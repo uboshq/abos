@@ -34,6 +34,8 @@ Route::middleware('auth')->prefix('messages')->group(function (): void {
         Route::post('/direct', [MessengerApiController::class, 'direct'])->name('direct');
         Route::post('/groups', [MessengerApiController::class, 'group'])->name('groups');
         Route::post('/papers', [MessengerApiController::class, 'papers'])->name('papers');
+        /* ⓘ attach → "ERP কাগজ" (web only): a LIKE over each paper table — kept to a walking pace */
+        Route::get('/papers/find', [MessengerApiController::class, 'paperSearch'])->middleware('throttle:60,1')->name('papers.find');
         Route::post('/forward', [MessengerApiController::class, 'forward'])->name('forward');
         Route::delete('/messages/{message}', [MessengerApiController::class, 'destroy'])->whereNumber('message')->name('message.delete');
         Route::get('/messages/{message}/info', [MessengerApiController::class, 'info'])->whereNumber('message')->name('message.info');

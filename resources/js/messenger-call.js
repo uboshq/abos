@@ -41,9 +41,11 @@ function csrf () {
 export async function api (url, { method = 'GET', body = null, query = null } = {}) {
     let target = url
     if (query) {
-        const u = new URL(url, window.location.origin)
-        for (const [k, v] of Object.entries(query)) if (v !== null && v !== undefined && v !== '') u.searchParams.set(k, v)
-        target = u.toString()
+        // ⓘ string-built, not `new URL(…, origin)` — the address stays exactly the one the server printed
+        const qs = new URLSearchParams()
+        for (const [k, v] of Object.entries(query)) if (v !== null && v !== undefined && v !== '') qs.set(k, String(v))
+        const s = qs.toString()
+        if (s) target = url + (String(url).includes('?') ? '&' : '?') + s
     }
     const headers = { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
     if (method !== 'GET') {

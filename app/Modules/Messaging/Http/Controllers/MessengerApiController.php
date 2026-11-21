@@ -277,6 +277,15 @@ final class MessengerApiController extends Controller implements HasMiddleware
         return response()->json(['data' => ['sent' => count($threads), 'thread_ids' => array_map(fn ($t) => (string) $t->public_id, $threads)]], 201);
     }
 
+    /** The composer's attach → "ERP কাগজ": my own papers by number, only those I may open ([[PaperCards::search()]]). */
+    public function paperSearch(Request $request): JsonResponse
+    {
+        $me = $this->me($request);
+        $data = $request->validate(['q' => ['nullable', 'string', 'max:60']]);
+
+        return response()->json(['data' => $this->papers->search($me, (string) ($data['q'] ?? ''))]);
+    }
+
     public function forward(Request $request): JsonResponse
     {
         $me = $this->me($request);

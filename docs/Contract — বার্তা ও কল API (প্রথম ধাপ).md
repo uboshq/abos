@@ -86,6 +86,7 @@
 | `GET /messenger/people` | `q`, optionally `paper_type` + `paper_id` | `{ data: [person] }`: only people this user may talk to. With a paper, each has `can_open_paper` |
 | `POST /messenger/direct` | `person` | `{ data: thread }`: finds or creates |
 | `POST /messenger/papers` | `paper_type`, `paper_id`, `to: ["person:12", "thread:01J…"]`, `note`, `client_id` | `201 { data: { sent: 2, thread_ids: [...] } }`; `403 paper_denied` if the sender may not open it |
+| `GET /messages/x/papers/find` (web only) | `q` (number; empty = most recent) | `{ data: [{ type, id, no, title, amount, party }] }` — only papers the sender may open; the composer's attach → "ERP কাগজ" |
 | `POST /messenger/calls` | `person`, `video` (bool) | `201 { data: { call_id, url, token, video, peer, room } }` |
 | `POST /messenger/calls/{id}/answer` | | `{ data: { call_id, url, token, video, peer, room } }`: callee only, while ringing |
 | `POST /messenger/calls/{id}/decline` | | `204`: callee only |

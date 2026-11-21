@@ -8,6 +8,7 @@ use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Messaging\Models\Call;
+use App\Modules\Messaging\Services\LiveKitToken;
 use App\Modules\Messaging\Services\MessengerPresenter;
 use App\Modules\Messaging\Services\MessengerService;
 use App\Modules\Messaging\Services\Presence;
@@ -40,8 +41,9 @@ final class MessengerPageController extends Controller implements HasMiddleware
     {
         return view('messaging::index', [
             'menu' => app(MenuBuilder::class)->forUser($request->user()),
-            'open' =>is_string($request->query('t')) ? $request->query('t') : null,
-            'livekitUrl' => (string) config('services.livekit.url', ''),
+            'open' => is_string($request->query('t')) ? $request->query('t') : null,
+            // ⓘ calls_off: LIVEKIT_URL / KEY / SECRET empty → the page draws no call button
+            'callsOn' => app(LiveKitToken::class)->configured(),
         ]);
     }
 

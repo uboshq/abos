@@ -12,8 +12,7 @@
  */
 import '../css/messenger.css'
 
-const root = document.querySelector('[data-msgr]')
-if (root) start(root)
+/* ⓘ the page starts at the END of this file — the module's constants (pad, GRADS, EMOJI…) must exist first */
 
 function parse(s, fallback) {
     try {
@@ -23,7 +22,7 @@ function parse(s, fallback) {
     }
 }
 
-function esc(s) {
+export function esc(s) {
     return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
 }
 
@@ -53,7 +52,7 @@ const GRADS = [
 ]
 const NAME_COLOURS = ['#5b61d6', '#d63384', '#0f9d8a', '#c2410c', '#7c3aed', '#0e7490', '#b45309', '#15803d']
 
-function hash(s) {
+export function hash(s) {
     let h = 0
     for (const ch of String(s ?? '')) h = (h * 31 + ch.codePointAt(0)) >>> 0
     return h
@@ -61,7 +60,7 @@ function hash(s) {
 
 const segmenter = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null
 
-function initial(name) {
+export function initial(name) {
     const s = String(name || '').trim()
     const first = segmenter ? segmenter.segment(s)[Symbol.iterator]().next().value?.segment : Array.from(s)[0]
     return first ? first.toUpperCase() : '?'
@@ -104,7 +103,9 @@ const EMOJI_WORDS = {
     'sun রোদ rain বৃষ্টি': '☀️ 🌧️ ⛅ 🌈',
 }
 
-function start(root) {
+export function start(root) {
+    if (!root || root.dataset.msgrStarted === '1') return
+    root.dataset.msgrStarted = '1'
     const W = parse(root.dataset.words, {})
     const R = parse(root.dataset.routes, {})
     const ME = parse(root.dataset.me, { id: '', name: '' })
@@ -435,8 +436,9 @@ function start(root) {
         $$('[data-group-only]').forEach((x) => {
             x.hidden = !group
         })
-        $('[data-act="call-video"]').setAttribute('aria-label', group ? w('group_video') : w('video_call'))
-        $('[data-act="call-voice"]').setAttribute('aria-label', group ? w('group_call') : w('voice_call'))
+        // ⓘ no call buttons at all when LiveKit is not set up (calls_off) — the view leaves them out
+        $('[data-act="call-video"]')?.setAttribute('aria-label', group ? w('group_video') : w('video_call'))
+        $('[data-act="call-voice"]')?.setAttribute('aria-label', group ? w('group_call') : w('voice_call'))
         $('[data-mute-label]').textContent = t.muted ? w('menu_unmute') : w('menu_mute')
         $('[data-mute-icon]').setAttribute('href', t.muted ? '#mg-bell' : '#mg-belloff')
     }
@@ -1555,6 +1557,71 @@ function start(root) {
         })
     }
 
+    /*
+     * ── attach → "ERP কাগজ": find one of MY papers by its number and send it into this chat (sample v7, tab খ).
+     * ⓘ The door lists only papers I may open myself; the card each receiver sees follows THEIR right (PaperCards).
+     *   Empty search = my most recent papers. A text already typed in the composer goes along as the note.
+     */
+    function paperDialog() {
+        if (!S.cur || !R.paper_find || !R.papers) return
+        const t = S.cur
+        el.dialogHost.innerHTML = `<div class="scrim" data-act="dlg-x"></div><div class="dlg" role="dialog" aria-modal="true" aria-label="${esc(w('paper_title'))}"><div class="tr"><h4>${esc(w('paper_title'))}</h4><button type="button" class="hb" data-act="dlg-x" aria-label="${esc(w('close'))}">${ic('x', '')}</button></div><label class="msrch">${ic('search', '')}<input type="search" data-dlg-q autocomplete="off" placeholder="${esc(w('paper_search'))}" aria-label="${esc(w('paper_search'))}"></label><div class="plist" data-dlg-list></div></div>`
+        const box = $('.dlg', el.dialogHost)
+        const list = $('[data-dlg-list]', box)
+        const q = $('[data-dlg-q]', box)
+        let found = []
+        let seq = 0
+        let busy = false
+        async function draw() {
+            const my = ++seq
+            list.innerHTML = `<p class="none">${esc(w('loading'))}</p>`
+            try {
+                const d = await api('GET', withQuery(R.paper_find, { q: q.value.trim() }))
+                if (my !== seq) return
+                found = d?.data || []
+                list.innerHTML = found
+                    .map((p, i) => {
+                        const money = paperIsMoney(p)
+                        const sub = [p.amount, p.party].filter(Boolean).join(' · ')
+                        return `<button type="button" class="shp" data-pick-paper="${i}"><span class="pic${money ? ' g' : ''}">${ic(money ? 'deposit' : 'paper', '')}</span><div class="tx"><b>${esc(p.title)} ${esc(p.no)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</div></button>`
+                    })
+                    .join('') || `<p class="none">${esc(w('no_results'))}</p>`
+            } catch (e) {
+                if (my === seq) list.innerHTML = `<p class="none">${esc(e.message)}</p>`
+            }
+        }
+        let timer = 0
+        q.addEventListener('input', () => {
+            clearTimeout(timer)
+            timer = setTimeout(draw, 300)
+        })
+        list.addEventListener('click', async (e) => {
+            const b = e.target.closest('[data-pick-paper]')
+            const p = b ? found[Number(b.dataset.pickPaper)] : null
+            if (!p || busy) return
+            busy = true
+            const note = el.input.value.trim()
+            try {
+                await api('POST', R.papers, { paper_type: p.type, paper_id: p.id, to: ['thread:' + t.id], note: note || null, client_id: newClientId().slice(0, 40) })
+                closeDialog()
+                if (note) {
+                    el.input.value = ''
+                    autosize()
+                    updateSend()
+                }
+                toast(w('paper_sent'))
+                if (S.cur?.id === t.id) poll()
+                loadList()
+            } catch (err) {
+                toast(err.message)
+            } finally {
+                busy = false
+            }
+        })
+        draw()
+        q.focus()
+    }
+
     /* ════════════════ the info drawer (members, shared papers; ⋮ search) ════════════════ */
     function closeInfo() {
         el.info.hidden = true
@@ -1745,9 +1812,8 @@ function start(root) {
                 $(`[data-pick="${act.slice(2)}"]`)?.click()
                 break
             case 'a-paper':
-                // ⓘ there is no paper picker door yet — papers go out from their own list (⋯ → বার্তায় পাঠান)
                 toggleTray(false)
-                toast(w('paper_from_list'))
+                paperDialog()
                 break
             case 'unstage': {
                 const f = S.staged.splice(Number(actEl.dataset.i), 1)[0]
@@ -1860,3 +1926,6 @@ function start(root) {
     })
     scheduleList()
 }
+
+// ⭐ the page itself — once, after every constant above exists
+start(document.querySelector('[data-msgr]'))

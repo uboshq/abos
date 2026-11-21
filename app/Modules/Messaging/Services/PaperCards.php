@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Modules\Messaging\Services;
 
 use App\Core\Contracts\Drillable;
+use App\Core\Services\PaperTrail;
 use App\Core\Services\PhonePaperDoor;
 use App\Core\Support\Money;
 use App\Models\User;
 use App\Modules\Messaging\Models\Message;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * The ERP paper card inside a message — sample: "বার্তায় পাঠানো কাগজ খোলে কেবল যাঁর সেই কাগজ দেখার অনুমতি আছে; বাকিরা শুধু নম্বর দেখেন".
@@ -20,6 +22,9 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class PaperCards
 {
+    /** ⓘ the attach picker asks each paper type for at most this many rows ([[search()]]) */
+    public const PER_TYPE = 5;
+
     /** @var array<string, array{0: string, 1: class-string<Model>, 2: Model}|null> */
     private array $seen = [];
 
@@ -55,6 +60,80 @@ final class PaperCards
         } catch (\Throwable) {
             return false;
         }
+    }
+
+    /**
+     * The composer's attach → "ERP কাগজ" (web sample v7, tab খ): MY papers whose number matches, newest first — only
+     * the ones I may open myself (the same rule as sending one, [[MessengerService::sharePaper()]]).
+     *
+     * ⛔ A paper type whose print keys I lack is not even queried. ⓘ Empty term = my most recent papers.
+     * ⓘ Each type is asked for at most PER_TYPE rows by its own number column (`document_no`, `number`, `voucher_no`,
+     *   `code` — the first one the table has); a type without one is skipped.
+     *
+     * @return list<array{type: string, id: string, no: string, title: string, amount: string, party: string}>
+     */
+    public function search(User $me, string $term, int $limit = 20): array
+    {
+        $term = trim(mb_substr($term, 0, 60));
+        $like = '%'.addcslashes($term, '\\%_').'%';
+        $out = [];
+
+        foreach ($this->door->printable() as $type => [$documentType, $class]) {
+            if (count($out) >= $limit) {
+                break;
+            }
+
+            $abilities = PaperTrail::abilitiesFor($documentType);
+            if ($abilities === [] || array_filter($abilities, fn (string $a): bool => ! $me->can($a)) !== []) {
+                continue;
+            }
+
+            try {
+                $model = new $class;
+                $columns = Schema::getColumnListing($model->getTable());
+                $numberColumn = array_values(array_intersect(['document_no', 'number', 'voucher_no', 'code'], $columns))[0] ?? null;
+                if ($numberColumn === null || ! in_array('public_id', $columns, true)) {
+                    continue;
+                }
+
+                $rows = $class::query()
+                    ->when($term !== '', fn ($q) => $q->where($numberColumn, 'like', $like))
+                    ->orderByDesc($model->getQualifiedKeyName())
+                    ->limit(self::PER_TYPE)
+                    ->get();
+            } catch (\Throwable) {
+                continue;
+            }
+
+            foreach ($rows as $paper) {
+                $publicId = (string) $paper->getAttribute('public_id');
+                if ($publicId === '') {
+                    continue;
+                }
+                try {
+                    if (! $this->door->mayOpen($me, $documentType, $paper, checkBranch: true)) {
+                        continue;
+                    }
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                $out[] = [
+                    'type' => $type,
+                    'id' => $publicId,
+                    'no' => $this->numberOf($paper),
+                    'title' => $this->titleOf($type, $paper),
+                    'amount' => $this->amountOf($paper),
+                    'party' => $this->partyOf($paper),
+                ];
+
+                if (count($out) >= $limit) {
+                    break;
+                }
+            }
+        }
+
+        return $out;
     }
 
     public function numberOf(Model $paper): string

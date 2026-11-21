@@ -24,6 +24,8 @@
         'people' => route('messaging.x.people'),
         'direct' => route('messaging.x.direct'),
         'forward' => route('messaging.x.forward'),
+        'papers' => route('messaging.x.papers'),
+        'paper_find' => route('messaging.x.papers.find'),
         'delete' => route('messaging.x.message.delete', ['message' => 987654321]),
         'info' => route('messaging.x.message.info', ['message' => 987654321]),
         'page' => route('messaging.index'),
@@ -45,6 +47,7 @@
          data-routes="{{ json_encode($msgrRoutes, JSON_UNESCAPED_SLASHES) }}"
          data-me="{{ json_encode($msgrMe, JSON_UNESCAPED_UNICODE) }}"
          data-open="{{ $open ?? '' }}"
+         data-calls="{{ ($callsOn ?? false) ? '1' : '0' }}"
          data-locale="{{ app()->getLocale() }}"
          data-csrf="{{ csrf_token() }}">
         @include('messaging::partials.sprite')
@@ -82,9 +85,13 @@
                 <button type="button" class="who" data-act="info" aria-label="{{ __('messaging::web.group_info') }}">
                     <b data-head-title></b><small data-head-sub></small>
                 </button>
-                <span class="soon2" data-group-only hidden><svg aria-hidden="true"><use href="#mg-clock"/></svg>{{ __('messaging::web.group_calls_soon') }}</span>
-                <button type="button" class="hb" data-act="call-video" aria-label="{{ __('messaging::web.video_call') }}" title="{{ __('messaging::web.video_call') }}"><svg><use href="#mg-video"/></svg></button>
-                <button type="button" class="hb" data-act="call-voice" aria-label="{{ __('messaging::web.voice_call') }}" title="{{ __('messaging::web.voice_call') }}"><svg><use href="#mg-phone"/></svg></button>
+                {{-- ⓘ calls only when the office LiveKit is set up (LIVEKIT_URL/KEY/SECRET in .env) — otherwise no call button
+                     and no group-call badge at all (calls_off, [[LiveKitToken::configured()]]) --}}
+                @if ($callsOn ?? false)
+                    <span class="soon2" data-group-only hidden><svg aria-hidden="true"><use href="#mg-clock"/></svg>{{ __('messaging::web.group_calls_soon') }}</span>
+                    <button type="button" class="hb" data-act="call-video" aria-label="{{ __('messaging::web.video_call') }}" title="{{ __('messaging::web.video_call') }}"><svg><use href="#mg-video"/></svg></button>
+                    <button type="button" class="hb" data-act="call-voice" aria-label="{{ __('messaging::web.voice_call') }}" title="{{ __('messaging::web.voice_call') }}"><svg><use href="#mg-phone"/></svg></button>
+                @endif
                 <button type="button" class="hb" data-act="kebab" aria-label="{{ __('messaging::web.more') }}" aria-haspopup="menu" aria-expanded="false"><svg><use href="#mg-kebab"/></svg></button>
                 <div class="km" data-kebab role="menu" hidden>
                     <button type="button" role="menuitem" data-act="k-search"><svg class="i" aria-hidden="true"><use href="#mg-search"/></svg>{{ __('messaging::web.menu_search') }}</button>
