@@ -737,9 +737,11 @@
                     @php
                         /* ⭐ মডিউলের মাথা — কেবল "ABOS" (rose) রূপে, Fluent/Lightning ধাঁচে (মালিক, ২০ নভেম্বর ২০২৬, "চ. আন্তর্জাতিক ok"):
                            মডিউলের রঙের ৩২px বর্গে সাদা চিহ্ন, পাশে নাম; এক করা মডিউলে প্রধান মডিউলের চিহ্ন ও রং (`config/abos.php`-এর
-                           `module_picker`)। ⓘ ABOS Navy, ABOS Blue, SAP, Dynamic আর বাকিরা আগের ছোট নামই রাখে (মালিকের সংশোধন, একই দিন)। */
+                           `module_picker`)। ⓘ ABOS Navy, ABOS Blue, SAP, Dynamic আর বাকিরা আগের ছোট নামই রাখে (মালিকের সংশোধন, একই দিন)।
+                           ⓘ চিহ্ন আর রং কেবল config থেকে (মডিউলের নিজের রং, ডেটা) — এখানে হাতে লেখা রং বা চিহ্ন নেই; config-এ `default`-ও না
+                           থাকলে মাথাটা আগের ছোট নামে ফেরে, ফাঁকা বর্গ বসে না */
                         $moduleHead = \App\Core\Support\Ui::wearsModuleHead(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)))
-                            ? (config('abos.module_picker')[$activeModule['code']] ?? config('abos.module_picker.default') ?? ['icon' => 'layout-grid', 'colour' => '#2563eb'])
+                            ? (config('abos.module_picker')[$activeModule['code']] ?? config('abos.module_picker.default'))
                             : null;
                     @endphp
                     @if ($moduleHead !== null)

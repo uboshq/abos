@@ -68,11 +68,15 @@ final class TheSapLookOpensSpacesNotDropDownsTest extends TestCase
 
     public function test_the_sap_space_page_draws_one_tile_per_menu_row_in_sections(): void
     {
+        // ⛔ আগে পাতা, পরে মেনু — মেনুটা SAP-এর মানুষের চোখে মাপতে হয়: SAP-এ মডিউল এক করা নয় (মালিক, ২০ নভেম্বর ২০২৬:
+        //   "100% অরিজিনাল", [[Ui::keepsModulesApart()]])। আগের ক্রমে মেনু আসত মালিকের ABOS রূপের, এক করা — গ্রাহকের দল বিক্রয়ের
+        //   ভিতরে, আর পাতায় (SAP) তা থাকে না (Mac run, ২১ নভেম্বর ২০২৬: "ভাগের শিরোনাম নেই: core.menu.customer:dashboard")
+        $body = $this->pageAs($this->owner, 'tiles', route('module.dashboard', ['module' => 'sales']));
+
         $menu = app(MenuBuilder::class)->forUser($this->owner->fresh());
         $sales = FioriLaunchpad::space($menu, 'sales');
         $this->assertNotNull($sales, 'মালিকের মেনুতে বিক্রয় নেই');
-
-        $body = $this->pageAs($this->owner, 'tiles', route('module.dashboard', ['module' => 'sales']));
+        $this->assertNotContains('customer', $sales['codes'] ?? [], 'SAP রূপে গ্রাহক বিক্রয়ের ভিতরে — এক করা মেনু ঢুকেছে');
 
         $this->assertStringContainsString('data-fiori-launchpad="page"', $body);
         $this->assertStringContainsString('data-fiori-section=', $body);

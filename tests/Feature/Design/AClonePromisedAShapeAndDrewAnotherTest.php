@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Design;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingsService;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\Ui;
@@ -479,8 +480,22 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
 
             $body = $this->shellFor($look);
 
-            $labels = collect(app(ModuleRegistry::class)->all())
-                ->map(fn ($m) => $m->label())
+            /*
+             * ⭐ মডিউলের নাম = এই রূপের মেনুতে যে মডিউলগুলো নিজে দাঁড়িয়ে — রেজিস্ট্রির সব কোড নয়।
+             * ⓘ মালিক, ২০ নভেম্বর ২০২৬: হিসাব+অর্থ+স্থায়ী সম্পদ = "হিসাব ও অর্থ", বিক্রয়+গ্রাহক+বাকি নিয়ন্ত্রণ+অফার = "বিক্রয়",
+             *   ক্রয়+সরবরাহকারী = "ক্রয়" — অতিথিরা আর আলাদা মডিউল নয়, আশ্রয়দাতার ভিতরের একটা ভাগ ("স্থায়ী সম্পদ" হিসাব ও অর্থের
+             *   নয় ভাগের একটা)। ⛔ SAP (tiles) আর Dynamic আগের মতো আলাদা ([[Ui::keepsModulesApart()]]) — ওখানে মেনুতে সব মডিউল নিজে
+             *   দাঁড়ায়, তাই দাবিটাও আগের মতো সবগুলো চায়। মেনুটা এই রূপের মানুষের চোখে ([[MenuBuilder::forUser()]])।
+             */
+            $menu = app(MenuBuilder::class)->forUser($this->user->fresh());
+            $covered = collect($menu)->flatMap(fn (array $m) => $m['codes'] ?? [$m['code']])->all();
+
+            foreach (array_keys(app(ModuleRegistry::class)->all()) as $code) {
+                $this->assertContains($code, $covered, "রূপ {$look}: মডিউল {$code} মেনুর কোথাও নেই — না নিজে, না কারও ভিতরে");
+            }
+
+            $labels = collect($menu)
+                ->map(fn (array $m) => (string) $m['label'])
                 ->values();
 
             $strip = $this->stripOf($body);
@@ -590,7 +605,8 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
      */
     private function stripCarriesLabel(string $strip, string $label): bool
     {
-        return str_contains($strip, '>'.$label.'</span>');
+        // ⓘ e() — এক করা মডিউলের ইংরেজি নামে "&" ("Accounts & Finance"), পাতায় তা `&amp;`
+        return str_contains($strip, '>'.e($label).'</span>');
     }
 
     private function stripOf(string $body): string
