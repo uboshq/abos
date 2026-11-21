@@ -433,8 +433,14 @@ class AuthController extends Controller
             return null;
         }
 
-        $user = User::query()->find((int) ($used['user'] ?? 0));
-        if (! $user instanceof User || ! $user->is_active || $this->twoStepMissing($user)) {
+        /*
+         * ⓘ মানুষটা জেতা জোড়ার নিজের নবায়ন-টোকেন থেকে — সেটা না থাকলে (বের হওয়া, ফোন বাদ, পাসওয়ার্ড বদল, প্রশাসক বন্ধ) কিছুই ফেরত নয়।
+         * ব্যবহারকারীর তালিকা খোঁজা নয় ([[EveryUserListAsksWhichCompanyTest]]), আর ক্যাশের `user` সংখ্যায় ভরসাও নয়।
+         */
+        $successorRefresh = PersonalAccessToken::query()->whereKey((int) $used['refresh_id'])->first();
+        $user = $successorRefresh?->tokenable;
+        if (! $user instanceof User || (int) $user->getKey() !== (int) ($used['user'] ?? 0)
+            || ! $user->is_active || $this->twoStepMissing($user)) {
             return null;
         }
         $deviceId = (string) ($used['device'] ?? '');
@@ -447,8 +453,8 @@ class AuthController extends Controller
             } catch (\Throwable) {
                 $pair = null;
             }
-            // ⓘ জেতা জোড়াটা এর মধ্যে বাতিল হয়ে থাকলে (বের হওয়া, ফোন বাদ, পাসওয়ার্ড বদল) ফেরত নয়
-            if (! is_array($pair) || ! PersonalAccessToken::query()->whereKey((int) $used['refresh_id'])->exists()) {
+            // ⓘ জেতা জোড়াটা এর মধ্যে বাতিল হয়ে থাকলে উপরেই ফেরত নেই (তার নবায়ন-টোকেন থেকেই মানুষটা)
+            if (! is_array($pair)) {
                 return null;
             }
 
@@ -465,9 +471,8 @@ class AuthController extends Controller
         if ($age > self::LOST_ANSWER_SECONDS || $deviceId === '' || ! hash_equals($deviceId, $sentDevice)) {
             return null;
         }
-        $successorRefresh = PersonalAccessToken::query()->whereKey((int) $used['refresh_id'])->first();
         $successorAccess = PersonalAccessToken::query()->whereKey((int) ($used['access_id'] ?? 0))->first();
-        if ($successorRefresh === null || $successorRefresh->last_used_at !== null
+        if ($successorRefresh->last_used_at !== null
             || ($successorAccess !== null && $successorAccess->last_used_at !== null)) {
             return null;
         }
