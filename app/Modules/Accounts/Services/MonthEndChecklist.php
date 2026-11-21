@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Approval;
+use App\Models\DayClose;
 use App\Models\LedgerEntry;
 use App\Models\PeriodLock;
 use App\Modules\Accounts\Models\Account;
@@ -55,8 +58,125 @@ final class MonthEndChecklist
             $this->cashCounted($from, $to),
             $this->depreciated($from, $to),
             $this->balanced($from, $to),
+            ...$this->dayCloses($from, $to),
             $this->reversalsStuck($from, $to),
             $this->locked($month),
+        ];
+    }
+
+    /**
+     * ⛔ মাস বন্ধে যে সারিগুলো থাকলে মাস বন্ধই হয় না — কারণ লিখেও নয় ([[PeriodLockController::close()]])।
+     *
+     * ⓘ খাতা না মিললে মাসের কোনো অঙ্কই সত্যি নয়; আর মালিক, ১৭ নভেম্বর ২০২৬ (মাস শেষের পরিকল্পনা, "Ok" আর "Sob ok"): *"দিন-শেষগুলোর
+     *   যোগ মাসের অঙ্কের সমান না হলে মাস বন্ধ হবে না"* — কাজ হওয়া প্রতিটা কর্মদিবস দিন শেষের হিসাবে বন্ধ, তবেই দিনের কাগজগুলোর যোগ = মাস।
+     */
+    public const MUST_CLEAR = ['balanced', 'days_closed'];
+
+    /**
+     * কোন সারিগুলো বাকি থাকলে মাস বন্ধে কারণ লিখতে হয় — বাকি রেখে বন্ধ করা যায়, কিন্তু কেন, তা তালায় লেখা থাকে।
+     *
+     * ⓘ দিন বন্ধের একই নিয়ম — মালিক, ১৮ নভেম্বর ২০২৬: *"সব পরিষ্কার হলে, নয়তো কারণ লিখে দিন বন্ধ"*। খসড়া, অপেক্ষা আর তালা নিজেই
+     *   আলাদা পাহারায় ([[PeriodLockController::close()]]), তাই এখানে নেই।
+     */
+    public const NEEDS_REASON = ['bank_reconciled', 'cash_counted', 'depreciated', 'days_changed', 'reversals_stuck'];
+
+    /**
+     * "ব্যাংক মিলকরণ (1), নগদ গণনা (2)" — বাকি কাজের নাম আর সংখ্যা, ইংরেজি অঙ্কে (মাস বন্ধের বার্তা, তালার পাতা, মাস শেষের কাগজ)।
+     *
+     * @param  array<string, int|string>  $items  চেকলিস্টের চাবি => কতগুলো
+     */
+    public static function itemList(array $items): string
+    {
+        return collect($items)
+            ->map(fn ($count, $key) => __('accounts::board.close.step.'.$key).' ('.(int) $count.')')
+            ->implode(', ');
+    }
+
+    /**
+     * ⭐ দিন বন্ধ আর মাস — মালিক, ১৭ নভেম্বর ২০২৬: *"দিন-শেষগুলোর যোগ = মাসের অঙ্ক, নইলে মাস বন্ধ হবে না"*।
+     *
+     * দুই সারি:
+     *   · `days_closed` — মাসের যে কর্মদিবসে খাতায় কিছু লেখা হয়েছে, তার প্রতিটা দিন শেষের হিসাবে বন্ধ ([[DayChecklist::openDays()]]-এর
+     *     একই নিয়ম: সাপ্তাহিক ছুটি বাদ; দিনটা বন্ধ যদি কোম্পানির পুরো দিন বন্ধ, বা সেদিন যে শাখায় লেখা হয়েছে তার প্রতিটা বন্ধ)।
+     *   · `days_changed` — বন্ধ দিনে বন্ধের পরে খাতায় যা বসেছে (দিনের কাগজের "দিন বন্ধের পরে যোগ হয়েছে" — [[DayClosingService]])।
+     *     ⓘ ডিফল্টে বন্ধ দিনে লেখা চলে (মালিক, ১৮ নভেম্বর: "কাজ যাতে আটকে না থাকে"), তাই এটা কারণ চায়, মাস আটকায় না।
+     *
+     * ⓘ গোটা কোম্পানি, দেখার শাখা নয় — মাস কোম্পানি ধরে বন্ধ হয়।
+     * ⓘ দিন বন্ধ চালু হওয়ার আগের দিন গোনা হয় না: কোম্পানির প্রথম দিন বন্ধের আগে দিন বন্ধের পাতাই ছিল না (১.৩.৪, ১৯ নভেম্বর ২০২৬) —
+     *   নইলে অক্টোবর আর কখনো বন্ধ হত না। কোনো দিন বন্ধই না থাকলে দুই সারিই "এই মাসে প্রযোজ্য নয়"।
+     * ⓘ আজ আর ভবিষ্যৎ বাদ — আজকের দিন এখনো চলছে।
+     *
+     * @return array{0: array<string, mixed>, 1: array<string, mixed>}
+     */
+    private function dayCloses(CarbonImmutable $from, CarbonImmutable $to): array
+    {
+        $company = CompanyContext::id();
+        $first = DayClose::query()->where('company_id', $company)->min('day');
+        $start = $first === null ? null : CarbonImmutable::parse((string) $first)->max($from);
+        $end = $to->min(CarbonImmutable::yesterday());
+
+        if ($start === null || $start->greaterThan($end)) {
+            return [
+                $this->row('days_closed', 0, 'executive.dayclose', applicable: false),
+                $this->row('days_changed', 0, 'executive.dayclose', applicable: false),
+            ];
+        }
+
+        $holiday = (string) (app(SettingsService::class)->get('accounts.day_close.weekly_holiday') ?? 'friday');
+        $off = ['sunday' => 0, 'monday' => 1, 'tuesday' => 2, 'wednesday' => 3, 'thursday' => 4, 'friday' => 5, 'saturday' => 6][$holiday] ?? null;
+
+        // ⓘ এক প্রশ্নে: কোন দিন কোন শাখায় লেখা হয়েছে, আর সেখানে শেষ সারিটা কখন বসেছে
+        $written = LedgerEntry::query()
+            ->whereBetween('trx_date', [$start->toDateString(), $end->toDateString()])
+            ->groupBy('trx_date', 'branch_id')
+            ->selectRaw('trx_date, branch_id, MAX(created_at) as last_at')
+            ->get()
+            ->groupBy(fn ($r) => CarbonImmutable::parse((string) $r->trx_date)->toDateString())
+            ->sortKeys();
+
+        // ⓘ আবার খোলা দিন বন্ধ নয় ([[DayClose::closedOn()]]-এর একই নিয়ম)
+        $closes = DayClose::query()->where('company_id', $company)->whereNull('reopened_at')
+            ->whereBetween('day', [$start->toDateString(), $end->toDateString()])
+            ->get(['day', 'branch_id', 'closed_at'])
+            ->groupBy(fn (DayClose $c) => $c->day->toDateString());
+
+        $open = [];
+        $changed = [];
+
+        foreach ($written as $day => $rows) {
+            if ($off !== null && CarbonImmutable::parse($day)->dayOfWeek === $off) {
+                continue;
+            }
+
+            $records = $closes->get($day, collect());
+            $whole = $records->first(fn (DayClose $c) => $c->branch_id === null);
+            $late = false;
+            $shut = true;
+
+            foreach ($rows as $r) {
+                $record = $whole ?? ($r->branch_id === null ? null : $records->first(fn (DayClose $c) => (int) $c->branch_id === (int) $r->branch_id));
+
+                if ($record === null) {
+                    $shut = false;
+
+                    continue;
+                }
+
+                if ($record->closed_at !== null && $r->last_at !== null && CarbonImmutable::parse((string) $r->last_at)->greaterThan($record->closed_at)) {
+                    $late = true;
+                }
+            }
+
+            if (! $shut) {
+                $open[] = $day;
+            } elseif ($late) {
+                $changed[] = $day;
+            }
+        }
+
+        return [
+            $this->row('days_closed', count($open), 'executive.dayclose', params: $open === [] ? [] : ['date' => $open[0]], dates: $open),
+            $this->row('days_changed', count($changed), 'executive.dayclose', params: $changed === [] ? [] : ['date' => $changed[0]], dates: $changed),
         ];
     }
 
@@ -233,7 +353,8 @@ final class MonthEndChecklist
         return $this->row('locked', $locked ? 0 : 1, 'accounts.period.index');
     }
 
-    private function row(string $key, int $count, string $route, bool $applicable = true, array $params = []): array
+    /** @param  list<string>  $dates  কোন দিনগুলো (Y-m-d) — দিন বন্ধের দুই সারিতে, বার্তায় নাম ধরে বলার জন্য */
+    private function row(string $key, int $count, string $route, bool $applicable = true, array $params = [], array $dates = []): array
     {
         return [
             'key' => $key,
@@ -241,6 +362,7 @@ final class MonthEndChecklist
             'count' => $count,
             'route' => $route,
             'params' => $params,
+            'dates' => $dates,
         ];
     }
 }

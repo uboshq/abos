@@ -185,12 +185,54 @@ class PeriodLockController extends Controller implements HasMiddleware
             return back()->withErrors(['month' => __('accounts::validation.month_has_unposted', ['count' => $unposted])]);
         }
 
+        /*
+         * ⛔ খাতা না মিললে, বা কাজ হওয়া কোনো কর্মদিবস দিন শেষের হিসাবে বন্ধ না হলে মাস বন্ধ নয় — মালিক, ১৭ নভেম্বর ২০২৬ (মাস শেষের
+         * পরিকল্পনা "Ok"): *"দিন-শেষগুলোর যোগ মাসের অঙ্কের সমান না হলে মাস বন্ধ হবে না"* ([[MonthEndChecklist::MUST_CLEAR]];
+         * [[AMonthClosesOnlyWhenItsDaysAreClosedTest]])। ⓘ মাস বন্ধ রোজকার কাজ থামায় না — কেবল তালাটা পরে পড়ে।
+         */
+        if ((int) ($rows['balanced']['count'] ?? 0) > 0) {
+            return back()->withErrors(['month' => __('accounts::validation.month_books_off')]);
+        }
+
+        if ((int) ($rows['days_closed']['count'] ?? 0) > 0) {
+            return back()->withErrors(['month' => __('accounts::validation.month_days_open', [
+                'count' => $rows['days_closed']['count'],
+                'days' => $this->dayList($rows['days_closed']['dates'] ?? []),
+            ])]);
+        }
+
+        /*
+         * ⭐ বাকি কাজ রেখে বন্ধ — কারণ লিখে, আর কী বাকি ছিল তা তালায় লেখা থাকে (দিন বন্ধের একই নিয়ম — মালিক, ১৮ নভেম্বর ২০২৬:
+         * "সব পরিষ্কার হলে, নয়তো কারণ লিখে")। ⓘ ব্যাংক না মেলা, নগদ না গোনা, অবচয় না বসা, বন্ধ দিনে পরে যোগ, আটকে থাকা উল্টো —
+         * আন্তর্জাতিক নিয়মে মাস-শেষের ব্যতিক্রম লিখে রাখা হয়, চুপচাপ পার হয় না।
+         */
+        $left = collect(MonthEndChecklist::NEEDS_REASON)
+            ->filter(fn (string $key) => ($rows[$key]['state'] ?? null) === MonthEndChecklist::PENDING)
+            ->mapWithKeys(fn (string $key) => [$key => (int) $rows[$key]['count']])
+            ->all();
+        $reason = trim((string) ($data['reason'] ?? ''));
+
+        if ($left !== [] && mb_strlen($reason) < 3) {
+            return back()->withErrors(['reason' => __('accounts::validation.month_needs_reason', [
+                'items' => MonthEndChecklist::itemList($left),
+            ])]);
+        }
+
         $lock = PeriodLock::query()->firstOrCreate(
             ['company_id' => CompanyContext::id(), 'year' => $data['year'], 'month' => $data['month']],
-            ['reason' => $data['reason'] ?? null, 'locked_by' => $request->user()?->id, 'locked_at' => now()],
+            ['reason' => $reason !== '' ? $reason : null, 'open_items' => $left !== [] ? $left : null,
+                'locked_by' => $request->user()?->id, 'locked_at' => now()],
         );
 
         return back()->with('saved', __('accounts::message.period_closed', ['month' => $lock->label()]));
+    }
+
+    /** @param  list<string>  $dates  প্রথম পাঁচটা দিন, "dd-mm" */
+    private function dayList(array $dates): string
+    {
+        $shown = array_map(fn (string $d) => Carbon::parse($d)->format('d-m'), array_slice($dates, 0, 5));
+
+        return implode(', ', $shown).(count($dates) > 5 ? ' …' : '');
     }
 
     /** একই অর্থবছরে এই মাসের আগের প্রথম খোলা মাস — সব বন্ধ থাকলে `null` */

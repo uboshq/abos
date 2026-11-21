@@ -141,6 +141,9 @@ return [
     'month_has_changed_drafts' => 'Of these, :stale draft(s) changed after the approval was asked for — post them again and they go for approval afresh.',
     'party_types_owner_only' => 'Only the owner can change which parties an account holds.',
     'cannot_close_this_month' => 'This month cannot be closed — today’s sales would stop.',
+    'month_books_off' => 'Debits and credits for the month do not agree — fix it from the books check, then close the month.',
+    'month_days_open' => ':count working day(s) of the month are not closed in the day closing yet (:days) — close those days first; the day closings add up to the month.',
+    'month_needs_reason' => 'Still left: :items — finish them, or write a reason and close the month.',
 
     // চেকের খাতা
     'cheque_direction' => 'Say whether the cheque was received or issued.',

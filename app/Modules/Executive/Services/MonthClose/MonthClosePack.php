@@ -1024,7 +1024,11 @@ final class MonthClosePack
 
     // ─────────────────────────────── ১১ তালা ───────────────────────────────
 
-    /** @return array{locked: bool, by: ?string, at: ?string, pending: int} */
+    /**
+     * ⓘ বাকি রেখে বন্ধ হলে কারণ আর কী বাকি ছিল — তালার সাথেই লেখা ([[PeriodLockController::close()]]; ২১ নভেম্বর ২০২৬), কাগজেও।
+     *
+     * @return array{locked: bool, by: ?string, at: ?string, pending: int, reason: ?string, left: ?string}
+     */
     private function lock(MonthPeriods $p): array
     {
         $lock = PeriodLock::query()->where('year', $p->month->year)->where('month', $p->month->month)->first();
@@ -1034,6 +1038,8 @@ final class MonthClosePack
             'by' => $lock?->locked_by !== null ? (string) User::query()->whereKey($lock->locked_by)->value('name') : null,
             'at' => $lock?->locked_at !== null ? DateFormat::formatWithTime($lock->locked_at) : null,
             'pending' => 0,
+            'reason' => $lock?->reason ?: null,
+            'left' => empty($lock?->open_items) ? null : MonthEndChecklist::itemList($lock->open_items),
         ];
     }
 

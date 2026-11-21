@@ -36,7 +36,7 @@ class PeriodLock extends Model
     protected $table = 'period_locks';
 
     protected $fillable = [
-        'company_id', 'year', 'month', 'reason', 'locked_by', 'locked_at',
+        'company_id', 'year', 'month', 'reason', 'open_items', 'locked_by', 'locked_at',
     ];
 
     protected function casts(): array
@@ -45,6 +45,8 @@ class PeriodLock extends Model
             'year' => 'integer',
             'month' => 'integer',
             'locked_at' => 'datetime',
+            // ⓘ বন্ধের মুহূর্তে যা বাকি ছিল — চেকলিস্টের চাবি => কতগুলো ([[PeriodLockController::close()]]); সব পরিষ্কার হলে null
+            'open_items' => 'array',
         ];
     }
 

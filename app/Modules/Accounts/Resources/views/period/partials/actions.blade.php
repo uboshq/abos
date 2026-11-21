@@ -18,6 +18,13 @@
     <form method="POST" action="{{ route('accounts.period.close') }}"
           class="flex flex-wrap items-center justify-end gap-2">
         @csrf
+        {{-- ⓘ বন্ধের আগে চেকলিস্ট — কী বাকি, কোথায় সারানো যায় ([[MonthEndChecklist]]); বাকি রেখে বন্ধ করলে কারণ লাগে (২১ নভেম্বর ২০২৬) --}}
+        @if (Route::has('accounts.control.month_end'))
+            @can('accounts.report')
+                <a href="{{ route('accounts.control.month_end', ['month' => sprintf('%04d-%02d', $month['year'], $month['month'])]) }}"
+                   class="text-sm text-(--color-link) hover:underline" data-month-checklist-link>{{ __('accounts::menu.month_end') }}</a>
+            @endcan
+        @endif
         <input type="hidden" name="year" value="{{ $month['year'] }}">
         <input type="hidden" name="month" value="{{ $month['month'] }}">
         <input type="text" name="reason" aria-label="{{ __('accounts::field.reason') }}" placeholder="{{ __('accounts::field.reason') }}"

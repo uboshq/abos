@@ -31,7 +31,12 @@
         [
             'key' => 'reason',
             'label' => __('accounts::field.reason'),
-            'render' => fn ($m) => $m['lock']?->reason ?: '—',
+            // ⓘ বাকি রেখে বন্ধ হলে কী বাকি ছিল, কারণের নিচে ([[PeriodLockController::close()]]; ২১ নভেম্বর ২০২৬)
+            'render' => fn ($m) => new \Illuminate\Support\HtmlString(e($m['lock']?->reason ?: '—')
+                .(! empty($m['lock']?->open_items)
+                    ? '<span class="block text-xs text-(--color-warning-hover)" data-open-items>'
+                        .e(__('accounts::message.period_left', ['items' => \App\Modules\Accounts\Services\MonthEndChecklist::itemList($m['lock']->open_items)])).'</span>'
+                    : '')),
         ],
         [
             'key' => 'actions',

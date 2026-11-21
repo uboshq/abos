@@ -85,7 +85,8 @@ final class AMonthLocksOnlyWhenItIsDoneTest extends TestCase
 
     private function lock(int $year, int $month): TestResponse
     {
-        return $this->from(route('accounts.period.index'))->post(route('accounts.period.close'), ['year' => $year, 'month' => $month]);
+        // ⓘ কারণসহ — ডেমোর টিল/ব্যাংকের বাকি কাজ থাকলে মাস বন্ধে কারণ লাগে ([[AMonthClosesOnlyWhenItsDaysAreClosedTest]]); এখানে প্রশ্ন কেবল কাগজ আর ভবিষ্যৎ
+        return $this->from(route('accounts.period.index'))->post(route('accounts.period.close'), ['year' => $year, 'month' => $month, 'reason' => 'পরীক্ষা: বাকি কাজ জানা']);
     }
 
     /** ⓘ বছরের আগের মাসগুলো আগে বন্ধ — ক্রম মেনে ([[AnEarlierMonthStayedOpenTest]], পুনঃঅডিট ৯ অক্টোবর ২০২৬) */
