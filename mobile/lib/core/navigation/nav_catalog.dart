@@ -5,6 +5,8 @@ import '../locale/app_locale.dart';
 import '../locale/l10n.dart';
 import '../menu/menu_item.dart';
 import '../theme/app_colors.dart';
+import '../widgets/row_icon.dart';
+import '../../features/copilot/copilot_mark.dart';
 
 /// ⭐ মডিউল → মেনু → পর্দা — অ্যাপের নতুন পথ (মালিক, ১২ অক্টোবর ২০২৬: "app icon e tap korle age module
 /// asbe, module e dhukle tar menu, menu r vitore kichu thakle vitore dekhabe")।
@@ -42,6 +44,7 @@ class NavScreenDef {
     required this.icon,
     this.aliases = const [],
     this.parent,
+    this.mark,
   });
 
   final String path;
@@ -51,6 +54,9 @@ class NavScreenDef {
   /// Used when the menu item carries no label of its own.
   final String label;
   final IconData icon;
+
+  /// Drawn instead of [icon] wherever the screen's row shows an icon ([RowIcon.mark]).
+  final RowMark? mark;
   final List<String> aliases;
 
   /// The [NavParentDef.id] this screen sits under, when it is one of several
@@ -88,6 +94,7 @@ class NavRow {
     this.planned = false,
     this.aliases = const [],
     this.web = false,
+    this.mark,
   });
 
   /// The path for a screen, `group:<id>` for a parent, the server route for a
@@ -96,6 +103,9 @@ class NavRow {
   final String label;
   final IconData icon;
   final String module;
+
+  /// Drawn instead of [icon] when set — the screen's own mark ([NavScreenDef.mark]).
+  final RowMark? mark;
 
   /// The `/home/<path>` this row opens; null for a parent or a planned row.
   final String? path;
@@ -565,6 +575,8 @@ class NavCatalog {
         group: _l.navGroupDashboards,
         label: _l.navScreenCopilot,
         icon: Icons.psychology_outlined,
+        // ⭐ মেনু আর খোঁজার সারিতে মালিকের চলন্ত "Ai" চিহ্ন (২১ নভেম্বর ২০২৬) — সারি ফোকাস পেলে তবেই চলে
+        mark: CopilotMark.row,
         aliases: ['copilot', 'কোপাইলট', 'মগজ', 'প্রশ্ন', 'নজর', 'সারাংশ', 'ask', 'assistant', 'brief', 'watch']),  // l10n-ok: search aliases in both languages
     NavScreenDef(
         path: 'owner-centre',
@@ -724,6 +736,7 @@ class NavTree {
           id: entry.path,
           label: label,
           icon: def?.icon ?? Icons.circle_outlined,
+          mark: def?.mark,
           module: def == null ? 'reports' : '',
           path: entry.path,
           aliases: def?.aliases ?? const [],
@@ -739,6 +752,7 @@ class NavTree {
         id: def.path,
         label: label,
         icon: def.icon,
+        mark: def.mark,
         module: def.module,
         path: def.path,
         aliases: [def.label, ...def.aliases],

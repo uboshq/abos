@@ -19,12 +19,19 @@ import 'package:flutter/material.dart';
 /// (TickerMode বন্ধ) ঘড়ি থামে; প্রতিটা চিহ্নের নিজের একটাই ঘড়ি, নিজের RepaintBoundary-তে।
 /// ⓘ পরীক্ষায় নিজে থেকে স্থির — অন্য পর্দার `pumpAndSettle` কখনো আটকায় না; চলন পরীক্ষা [animateInTests] চালু করে।
 class CopilotMark extends StatefulWidget {
-  const CopilotMark({super.key, this.size = 26, this.busy = false});
+  const CopilotMark({super.key, this.size = 26, this.busy = false, this.animate = true});
 
   final double size;
 
   /// Copilot শুনছে বা উত্তর ভাবছে — একই চলন দ্বিগুণ জোরে
   final bool busy;
+
+  /// false = স্থির, পুরো আঁকা — তালিকার সারিতে, যতক্ষণ সারি ফোকাস পায়নি ([row])
+  final bool animate;
+
+  /// ⭐ মেনু আর খোঁজার সারির চিহ্ন (`RowMark`) — তালিকায় সব সারি একসাথে নড়ে না: স্থির, সারি ফোকাস পেলে তবেই চলে
+  /// (মালিক, ২১ নভেম্বর ২০২৬)
+  static Widget row(double size) => _RowMark(size: size);
 
   /// ⓘ নমুনার ঢাল — সবুজ-নীল → নীল → বেগুনি
   static const colors = [Color(0xFF2EF2E6), Color(0xFF7AA2FF), Color(0xFFD36BFF)]; // dark-ok: ব্র্যান্ডের চিহ্ন, দুই মোডেই একই
@@ -61,11 +68,12 @@ class _CopilotMarkState extends State<CopilotMark> with SingleTickerProviderStat
   @override
   void didUpdateWidget(CopilotMark oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.busy != widget.busy) _follow();
+    if (oldWidget.busy != widget.busy || oldWidget.animate != widget.animate) _follow();
   }
 
   void _follow() {
-    final still = (MediaQuery.maybeDisableAnimationsOf(context) ?? false) ||
+    final still = !widget.animate ||
+        (MediaQuery.maybeDisableAnimationsOf(context) ?? false) ||
         (MediaQuery.maybeAccessibleNavigationOf(context) ?? false) ||
         (_underTest && !CopilotMark.animateInTests);
     _still = still;
@@ -96,6 +104,19 @@ class _CopilotMarkState extends State<CopilotMark> with SingleTickerProviderStat
         ),
       ),
     );
+  }
+}
+
+/// ⓘ সারির চিহ্ন — কাছের Focus (সারির InkWell-এর) নিজে ফোকাস পেলে চলে, হারালে আবার স্থির
+class _RowMark extends StatelessWidget {
+  const _RowMark({required this.size});
+
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final focused = Focus.maybeOf(context)?.hasPrimaryFocus ?? false;
+    return CopilotMark(size: size, animate: focused);
   }
 }
 

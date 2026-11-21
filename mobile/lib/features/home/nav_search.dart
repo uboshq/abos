@@ -7,6 +7,7 @@ import '../../core/records/customer_record.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/row_icon.dart';
 
 /// One customer the search found — from the customers already synced to this
 /// phone, never a server call.
@@ -172,7 +173,7 @@ class NavSearchDelegate extends SearchDelegate<NavPick?> {
             key: ValueKey('hit-${row.path}'),
             // ⓘ তালিকার সারি অন্তত ৭২dp (নকশার নিয়ম ০.৪.৩৮ §২)
             minTileHeight: 72,
-            leading: _Dot(color: AppColors.moduleSolid(row.module), icon: row.icon),
+            leading: _Dot(color: AppColors.moduleSolid(row.module), icon: row.icon, mark: row.mark),
             title: Text(row.label),
             // ⓘ ওয়েবের পর্দা হলে বলে দেয় — খোলে অ্যাপের ভিতরেই
             subtitle: Text(
@@ -214,10 +215,13 @@ class _Heading extends StatelessWidget {
 }
 
 class _Dot extends StatelessWidget {
-  const _Dot({required this.color, required this.icon});
+  const _Dot({required this.color, required this.icon, this.mark});
 
   final Color color;
   final IconData icon;
+
+  /// পর্দার নিজের চিহ্ন (Copilot-এর "Ai") — [icon]-এর বদলে
+  final RowMark? mark;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -225,6 +229,7 @@ class _Dot extends StatelessWidget {
         height: 36,
         decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
         // ⓘ moduleSolid সাদার সাথে ৩:১ মেপে বানানো — আইকন দুই মোডেই সাদা (AppColors.onPrimary)
-        child: Icon(icon, color: AppColors.onPrimary, size: 20), // dark-ok
+        alignment: Alignment.center,
+        child: mark?.call(26) ?? Icon(icon, color: AppColors.onPrimary, size: 20), // dark-ok
       );
 }

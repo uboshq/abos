@@ -1,3 +1,5 @@
+import 'package:abos_mobile/core/navigation/nav_catalog.dart';
+import 'package:abos_mobile/core/widgets/row_icon.dart';
 import 'package:abos_mobile/features/copilot/copilot_mark.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,6 +67,41 @@ void main() {
     await tester.pumpWidget(host(const CopilotMark(size: 40)));
     await tester.pump(const Duration(milliseconds: 1000));
     expect(painterOf(tester).storySeconds, closeTo(3.0, 0.02), reason: 'আবার স্বাভাবিক গতি, যেখানে ছিল সেখান থেকে');
+  });
+
+  testWidgets('the Copilot screen carries the mark, and its menu row draws it instead of the brain', (tester) async {
+    final def = NavCatalog.screenDef('copilot')!;
+    expect(def.mark, isNotNull, reason: 'মেনু আর খোঁজার সারিতে "Ai" চিহ্ন');
+    await tester.pumpWidget(host(RowIcon(def.icon, module: def.module, mark: def.mark)));
+    expect(find.byType(CopilotMark), findsOneWidget);
+    expect(find.byIcon(def.icon), findsNothing, reason: 'পুরনো মগজ আর নেই');
+    expect(tester.getSize(find.byType(CopilotMark)), const Size(26, 26));
+    // ⓘ অন্য পর্দার সারি আগের মতো আইকনেই
+    await tester.pumpWidget(host(const RowIcon(Icons.receipt_long)));
+    expect(find.byIcon(Icons.receipt_long), findsOneWidget);
+    expect(find.byType(CopilotMark), findsNothing);
+  });
+
+  testWidgets('in a list the row mark stays still; it runs only while its row is focused', (tester) async {
+    final node = FocusNode();
+    addTearDown(node.dispose);
+    await tester.pumpWidget(host(Material(
+      child: InkWell(focusNode: node, onTap: () {}, child: const RowIcon(Icons.psychology_outlined, mark: CopilotMark.row)),
+    )));
+    await tester.pump(const Duration(seconds: 2));
+    expect(painterOf(tester).storySeconds, isNull, reason: 'তালিকায় স্থির');
+    expect(tester.hasRunningAnimations, isFalse);
+
+    node.requestFocus();
+    await tester.pump(); // ⓘ ফোকাস বদল এই ফ্রেমের পরে পৌঁছায়, চিহ্ন পরের ফ্রেমে ঘড়ি চালায়
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(painterOf(tester).storySeconds, greaterThan(0.9), reason: 'ফোকাস পেলে চলে');
+
+    node.unfocus();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    expect(painterOf(tester).storySeconds, isNull, reason: 'ফোকাস হারালে আবার স্থির');
   });
 
   testWidgets('golden — the mark at rest', (tester) async {
