@@ -51,17 +51,22 @@
         $kind = (string) $r['kind'];
 
         if (in_array($r['verb'] ?? '', ['returned_to_draft', 'rejected', 'cancelled'], true)) {
-            return ['undo', '#e11d48'];
+            return ['undo', 'var(--color-dash-e11d48)'];
         }
 
         return match (true) {
-            str_contains($kind, 'receipt') || str_contains($kind, 'collection') || str_contains($kind, 'deposit') => ['deposit', '#16a34a'],
-            str_contains($kind, 'voucher') || str_contains($kind, 'journal') => ['doc', '#2563eb'],
-            str_contains($kind, 'sales') || str_contains($kind, 'order') || str_contains($kind, 'invoice') => ['tag', '#ea580c'],
-            str_contains($kind, 'payment') || str_contains($kind, 'purchase') => ['cart', '#7c3aed'],
-            default => ['doc', '#475569'],
+            str_contains($kind, 'receipt') || str_contains($kind, 'collection') || str_contains($kind, 'deposit') => ['deposit', 'var(--color-dash-16a34a)'],
+            str_contains($kind, 'voucher') || str_contains($kind, 'journal') => ['doc', 'var(--color-dash-2563eb)'],
+            str_contains($kind, 'sales') || str_contains($kind, 'order') || str_contains($kind, 'invoice') => ['tag', 'var(--color-dash-ea580c)'],
+            str_contains($kind, 'payment') || str_contains($kind, 'purchase') => ['cart', 'var(--color-dash-7c3aed)'],
+            default => ['doc', 'var(--color-dash-475569)'],
         };
     };
+
+    // ⓘ সংখ্যার রং — অ্যাপের চুক্তিতে হেক্স আসে ([[ProfileFacts]]), পর্দায় রূপের টোকেন (একই রঙের `--color-dash-…`)
+    $statTone = fn (string $hex): string => preg_match('/^#([0-9a-f]{6})$/i', $hex, $m) === 1
+        ? 'var(--color-dash-'.strtolower($m[1]).', '.$hex.')'
+        : 'var(--color-brand-600)';
 
     $date = function (?string $ymd): ?string {
         if ($ymd === null) {
@@ -75,7 +80,7 @@
     $card = 'rounded-[14px] border border-(--color-border) bg-(--color-surface-card) px-5 py-[18px]';
     $btn = 'inline-flex h-[38px] items-center gap-2 rounded-[10px] border border-(--color-border) bg-(--color-surface-card) px-4 text-sm font-semibold text-(--color-ink) hover:bg-(--color-surface-sunken)';
     $btnPri = 'inline-flex h-[38px] items-center gap-2 rounded-[10px] border border-(--color-brand-700) bg-(--color-brand-700) px-4 text-sm font-semibold text-(--color-ink-inverse) hover:opacity-90';
-    $soon = '<i class="ms-0.5 rounded-full bg-[#fef3c7] px-1.5 text-[10px] font-bold not-italic leading-4 text-[#92400e]">'.e(__('profile.soon')).'</i>';
+    $soon = '<i class="ms-0.5 rounded-full bg-(--color-badge-warning-bg) px-1.5 text-[10px] font-bold not-italic leading-4 text-(--color-badge-warning-ink)">'.e(__('profile.soon')).'</i>';
     $row = 'flex items-center gap-3 border-t border-(--color-border) py-[11px] first:border-t-0 first:pt-0';
     $title = $self ? __('profile.title') : ($asOther ? __('profile.as_others_see') : __('profile.their_title'));
 @endphp
@@ -91,10 +96,9 @@
                 <a href="{{ route('people.profile', ['user' => $p['public_id'], 'as' => 'other']) }}" class="{{ $btn }}" data-me-as-others>
                     {!! $i('eye', 17) !!}{{ __('profile.as_others_see') }}
                 </a>
-                <label class="{{ $btn }} cursor-pointer" data-me-cover-head>
+                {{-- ⓘ বোতামটা লুকানো মলাট-ঘরের লেবেল ([[x-ui.file-input]], নিচের ফর্মে); বাছলেই জমা — `data-action="submit-form"` --}}
+                <label for="me-cover-file" class="{{ $btn }} cursor-pointer" data-me-cover-head>
                     {!! $i('camera', 17) !!}{{ __('profile.change_cover') }}
-                    <input type="file" form="me-cover-form" name="cover" accept="image/jpeg,image/png" class="sr-only"
-                           onchange="this.form.requestSubmit()">
                 </label>
             @elseif ($asOther)
                 <span class="text-sm text-(--color-ink-muted)">{{ __('profile.as_others_note') }}</span>
@@ -112,24 +116,32 @@
 
         @if ($self)
             {{-- ⓘ মলাটের ফর্ম একটা, দুই বোতাম তাকে চালায় (মাথার আর মলাটের কোণের) --}}
-            <form id="me-cover-form" method="POST" action="{{ route('profile.cover') }}" enctype="multipart/form-data" class="hidden">@csrf</form>
-            <form id="me-photo-form" method="POST" action="{{ route('profile.avatar') }}" enctype="multipart/form-data" class="hidden">@csrf</form>
+            {{-- ⓘ আসল ফাইল-ঘর বাংলা কম্পোনেন্টের ([[x-ui.file-input]]); চোখে পড়ে কেবল ক্যামেরার বোতামগুলো, যারা এর লেবেল --}}
+            <form id="me-cover-form" method="POST" action="{{ route('profile.cover') }}" enctype="multipart/form-data" class="hidden">
+                @csrf
+                <x-ui.file-input id="me-cover-file" name="cover" accept="image/jpeg,image/png" data-action="submit-form" />
+            </form>
+            <form id="me-photo-form" method="POST" action="{{ route('profile.avatar') }}" enctype="multipart/form-data" class="hidden">
+                @csrf
+                <x-ui.file-input id="me-photo-file" name="avatar" accept="image/jpeg,image/png,image/webp"
+                                 x-on:change="$store.scanner ? $store.scanner.begin($el, 'face', { submit: true }) : $el.form.requestSubmit()" />
+            </form>
         @endif
 
         {{-- ═══ মলাট আর ছবি ═══ --}}
         <section class="overflow-hidden rounded-2xl border border-(--color-border) bg-(--color-surface-card)" data-me-head>
             <div class="relative h-[300px] max-md:h-[180px]" data-me-cover
                  @if (! $p['cover_url'])
-                     style="background: linear-gradient(120deg, {{ $p['company_colour'] ?? '#0b3b8f' }} 0%, #2563eb 48%, #22d3ee 100%)"
+                     style="background: linear-gradient(120deg, {{ $p['company_colour'] ?? 'var(--color-brand-900)' }} 0%, var(--color-dash-2563eb) 48%, var(--color-dash-06b6d4) 100%)"
                  @endif>
                 @if ($p['cover_url'])
                     <img src="{{ $p['cover_url'] }}" alt="" class="absolute inset-0 h-full w-full object-cover">
                 @else
                     {{-- ⓘ নমুনার হালকা পাহাড় আর সূর্য --}}
-                    <svg class="absolute inset-0 h-full w-full" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-                        <circle cx="305" cy="50" r="22" fill="#fff" opacity=".5"/>
-                        <path d="M0 112C60 74 112 86 160 104S262 64 322 90 380 98 400 86V160H0z" fill="#fff" opacity=".16"/>
-                        <path d="M0 138C80 108 140 122 200 132S320 106 400 124V160H0z" fill="#fff" opacity=".26"/>
+                    <svg class="absolute inset-0 h-full w-full text-white" viewBox="0 0 400 160" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                        <circle cx="305" cy="50" r="22" fill="currentColor" opacity=".5"/>
+                        <path d="M0 112C60 74 112 86 160 104S262 64 322 90 380 98 400 86V160H0z" fill="currentColor" opacity=".16"/>
+                        <path d="M0 138C80 108 140 122 200 132S320 106 400 124V160H0z" fill="currentColor" opacity=".26"/>
                     </svg>
                     @if ($self)
                         <span class="absolute start-5 top-4 rounded-full bg-black/30 px-3 py-0.5 text-[13px] text-white">{{ __('profile.cover_default') }}</span>
@@ -144,10 +156,8 @@
                                 <button type="submit" class="inline-flex items-center gap-1.5 rounded-full bg-black/50 px-3.5 py-[7px] text-sm font-semibold text-white">{{ __('profile.remove_cover') }}</button>
                             </form>
                         @endif
-                        <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-black/50 px-3.5 py-[7px] text-sm font-semibold text-white" data-me-cover-button>
+                        <label for="me-cover-file" class="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-black/50 px-3.5 py-[7px] text-sm font-semibold text-white" data-me-cover-button>
                             {!! $i('camera', 15) !!}{{ __('profile.change_cover') }}
-                            <input type="file" form="me-cover-form" name="cover" accept="image/jpeg,image/png" class="sr-only"
-                                   onchange="this.form.requestSubmit()">
                         </label>
                     </div>
                 @endif
@@ -155,7 +165,7 @@
 
             <div class="flex flex-wrap items-end gap-6 px-8 pb-[22px] max-md:px-4">
                 <div class="relative -mt-[88px] size-[176px] shrink-0 max-md:-mt-[60px] max-md:size-[120px]" data-me-avatar>
-                    <div class="grid size-full place-items-center overflow-hidden rounded-full border-[6px] border-(--color-surface-card) bg-linear-135 from-[#f59e0b] to-[#ea580c] text-[62px] font-bold text-white max-md:text-[42px]">
+                    <div class="grid size-full place-items-center overflow-hidden rounded-full border-[6px] border-(--color-surface-card) bg-linear-135 from-(--color-dash-f59e0b) to-(--color-dash-ea580c) text-[62px] font-bold text-white max-md:text-[42px]">
                         @if ($p['photo_url'])
                             <img src="{{ $p['photo_url'] }}" alt="{{ $p['name'] }}" class="h-full w-full object-cover">
                         @else
@@ -164,11 +174,9 @@
                     </div>
                     @if ($self)
                         {{-- ⓘ ছবির কোণের ক্যামেরা — গোলের বাইরের খোলসে, তাই গোলের overflow তাকে কাটে না --}}
-                        <label class="absolute end-1 bottom-2 grid size-[42px] cursor-pointer place-items-center rounded-full border-2 border-(--color-surface-card) bg-(--color-brand-50) text-(--color-brand-700)"
+                        <label for="me-photo-file" class="absolute end-1 bottom-2 grid size-[42px] cursor-pointer place-items-center rounded-full border-2 border-(--color-surface-card) bg-(--color-brand-50) text-(--color-brand-700)"
                                title="{{ __('profile.change_photo') }}" aria-label="{{ __('profile.change_photo') }}" data-me-photo-button>
                             {!! $i('camera', 21) !!}
-                            <input type="file" form="me-photo-form" name="avatar" accept="image/jpeg,image/png,image/webp" class="sr-only"
-                                   x-data x-on:change="$store.scanner ? $store.scanner.begin($el, 'face', { submit: true }) : $el.form.requestSubmit()">
                         </label>
                     @endif
                 </div>
@@ -236,9 +244,9 @@
                                     </small>
                                 </div>
                                 <form method="POST" action="{{ route('me.devices.forget', $d['id']) }}"
-                                      onsubmit="return confirm(@js(__('profile.remove_phone_confirm')))">
+                                      data-confirm="{{ __('profile.remove_phone_confirm') }}" data-confirm-tone="danger">
                                     @csrf @method('DELETE')
-                                    <button type="submit" class="rounded-full border border-[#f3b4c1] px-2.5 py-0.5 text-xs font-semibold text-[#e11d48]">{{ __('profile.remove_phone') }}</button>
+                                    <button type="submit" class="rounded-full border border-(--color-badge-danger-bg) px-2.5 py-0.5 text-xs font-semibold text-(--color-badge-danger-ink)">{{ __('profile.remove_phone') }}</button>
                                 </form>
                             </div>
                         @empty
@@ -295,7 +303,7 @@
                             <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
                                 @foreach ($month['stats'] as $s)
                                     <div class="flex items-center gap-3.5 rounded-[14px] border border-(--color-border) bg-(--color-surface-card) px-[18px] py-4" data-me-stat="{{ $s['key'] }}">
-                                        <span class="grid size-[46px] shrink-0 place-items-center rounded-xl text-white" style="background: {{ $s['tone'] }}">{!! $i($s['icon'], 24) !!}</span>
+                                        <span class="grid size-[46px] shrink-0 place-items-center rounded-xl text-white" style="background: {{ $statTone($s['tone']) }}">{!! $i($s['icon'], 24) !!}</span>
                                         <div class="min-w-0">
                                             <small class="block text-sm text-(--color-ink-muted)">{{ $s['label'] }}</small>
                                             <b class="num block text-2xl font-bold whitespace-nowrap">{{ $s['value'] }}</b>

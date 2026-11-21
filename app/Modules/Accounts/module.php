@@ -1228,6 +1228,11 @@ return [
         ],
     ],
 
+    // ⭐ প্রোফাইলের "এই মাসে আমার কাজ" — পোস্ট করা ভাউচার ([[ContributesToAProfile]]; ২১ নভেম্বর ২০২৬)
+    'profile' => [
+        \App\Modules\Accounts\Profile\AccountsProfile::class,
+    ],
+
     // ⭐ ফোনের হোম-স্ক্রিন উইজেট — টাকা হাতে, খরচ, লাভ, ব্যাংক মেলানো (cb, ২০ অক্টোবর ২০২৬; [[WidgetSummaries]])
     'phone_widgets' => [
         \App\Modules\Accounts\Widgets\MoneyInHandSummary::class,

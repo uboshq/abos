@@ -516,7 +516,15 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     //      আলাদা পাতায় পড়ত; কেবল না-মেলা সারি, প্রতিটা ২০০-তে বাঁধা
     // ⓘ ৫২৪ → ৫২৫ (২০ নভেম্বর ২০২৬, সব মডিউলের ড্যাশবোর্ড — মালিকের নমুনা RoPEayT7 "ok"): +১ MoneyIsNeverAFloat::FLOAT_IS_DELIBERATE
     //   `app/Core/Dashboard/Viz/Svg.php` — SVG আঁকার মাপ, টাকা নয়; মডিউলের গ্রাফের তথ্য স্ট্রিং/পূর্ণসংখ্যায় আসে, float কেবল এই এক জায়গায়
-    private const CEILING = 525;
+    // ⓘ ৫২৫ → ৫৩৪ (২১ নভেম্বর ২০২৬, নতুন প্রোফাইল পাতা — মালিকের নমুনা গ "ok"; Mac run rc138-par3):
+    //   +৪ EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER — me.profile, me.devices.forget, profile.cover, profile.cover.remove: নিজের
+    //      পাতা, নিজের ফোন, নিজের মলাট; কেবল `$request->user()`, ঠিকানায় অন্যের id নেই (`profile.avatar`-এর জাত)
+    //   +৪ EveryRouteIsGuardedTest::TOKEN_SYNC — api.me.profile, api.me.today, api.me.cover.store / .destroy: ফোনের একই চারটা
+    //      (`api.me.photo.*`-এর জাত)
+    //   +১ EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — profile.cover: ছবি, কাগজ নয়, শাখা লাগে না
+    //   ⓘ অন্যের পাতা (people.profile, api.users.profile) ছাড় নেয়নি: পাহারা নীতিতে, `authorize('seeProfile')` →
+    //      UserPolicy::seeProfile, সহকর্মী না হলে ৪০৪ — মুখের দরজার (`seeFace`) একই সিদ্ধান্ত
+    private const CEILING = 534;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

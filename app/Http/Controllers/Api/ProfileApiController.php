@@ -34,6 +34,9 @@ final class ProfileApiController extends Controller
 
         abort_if($owner === null || ! $this->facts->opens($viewer, $owner), 404);
 
+        // ⛔ সহকর্মী না হলে ৪০৪ — নীতিতেও একই প্রশ্ন ([[UserPolicy::seeProfile()]]); কোম্পানিহীন মানুষ মিডলওয়্যারেই ৪০৪ পান
+        $this->authorize('seeProfile', $owner);
+
         return response()->json($this->facts->for($viewer, $owner, $this->limit($request), true));
     }
 

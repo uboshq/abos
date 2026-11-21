@@ -497,6 +497,11 @@ return [
         ],
     ],
 
+    // ⭐ প্রোফাইলের পরিচয় — পদ, ফোন, কর্মী নম্বর, যোগদান ([[ContributesToAProfile]]; ২১ নভেম্বর ২০২৬)
+    'profile' => [
+        \App\Modules\Hr\Profile\EmployeeProfile::class,
+    ],
+
     // ⭐ ফোনের হোম-স্ক্রিনে ১৯ আমার উপস্থিতি — নিজেরটাই, বেতন নয় (a6, ২০ অক্টোবর ২০২৬)
     'phone_widgets' => [
         \App\Modules\Hr\Widgets\AttendanceSummary::class,

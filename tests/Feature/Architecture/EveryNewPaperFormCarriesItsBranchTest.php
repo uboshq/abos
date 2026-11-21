@@ -113,6 +113,7 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'paper.share' => 'a share link for an existing paper',
         'password.email' => 'password reset mail',
         'profile.avatar' => 'personal profile',
+        'profile.cover' => 'personal cover photo on own profile, a picture not a business paper, no branch',
         'profile.email.request' => 'personal profile',
         'promotion.coupon.redeem' => 'counts a coupon on the sale in progress; the sale door is guarded',
         'purchase.direct.overview' => 'summary before confirm, writes nothing',

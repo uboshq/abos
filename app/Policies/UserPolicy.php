@@ -75,6 +75,19 @@ class UserPolicy
             : Response::denyAsNotFound();
     }
 
+    /**
+     * ⭐ একজনের প্রোফাইল পাতা দেখা — নিজে, নয়তো এই চালু কোম্পানির চালু সহকর্মী ([[ProfileFacts::opens()]]; ২১ নভেম্বর ২০২৬)।
+     *
+     * ⛔ না হলে ৪০৪, ৪০৩ নয় (`denyAsNotFound`) — মুখের একই নিয়ম: অন্য কোম্পানির কেউ যেন জানতেও না পারেন ঐ id-র মানুষটা আছেন।
+     * ⓘ ডাকে [[App\Http\Controllers\ProfilePageController::show()]] আর [[App\Http\Controllers\Api\ProfileApiController::show()]]।
+     */
+    public function seeProfile(User $viewer, User $owner): Response
+    {
+        return app(\App\Core\Services\ProfileFacts::class)->opens($viewer, $owner)
+            ? Response::allow()
+            : Response::denyAsNotFound();
+    }
+
     public function update(User $actor, User $target): bool
     {
         if (! $actor->can('system_admin.user.manage')) {

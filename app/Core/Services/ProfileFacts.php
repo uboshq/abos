@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Core\Services;
 
+use App\Core\Contracts\ContributesToAProfile;
 use App\Core\Engines\Drill\DrillResolver;
+use App\Core\Module\ModuleRegistry;
 use App\Core\Support\CompanyContext;
-use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Core\Support\RoleLabel;
 use App\Models\AuditTrail;
@@ -45,18 +46,45 @@ final class ProfileFacts
     public const HIDDEN = ['phone', 'email', 'stats', 'devices', 'security'];
 
     /** খাতার যে ঘটনাগুলো "আমার কাজ" — দেখা বা ছোট বদল নয়, কাগজে সিদ্ধান্ত */
-    private const ACTIONS = ['created', 'confirmed', 'approved', 'rejected', 'cancelled', 'returned_to_draft', 'reopened'];
+    /** সংখ্যার চেহারা — ধরন, চিহ্ন, রং (নমুনার ঘ-৬); মান আসে মডিউল থেকে */
+    private const STAT_LOOK = [
+        'sales_total' => ['sales', 'tag', '#16a34a'],
+        'my_sales' => ['sales', 'tag', '#16a34a'],
+        'my_orders' => ['orders', 'cart', '#ea580c'],
+        'target' => ['target', 'chart', '#4f46e5'],
+        'approvals_given' => ['approvals', 'approve', '#e11d48'],
+        'vouchers_posted' => ['vouchers', 'doc', '#2563eb'],
+        'deposits_matched' => ['deposits', 'deposit', '#7c3aed'],
+    ];
+
+    private const ACTIONS =['created', 'confirmed', 'approved', 'rejected', 'cancelled', 'returned_to_draft', 'reopened'];
 
     public function __construct(
         private readonly DrillResolver $drill,
         private readonly DataScope $scope,
         private readonly AvatarService $avatars,
+        private readonly ModuleRegistry $modules,
     ) {}
+
+    /** @var list<ContributesToAProfile>|null */
+    private ?array $providers = null;
 
     /** ⛔ প্রোফাইল খোলে কি না — নিজে, নয়তো একই চালু কোম্পানির চালু সহকর্মী */
     public function opens(User $viewer, User $owner): bool
     {
-        return (int) $viewer->getKey() === (int) $owner->getKey() || $this->avatars->visibleTo($viewer, $owner);
+        if ((int) $viewer->getKey() === (int) $owner->getKey()) {
+            return true;
+        }
+
+        // ⛔ সহকর্মী এই চালু কোম্পানিতেই — অন্য কোনো কোম্পানিতে একসাথে থাকলেও এখানকার পাতা (কাজ, শাখা) তাঁর নয়; কোম্পানি না থাকলে কেউ নয়
+        $company = CompanyContext::id();
+
+        return $company !== null
+            && $this->avatars->visibleTo($viewer, $owner)
+            && DB::table('company_user')->where('company_id', $company)->where('is_active', true)
+                ->where('user_id', $owner->getKey())->exists()
+            && DB::table('company_user')->where('company_id', $company)->where('is_active', true)
+                ->where('user_id', $viewer->getKey())->exists();
     }
 
     /** ফোন, ইমেইল, কাজের সংখ্যা — নিজে বা মালিক */
@@ -75,13 +103,13 @@ final class ProfileFacts
     {
         $self = (int) $viewer->getKey() === (int) $owner->getKey();
         $private = $this->seesPrivate($viewer, $owner);
-        $employee = $this->employeeOf($owner);
+        $identity = $this->identityOf($owner);
 
         return [
             'public_id' => (string) $owner->public_id,
             'name' => (string) $owner->name,
             'initial' => $owner->initial(),
-            'designation' => $this->designationOf($owner, $employee),
+            'designation' => $this->designationOf($owner, $identity),
             'company' => $this->companyName(),
             'branch' => $this->branchOf($owner, $self),
             'company_colour' => $this->companyColour(),
@@ -89,7 +117,7 @@ final class ProfileFacts
             'cover_url' => $this->coverUrlOf($owner, $absolute),
             'self' => $self,
             'can_edit' => $self,
-            'about' => $private ? $this->about($owner, $employee) : null,
+            'about' => $private ? $this->about($owner, $identity) : null,
             'month' => $private ? $this->month($owner) : null,
             'recent' => $this->recent($owner, max(1, min(20, $recent))),
             'hidden' => $self ? [] : ($private ? ['devices', 'security'] : self::HIDDEN),
@@ -99,55 +127,74 @@ final class ProfileFacts
     // ── পরিচয় ───────────────────────────────────────────────────────────
 
     /** @return array{phone: ?string, email: ?string, employee_no: ?string, joined_on: ?string, role: ?string, branches: ?string} */
-    private function about(User $owner, ?Model $employee): array
+    private function about(User $owner, array $identity): array
     {
-        $phone = trim((string) ($owner->mobile ?? '')) ?: trim((string) ($employee?->getAttribute('mobile') ?? ''));
-        $joined = $employee?->getAttribute('joining_date');
+        $phone = trim((string) ($owner->mobile ?? '')) ?: trim((string) ($identity['phone'] ?? ''));
 
         return [
             'phone' => $phone !== '' ? $phone : null,
             'email' => filled($owner->email) ? (string) $owner->email : null,
-            'employee_no' => filled($employee?->getAttribute('code')) ? (string) $employee->getAttribute('code') : null,
-            'joined_on' => $joined instanceof CarbonInterface ? $joined->toDateString() : null,
+            'employee_no' => filled($identity['employee_no'] ?? null) ? (string) $identity['employee_no'] : null,
+            'joined_on' => filled($identity['joined_on'] ?? null) ? (string) $identity['joined_on'] : null,
             'role' => $this->rolesOf($owner),
             'branches' => $this->branchesOf($owner),
         ];
     }
 
-    private function employeeOf(User $owner): ?Model
+    /**
+     * ⭐ যে মডিউলগুলো প্রোফাইলে কিছু বলে — `module.php` → `profile` ([[ContributesToAProfile]])। ⓘ কোর কারও নাম জানে না।
+     *
+     * @return list<ContributesToAProfile>
+     */
+    private function providers(): array
     {
-        $class = \App\Modules\Hr\Models\Employee::class;
-
-        if (! class_exists($class)) {
-            return null;
+        if ($this->providers !== null) {
+            return $this->providers;
         }
 
-        try {
-            return $class::query()->withoutGlobalScopes()
-                ->where('company_id', CompanyContext::id())
-                ->where('user_id', $owner->getKey())
-                ->whereNull('deleted_at')
-                ->with('designation')
-                ->orderBy('id')
-                ->first();
-        } catch (\Throwable) {
-            // ⓘ HR বন্ধ বা টেবিল নেই — পরিচয়ের ঐ ঘরগুলো খালি, পাতা চলে
-            return null;
+        $out = [];
+
+        foreach ($this->modules->all() as $module) {
+            foreach ($module->profile as $class) {
+                $out[] = app($class);
+            }
         }
+
+        return $this->providers = $out;
     }
 
-    private function designationOf(User $owner, ?Model $employee): ?string
+    /**
+     * ⓘ পরিচয়ের ঘর — প্রথম যে মডিউল একটা ঘর জানে তার উত্তর (HR: পদ, ফোন, কর্মী নম্বর, যোগদান)।
+     *
+     * @return array<string, ?string>
+     */
+    private function identityOf(User $owner): array
     {
-        $designation = $employee?->getRelationValue('designation');
+        $out = [];
 
-        if ($designation instanceof Model) {
-            $bn = (string) $designation->getAttribute('name_bn');
-            $en = (string) $designation->getAttribute('name_en');
-            $name = app()->getLocale() === 'bn' ? ($bn ?: $en) : ($en ?: $bn);
-
-            if ($name !== '') {
-                return $name;
+        foreach ($this->providers() as $provider) {
+            try {
+                $facts = $provider->identityOf($owner);
+            } catch (\Throwable) {
+                // ⓘ মডিউল বন্ধ বা টেবিল নেই — পরিচয়ের ঐ ঘরগুলো খালি, পাতা চলে
+                continue;
             }
+
+            foreach ($facts as $key => $value) {
+                if (! isset($out[$key]) && $value !== null && $value !== '') {
+                    $out[$key] = (string) $value;
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /** @param  array<string, ?string>  $identity */
+    private function designationOf(User $owner, array $identity): ?string
+    {
+        if (filled($identity['designation'] ?? null)) {
+            return (string) $identity['designation'];
         }
 
         // ⓘ কর্মীর খাতা বা পদ না থাকলে প্রথম রোলের নাম (মালিক → "মালিক")
@@ -282,21 +329,16 @@ final class ProfileFacts
     /** @return array{key: string, label: string, value: string, kind: string, icon: string, tone: string}|null */
     private function stat(string $key, User $owner, Carbon $from, Carbon $to): ?array
     {
-        try {
-            [$value, $kind, $icon, $tone] = match ($key) {
-                'sales_total' => [$this->taka($this->salesTotal(null, $from, $to)), 'sales', 'tag', '#16a34a'],
-                'my_sales' => [$this->taka($this->salesTotal($owner, $from, $to)), 'sales', 'tag', '#16a34a'],
-                'my_orders' => [number_format($this->ordersBy($owner, $from, $to)), 'orders', 'cart', '#ea580c'],
-                'target' => [$this->targetPercent($owner, $from), 'target', 'chart', '#4f46e5'],
-                'approvals_given' => [number_format($this->approvalsBy($owner, $from, $to)), 'approvals', 'approve', '#e11d48'],
-                'vouchers_posted' => [number_format($this->vouchersBy($owner, $from, $to)), 'vouchers', 'doc', '#2563eb'],
-                'deposits_matched' => [number_format($this->depositsBy($owner, $from, $to)), 'deposits', 'deposit', '#7c3aed'],
-                default => [null, '', '', ''],
-            };
-        } catch (\Throwable) {
-            // ⓘ মডিউল বন্ধ বা টেবিল নেই — এই সংখ্যাটা বাদ
+        $look = self::STAT_LOOK[$key] ?? null;
+
+        if ($look === null) {
             return null;
         }
+
+        [$kind, $icon, $tone] = $look;
+
+        // ⓘ অনুমোদন কোরের নিজের খাতা; বাকি সংখ্যা মডিউল দেয় ([[ContributesToAProfile]]) — যে প্রথম চেনে তার উত্তর
+        $value = $key === 'approvals_given' ? $this->approvalsGiven($owner, $from, $to) : $this->fromModules($key, $owner, $from, $to);
 
         if ($value === null) {
             return null;
@@ -305,66 +347,37 @@ final class ProfileFacts
         return ['key' => $key, 'label' => __('profile.stat.'.$key), 'value' => $value, 'kind' => $kind, 'icon' => $icon, 'tone' => $tone];
     }
 
-    private function salesTotal(?User $by, Carbon $from, Carbon $to): string
+    private function fromModules(string $key, User $owner, Carbon $from, Carbon $to): ?string
     {
-        return (string) \App\Modules\Sales\Models\SalesInvoice::acrossBranches()
-            ->whereIn('status', DocumentStatus::POSTED)
-            ->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
-            ->when($by !== null, fn ($q) => $q->where('created_by', $by->getKey()))
-            ->sum('total');
-    }
+        foreach ($this->providers() as $provider) {
+            try {
+                $value = $provider->stat($key, $owner, $from, $to);
+            } catch (\Throwable) {
+                // ⓘ মডিউল বন্ধ বা টেবিল নেই — এই সংখ্যাটা বাদ
+                continue;
+            }
 
-    private function ordersBy(User $by, Carbon $from, Carbon $to): int
-    {
-        return \App\Modules\Sales\Models\SalesOrder::acrossBranches()
-            ->where('created_by', $by->getKey())
-            ->whereIn('status', DocumentStatus::POSTED)
-            ->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
-            ->count();
-    }
-
-    private function targetPercent(User $by, Carbon $month): ?string
-    {
-        foreach (app(\App\Modules\Sales\Services\SalesTargetService::class)->scoreboard($month) as $row) {
-            if ((int) $row['user']->getKey() === (int) $by->getKey()) {
-                return $row['percent'] === null ? null : rtrim(rtrim((string) $row['percent'], '0'), '.').'%';
+            if ($value !== null) {
+                return $value;
             }
         }
 
-        // ⓘ লক্ষ্য বসানো নেই — ঘরটা বাদ, পরের সংখ্যা আসে
         return null;
     }
 
-    private function approvalsBy(User $by, Carbon $from, Carbon $to): int
+    private function approvalsGiven(User $by, Carbon $from, Carbon $to): ?string
     {
-        return DB::table('approval_decisions')
-            ->join('approvals', 'approvals.id', '=', 'approval_decisions.approval_id')
-            ->where('approvals.company_id', CompanyContext::id())
-            ->where('approval_decisions.user_id', $by->getKey())
-            ->where('approval_decisions.decision', 'approved')
-            ->whereBetween('approval_decisions.decided_at', [$from, $to])
-            ->count();
-    }
-
-    private function vouchersBy(User $by, Carbon $from, Carbon $to): int
-    {
-        return \App\Modules\Accounts\Models\Voucher::acrossBranches()
-            ->where('created_by', $by->getKey())
-            ->whereIn('status', DocumentStatus::POSTED)
-            ->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
-            ->count();
-    }
-
-    private function depositsBy(User $by, Carbon $from, Carbon $to): int
-    {
-        $class = \App\Modules\Sales\Models\DepositClaim::class;
-
-        return $class::query()->withoutGlobalScopes()
-            ->where('company_id', CompanyContext::id())
-            ->where('decided_by', $by->getKey())
-            ->where('status', $class::ACCEPTED)
-            ->whereBetween('decided_at', [$from, $to])
-            ->count();
+        try {
+            return number_format(DB::table('approval_decisions')
+                ->join('approvals', 'approvals.id', '=', 'approval_decisions.approval_id')
+                ->where('approvals.company_id', CompanyContext::id())
+                ->where('approval_decisions.user_id', $by->getKey())
+                ->where('approval_decisions.decision', 'approved')
+                ->whereBetween('approval_decisions.decided_at', [$from, $to])
+                ->count());
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     private function taka(string $amount): string
