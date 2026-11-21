@@ -327,6 +327,33 @@
                 @endforeach
             </dl>
 
+            {{-- ⭐ ভাড়া বা লোডিংয়ের ভাউচার — কাগজের বিস্তারিত: ভাড়া, মাধ্যম, ড্রাইভার, মোবাইল, গাড়ি, সব চালান, সব পয়েন্ট (মালিক,
+                 ২১ নভেম্বর ২০২৬, নমুনা v6 ক)। ⓘ সারি আর লেবেল কাগজের মালিক মডিউলের ([[ExplainsItsCostVoucher]]); এখানে কেবল আঁকা। --}}
+            @php
+                $costFacts = $forDoc instanceof \App\Core\Contracts\ExplainsItsCostVoucher ? $forDoc->costVoucherFacts() : null;
+            @endphp
+            @if ($costFacts !== null && $costFacts['rows'] !== [])
+                <div class="mt-3 border-t border-(--color-border) pt-3" data-voucher-cost-facts>
+                    <h3 class="mb-2 text-sm font-semibold">{{ $costFacts['title'] }}</h3>
+                    <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-3">
+                        @foreach ($costFacts['rows'] as $row)
+                            <div data-cost-fact="{{ $row['key'] }}">
+                                <dt class="text-2xs text-(--color-ink-muted)">{{ $row['label'] }}</dt>
+                                <dd @class(['text-sm', 'num' => $row['numeric'] ?? false])>
+                                    @if (! empty($row['links']))
+                                        @foreach ($row['links'] as $link)
+                                            @if ($link['url'])<a href="{{ $link['url'] }}" class="num text-(--color-link) hover:underline">{{ $link['label'] }}</a>@else<span class="num">{{ $link['label'] }}</span>@endif{{ $loop->last ? '' : ', ' }}
+                                        @endforeach
+                                    @else
+                                        {{ $row['value'] }}
+                                    @endif
+                                </dd>
+                            </div>
+                        @endforeach
+                    </dl>
+                </div>
+            @endif
+
             {{-- কে লিখল ও কে পোস্ট করল — নিয়ম ২। কাগজের ভাউচারে দুইটা
                  সই থাকে; পর্দাতেও দুইটা নাম থাকা দরকার। --}}
             <p class="mt-3 border-t border-(--color-border) pt-3 text-2xs text-(--color-ink-muted)">

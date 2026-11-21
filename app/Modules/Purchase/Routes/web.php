@@ -222,5 +222,8 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::post('/{return}/cancel', [PurchaseReturnController::class, 'cancel'])->whereNumber('return')->name('cancel');
     });
 
+    // ⭐ ক্রয়ের খরচ — ক্রয় ইনভয়েস/GRN অনুযায়ী (নমুনা v6 গ, ২১ নভেম্বর ২০২৬; [[PurchaseCostReportController]])
+    Route::get('/landed-cost', [\App\Modules\Purchase\Http\Controllers\PurchaseCostReportController::class, 'index'])->name('cost_report.index');
+
     Route::get('/reports/{slug}', [PurchaseReportController::class, 'show'])->name('report.show');
 });

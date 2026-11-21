@@ -35,7 +35,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * খতিয়ানে কিছু বসে না। মাল বেরোনো মানে বিক্রি নয় — ফেরত আসতে পারে, আর
  * দাম এখনো ঠিক হয়নি। আয় বসে বিলের দিনে।
  */
-class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
+class DeliveryChallan extends Model implements \App\Core\Contracts\ExplainsItsCostVoucher, Drillable, ShowsItselfForSigning
 {
     // ⭐ বিজ্ঞপ্তিতে "নাম · পয়েন্ট" ([[NamesItsCustomerInNotices]])
     use \App\Modules\Sales\Models\Concerns\NamesItsCustomerInNotices;
@@ -279,5 +279,11 @@ class DeliveryChallan extends Model implements Drillable, ShowsItselfForSigning
     public function drillRoute(): array
     {
         return ['sales.challan.show', ['challan' => $this->id]];
+    }
+
+    /** ⭐ ভাড়ার ভাউচার খুললে — ভাড়া, মাধ্যম, ড্রাইভার, মোবাইল, গাড়ি, চালান, পয়েন্ট (মালিক, ২১ নভেম্বর ২০২৬; [[CostNarration::facts()]]) */
+    public function costVoucherFacts(): array
+    {
+        return app(\App\Modules\Sales\Services\CostNarration::class)->facts($this);
     }
 }

@@ -81,7 +81,9 @@ final class ChallanLoading
             $challan,
             'loading_',
             (int) StandardChart::accountFor(StandardChart::LOADING)->id,
-            __('supplier::labour.loading_narration', ['no' => $challan->document_no]),
+            // ⭐ "লোডিং CH-…, পয়েন্ট: …" — মালিক, ২১ নভেম্বর ২০২৬ (নমুনা v6, ক; [[CostNarration]])। ⓘ খাতার সারি বদলানো যায় না,
+            //   তাই আগে বসা লোডিং আগের লেখাতেই থাকে — কেবল নতুনটা নতুন লেখা পায়
+            app(CostNarration::class)->loadingNarration($challan),
         );
 
         if ($lines === []) {

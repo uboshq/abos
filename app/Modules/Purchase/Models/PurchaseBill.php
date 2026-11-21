@@ -119,6 +119,9 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
 
         'carrier_id', 'carrier_name', 'transport_cost', 'vehicle_no', 'driver_name',
 
+        // ⭐ অন্যান্য খরচ — ঘাট, টোল ইত্যাদি; ভাড়ার মতোই আনার খরচ ([[PurchaseBillService::bringingInCost()]]; নমুনা v6 গ, ২১ নভেম্বর ২০২৬)
+        'other_cost',
+
         /*
          * ── আমদানি চালান — পাঁচটা ঘর, একই কারণে এখানে ─────────────
          *
@@ -166,6 +169,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
             // ⓘ বাকি টাকার ঘরগুলোর সমান মাপ — নাহলে যোগ-বিয়োগে
             // এক পয়সা করে হারাত, আর ধরা পড়ত মাস শেষে
             'transport_cost' => 'decimal:4',
+            'other_cost' => 'decimal:4',
             // ⭐ আনলোডিং (মালিক, ১৮ নভেম্বর ২০২৬) — কেবল সেবা বসায় ([[ChargesUnloading]])
             'unload_amount' => 'decimal:4',
             'unload_rate' => 'decimal:4',

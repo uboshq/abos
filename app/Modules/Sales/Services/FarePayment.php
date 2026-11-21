@@ -514,24 +514,13 @@ final class FarePayment
         return $account->isCash() ? 'cash' : ($account->isMfs() ? 'mfs' : 'transfer');
     }
 
+    /**
+     * ⭐ খাত — চালান, সব পয়েন্ট, গাড়ি (ড্রাইভার: নাম) — মালিক, ২১ নভেম্বর ২০২৬ (নমুনা v6, ক; [[CostNarration]])।
+     * ⓘ আগের লেখা ("…, বাহক বা চালক …") `narration_v1`-এ রইল, কেবল পুরনো ভাউচার চেনার জন্য ([[\App\Console\Commands\FareNarrations]])।
+     */
     private function narration(DeliveryChallan|Shipment $paper): string
     {
-        if ($paper instanceof Shipment) {
-            $paper->loadMissing('lines.challan');
-
-            return __('sales::fare.trip_narration', [
-                'trip' => $paper->document_no,
-                'challans' => $paper->lines->map(fn (ShipmentLine $l) => $l->challan?->document_no)->filter()->implode(', ') ?: '—',
-                'vehicle' => $paper->vehiclePlate() ?: '—',
-                'by' => $this->payee($paper) ?? '—',
-            ]);
-        }
-
-        return __('sales::fare.narration', [
-            'challan' => $paper->document_no,
-            'vehicle' => $paper->vehicle_no ?: ($paper->vehicle?->registration_no ?? '—'),
-            'by' => $this->payee($paper) ?? '—',
-        ]);
+        return app(CostNarration::class)->fareNarration($paper);
     }
 
     private function payee(DeliveryChallan|Shipment $paper): ?string

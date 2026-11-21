@@ -570,6 +570,15 @@
                                       px-2 text-2xs">
                     </div>
 
+                    {{-- ⭐ অন্যান্য খরচ (ঘাট, টোল …) — ঐচ্ছিক; ভাড়ার মতোই মালের দামে বসে (নমুনা v6 গ, ২১ নভেম্বর ২০২৬)।
+                         ⓘ সাধারণ ঘর, Alpine-এর মডেল নয় — ফর্মের সাথে সরাসরি যায়। --}}
+                    <input type="number" step="0.01" min="0" inputmode="decimal"
+                           name="other_cost" value="{{ old('other_cost') }}" data-other-cost
+                           placeholder="{{ __('purchase::field.other_cost') }}"
+                           aria-label="{{ __('purchase::field.other_cost') }}"
+                           class="num h-(--spacing-field-dense) w-full rounded-(--radius-field) border
+                                  border-(--color-border) bg-(--color-surface-card) px-2 text-end text-2xs">
+
                     <input type="text" name="driver_name" x-model="driverName"
                            placeholder="{{ __('purchase::field.driver_name') }}"
                            class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border

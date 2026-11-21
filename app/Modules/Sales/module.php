@@ -379,6 +379,9 @@ return [
                 'route_params' => ['slug' => 'monthly'], 'permission' => 'sales.report'],
             ['label' => 'sales::margin.report_title', 'icon' => 'reports', 'route' => 'sales.margin.report.show',
                 'route_params' => ['slug' => 'margin'], 'permission' => 'sales.margin.report'],
+            /* ⭐ ডেলিভারি খরচ — চালান অনুযায়ী, খরচ % আর সীমা (মালিক, ২১ নভেম্বর ২০২৬; [[DeliveryCostReport]]) */
+            ['label' => 'sales::delivery_cost.menu', 'icon' => 'reports', 'route' => 'sales.delivery_cost.index',
+                'permission' => 'sales.delivery_cost.report'],
             ['label' => 'sales::return_reason.report_title', 'icon' => 'refresh', 'route' => 'sales.return.report.show',
                 'route_params' => ['slug' => 'by-reason'], 'permission' => 'sales.return.report'],
             ['label' => 'sales::channel.report_title', 'icon' => 'share', 'route' => 'sales.report.show',
@@ -579,6 +582,8 @@ return [
         'sales.report',
         // ⓘ মার্জিনের রিপোর্ট — খরচ দেখায়, তাই নিজের চাবি (NEXUS §৩২ · [[MarginReport]])
         'sales.margin.report',
+        // ⓘ ডেলিভারি খরচের রিপোর্ট — খরচ দেখায়, তাই নিজের চাবি ([[DeliveryCostController]], ২১ নভেম্বর ২০২৬)
+        'sales.delivery_cost.report',
 
         /*
          * ক্রয়মূল্য ও মুনাফা দেখার অনুমতি — রিপোর্ট দেখার থেকে আলাদা।
@@ -1606,6 +1611,14 @@ return [
             'options' => ['warn', 'approval', 'block'],
             'option_label' => 'sales::margin.action_',
             'default' => 'warn',
+            'group' => 'limits',
+        ],
+        [
+            // ⭐ ডেলিভারি খরচের সীমা — খরচ % এর উপরে হলে রিপোর্টে চিহ্ন আর রং ([[DeliveryCostReport]], মালিক, ২১ নভেম্বর ২০২৬)
+            'key' => 'sales.delivery_cost.threshold_percent',
+            'label' => 'sales::delivery_cost.setting_threshold',
+            'type' => 'number',
+            'default' => 3,
             'group' => 'limits',
         ],
         [

@@ -39,6 +39,8 @@ class PurchaseBillRequest extends FormRequest
             'ait_amount' => ['nullable', 'numeric', 'min:0'],
             'vds_amount' => ['nullable', 'numeric', 'min:0'],
             'narration' => ['nullable', 'string', 'max:500'],
+            // ⭐ অন্যান্য খরচ (ঘাট, টোল …) — ঐচ্ছিক, ০ বা বেশি; ভাড়ার মতোই আনার খরচ (নমুনা v6 গ, ২১ নভেম্বর ২০২৬)
+            'other_cost' => ['nullable', 'numeric', 'min:0'],
 
             'lines' => ['required', 'array', 'min:1', 'max:500'],
             'lines.*.product_id' => ['required', 'integer',
@@ -131,6 +133,7 @@ class PurchaseBillRequest extends FormRequest
             'supplier_id', 'trx_date', 'due_on', 'supplier_bill_no', 'narration',
             // ⭐ উৎসে কর্তন — হিসাব #১
             'ait_amount', 'vds_amount',
+            'other_cost',
         ]);
     }
 

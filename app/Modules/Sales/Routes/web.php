@@ -623,6 +623,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
     });
     // ⓘ মার্জিনের রিপোর্ট — নিজের চাবি ([[MarginReportController]], NEXUS §৩২)
     Route::get('/margin/{slug}', [MarginReportController::class, 'show'])->name('margin.report.show');
+    // ⭐ ডেলিভারি খরচ — চালান অনুযায়ী, নিজের চাবি ([[DeliveryCostController]], নমুনা v6 খ, ২১ নভেম্বর ২০২৬)
+    Route::get('/delivery-cost', [\App\Modules\Sales\Http\Controllers\DeliveryCostController::class, 'index'])->name('delivery_cost.index');
 });
 
 /*
