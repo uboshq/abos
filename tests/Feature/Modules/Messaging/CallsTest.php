@@ -84,7 +84,7 @@ final class CallsTest extends TestCase
         $data = $this->phone($this->caller, 'POST', '/api/v1/messenger/calls', ['person' => (string) $this->callee->id, 'video' => true])
             ->assertCreated()->json('data');
 
-        $call = $this->call($data['call_id']);
+        $call = $this->findCall($data['call_id']);
         $this->assertSame(Call::RINGING, $call->status);
         $this->assertSame('call-'.$call->public_id, $data['room']);
         $this->assertSame('wss://rtc.example.test', $data['url']);
@@ -109,7 +109,7 @@ final class CallsTest extends TestCase
 
         $data = $this->phone($this->callee, 'POST', "/api/v1/messenger/calls/{$id}/answer")->assertOk()->json('data');
         $this->assertSame((string) $this->caller->id, $data['peer']['id']);
-        $this->assertSame(Call::ANSWERED, $this->call($id)->status);
+        $this->assertSame(Call::ANSWERED, $this->findCall($id)->status);
 
         $this->phone($this->callee, 'POST', "/api/v1/messenger/calls/{$id}/answer")
             ->assertStatus(409)->assertJsonPath('error', 'call_over');
@@ -124,7 +124,7 @@ final class CallsTest extends TestCase
 
         $this->phone($this->caller, 'POST', "/api/v1/messenger/calls/{$id}/end")->assertNoContent();
 
-        $this->assertSame(Call::MISSED, $this->call($id)->status);
+        $this->assertSame(Call::MISSED, $this->findCall($id)->status);
         Queue::assertPushed(SendCallEnd::class, fn (SendCallEnd $job): bool => $job->userId === (int) $this->callee->id
             && $job->status === Call::MISSED && $job->data()['type'] === 'call_end');
         Queue::assertPushed(SendPushToUser::class, fn (SendPushToUser $job): bool => $job->userId === (int) $this->callee->id
@@ -141,7 +141,7 @@ final class CallsTest extends TestCase
         $this->travel(95)->seconds();
         $this->phone($this->callee, 'POST', "/api/v1/messenger/calls/{$id}/end")->assertNoContent();
 
-        $call = $this->call($id);
+        $call = $this->findCall($id);
         $this->assertSame(Call::ENDED, $call->status);
         $this->assertSame(95, $call->duration_s);
         Queue::assertPushed(SendCallEnd::class, fn (SendCallEnd $job): bool => $job->userId === (int) $this->caller->id
@@ -162,7 +162,7 @@ final class CallsTest extends TestCase
         $this->phone($this->caller, 'POST', "/api/v1/messenger/calls/{$id}/decline")->assertForbidden();
         $this->phone($this->callee, 'POST', "/api/v1/messenger/calls/{$id}/decline")->assertNoContent();
 
-        $this->assertSame(Call::DECLINED, $this->call($id)->status);
+        $this->assertSame(Call::DECLINED, $this->findCall($id)->status);
         Queue::assertPushed(SendCallEnd::class, fn (SendCallEnd $job): bool => $job->userId === (int) $this->caller->id
             && $job->status === Call::DECLINED);
     }
@@ -173,11 +173,11 @@ final class CallsTest extends TestCase
 
         $this->travel(30)->seconds();
         $this->artisan('messenger:sweep-calls')->assertSuccessful();
-        $this->assertSame(Call::RINGING, $this->call($id)->status, 'missed too early');
+        $this->assertSame(Call::RINGING, $this->findCall($id)->status, 'missed too early');
 
         $this->travel(16)->seconds();
         $this->artisan('messenger:sweep-calls')->assertSuccessful();
-        $this->assertSame(Call::MISSED, $this->call($id)->status);
+        $this->assertSame(Call::MISSED, $this->findCall($id)->status);
 
         Queue::assertPushed(SendCallEnd::class, fn (SendCallEnd $job): bool => $job->userId === (int) $this->callee->id
             && $job->status === Call::MISSED);
@@ -191,7 +191,7 @@ final class CallsTest extends TestCase
 
         // no sweep ran — the answer itself finds the ring is over
         $this->phone($this->callee, 'POST', "/api/v1/messenger/calls/{$id}/answer")->assertStatus(409);
-        $this->assertSame(Call::MISSED, $this->call($id)->status);
+        $this->assertSame(Call::MISSED, $this->findCall($id)->status);
     }
 
     public function test_a_third_person_gets_404(): void
@@ -203,7 +203,7 @@ final class CallsTest extends TestCase
         }
 
         $this->assertSame([], $this->phone($this->stranger, 'GET', '/api/v1/messenger/calls')->assertOk()->json('data'));
-        $this->assertSame(Call::RINGING, $this->call($id)->status);
+        $this->assertSame(Call::RINGING, $this->findCall($id)->status);
     }
 
     public function test_calls_are_off_while_livekit_is_not_set_up(): void
@@ -239,7 +239,7 @@ final class CallsTest extends TestCase
             ->assertCreated()->json('data.call_id');
     }
 
-    private function call(string $publicId): Call
+    private function findCall(string $publicId): Call
     {
         return CompanyContext::forCompany($this->company->id, fn () => Call::query()->wherePublicId($publicId)->firstOrFail());
     }
