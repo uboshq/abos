@@ -38,7 +38,11 @@ class DepositRequestScreen extends StatefulWidget {
     this.galleryPicker,
     this.scanner,
     this.customers,
+    this.now = DateTime.now,
   });
+
+  /// আজকের ঘড়ি — পরীক্ষায় স্থির দিন (সোনালি ছবিতে আজকের তারিখ না বদলায়); না দিলে ফোনের ঘড়ি
+  final DateTime Function() now;
 
   /// দোকানের পাতা থেকে খুললে সেই দোকান; দ্রুত কাজ বা "জমা" থেকে খুললে null — পাতায় বাছা হয়
   final String? customerId;
@@ -69,7 +73,7 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
   final _once = OnceKey();
 
   String _method = 'bank';
-  DateTime _date = DateTime.now();
+  late DateTime _date = widget.now();
   int? _bank;
   String? _slip;
 
@@ -272,8 +276,8 @@ class _DepositRequestScreenState extends State<DepositRequestScreen> {
     final picked = await showDatePicker(
       context: context,
       initialDate: _date,
-      firstDate: DateTime.now().subtract(const Duration(days: 60)),
-      lastDate: DateTime.now(),
+      firstDate: widget.now().subtract(const Duration(days: 60)),
+      lastDate: widget.now(),
     );
     if (picked != null) setState(() => _date = picked);
   }

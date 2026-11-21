@@ -25,6 +25,7 @@ Future<AvatarChoice?> showAvatarMenu(
   required String branch,
   ImageProvider? avatar,
   bool canSwitchCompany = false,
+  String version = AppConfig.appVersion,
 }) =>
     showGeneralDialog<AvatarChoice>(
       context: context,
@@ -41,6 +42,7 @@ Future<AvatarChoice?> showAvatarMenu(
           branch: branch,
           avatar: avatar,
           canSwitchCompany: canSwitchCompany,
+          version: version,
         ),
       ),
       transitionBuilder: (ctx, a, _, child) => FadeTransition(
@@ -99,9 +101,13 @@ class AvatarMenu extends StatelessWidget {
     required this.branch,
     this.avatar,
     this.canSwitchCompany = false,
+    this.version = AppConfig.appVersion,
   });
 
   final String name;
+
+  /// "সেটিংস · সংস্করণ …"-এর সংখ্যা — অ্যাপের নিজের ধ্রুবক; পরীক্ষায় স্থির (সোনালি ছবি প্রতি সংস্করণে না ভাঙে)
+  final String version;
 
   /// পদবি — রোল নয় (মালিক, ২ অক্টোবর ২০২৬); না থাকলে কেবল শাখা
   final String? designation;
@@ -212,7 +218,7 @@ class AvatarMenu extends StatelessWidget {
                 key: const ValueKey('avatar-settings'),
                 icon: Symbols.settings,
                 // ⓘ সংস্করণ অ্যাপের নিজের ধ্রুবক থেকে ([AppConfig.appVersion], pubspec-এর সাথে বাঁধা) — হাতে লেখা নয়
-                title: words.avatarMenuSettingsVersion(AppConfig.appVersion),
+                title: words.avatarMenuSettingsVersion(version),
                 onTap: () => pick(AvatarChoice.settings),
               ),
               line,

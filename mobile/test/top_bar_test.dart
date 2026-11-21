@@ -350,7 +350,10 @@ void main() {
     test('the version line reads the app constant, never a written number', () {
       final src = File('lib/core/navigation/top_bar/avatar_menu.dart').readAsStringSync();
       // ⓘ লেখা এখন ARB-তে (0.4.43): "সেটিংস · সংস্করণ {version}" / "Settings · Version {version}" — সংখ্যাটা তবু ধ্রুবক থেকে
-      expect(src, contains('words.avatarMenuSettingsVersion(AppConfig.appVersion)'));
+      // ⓘ সংখ্যাটা `version` থেকে, যার নিজের মান সবসময় ধ্রুবক — কেবল সোনালি ছবির পরীক্ষা স্থির সংখ্যা দেয়
+      expect(src, contains('words.avatarMenuSettingsVersion(version)'));
+      expect(src, contains('this.version = AppConfig.appVersion'));
+      expect(src, contains('String version = AppConfig.appVersion'));
       for (final arb in ['lib/l10n/app_bn.arb', 'lib/l10n/app_en.arb']) {
         final text = File(arb).readAsStringSync();
         expect(RegExp(r'"avatarMenuSettingsVersion": "[^"]*\{version\}"').hasMatch(text), isTrue, reason: arb);
@@ -461,6 +464,8 @@ void main() {
         });
       }
       testWidgets('avatar menu $mode', (tester) async {
+        _goldenVersion = '0.4.61';
+        addTearDown(() => _goldenVersion = null);
         // ⓘ আসল ছায়া — টেস্টে ছায়া বন্ধ থাকলে কার্ডের চারপাশে মোটা ধূসর দাগ আঁকা হয়, ফোনে যা নেই
         debugDisableShadows = false;
         await themes.choose(dark ? ThemeChoice.dark : ThemeChoice.light);
@@ -501,6 +506,9 @@ _BarSpec _sr() => _bar(
       pendingCount: () => 2,
       menu: (name: 'করিম', designation: 'বিক্রয়কর্মী', canSwitchCompany: false, onMenu: null),
     );
+
+/// সোনালি ছবির সংস্করণ — কেবল ছবির পরীক্ষায়; null মানে অ্যাপের নিজের [AppConfig.appVersion]
+String? _goldenVersion;
 
 typedef _Menu = ({String name, String? designation, bool canSwitchCompany, ValueChanged<AvatarChoice?>? onMenu});
 
@@ -552,7 +560,9 @@ _BarSpec _bar({
                 name: menu.name,
                 designation: menu.designation,
                 branch: branch,
-                canSwitchCompany: menu.canSwitchCompany);
+                canSwitchCompany: menu.canSwitchCompany,
+                // ⓘ সোনালি ছবিতে সংস্করণ স্থির ([_goldenVersion]) — নতুন সংস্করণে ছবি না ভাঙে; বাকি পরীক্ষায় অ্যাপের ধ্রুবক
+                version: _goldenVersion ?? AppConfig.appVersion);
             state.set(false);
             menu.onMenu?.call(choice);
           },

@@ -148,7 +148,7 @@ void main() {
     });
 
     testWidgets('deposit report — ${look.name}', (tester) async {
-      await shoot(tester, look, DepositRequestScreen(customerId: 'c1', api: _Api()), 'deposit_${look.name}',
+      await shoot(tester, look, DepositRequestScreen(customerId: 'c1', api: _Api(), now: _goldenDay), 'deposit_${look.name}',
           selected: BarTab.deposit);
     });
   }
@@ -217,7 +217,7 @@ void main() {
   });
 
   testWidgets('deposit report from the shortcut — abos', (tester) async {
-    await shoot(tester, AppLook.abos, DepositRequestScreen(api: _Api(), customers: () => const []), 'deposit_abos');
+    await shoot(tester, AppLook.abos, DepositRequestScreen(api: _Api(), customers: () => const [], now: _goldenDay), 'deposit_abos');
   });
 
   // ⭐ মালিকের বারের নমুনার পাশে (২০ নভেম্বর ২০২৬ "Ok"), তিন রূপেই: নতুন দুই রূপে উপরে ＋ · খোঁজা · বার্তা, নিচে সাত আইকন;
@@ -262,3 +262,6 @@ void main() {
     });
   }
 }
+
+/// ⓘ সোনালি ছবির দিন স্থির — জমার তারিখের ঘর আজকের দিন দেখায়, তাই ঘড়ি না বাঁধলে প্রতিদিন ছবি ভাঙত
+DateTime _goldenDay() => DateTime(2026, 11, 20, 10);
