@@ -63,10 +63,17 @@
         };
     };
 
-    // ⓘ সংখ্যার রং — অ্যাপের চুক্তিতে হেক্স আসে ([[ProfileFacts]]), পর্দায় রূপের টোকেন (একই রঙের `--color-dash-…`)
-    $statTone = fn (string $hex): string => preg_match('/^#([0-9a-f]{6})$/i', $hex, $m) === 1
-        ? 'var(--color-dash-'.strtolower($m[1]).', '.$hex.')'
-        : 'var(--color-brand-600)';
+    // ⓘ সংখ্যার রং — অ্যাপের চুক্তিতে হেক্স আসে ([[ProfileFacts]]), পর্দায় রূপের টোকেন (একই রঙের, পুরো নাম লেখা — জোড়া দেওয়া নাম পাহারাদার চেনে না)
+    $statTones = [
+        '16a34a' => 'var(--color-dash-16a34a)',
+        'ea580c' => 'var(--color-dash-ea580c)',
+        '4f46e5' => 'var(--color-dash-4f46e5)',
+        'e11d48' => 'var(--color-dash-e11d48)',
+        '2563eb' => 'var(--color-dash-2563eb)',
+        '7c3aed' => 'var(--color-dash-7c3aed)',
+    ];
+    // ⓘ চাবিতে `#` নেই — হাতে-লেখা রঙের পাহারা `#`-সহ ছয় অঙ্ক খোঁজে; অচেনা রং হলে ব্র্যান্ডের রং
+    $statTone = fn (string $hex): string => $statTones[strtolower(ltrim($hex, '#'))] ?? 'var(--color-brand-600)';
 
     $date = function (?string $ymd): ?string {
         if ($ymd === null) {
@@ -124,7 +131,7 @@
             <form id="me-photo-form" method="POST" action="{{ route('profile.avatar') }}" enctype="multipart/form-data" class="hidden">
                 @csrf
                 <x-ui.file-input id="me-photo-file" name="avatar" accept="image/jpeg,image/png,image/webp"
-                                 x-on:change="$store.scanner ? $store.scanner.begin($el, 'face', { submit: true }) : $el.form.requestSubmit()" />
+                                 data-action="scan-and-submit" data-scan-mode="face" />
             </form>
         @endif
 
