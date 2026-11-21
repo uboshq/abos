@@ -161,6 +161,7 @@ TopBarContext sampleTopBar({String? Function(String path)? moduleOf}) => TopBarC
       search: (_) async {},
       openNotifications: (_) async {},
       openMenu: (_, __) async {},
+      messages: (_) async {},
     );
 
 /// ঢোকা মানুষ আর হোমের লেখা বার — ভেতরের পর্দার বার ([AbosScreenBar]) তখন আসল নীল বার আঁকে

@@ -77,6 +77,7 @@ void main() {
         onLeading: () {},
         onSearch: () {},
         onBell: () {},
+        onMessages: () {},
         unread: 3,
         avatarName: 'Karim',
         onAvatar: (_) async {},

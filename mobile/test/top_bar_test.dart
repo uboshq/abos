@@ -549,6 +549,8 @@ _BarSpec _bar({
           onOrgTap: onOrgTap,
           onSearch: () {},
           onBell: () {},
+          // ⓘ বার্তা চালু (`features.messaging`) — বারে বার্তা-বোতাম থাকে
+          onMessages: () {},
           unread: unread,
           news: news,
           avatarName: menu.name,

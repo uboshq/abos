@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../config/app_config.dart';
 import '../../locale/app_locale.dart';
 import '../../locale/l10n.dart';
+import '../../messenger/messenger_unread.dart';
 import '../../sync_engine/sync_engine.dart';
 import '../../sync_engine/sync_status.dart';
 import '../../theme/app_look.dart';
@@ -38,6 +39,8 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
     this.onCopilot,
     this.onCreate,
     this.onBell,
+    this.onMessages,
+    this.messagesActive = false,
     this.unread,
     this.news = false,
     required this.avatarName,
@@ -84,6 +87,13 @@ class AbosTopBar extends StatefulWidget implements PreferredSizeWidget {
   /// null মানে বোতাম নেই
   final VoidCallback? onCreate;
   final VoidCallback? onBell;
+
+  /// ⭐ বার্তা — বার্তার তালিকা খোলে/বন্ধ করে (নমুনা 3nuwRUdn v5 "ক"); null = বার্তা চালু নেই (`/me`-র `features.messaging`
+  /// false) বা হোম নেই — বোতামই নেই
+  final VoidCallback? onMessages;
+
+  /// বার্তার তালিকা খোলা — বার্তার বোতাম নীল ঘরে, ভরাট চিহ্নে (নমুনার `.ib.act`), লাল গোনা ছাড়া
+  final bool messagesActive;
 
   /// না-পড়া বিজ্ঞপ্তি — null বা ০ হলে গোনা নেই
   final int? unread;
@@ -311,7 +321,7 @@ class _AbosTopBarState extends State<AbosTopBar> {
                     icon: Symbols.search,
                     color: fg,
                     onPressed: widget.onSearch),
-                _MessagesButton(color: fg),
+                if (widget.onMessages != null) _MessagesButton(color: fg, onPressed: widget.onMessages!, active: widget.messagesActive),
                 if (widget.showAvatar)
                   IconButton(
                     key: const ValueKey('header-avatar'),
@@ -687,28 +697,62 @@ class ScreenActionsRow extends StatelessWidget {
   }
 }
 
-/// ⭐ বার্তা — মালিকের কথায়: "মেসেঞ্জার আইকনটা বসায় দিবা, বাট কোনো কাজ করবে না, বা চাপলে বলবে যে কামিং সুন বা শীঘ্রই আসছে"
-/// (২০ নভেম্বর ২০২৬)। চাপলে ছোট নরম খবর; না-পড়ার গোনা নেই (আসল কিছু এখনো নেই)। ⓘ "বার্তা" বানালে এখানেই খুলবে
+/// ⭐ বার্তা — বার্তার তালিকা খোলে/বন্ধ করে (মালিকের অনুমোদিত নমুনা 3nuwRUdn v5 "ক", ২১ নভেম্বর ২০২৬)। বন্ধ থাকলে না-পড়ার
+/// লাল গোনা ([MessengerUnread]); খোলা থাকলে নমুনার `.ib.act` — ভরাট চিহ্ন, ক্লাসিকে নীল ঘরে সাদা, স্মার্ট আর গ্লাসে রূপের নীল
+/// ১৬% আভায়। ⓘ বার্তা চালু না থাকলে বারই এটা বসায় না ([AbosTopBar.onMessages])
 class _MessagesButton extends StatelessWidget {
-  const _MessagesButton({required this.color});
+  const _MessagesButton({required this.color, required this.onPressed, this.active = false});
 
   final Color color;
+  final VoidCallback onPressed;
+  final bool active;
 
   @override
-  Widget build(BuildContext context) => _PlainAction(
-        key: const ValueKey('top-messages'),
-        tooltip: context.l10n.lookMessages,
-        icon: Symbols.chat_bubble,
-        color: color,
-        onPressed: () {
-          final messenger = ScaffoldMessenger.maybeOf(context);
-          messenger?.hideCurrentSnackBar();
-          messenger?.showSnackBar(SnackBar(
-            key: const ValueKey('messages-soon'),
-            content: Text(context.l10n.lookMessagesSoon),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ));
+  Widget build(BuildContext context) => ValueListenableBuilder<int?>(
+        valueListenable: MessengerUnread.count,
+        builder: (context, unread, _) {
+          final look = AppLooks.instance.look.value;
+          final classic = look == AppLook.abos;
+          final activeInk = classic ? const Color(0xFFFFFFFF) : (look == AppLook.glass ? const Color(0xFF7CB4FF) : const Color(0xFF3B82F6));
+          final activeBg = classic ? const Color(0xFF3B82F6) : const Color(0x293B82F6);
+          final count = active ? null : badgeText(unread);
+          final icon = Icon(Symbols.chat_bubble, size: 24, fill: active ? 1 : 0, color: active ? activeInk : color);
+          return Semantics(
+            key: const ValueKey('top-messages'),
+            selected: active,
+            // ⓘ চাপার জায়গা সবসময় ৪৮×৪৮; খোলা থাকলে ভেতরে ৪০-এর নীল ঘর (নমুনার `.ib.act`)
+            child: SizedBox.square(
+              dimension: 48,
+              child: Center(
+                child: IconButton(
+                  tooltip: count == null ? context.l10n.lookMessages : context.l10n.msgListMessagesUnread(bnDigits(unread!)),
+                  color: active ? activeInk : color,
+                  isSelected: active ? true : null,
+                  onPressed: onPressed,
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints.tightFor(width: active ? 40 : 48, height: active ? 40 : 48),
+                  style: active
+                      ? IconButton.styleFrom(
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          backgroundColor: activeBg,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          fixedSize: const Size(40, 40),
+                          minimumSize: const Size(40, 40),
+                        )
+                      : IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  icon: count == null
+                      ? icon
+                      : Badge(
+                          key: const ValueKey('top-messages-badge'),
+                          backgroundColor: const Color(0xFFE11D48),
+                          textColor: const Color(0xFFFFFFFF),
+                          label: Text(count),
+                          child: icon,
+                        ),
+                ),
+              ),
+            ),
+          );
         },
       );
 }

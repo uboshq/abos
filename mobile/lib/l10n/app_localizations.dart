@@ -20089,6 +20089,216 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'ABOS অ্যাপ {version}'**
   String menuPageAppVersion(String version);
+
+  /// Messenger chat list: the round search field at the top (sample 3nuwRUdn v5, part ক)
+  ///
+  /// In bn, this message translates to:
+  /// **'নাম বা বার্তা খুঁজুন'**
+  String get msgListSearch;
+
+  /// Messenger chat list: filter chip — every conversation
+  ///
+  /// In bn, this message translates to:
+  /// **'সব'**
+  String get msgListAll;
+
+  /// Messenger chat list: filter chip — unread conversations, when nothing is unread
+  ///
+  /// In bn, this message translates to:
+  /// **'না-পড়া'**
+  String get msgListUnread;
+
+  /// Messenger chat list: filter chip — unread conversations with the unread message count (English digits)
+  ///
+  /// In bn, this message translates to:
+  /// **'না-পড়া {count}'**
+  String msgListUnreadCount(String count);
+
+  /// Messenger chat list: filter chip — group conversations
+  ///
+  /// In bn, this message translates to:
+  /// **'গ্রুপ'**
+  String get msgListGroups;
+
+  /// Messenger chat list: filter chip — conversations whose last message is an ERP paper (invoice, receipt …)
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজ'**
+  String get msgListPapers;
+
+  /// Messenger: the green button at the bottom right of the chat list, and the title of the person picker it opens
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন বার্তা'**
+  String get msgListNew;
+
+  /// Messenger chat list: prefix before the last message when I sent it
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনি:'**
+  String get msgListYou;
+
+  /// Messenger chat list: in a group, the sender's first name before the last message
+  ///
+  /// In bn, this message translates to:
+  /// **'{name}:'**
+  String msgListSender(String name);
+
+  /// Messenger chat list: last message was a voice message, with its length like 0:18
+  ///
+  /// In bn, this message translates to:
+  /// **'ভয়েস বার্তা · {duration}'**
+  String msgListVoice(String duration);
+
+  /// Messenger chat list: last message was a photo without a caption
+  ///
+  /// In bn, this message translates to:
+  /// **'ছবি'**
+  String get msgListPhoto;
+
+  /// Messenger chat list: last message was a file without a name
+  ///
+  /// In bn, this message translates to:
+  /// **'ফাইল'**
+  String get msgListFile;
+
+  /// Messenger chat list: last message was a shared location
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থান'**
+  String get msgListLocation;
+
+  /// Messenger chat list: time column for a message sent yesterday
+  ///
+  /// In bn, this message translates to:
+  /// **'গতকাল'**
+  String get msgListYesterday;
+
+  /// Messenger chat list: time column for a message sent earlier this week — the short weekday name
+  ///
+  /// In bn, this message translates to:
+  /// **'{day, select, mon{সোম} tue{মঙ্গল} wed{বুধ} thu{বৃহস্পতি} fri{শুক্র} sat{শনি} other{রবি}}'**
+  String msgListWeekday(String day);
+
+  /// Messenger chat list: screen reader words for the green unread count on a row
+  ///
+  /// In bn, this message translates to:
+  /// **'{count}টা না-পড়া'**
+  String msgListUnreadSpoken(String count);
+
+  /// Top bar: screen reader words for the messages button when some messages are unread
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা, {count}টা না-পড়া'**
+  String msgListMessagesUnread(String count);
+
+  /// Messenger: calm empty state when the server does not have messaging yet
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা এখনো চালু হয়নি'**
+  String get msgListNotOpenYet;
+
+  /// Messenger: empty state when the person's role may not use messages
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনার বার্তার অনুমতি নেই'**
+  String get msgListNotAllowed;
+
+  /// Messenger: the list could not be loaded (no signal or server error)
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা আনা যায়নি'**
+  String get msgListLoadFailed;
+
+  /// Messenger: button to load the list again
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার চেষ্টা করুন'**
+  String get msgListRetry;
+
+  /// Messenger chat list: there are no conversations
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনো কোনো বার্তা নেই'**
+  String get msgListEmpty;
+
+  /// Messenger: a search found nothing
+  ///
+  /// In bn, this message translates to:
+  /// **'কিছু পাওয়া যায়নি'**
+  String get msgListNoMatch;
+
+  /// Messenger: search field in the new-message and call person pickers
+  ///
+  /// In bn, this message translates to:
+  /// **'নাম খুঁজুন'**
+  String get msgListFindPerson;
+
+  /// Messenger: tooltip of the × that closes a sheet
+  ///
+  /// In bn, this message translates to:
+  /// **'বন্ধ করুন'**
+  String get msgListClose;
+
+  /// Me page: title of the person picker opened by the Call button
+  ///
+  /// In bn, this message translates to:
+  /// **'কাকে কল করবেন?'**
+  String get msgListCallWho;
+
+  /// Paper menus (⋯ and print/send sheet) and the sheet title: send this ERP paper to people or groups in messages
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তায় পাঠান'**
+  String get msgListSendPaper;
+
+  /// Send-paper sheet: search field for the people to send the paper to
+  ///
+  /// In bn, this message translates to:
+  /// **'কাকে পাঠাবেন? নাম খুঁজুন'**
+  String get msgListSendWho;
+
+  /// Send-paper sheet: label above the recent conversations (people and groups)
+  ///
+  /// In bn, this message translates to:
+  /// **'সাম্প্রতিক'**
+  String get msgListRecent;
+
+  /// Send-paper sheet: amber line under a person who may not open this paper; they will only see its number
+  ///
+  /// In bn, this message translates to:
+  /// **'এই কাগজ খোলার অনুমতি নেই — শুধু নম্বর দেখবেন'**
+  String get msgListNoPaperAccess;
+
+  /// Send-paper sheet: optional note sent with the paper
+  ///
+  /// In bn, this message translates to:
+  /// **'সাথে একটা কথা লিখুন (ইচ্ছা হলে)'**
+  String get msgListNote;
+
+  /// Send-paper sheet: the green send button with how many recipients are ticked (English digits)
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠান · {count} জন'**
+  String msgListSendTo(String count);
+
+  /// Send-paper sheet: short message after the paper was sent
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানো হয়েছে'**
+  String get msgListSent;
+
+  /// Send-paper sheet: the paper could not be sent
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানো যায়নি — আবার চেষ্টা করুন'**
+  String get msgListSendFailed;
+
+  /// Send-paper sheet: screen reader word for a ticked recipient
+  ///
+  /// In bn, this message translates to:
+  /// **'বাছা'**
+  String get msgListSelected;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

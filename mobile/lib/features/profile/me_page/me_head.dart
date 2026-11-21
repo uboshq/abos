@@ -276,13 +276,20 @@ class _Avatar extends StatelessWidget {
   }
 }
 
-/// "প্রোফাইল ঠিক করুন" (পুরো চওড়া), তার নিচে "বার্তা" আর "কল" — দুটোতেই "শীঘ্রই" (নমুনার `.btns`)
+/// "প্রোফাইল ঠিক করুন" (পুরো চওড়া), তার নিচে "বার্তা" আর "কল" (নমুনার `.btns`) — ⭐ বার্তা ও কল (২১ নভেম্বর ২০২৬): "বার্তা" কেবল
+/// [showMessage] (`features.messaging`), "কল" কেবল [showCall] (`features.calls`) হলে; একটা থাকলে সে পুরো সারি, কোনোটাই না থাকলে
+/// সারিই নেই। শেল [onMessage]/[onCall] দিলে সেগুলো খোলে; না দিলে "শীঘ্রই"
 class _Buttons extends StatelessWidget {
-  const _Buttons({required this.tok, required this.onEdit, required this.onSoon});
+  const _Buttons(
+      {required this.tok, required this.onEdit, required this.onSoon, this.showMessage = false, this.showCall = false, this.onMessage, this.onCall});
 
   final _Tok tok;
   final VoidCallback onEdit;
   final VoidCallback onSoon;
+  final bool showMessage;
+  final bool showCall;
+  final VoidCallback? onMessage;
+  final VoidCallback? onCall;
 
   @override
   Widget build(BuildContext context) {
@@ -290,22 +297,45 @@ class _Buttons extends StatelessWidget {
     // ⓘ স্মার্টে বোতাম নিজেই ৪৮ — ফাঁক যেমন ছিল। ক্লাসিক আর গ্লাসে বোতাম দেখতে ৩৮, চাপার জায়গা ৪৮ (Android-এর নিয়ম): বাড়তি
     // ১০ আগের ফাঁক থেকেই নেওয়া — "ঠিক করুন"-এর উপরে ১০ (উপরের ১২ থেকে), "বার্তা"/"কল"-এর উপরে ৮ (মাঝের ফাঁক) আর নিচে ২
     // (নিচের ফাঁক)। ⛔ তাই আঁকা হুবহু আগের জায়গায়, পাতার মাপও একই
+    final rowReach = tok.smart ? EdgeInsets.zero : const EdgeInsets.only(top: 8, bottom: 2);
+    final pair = <Widget>[
+      if (showMessage)
+        _Btn(
+            key: const ValueKey('me-message'),
+            tok: tok,
+            icon: Symbols.chat,
+            label: l.mePageMessage,
+            soon: onMessage == null,
+            reach: rowReach,
+            onTap: onMessage ?? onSoon),
+      if (showCall)
+        _Btn(
+            key: const ValueKey('me-call'),
+            tok: tok,
+            icon: Symbols.call,
+            label: l.mePageCall,
+            soon: onCall == null,
+            reach: rowReach,
+            onTap: onCall ?? onSoon),
+    ];
+    final row = pair.isEmpty
+        ? null
+        : Row(children: [
+            for (final (i, b) in pair.indexed) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(child: b),
+            ],
+          ]);
     if (tok.smart) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _Btn(key: const ValueKey('me-edit'), tok: tok, primary: true, icon: Symbols.edit, label: l.mePageEditProfile, onTap: onEdit),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: _Btn(key: const ValueKey('me-message'), tok: tok, icon: Symbols.chat, label: l.mePageMessage, soon: true, onTap: onSoon)),
-            const SizedBox(width: 8),
-            Expanded(child: _Btn(key: const ValueKey('me-call'), tok: tok, icon: Symbols.call, label: l.mePageCall, soon: true, onTap: onSoon)),
-          ]),
+          if (row != null) ...[const SizedBox(height: 8), row],
         ]),
       );
     }
     const editReach = EdgeInsets.only(top: 10);
-    const rowReach = EdgeInsets.only(top: 8, bottom: 2);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -317,27 +347,7 @@ class _Buttons extends StatelessWidget {
             label: l.mePageEditProfile,
             reach: editReach,
             onTap: onEdit),
-        Row(children: [
-          Expanded(
-              child: _Btn(
-                  key: const ValueKey('me-message'),
-                  tok: tok,
-                  icon: Symbols.chat,
-                  label: l.mePageMessage,
-                  soon: true,
-                  reach: rowReach,
-                  onTap: onSoon)),
-          const SizedBox(width: 8),
-          Expanded(
-              child: _Btn(
-                  key: const ValueKey('me-call'),
-                  tok: tok,
-                  icon: Symbols.call,
-                  label: l.mePageCall,
-                  soon: true,
-                  reach: rowReach,
-                  onTap: onSoon)),
-        ]),
+        if (row != null) row,
       ]),
     );
   }

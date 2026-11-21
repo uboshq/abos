@@ -25,7 +25,7 @@ void main() {
   });
   tearDown(() => AppLooks.instance = saved);
 
-  const all = MeFeatures(profilePhoto: true, myPhones: true, profilePage: true, coverPhoto: true);
+  const all = MeFeatures(profilePhoto: true, myPhones: true, profilePage: true, coverPhoto: true, messaging: true, calls: true);
 
   final fallback = MeProfile.fallback(
     name: 'শুভ আহমেদ',
@@ -47,7 +47,9 @@ void main() {
     return (c: c, me: me);
   }
 
-  MePage page({bool security = true}) => MePage(
+  MePage page({bool security = true, VoidCallback? onMessage, VoidCallback? onCall}) => MePage(
+        onMessage: onMessage,
+        onCall: onCall,
         fallback: fallback,
         profileApi: FakeProfileApi(),
         now: () => DateTime(2026, 11, 20, 12),
@@ -177,9 +179,38 @@ void main() {
     expect(key('me-month'), findsOneWidget);
   });
 
-  testWidgets('Message and Call only say "coming soon"', (tester) async {
+  testWidgets('Message and Call show only with features.messaging / features.calls', (tester) async {
     setScreenSize(tester, const Size(412, 915));
-    final (:c, me: _) = container(all);
+    final (:c, me: _) = container(const MeFeatures(profilePhoto: true, myPhones: true, profilePage: true, coverPhoto: true));
+    await tester.pumpWidget(host(c, page(), AppLook.abos));
+    await tester.pumpAndSettle();
+    expect(key('me-message'), findsNothing);
+    expect(key('me-call'), findsNothing);
+    expect(find.text('শীঘ্রই'), findsNothing);
+    expect(key('me-edit'), findsOneWidget);
+
+    c.read(meFeaturesProvider.notifier).state =
+        const MeFeatures(profilePhoto: true, myPhones: true, profilePage: true, coverPhoto: true, messaging: true);
+    await tester.pumpAndSettle();
+    expect(key('me-message'), findsOneWidget);
+    expect(key('me-call'), findsNothing, reason: 'কল আলাদা চাবি');
+  });
+
+  testWidgets('with the flags on, Message and Call do what the shell gives — no "coming soon" tag', (tester) async {
+    setScreenSize(tester, const Size(412, 915));
+    final (:c, me: _) = container(const MeFeatures(profilePhoto: true, myPhones: true, profilePage: true, coverPhoto: true, messaging: true, calls: true));
+    var messages = 0, calls = 0;
+    await tester.pumpWidget(host(c, page(onMessage: () => messages++, onCall: () => calls++), AppLook.abos));
+    await tester.pumpAndSettle();
+    expect(find.text('শীঘ্রই'), findsNothing);
+    await tester.tap(key('me-message'));
+    await tester.tap(key('me-call'));
+    expect((messages, calls), (1, 1));
+  });
+
+  testWidgets('with the flags on but no shell, Message and Call say "coming soon"', (tester) async {
+    setScreenSize(tester, const Size(412, 915));
+    final (:c, me: _) = container(const MeFeatures(profilePhoto: true, myPhones: true, profilePage: true, coverPhoto: true, messaging: true, calls: true));
     await tester.pumpWidget(host(c, page(), AppLook.abos));
     await tester.pumpAndSettle();
 

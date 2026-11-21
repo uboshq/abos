@@ -20,6 +20,7 @@ class TopBarContext {
     this.switchBranch,
     this.copilot,
     this.quick,
+    this.messages,
   });
 
   final String company;
@@ -48,6 +49,9 @@ class TopBarContext {
 
   /// ⭐ দ্রুত কাজ — ≡ আর Material 3-এর ＋ (0.4.58; মালিক, ১৬ ও ২০ নভেম্বর ২০২৬): টাকা জমার খবর, নতুন অর্ডার, আদায়, অনুমোদন …
   final Future<void> Function(BuildContext context)? quick;
+
+  /// ⭐ বার্তা — ভেতরের পর্দা থেকে: হোমে ফিরে বার্তার তালিকা খোলে (নমুনা 3nuwRUdn v5 "ক"); null = বোতাম কেবল "শীঘ্রই"
+  final Future<void> Function(BuildContext context)? messages;
 }
 
 /// হোম লেখে, প্রতিটা পর্দার বার পড়ে

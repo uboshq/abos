@@ -12015,4 +12015,136 @@ class AppL10nBn extends AppL10n {
   String menuPageAppVersion(String version) {
     return 'ABOS অ্যাপ $version';
   }
+
+  @override
+  String get msgListSearch => 'নাম বা বার্তা খুঁজুন';
+
+  @override
+  String get msgListAll => 'সব';
+
+  @override
+  String get msgListUnread => 'না-পড়া';
+
+  @override
+  String msgListUnreadCount(String count) {
+    return 'না-পড়া $count';
+  }
+
+  @override
+  String get msgListGroups => 'গ্রুপ';
+
+  @override
+  String get msgListPapers => 'কাগজ';
+
+  @override
+  String get msgListNew => 'নতুন বার্তা';
+
+  @override
+  String get msgListYou => 'আপনি:';
+
+  @override
+  String msgListSender(String name) {
+    return '$name:';
+  }
+
+  @override
+  String msgListVoice(String duration) {
+    return 'ভয়েস বার্তা · $duration';
+  }
+
+  @override
+  String get msgListPhoto => 'ছবি';
+
+  @override
+  String get msgListFile => 'ফাইল';
+
+  @override
+  String get msgListLocation => 'অবস্থান';
+
+  @override
+  String get msgListYesterday => 'গতকাল';
+
+  @override
+  String msgListWeekday(String day) {
+    String _temp0 = intl.Intl.selectLogic(
+      day,
+      {
+        'mon': 'সোম',
+        'tue': 'মঙ্গল',
+        'wed': 'বুধ',
+        'thu': 'বৃহস্পতি',
+        'fri': 'শুক্র',
+        'sat': 'শনি',
+        'other': 'রবি',
+      },
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String msgListUnreadSpoken(String count) {
+    return '$countটা না-পড়া';
+  }
+
+  @override
+  String msgListMessagesUnread(String count) {
+    return 'বার্তা, $countটা না-পড়া';
+  }
+
+  @override
+  String get msgListNotOpenYet => 'বার্তা এখনো চালু হয়নি';
+
+  @override
+  String get msgListNotAllowed => 'আপনার বার্তার অনুমতি নেই';
+
+  @override
+  String get msgListLoadFailed => 'বার্তা আনা যায়নি';
+
+  @override
+  String get msgListRetry => 'আবার চেষ্টা করুন';
+
+  @override
+  String get msgListEmpty => 'এখনো কোনো বার্তা নেই';
+
+  @override
+  String get msgListNoMatch => 'কিছু পাওয়া যায়নি';
+
+  @override
+  String get msgListFindPerson => 'নাম খুঁজুন';
+
+  @override
+  String get msgListClose => 'বন্ধ করুন';
+
+  @override
+  String get msgListCallWho => 'কাকে কল করবেন?';
+
+  @override
+  String get msgListSendPaper => 'বার্তায় পাঠান';
+
+  @override
+  String get msgListSendWho => 'কাকে পাঠাবেন? নাম খুঁজুন';
+
+  @override
+  String get msgListRecent => 'সাম্প্রতিক';
+
+  @override
+  String get msgListNoPaperAccess =>
+      'এই কাগজ খোলার অনুমতি নেই — শুধু নম্বর দেখবেন';
+
+  @override
+  String get msgListNote => 'সাথে একটা কথা লিখুন (ইচ্ছা হলে)';
+
+  @override
+  String msgListSendTo(String count) {
+    return 'পাঠান · $count জন';
+  }
+
+  @override
+  String get msgListSent => 'পাঠানো হয়েছে';
+
+  @override
+  String get msgListSendFailed => 'পাঠানো যায়নি — আবার চেষ্টা করুন';
+
+  @override
+  String get msgListSelected => 'বাছা';
 }

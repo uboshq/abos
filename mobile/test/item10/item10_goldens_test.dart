@@ -35,7 +35,8 @@ void main() {
   });
   tearDown(() => AppLooks.instance = saved);
 
-  const features = MeFeatures(profilePhoto: true, myPhones: true, profilePage: true, coverPhoto: true);
+  // ⓘ বার্তা আর কল চালু — "আমি"-র "বার্তা"/"কল" বোতাম আগের ছবির মতোই থাকে (শেল ছাড়া "শীঘ্রই" চিহ্নসহ)
+  const features = MeFeatures(profilePhoto: true, myPhones: true, profilePage: true, coverPhoto: true, messaging: true, calls: true);
   DateTime clock() => DateTime(2026, 11, 20, 12);
 
   ThemeData themeOf(AppLook look, {bool dark = false}) => withBarFonts(switch (look) {

@@ -8,7 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// ⓘ কেবল `true` মানে হ্যাঁ — "1", "yes" বা ভাঙা মান না।
 @immutable
 class MeFeatures {
-  const MeFeatures({this.profilePhoto = false, this.myPhones = false, this.profilePage = false, this.coverPhoto = false});
+  const MeFeatures(
+      {this.profilePhoto = false, this.myPhones = false, this.profilePage = false, this.coverPhoto = false, this.messaging = false, this.calls = false});
 
   /// পুরনো সার্ভার — কিছুই নেই
   static const MeFeatures none = MeFeatures();
@@ -25,6 +26,13 @@ class MeFeatures {
   /// মলাট-ছবি বদল (`POST/DELETE /me/cover`); না থাকলে মলাটে কোম্পানির রঙের ঢাল, "মলাট বদলান" বোতাম নেই
   final bool coverPhoto;
 
+  /// ⭐ বার্তা (বার্তা ও কল, প্রথম ধাপ; ২১ নভেম্বর ২০২৬) — উপরের বারের বার্তা-বোতাম আর তালিকা, "আমি"-র "বার্তা", কাগজের
+  /// "বার্তায় পাঠান"; না থাকলে এগুলো দেখায়ই না
+  final bool messaging;
+
+  /// ⭐ একজনের সাথে ভয়েস/ভিডিও কল — "আমি"-র "কল" আর চ্যাটের কল-বোতাম; না থাকলে দেখায়ই না
+  final bool calls;
+
   factory MeFeatures.fromJson(Object? raw) {
     if (raw is! Map) return none;
     return MeFeatures(
@@ -32,6 +40,8 @@ class MeFeatures {
       myPhones: raw['my_phones'] == true,
       profilePage: raw['profile_page'] == true,
       coverPhoto: raw['cover_photo'] == true,
+      messaging: raw['messaging'] == true,
+      calls: raw['calls'] == true,
     );
   }
 
@@ -41,14 +51,22 @@ class MeFeatures {
       other.profilePhoto == profilePhoto &&
       other.myPhones == myPhones &&
       other.profilePage == profilePage &&
-      other.coverPhoto == coverPhoto;
+      other.coverPhoto == coverPhoto &&
+      other.messaging == messaging &&
+      other.calls == calls;
 
   @override
-  int get hashCode => Object.hash(profilePhoto, myPhones, profilePage, coverPhoto);
+  int get hashCode => Object.hash(profilePhoto, myPhones, profilePage, coverPhoto, messaging, calls);
 
   @override
-  String toString() => 'MeFeatures(profilePhoto: $profilePhoto, myPhones: $myPhones, profilePage: $profilePage, coverPhoto: $coverPhoto)';
+  String toString() => 'MeFeatures(profilePhoto: $profilePhoto, myPhones: $myPhones, profilePage: $profilePage, coverPhoto: $coverPhoto, messaging: $messaging, calls: $calls)';
 }
 
 /// হোম `/me` পেলেই লেখে; null = `/me` এখনো আসেনি (যেমন ঠান্ডা শুরুতে সরাসরি লিংক)
 final meFeaturesProvider = StateProvider<MeFeatures?>((ref) => null);
+
+/// ⭐ বার্তা চালু কি — Riverpod-ছাড়া পর্দা থেকেও (কাগজের শিট, সারির ⋯); গাছে ProviderScope না থাকলে বা `/me` না এলে false
+bool messagingOn(BuildContext context) {
+  if (context.getElementForInheritedWidgetOfExactType<UncontrolledProviderScope>() == null) return false;
+  return ProviderScope.containerOf(context, listen: false).read(meFeaturesProvider)?.messaging ?? false;
+}

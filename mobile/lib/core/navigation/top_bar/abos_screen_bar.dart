@@ -148,6 +148,7 @@ class _LiveScreenBarState extends ConsumerState<_LiveScreenBar> {
       // ⭐ ＋ তৈরি করুন — নতুন দুই রূপে উপরের বারে (মালিক, ২০ নভেম্বর ২০২৬ "Ok")
       onCreate: top.quick == null ? null : () => top.quick!(context),
       onBell: () => top.openNotifications(context),
+      onMessages: top.messages == null ? null : () => top.messages!(context),
       unread: unread,
       avatarName: user.name,
       avatar: top.avatar,

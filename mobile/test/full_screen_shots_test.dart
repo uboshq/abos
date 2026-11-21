@@ -63,6 +63,7 @@ GoRouter _router(String initial) => GoRouter(initialLocation: initial, routes: [
               // ⓘ HomeShell-এর মতোই উপরে ＋ (দ্রুত কাজ) — 0.4.63 থেকে হোমে নিচের "＋ নতুন" নেই
               onCreate: () {},
               onBell: () {},
+              onMessages: () {},
               unread: 3,
               avatarName: _owner.name,
               onAvatar: (_) async {},

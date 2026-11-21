@@ -181,6 +181,7 @@ void main() {
           search: (_) async {},
           openNotifications: (_) async {},
           openMenu: (_, __) async {},
+          messages: (_) async {},
         );
         await tester.pumpWidget(RepaintBoundary(
           key: const ValueKey('shot'),
