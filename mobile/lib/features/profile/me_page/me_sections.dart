@@ -325,7 +325,9 @@ class _RemoveButton extends StatelessWidget {
         padding: t.smart ? const EdgeInsets.symmetric(horizontal: 12, vertical: 4) : const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
         minimumSize: const Size(0, 28),
         tapTargetSize: MaterialTapTargetSize.padded,
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        // ⓘ থিমের বোতামের অক্ষর থেকে (বাংলা অক্ষরসহ) — খালি TextStyle দিলে থিমের ফন্ট হারিয়ে যেত
+        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12, fontWeight: FontWeight.w600) ??
+            const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       ),
       child: busy
           ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: ink))
