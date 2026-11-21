@@ -70,22 +70,22 @@ class FakeMessengerApi implements MessengerApi {
 
   static Map<String, List<ChatMessage>> sampleMessages() => {
         't-rak': [
-          _m('r1', 't-rak', MessageKind.text, at(18, 5, daysAgo: 1), sender: rakib, text: 'স্যার, রহমান এন্টারপ্রাইজ আজ ব্যাংকে টাকা জমা দিয়েছে।'),
-          _m('r2', 't-rak', MessageKind.text, at(18, 7, daysAgo: 1), mine: true, text: 'কত টাকা? রসিদ বানিয়ে পাঠান।', state: MessageState.read),
-          _m('r3', 't-rak', MessageKind.paper, at(10, 40), sender: rakib, text: 'রসিদ বানিয়েছি, অনুমোদন দিন।', paper: rcv142),
-          _m('r4', 't-rak', MessageKind.image, at(10, 41), sender: rakib, text: 'ব্যাংকের জমা স্লিপ', attachment: const ChatAttachment(url: '', name: 'slip.jpg', mime: 'image/jpeg')),
-          _m('r5', 't-rak', MessageKind.voice, at(10, 44), mine: true, state: MessageState.delivered, attachment: const ChatAttachment(url: '', durationMs: 24000, waveform: wave)),
-          _m('r6', 't-rak', MessageKind.file, at(10, 46), sender: rakib,
+          _m('101', 't-rak', MessageKind.text, at(18, 5, daysAgo: 1), sender: rakib, text: 'স্যার, রহমান এন্টারপ্রাইজ আজ ব্যাংকে টাকা জমা দিয়েছে।'),
+          _m('102', 't-rak', MessageKind.text, at(18, 7, daysAgo: 1), mine: true, text: 'কত টাকা? রসিদ বানিয়ে পাঠান।', state: MessageState.read),
+          _m('103', 't-rak', MessageKind.paper, at(10, 40), sender: rakib, text: 'রসিদ বানিয়েছি, অনুমোদন দিন।', paper: rcv142),
+          _m('104', 't-rak', MessageKind.image, at(10, 41), sender: rakib, text: 'ব্যাংকের জমা স্লিপ', attachment: const ChatAttachment(url: '', name: 'slip.jpg', mime: 'image/jpeg')),
+          _m('105', 't-rak', MessageKind.voice, at(10, 44), mine: true, state: MessageState.delivered, attachment: const ChatAttachment(url: '', durationMs: 24000, waveform: wave)),
+          _m('106', 't-rak', MessageKind.file, at(10, 46), sender: rakib,
               attachment: const ChatAttachment(url: '', name: 'নভেম্বর-জমার-তালিকা.pdf', mime: 'application/pdf', size: 240 * 1024)),
-          _m('r7', 't-rak', MessageKind.text, at(10, 47), mine: true, text: 'ঠিক আছে, স্লিপ মিলিয়ে দেখছি।'),
+          _m('107', 't-rak', MessageKind.text, at(10, 47), mine: true, text: 'ঠিক আছে, স্লিপ মিলিয়ে দেখছি।'),
         ],
         't-acc': [
-          _m('a0', 't-acc', MessageKind.system, at(10, 0), text: 'ফারজানা নাসিরকে গ্রুপে যোগ করেছেন'),
-          _m('a1', 't-acc', MessageKind.text, at(10, 12), sender: farzana, text: 'আজকের জমার স্লিপগুলো দিয়েছি, মোট 6টা।'),
-          _m('a2', 't-acc', MessageKind.text, at(10, 14), sender: rakib, text: 'RCV-0142 থেকে RCV-0147 পর্যন্ত রসিদ বানানো হয়েছে।'),
-          _m('a3', 't-acc', MessageKind.text, at(10, 15), sender: nasir, text: 'রহমান এন্টারপ্রাইজের বাকি টাকা কাল তুলব।'),
-          _m('a4', 't-acc', MessageKind.text, at(10, 18), mine: true, text: 'সবাই দিন বন্ধের আগে জমা মিলিয়ে নিন।', state: MessageState.read, readCount: 4),
-          _m('a5', 't-acc', MessageKind.paper, at(10, 20), sender: rakib, paper: rcv142),
+          _m('200', 't-acc', MessageKind.system, at(10, 0), text: 'ফারজানা নাসিরকে গ্রুপে যোগ করেছেন'),
+          _m('201', 't-acc', MessageKind.text, at(10, 12), sender: farzana, text: 'আজকের জমার স্লিপগুলো দিয়েছি, মোট 6টা।'),
+          _m('202', 't-acc', MessageKind.text, at(10, 14), sender: rakib, text: 'RCV-0142 থেকে RCV-0147 পর্যন্ত রসিদ বানানো হয়েছে।'),
+          _m('203', 't-acc', MessageKind.text, at(10, 15), sender: nasir, text: 'রহমান এন্টারপ্রাইজের বাকি টাকা কাল তুলব।'),
+          _m('204', 't-acc', MessageKind.text, at(10, 18), mine: true, text: 'সবাই দিন বন্ধের আগে জমা মিলিয়ে নিন।', state: MessageState.read, readCount: 4),
+          _m('205', 't-acc', MessageKind.paper, at(10, 20), sender: rakib, paper: rcv142),
         ],
       };
 
@@ -120,21 +120,59 @@ class FakeMessengerApi implements MessengerApi {
     return [...?_messages[threadId]];
   }
 
-  ChatMessage _mine(String threadId, MessageKind kind, String clientId, {String text = '', ChatAttachment? attachment, double? lat, double? lng}) {
+  ChatMessage _mine(String threadId, MessageKind kind, String clientId,
+      {String text = '', ChatAttachment? attachment, double? lat, double? lng, String? replyToId}) {
+    final quoted = replyToId == null ? null : _messages[threadId]?.where((m) => m.id == replyToId).firstOrNull;
     final m = ChatMessage(
-        id: 'm${_seq++}', threadId: threadId, clientId: clientId, kind: kind, at: at(10, 48), mine: true, text: text, attachment: attachment, lat: lat, lng: lng);
+        id: '${_seq++}', threadId: threadId, clientId: clientId, kind: kind, at: at(10, 48), mine: true, text: text, attachment: attachment, lat: lat, lng: lng,
+        replyTo: quoted == null
+            ? null
+            : ReplyRef(id: quoted.id, kind: quoted.kind, text: quoted.text, sender: quoted.sender, mine: quoted.mine));
     _messages.putIfAbsent(threadId, () => []).add(m);
     return m;
   }
 
+  /// পরের [poll]-এ "লিখছেন…", অন্যজন অনলাইন কি, আর আগের বার্তার নতুন টিক
+  List<ChatPerson> typingNow = [];
+  bool? peerOnline;
+  final List<MessageStateUpdate> states = [];
+
   @override
-  Future<ChatMessage> sendText(String threadId, String text, {required String clientId}) async {
-    _note('sendText:$threadId:$text');
-    return _mine(threadId, MessageKind.text, clientId, text: text);
+  Future<MessagePoll> poll(String threadId, {required String after}) async {
+    final fresh = await messages(threadId, after: after);
+    final changed = [...states];
+    states.clear();
+    return MessagePoll(messages: fresh, typing: typingNow, peerOnline: peerOnline, states: changed);
   }
 
   @override
-  Future<ChatMessage> sendFile(String threadId, ChatUpload upload, {required String clientId, void Function(double sent)? onProgress}) async {
+  Future<void> typing(String threadId) async => _note('typing:$threadId');
+
+  @override
+  Future<List<ChatMessage>> search(String threadId, String query) async {
+    _note('search:$threadId:$query');
+    final q = query.toLowerCase();
+    return [
+      ...?_messages[threadId]?.where((m) =>
+          m.text.toLowerCase().contains(q) ||
+          (m.paper?.no.toLowerCase().contains(q) ?? false) ||
+          (m.attachment?.name.toLowerCase().contains(q) ?? false)),
+    ];
+  }
+
+  @override
+  Future<ChatMessage> sendText(String threadId, String text, {required String clientId, String? replyToId}) async {
+    _note('sendText:$threadId:$text${replyToId == null ? '' : ':reply=$replyToId'}');
+    if (failNextSend) {
+      failNextSend = false;
+      throw Exception('offline');
+    }
+    return _mine(threadId, MessageKind.text, clientId, text: text, replyToId: replyToId);
+  }
+
+  @override
+  Future<ChatMessage> sendFile(String threadId, ChatUpload upload,
+      {required String clientId, void Function(double sent)? onProgress, String? replyToId}) async {
     _note('sendFile:$threadId:${upload.kind.name}:${upload.name}');
     onProgress?.call(1);
     return _mine(threadId, upload.kind, clientId,
@@ -142,9 +180,32 @@ class FakeMessengerApi implements MessengerApi {
   }
 
   @override
-  Future<ChatMessage> sendLocation(String threadId, double lat, double lng, {required String clientId}) async {
+  Future<ChatMessage> sendLocation(String threadId, double lat, double lng, {required String clientId, String? replyToId}) async {
     _note('sendLocation:$threadId:$lat,$lng');
-    return _mine(threadId, MessageKind.location, clientId, lat: lat, lng: lng);
+    return _mine(threadId, MessageKind.location, clientId, lat: lat, lng: lng, replyToId: replyToId);
+  }
+
+  /// পরের [sendText] একবার ব্যর্থ হয় — "যায়নি, আবার চাপুন"-এর পরীক্ষা
+  bool failNextSend = false;
+
+  /// [deleteMessage]-এ সবার কাছ থেকে মোছা মানা (সার্ভারের ৪০৩ delete_not_allowed)
+  bool deleteEveryoneRefused = false;
+
+  @override
+  Future<void> forward(List<String> messageIds, List<String> to, {required String clientId}) async {
+    _note('forward:${messageIds.join(',')}:${to.join(',')}');
+  }
+
+  @override
+  Future<void> deleteMessage(String messageId, {required bool everyone}) async {
+    _note('delete:$messageId:${everyone ? 'everyone' : 'me'}');
+    if (everyone && deleteEveryoneRefused) throw const MessengerNotAllowed('এক ঘণ্টা পেরিয়ে গেছে — এখন কেবল নিজের কাছ থেকে মোছা যায়');
+  }
+
+  @override
+  Future<List<MessageReceipt>> info(String messageId) async {
+    _note('info:$messageId');
+    return [MessageReceipt(person: rakib, deliveredAt: at(10, 45), readAt: at(10, 46))];
   }
 
   @override

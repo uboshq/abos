@@ -20089,6 +20089,678 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'ABOS অ্যাপ {version}'**
   String menuPageAppVersion(String version);
+
+  /// Chat page header: back button
+  ///
+  /// In bn, this message translates to:
+  /// **'পেছনে'**
+  String get msgChatBack;
+
+  /// Chat page header: status line when the person is online
+  ///
+  /// In bn, this message translates to:
+  /// **'অনলাইন'**
+  String get msgChatOnline;
+
+  /// Group chat header status line
+  ///
+  /// In bn, this message translates to:
+  /// **'{members} জন সদস্য · {online} জন অনলাইন'**
+  String msgChatGroupStatus(int members, int online);
+
+  /// Group chat header status line when nobody is online
+  ///
+  /// In bn, this message translates to:
+  /// **'{members} জন সদস্য'**
+  String msgChatGroupMembers(int members);
+
+  /// Chat header: video call button (one person)
+  ///
+  /// In bn, this message translates to:
+  /// **'ভিডিও কল'**
+  String get msgChatVideoCall;
+
+  /// Chat header: voice call button (one person)
+  ///
+  /// In bn, this message translates to:
+  /// **'ভয়েস কল'**
+  String get msgChatVoiceCall;
+
+  /// Chat header: video button in a group
+  ///
+  /// In bn, this message translates to:
+  /// **'ভিডিও'**
+  String get msgChatGroupVideo;
+
+  /// Chat header: call button in a group
+  ///
+  /// In bn, this message translates to:
+  /// **'কল'**
+  String get msgChatGroupCall;
+
+  /// Chat header: the three-dot menu button
+  ///
+  /// In bn, this message translates to:
+  /// **'আরও'**
+  String get msgChatMore;
+
+  /// Toast when the group video button is tapped
+  ///
+  /// In bn, this message translates to:
+  /// **'শীঘ্রই আসছে — গ্রুপ ভিডিও সভা দ্বিতীয় ধাপে'**
+  String get msgChatSoonGroupVideo;
+
+  /// Toast when the group call button is tapped
+  ///
+  /// In bn, this message translates to:
+  /// **'শীঘ্রই আসছে — গ্রুপ কল দ্বিতীয় ধাপে'**
+  String get msgChatSoonGroupCall;
+
+  /// Chat menu: search within the chat
+  ///
+  /// In bn, this message translates to:
+  /// **'কথোপকথনে খুঁজুন'**
+  String get msgChatMenuSearch;
+
+  /// Chat menu: the page listing shared photos, files and ERP papers
+  ///
+  /// In bn, this message translates to:
+  /// **'ছবি-ফাইল-কাগজ'**
+  String get msgChatMenuMedia;
+
+  /// Chat menu: mute this chat
+  ///
+  /// In bn, this message translates to:
+  /// **'নোটিফিকেশন বন্ধ (মিউট)'**
+  String get msgChatMenuMute;
+
+  /// Chat menu: unmute this chat (shown when muted)
+  ///
+  /// In bn, this message translates to:
+  /// **'নোটিফিকেশন চালু করুন'**
+  String get msgChatMenuUnmute;
+
+  /// Chat menu (groups): the member list
+  ///
+  /// In bn, this message translates to:
+  /// **'সদস্যের তালিকা'**
+  String get msgChatMenuMembers;
+
+  /// Toast after muting
+  ///
+  /// In bn, this message translates to:
+  /// **'নোটিফিকেশন বন্ধ হলো'**
+  String get msgChatMutedToast;
+
+  /// Toast after unmuting
+  ///
+  /// In bn, this message translates to:
+  /// **'নোটিফিকেশন চালু হলো'**
+  String get msgChatUnmutedToast;
+
+  /// Date chip: today
+  ///
+  /// In bn, this message translates to:
+  /// **'আজ'**
+  String get msgChatToday;
+
+  /// Date chip: yesterday
+  ///
+  /// In bn, this message translates to:
+  /// **'গতকাল'**
+  String get msgChatYesterday;
+
+  /// My group message: how many have read it
+  ///
+  /// In bn, this message translates to:
+  /// **'{count} জন পড়েছেন'**
+  String msgChatReadBy(int count);
+
+  /// Chat header status of a one-to-one chat while the other person types
+  ///
+  /// In bn, this message translates to:
+  /// **'লিখছেন…'**
+  String get msgChatTypingNow;
+
+  /// Typing line under the dots
+  ///
+  /// In bn, this message translates to:
+  /// **'{name} লিখছেন…'**
+  String msgChatTyping(String name);
+
+  /// Screen reader: message is on its way
+  ///
+  /// In bn, this message translates to:
+  /// **'যাচ্ছে'**
+  String get msgChatTickSending;
+
+  /// Screen reader: single tick
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠানো'**
+  String get msgChatTickSent;
+
+  /// Screen reader: double tick
+  ///
+  /// In bn, this message translates to:
+  /// **'পৌঁছেছে'**
+  String get msgChatTickDelivered;
+
+  /// Screen reader: blue double tick
+  ///
+  /// In bn, this message translates to:
+  /// **'পড়েছে'**
+  String get msgChatTickRead;
+
+  /// A failed message: tap to retry
+  ///
+  /// In bn, this message translates to:
+  /// **'যায়নি — আবার পাঠাতে চাপুন'**
+  String get msgChatFailedRetry;
+
+  /// Paper card: open button
+  ///
+  /// In bn, this message translates to:
+  /// **'খুলুন'**
+  String get msgChatPaperOpen;
+
+  /// Toast when the paper cannot be opened by this person
+  ///
+  /// In bn, this message translates to:
+  /// **'এই কাগজ খোলার অনুমতি আপনার নেই'**
+  String get msgChatPaperNoPermission;
+
+  /// Toast when the paper failed to load
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজ খোলা গেল না'**
+  String get msgChatPaperOpenFailed;
+
+  /// A photo message without caption; also the tray item for the gallery
+  ///
+  /// In bn, this message translates to:
+  /// **'ছবি'**
+  String get msgChatPhoto;
+
+  /// Screen reader: a voice message
+  ///
+  /// In bn, this message translates to:
+  /// **'ভয়েস বার্তা'**
+  String get msgChatVoice;
+
+  /// Voice message: play button
+  ///
+  /// In bn, this message translates to:
+  /// **'শুনুন'**
+  String get msgChatVoicePlay;
+
+  /// Voice message: pause button
+  ///
+  /// In bn, this message translates to:
+  /// **'থামান'**
+  String get msgChatVoicePause;
+
+  /// Toast when the voice message fails to play
+  ///
+  /// In bn, this message translates to:
+  /// **'ভয়েস বার্তা চালানো গেল না'**
+  String get msgChatVoiceFailed;
+
+  /// File message: download button
+  ///
+  /// In bn, this message translates to:
+  /// **'নামিয়ে খুলুন'**
+  String get msgChatDownload;
+
+  /// Toast when the download fails
+  ///
+  /// In bn, this message translates to:
+  /// **'ফাইল নামানো গেল না'**
+  String get msgChatDownloadFailed;
+
+  /// Location message title; also the tray item
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থান'**
+  String get msgChatLocation;
+
+  /// Location message: tap to open in maps
+  ///
+  /// In bn, this message translates to:
+  /// **'মানচিত্রে খুলুন'**
+  String get msgChatOpenMap;
+
+  /// Composer placeholder
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা লিখুন…'**
+  String get msgChatHint;
+
+  /// Composer: emoji button
+  ///
+  /// In bn, this message translates to:
+  /// **'ইমোজি'**
+  String get msgChatEmoji;
+
+  /// Composer: attach (clip) button
+  ///
+  /// In bn, this message translates to:
+  /// **'জুড়ুন'**
+  String get msgChatAttach;
+
+  /// Composer: camera button; also the tray item
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্যামেরা'**
+  String get msgChatCamera;
+
+  /// Composer: the round mic button
+  ///
+  /// In bn, this message translates to:
+  /// **'ভয়েস বার্তা — চেপে ধরে বলুন'**
+  String get msgChatMic;
+
+  /// Toast when the mic is only tapped
+  ///
+  /// In bn, this message translates to:
+  /// **'চেপে ধরে বলুন, ছেড়ে দিলে যাবে'**
+  String get msgChatMicHint;
+
+  /// Toast when the microphone permission is refused
+  ///
+  /// In bn, this message translates to:
+  /// **'মাইকের অনুমতি দেওয়া হয়নি'**
+  String get msgChatMicDenied;
+
+  /// Recording strip: slide to cancel
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল করতে বাঁয়ে সরান'**
+  String get msgChatRecordingCancel;
+
+  /// Composer: send button
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠান'**
+  String get msgChatSend;
+
+  /// Attach tray: file
+  ///
+  /// In bn, this message translates to:
+  /// **'ফাইল'**
+  String get msgChatTrayFile;
+
+  /// Attach tray: send an ERP paper
+  ///
+  /// In bn, this message translates to:
+  /// **'ERP কাগজ'**
+  String get msgChatTrayPaper;
+
+  /// Paper picker sheet title
+  ///
+  /// In bn, this message translates to:
+  /// **'কোন কাগজ পাঠাবেন?'**
+  String get msgChatPaperPickTitle;
+
+  /// Paper picker: nothing recent
+  ///
+  /// In bn, this message translates to:
+  /// **'সাম্প্রতিক কাগজ নেই — কাগজটা খুলে ⋯ থেকে বার্তায় পাঠান'**
+  String get msgChatPaperPickEmpty;
+
+  /// Toast: location service off
+  ///
+  /// In bn, this message translates to:
+  /// **'ফোনের অবস্থান (GPS) বন্ধ'**
+  String get msgChatLocationOff;
+
+  /// Toast: location permission refused
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থানের অনুমতি দেওয়া হয়নি'**
+  String get msgChatLocationDenied;
+
+  /// Toast: location failed
+  ///
+  /// In bn, this message translates to:
+  /// **'অবস্থান পাওয়া গেল না'**
+  String get msgChatLocationFailed;
+
+  /// Toast: picking a file or photo failed
+  ///
+  /// In bn, this message translates to:
+  /// **'জোড়া গেল না'**
+  String get msgChatAttachFailed;
+
+  /// Calm message when the server has no messenger doors
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা এখনো চালু হয়নি'**
+  String get msgChatDoorsMissing;
+
+  /// Calm message on 403 without a server sentence
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনার বার্তার অনুমতি নেই'**
+  String get msgChatNotAllowed;
+
+  /// Calm message when loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা আনা গেল না'**
+  String get msgChatLoadFailed;
+
+  /// Retry button
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার চেষ্টা করুন'**
+  String get msgChatRetry;
+
+  /// openChatById: the thread is not in the list
+  ///
+  /// In bn, this message translates to:
+  /// **'কথোপকথন পাওয়া গেল না'**
+  String get msgChatNotFound;
+
+  /// Search bar placeholder
+  ///
+  /// In bn, this message translates to:
+  /// **'খুঁজুন…'**
+  String get msgChatSearchHint;
+
+  /// Search bar: which match of how many
+  ///
+  /// In bn, this message translates to:
+  /// **'{at}/{of}'**
+  String msgChatSearchCount(int at, int of);
+
+  /// Search bar: nothing found
+  ///
+  /// In bn, this message translates to:
+  /// **'মেলেনি'**
+  String get msgChatSearchNone;
+
+  /// Search bar: previous (older) match
+  ///
+  /// In bn, this message translates to:
+  /// **'আগেরটা'**
+  String get msgChatSearchPrev;
+
+  /// Search bar: next (newer) match
+  ///
+  /// In bn, this message translates to:
+  /// **'পরেরটা'**
+  String get msgChatSearchNext;
+
+  /// Search bar: close
+  ///
+  /// In bn, this message translates to:
+  /// **'খোঁজা বন্ধ'**
+  String get msgChatSearchClose;
+
+  /// Media page: empty
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনো কোনো ছবি, ফাইল বা কাগজ নেই'**
+  String get msgChatMediaEmpty;
+
+  /// Members page: empty
+  ///
+  /// In bn, this message translates to:
+  /// **'সদস্য নেই'**
+  String get msgChatMembersEmpty;
+
+  /// Photo viewer: close
+  ///
+  /// In bn, this message translates to:
+  /// **'বন্ধ'**
+  String get msgChatClose;
+
+  /// Action bar: back button that clears the selected message
+  ///
+  /// In bn, this message translates to:
+  /// **'বাছাই বাতিল'**
+  String get msgChatUnselect;
+
+  /// Action bar: reply to the selected message
+  ///
+  /// In bn, this message translates to:
+  /// **'উত্তর দিন'**
+  String get msgChatActReply;
+
+  /// Action bar: forward the selected message
+  ///
+  /// In bn, this message translates to:
+  /// **'ফরোয়ার্ড'**
+  String get msgChatActForward;
+
+  /// Action bar: copy the selected message's text
+  ///
+  /// In bn, this message translates to:
+  /// **'কপি'**
+  String get msgChatActCopy;
+
+  /// Action bar: delete the selected message
+  ///
+  /// In bn, this message translates to:
+  /// **'মুছুন'**
+  String get msgChatActDelete;
+
+  /// Action bar: delivered and read times
+  ///
+  /// In bn, this message translates to:
+  /// **'তথ্য'**
+  String get msgChatActInfo;
+
+  /// Toast after copying
+  ///
+  /// In bn, this message translates to:
+  /// **'কপি হলো'**
+  String get msgChatCopied;
+
+  /// Delete dialog question
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তাটি মুছবেন?'**
+  String get msgChatDeleteAsk;
+
+  /// Delete dialog: for everyone (own messages only)
+  ///
+  /// In bn, this message translates to:
+  /// **'সবার কাছ থেকে মুছুন'**
+  String get msgChatDeleteEveryone;
+
+  /// Delete dialog: only from my phone
+  ///
+  /// In bn, this message translates to:
+  /// **'আমার কাছ থেকে মুছুন'**
+  String get msgChatDeleteMe;
+
+  /// Dialog: cancel
+  ///
+  /// In bn, this message translates to:
+  /// **'বাতিল'**
+  String get msgChatCancel;
+
+  /// A message deleted for everyone
+  ///
+  /// In bn, this message translates to:
+  /// **'এই বার্তাটি মুছে ফেলা হয়েছে'**
+  String get msgChatDeleted;
+
+  /// Toast when deleting failed
+  ///
+  /// In bn, this message translates to:
+  /// **'মোছা গেল না'**
+  String get msgChatDeleteFailed;
+
+  /// Info sheet title
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তার তথ্য'**
+  String get msgChatInfoTitle;
+
+  /// Info sheet: someone else's message, when it arrived
+  ///
+  /// In bn, this message translates to:
+  /// **'পেয়েছেন'**
+  String get msgChatInfoReceived;
+
+  /// Info sheet: not delivered or read yet
+  ///
+  /// In bn, this message translates to:
+  /// **'এখনো নয়'**
+  String get msgChatInfoNotYet;
+
+  /// Info sheet: loading failed
+  ///
+  /// In bn, this message translates to:
+  /// **'তথ্য আনা গেল না'**
+  String get msgChatInfoFailed;
+
+  /// Info sheet: close button
+  ///
+  /// In bn, this message translates to:
+  /// **'ঠিক আছে'**
+  String get msgChatOk;
+
+  /// Reply quote: my own earlier message
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনি'**
+  String get msgChatYou;
+
+  /// Composer: close the reply preview
+  ///
+  /// In bn, this message translates to:
+  /// **'উত্তর বাতিল'**
+  String get msgChatReplyCancel;
+
+  /// Forward picker: heading of the recent conversations
+  ///
+  /// In bn, this message translates to:
+  /// **'কথোপকথন'**
+  String get msgChatForwardChats;
+
+  /// Forward picker: heading of the people without a chat yet
+  ///
+  /// In bn, this message translates to:
+  /// **'মানুষ'**
+  String get msgChatForwardPeople;
+
+  /// Forward picker title
+  ///
+  /// In bn, this message translates to:
+  /// **'কাকে ফরোয়ার্ড করবেন?'**
+  String get msgChatForwardTitle;
+
+  /// Forward picker: send button with how many are chosen
+  ///
+  /// In bn, this message translates to:
+  /// **'পাঠান · {count} জন'**
+  String msgChatForwardSend(int count);
+
+  /// Toast after forwarding
+  ///
+  /// In bn, this message translates to:
+  /// **'ফরোয়ার্ড হলো'**
+  String get msgChatForwarded;
+
+  /// Toast when forwarding failed
+  ///
+  /// In bn, this message translates to:
+  /// **'ফরোয়ার্ড করা গেল না'**
+  String get msgChatForwardFailed;
+
+  /// Forward picker: empty
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো কথোপকথন নেই'**
+  String get msgChatForwardEmpty;
+
+  /// Toast after sending an ERP paper from the tray
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজ পাঠানো হলো'**
+  String get msgChatPaperSent;
+
+  /// Toast when sending a paper failed
+  ///
+  /// In bn, this message translates to:
+  /// **'কাগজ পাঠানো গেল না'**
+  String get msgChatPaperSendFailed;
+
+  /// Composer: the emoji button while the emoji panel is open (switches back to the keyboard)
+  ///
+  /// In bn, this message translates to:
+  /// **'কিবোর্ড'**
+  String get msgChatKeyboard;
+
+  /// Emoji panel: search box
+  ///
+  /// In bn, this message translates to:
+  /// **'ইমোজি খুঁজুন'**
+  String get msgChatEmojiSearch;
+
+  /// Emoji panel: recent tab and heading
+  ///
+  /// In bn, this message translates to:
+  /// **'সাম্প্রতিক'**
+  String get msgChatEmojiRecent;
+
+  /// Emoji panel: faces tab and heading
+  ///
+  /// In bn, this message translates to:
+  /// **'মুখ ও মানুষ'**
+  String get msgChatEmojiFaces;
+
+  /// Emoji panel: nature tab and heading
+  ///
+  /// In bn, this message translates to:
+  /// **'প্রকৃতি'**
+  String get msgChatEmojiNature;
+
+  /// Emoji panel: food tab and heading
+  ///
+  /// In bn, this message translates to:
+  /// **'খাবার'**
+  String get msgChatEmojiFood;
+
+  /// Emoji panel: hearts tab and heading
+  ///
+  /// In bn, this message translates to:
+  /// **'ভালোবাসা'**
+  String get msgChatEmojiLove;
+
+  /// Emoji panel: flags tab and heading
+  ///
+  /// In bn, this message translates to:
+  /// **'পতাকা'**
+  String get msgChatEmojiFlags;
+
+  /// Composer: speech-to-text button inside the pill
+  ///
+  /// In bn, this message translates to:
+  /// **'বলে লিখুন'**
+  String get msgChatVoiceType;
+
+  /// Composer: small green line while voice typing listens
+  ///
+  /// In bn, this message translates to:
+  /// **'শুনছি…'**
+  String get msgChatListening;
+
+  /// Toast when voice typing has no microphone permission
+  ///
+  /// In bn, this message translates to:
+  /// **'মাইকের অনুমতি দেওয়া হয়নি — বলে লেখা যাবে না'**
+  String get msgChatVoiceTypeDenied;
+
+  /// Toast when the recogniser failed
+  ///
+  /// In bn, this message translates to:
+  /// **'শোনা গেল না — আবার বলুন'**
+  String get msgChatVoiceTypeFailed;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

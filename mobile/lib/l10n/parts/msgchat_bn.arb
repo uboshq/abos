@@ -1,0 +1,487 @@
+{
+  "@@locale": "bn",
+  "msgChatBack": "পেছনে",
+  "@msgChatBack": {
+    "description": "Chat page header: back button"
+  },
+  "msgChatOnline": "অনলাইন",
+  "@msgChatOnline": {
+    "description": "Chat page header: status line when the person is online"
+  },
+  "msgChatGroupStatus": "{members} জন সদস্য · {online} জন অনলাইন",
+  "@msgChatGroupStatus": {
+    "description": "Group chat header status line",
+    "placeholders": {
+      "members": {
+        "type": "int"
+      },
+      "online": {
+        "type": "int"
+      }
+    }
+  },
+  "msgChatGroupMembers": "{members} জন সদস্য",
+  "@msgChatGroupMembers": {
+    "description": "Group chat header status line when nobody is online",
+    "placeholders": {
+      "members": {
+        "type": "int"
+      }
+    }
+  },
+  "msgChatVideoCall": "ভিডিও কল",
+  "@msgChatVideoCall": {
+    "description": "Chat header: video call button (one person)"
+  },
+  "msgChatVoiceCall": "ভয়েস কল",
+  "@msgChatVoiceCall": {
+    "description": "Chat header: voice call button (one person)"
+  },
+  "msgChatGroupVideo": "ভিডিও",
+  "@msgChatGroupVideo": {
+    "description": "Chat header: video button in a group"
+  },
+  "msgChatGroupCall": "কল",
+  "@msgChatGroupCall": {
+    "description": "Chat header: call button in a group"
+  },
+  "msgChatMore": "আরও",
+  "@msgChatMore": {
+    "description": "Chat header: the three-dot menu button"
+  },
+  "msgChatSoonGroupVideo": "শীঘ্রই আসছে — গ্রুপ ভিডিও সভা দ্বিতীয় ধাপে",
+  "@msgChatSoonGroupVideo": {
+    "description": "Toast when the group video button is tapped"
+  },
+  "msgChatSoonGroupCall": "শীঘ্রই আসছে — গ্রুপ কল দ্বিতীয় ধাপে",
+  "@msgChatSoonGroupCall": {
+    "description": "Toast when the group call button is tapped"
+  },
+  "msgChatMenuSearch": "কথোপকথনে খুঁজুন",
+  "@msgChatMenuSearch": {
+    "description": "Chat menu: search within the chat"
+  },
+  "msgChatMenuMedia": "ছবি-ফাইল-কাগজ",
+  "@msgChatMenuMedia": {
+    "description": "Chat menu: the page listing shared photos, files and ERP papers"
+  },
+  "msgChatMenuMute": "নোটিফিকেশন বন্ধ (মিউট)",
+  "@msgChatMenuMute": {
+    "description": "Chat menu: mute this chat"
+  },
+  "msgChatMenuUnmute": "নোটিফিকেশন চালু করুন",
+  "@msgChatMenuUnmute": {
+    "description": "Chat menu: unmute this chat (shown when muted)"
+  },
+  "msgChatMenuMembers": "সদস্যের তালিকা",
+  "@msgChatMenuMembers": {
+    "description": "Chat menu (groups): the member list"
+  },
+  "msgChatMutedToast": "নোটিফিকেশন বন্ধ হলো",
+  "@msgChatMutedToast": {
+    "description": "Toast after muting"
+  },
+  "msgChatUnmutedToast": "নোটিফিকেশন চালু হলো",
+  "@msgChatUnmutedToast": {
+    "description": "Toast after unmuting"
+  },
+  "msgChatToday": "আজ",
+  "@msgChatToday": {
+    "description": "Date chip: today"
+  },
+  "msgChatYesterday": "গতকাল",
+  "@msgChatYesterday": {
+    "description": "Date chip: yesterday"
+  },
+  "msgChatReadBy": "{count} জন পড়েছেন",
+  "@msgChatReadBy": {
+    "description": "My group message: how many have read it",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "msgChatTypingNow": "লিখছেন…",
+  "@msgChatTypingNow": {
+    "description": "Chat header status of a one-to-one chat while the other person types"
+  },
+  "msgChatTyping": "{name} লিখছেন…",
+  "@msgChatTyping": {
+    "description": "Typing line under the dots",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "msgChatTickSending": "যাচ্ছে",
+  "@msgChatTickSending": {
+    "description": "Screen reader: message is on its way"
+  },
+  "msgChatTickSent": "পাঠানো",
+  "@msgChatTickSent": {
+    "description": "Screen reader: single tick"
+  },
+  "msgChatTickDelivered": "পৌঁছেছে",
+  "@msgChatTickDelivered": {
+    "description": "Screen reader: double tick"
+  },
+  "msgChatTickRead": "পড়েছে",
+  "@msgChatTickRead": {
+    "description": "Screen reader: blue double tick"
+  },
+  "msgChatFailedRetry": "যায়নি — আবার পাঠাতে চাপুন",
+  "@msgChatFailedRetry": {
+    "description": "A failed message: tap to retry"
+  },
+  "msgChatPaperOpen": "খুলুন",
+  "@msgChatPaperOpen": {
+    "description": "Paper card: open button"
+  },
+  "msgChatPaperNoPermission": "এই কাগজ খোলার অনুমতি আপনার নেই",
+  "@msgChatPaperNoPermission": {
+    "description": "Toast when the paper cannot be opened by this person"
+  },
+  "msgChatPaperOpenFailed": "কাগজ খোলা গেল না",
+  "@msgChatPaperOpenFailed": {
+    "description": "Toast when the paper failed to load"
+  },
+  "msgChatPhoto": "ছবি",
+  "@msgChatPhoto": {
+    "description": "A photo message without caption; also the tray item for the gallery"
+  },
+  "msgChatVoice": "ভয়েস বার্তা",
+  "@msgChatVoice": {
+    "description": "Screen reader: a voice message"
+  },
+  "msgChatVoicePlay": "শুনুন",
+  "@msgChatVoicePlay": {
+    "description": "Voice message: play button"
+  },
+  "msgChatVoicePause": "থামান",
+  "@msgChatVoicePause": {
+    "description": "Voice message: pause button"
+  },
+  "msgChatVoiceFailed": "ভয়েস বার্তা চালানো গেল না",
+  "@msgChatVoiceFailed": {
+    "description": "Toast when the voice message fails to play"
+  },
+  "msgChatDownload": "নামিয়ে খুলুন",
+  "@msgChatDownload": {
+    "description": "File message: download button"
+  },
+  "msgChatDownloadFailed": "ফাইল নামানো গেল না",
+  "@msgChatDownloadFailed": {
+    "description": "Toast when the download fails"
+  },
+  "msgChatLocation": "অবস্থান",
+  "@msgChatLocation": {
+    "description": "Location message title; also the tray item"
+  },
+  "msgChatOpenMap": "মানচিত্রে খুলুন",
+  "@msgChatOpenMap": {
+    "description": "Location message: tap to open in maps"
+  },
+  "msgChatHint": "বার্তা লিখুন…",
+  "@msgChatHint": {
+    "description": "Composer placeholder"
+  },
+  "msgChatEmoji": "ইমোজি",
+  "@msgChatEmoji": {
+    "description": "Composer: emoji button"
+  },
+  "msgChatAttach": "জুড়ুন",
+  "@msgChatAttach": {
+    "description": "Composer: attach (clip) button"
+  },
+  "msgChatCamera": "ক্যামেরা",
+  "@msgChatCamera": {
+    "description": "Composer: camera button; also the tray item"
+  },
+  "msgChatMic": "ভয়েস বার্তা — চেপে ধরে বলুন",
+  "@msgChatMic": {
+    "description": "Composer: the round mic button"
+  },
+  "msgChatMicHint": "চেপে ধরে বলুন, ছেড়ে দিলে যাবে",
+  "@msgChatMicHint": {
+    "description": "Toast when the mic is only tapped"
+  },
+  "msgChatMicDenied": "মাইকের অনুমতি দেওয়া হয়নি",
+  "@msgChatMicDenied": {
+    "description": "Toast when the microphone permission is refused"
+  },
+  "msgChatRecordingCancel": "বাতিল করতে বাঁয়ে সরান",
+  "@msgChatRecordingCancel": {
+    "description": "Recording strip: slide to cancel"
+  },
+  "msgChatSend": "পাঠান",
+  "@msgChatSend": {
+    "description": "Composer: send button"
+  },
+  "msgChatTrayFile": "ফাইল",
+  "@msgChatTrayFile": {
+    "description": "Attach tray: file"
+  },
+  "msgChatTrayPaper": "ERP কাগজ",
+  "@msgChatTrayPaper": {
+    "description": "Attach tray: send an ERP paper"
+  },
+  "msgChatPaperPickTitle": "কোন কাগজ পাঠাবেন?",
+  "@msgChatPaperPickTitle": {
+    "description": "Paper picker sheet title"
+  },
+  "msgChatPaperPickEmpty": "সাম্প্রতিক কাগজ নেই — কাগজটা খুলে ⋯ থেকে বার্তায় পাঠান",
+  "@msgChatPaperPickEmpty": {
+    "description": "Paper picker: nothing recent"
+  },
+  "msgChatLocationOff": "ফোনের অবস্থান (GPS) বন্ধ",
+  "@msgChatLocationOff": {
+    "description": "Toast: location service off"
+  },
+  "msgChatLocationDenied": "অবস্থানের অনুমতি দেওয়া হয়নি",
+  "@msgChatLocationDenied": {
+    "description": "Toast: location permission refused"
+  },
+  "msgChatLocationFailed": "অবস্থান পাওয়া গেল না",
+  "@msgChatLocationFailed": {
+    "description": "Toast: location failed"
+  },
+  "msgChatAttachFailed": "জোড়া গেল না",
+  "@msgChatAttachFailed": {
+    "description": "Toast: picking a file or photo failed"
+  },
+  "msgChatDoorsMissing": "বার্তা এখনো চালু হয়নি",
+  "@msgChatDoorsMissing": {
+    "description": "Calm message when the server has no messenger doors"
+  },
+  "msgChatNotAllowed": "আপনার বার্তার অনুমতি নেই",
+  "@msgChatNotAllowed": {
+    "description": "Calm message on 403 without a server sentence"
+  },
+  "msgChatLoadFailed": "বার্তা আনা গেল না",
+  "@msgChatLoadFailed": {
+    "description": "Calm message when loading failed"
+  },
+  "msgChatRetry": "আবার চেষ্টা করুন",
+  "@msgChatRetry": {
+    "description": "Retry button"
+  },
+  "msgChatNotFound": "কথোপকথন পাওয়া গেল না",
+  "@msgChatNotFound": {
+    "description": "openChatById: the thread is not in the list"
+  },
+  "msgChatSearchHint": "খুঁজুন…",
+  "@msgChatSearchHint": {
+    "description": "Search bar placeholder"
+  },
+  "msgChatSearchCount": "{at}/{of}",
+  "@msgChatSearchCount": {
+    "description": "Search bar: which match of how many",
+    "placeholders": {
+      "at": {
+        "type": "int"
+      },
+      "of": {
+        "type": "int"
+      }
+    }
+  },
+  "msgChatSearchNone": "মেলেনি",
+  "@msgChatSearchNone": {
+    "description": "Search bar: nothing found"
+  },
+  "msgChatSearchPrev": "আগেরটা",
+  "@msgChatSearchPrev": {
+    "description": "Search bar: previous (older) match"
+  },
+  "msgChatSearchNext": "পরেরটা",
+  "@msgChatSearchNext": {
+    "description": "Search bar: next (newer) match"
+  },
+  "msgChatSearchClose": "খোঁজা বন্ধ",
+  "@msgChatSearchClose": {
+    "description": "Search bar: close"
+  },
+  "msgChatMediaEmpty": "এখনো কোনো ছবি, ফাইল বা কাগজ নেই",
+  "@msgChatMediaEmpty": {
+    "description": "Media page: empty"
+  },
+  "msgChatMembersEmpty": "সদস্য নেই",
+  "@msgChatMembersEmpty": {
+    "description": "Members page: empty"
+  },
+  "msgChatClose": "বন্ধ",
+  "@msgChatClose": {
+    "description": "Photo viewer: close"
+  },
+  "msgChatUnselect": "বাছাই বাতিল",
+  "@msgChatUnselect": {
+    "description": "Action bar: back button that clears the selected message"
+  },
+  "msgChatActReply": "উত্তর দিন",
+  "@msgChatActReply": {
+    "description": "Action bar: reply to the selected message"
+  },
+  "msgChatActForward": "ফরোয়ার্ড",
+  "@msgChatActForward": {
+    "description": "Action bar: forward the selected message"
+  },
+  "msgChatActCopy": "কপি",
+  "@msgChatActCopy": {
+    "description": "Action bar: copy the selected message's text"
+  },
+  "msgChatActDelete": "মুছুন",
+  "@msgChatActDelete": {
+    "description": "Action bar: delete the selected message"
+  },
+  "msgChatActInfo": "তথ্য",
+  "@msgChatActInfo": {
+    "description": "Action bar: delivered and read times"
+  },
+  "msgChatCopied": "কপি হলো",
+  "@msgChatCopied": {
+    "description": "Toast after copying"
+  },
+  "msgChatDeleteAsk": "বার্তাটি মুছবেন?",
+  "@msgChatDeleteAsk": {
+    "description": "Delete dialog question"
+  },
+  "msgChatDeleteEveryone": "সবার কাছ থেকে মুছুন",
+  "@msgChatDeleteEveryone": {
+    "description": "Delete dialog: for everyone (own messages only)"
+  },
+  "msgChatDeleteMe": "আমার কাছ থেকে মুছুন",
+  "@msgChatDeleteMe": {
+    "description": "Delete dialog: only from my phone"
+  },
+  "msgChatCancel": "বাতিল",
+  "@msgChatCancel": {
+    "description": "Dialog: cancel"
+  },
+  "msgChatDeleted": "এই বার্তাটি মুছে ফেলা হয়েছে",
+  "@msgChatDeleted": {
+    "description": "A message deleted for everyone"
+  },
+  "msgChatDeleteFailed": "মোছা গেল না",
+  "@msgChatDeleteFailed": {
+    "description": "Toast when deleting failed"
+  },
+  "msgChatInfoTitle": "বার্তার তথ্য",
+  "@msgChatInfoTitle": {
+    "description": "Info sheet title"
+  },
+  "msgChatInfoReceived": "পেয়েছেন",
+  "@msgChatInfoReceived": {
+    "description": "Info sheet: someone else's message, when it arrived"
+  },
+  "msgChatInfoNotYet": "এখনো নয়",
+  "@msgChatInfoNotYet": {
+    "description": "Info sheet: not delivered or read yet"
+  },
+  "msgChatInfoFailed": "তথ্য আনা গেল না",
+  "@msgChatInfoFailed": {
+    "description": "Info sheet: loading failed"
+  },
+  "msgChatOk": "ঠিক আছে",
+  "@msgChatOk": {
+    "description": "Info sheet: close button"
+  },
+  "msgChatYou": "আপনি",
+  "@msgChatYou": {
+    "description": "Reply quote: my own earlier message"
+  },
+  "msgChatReplyCancel": "উত্তর বাতিল",
+  "@msgChatReplyCancel": {
+    "description": "Composer: close the reply preview"
+  },
+  "msgChatForwardChats": "কথোপকথন",
+  "@msgChatForwardChats": {
+    "description": "Forward picker: heading of the recent conversations"
+  },
+  "msgChatForwardPeople": "মানুষ",
+  "@msgChatForwardPeople": {
+    "description": "Forward picker: heading of the people without a chat yet"
+  },
+  "msgChatForwardTitle": "কাকে ফরোয়ার্ড করবেন?",
+  "@msgChatForwardTitle": {
+    "description": "Forward picker title"
+  },
+  "msgChatForwardSend": "পাঠান · {count} জন",
+  "@msgChatForwardSend": {
+    "description": "Forward picker: send button with how many are chosen",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "msgChatForwarded": "ফরোয়ার্ড হলো",
+  "@msgChatForwarded": {
+    "description": "Toast after forwarding"
+  },
+  "msgChatForwardFailed": "ফরোয়ার্ড করা গেল না",
+  "@msgChatForwardFailed": {
+    "description": "Toast when forwarding failed"
+  },
+  "msgChatForwardEmpty": "কোনো কথোপকথন নেই",
+  "@msgChatForwardEmpty": {
+    "description": "Forward picker: empty"
+  },
+  "msgChatPaperSent": "কাগজ পাঠানো হলো",
+  "@msgChatPaperSent": {
+    "description": "Toast after sending an ERP paper from the tray"
+  },
+  "msgChatPaperSendFailed": "কাগজ পাঠানো গেল না",
+  "@msgChatPaperSendFailed": {
+    "description": "Toast when sending a paper failed"
+  },
+  "msgChatKeyboard": "কিবোর্ড",
+  "@msgChatKeyboard": {
+    "description": "Composer: the emoji button while the emoji panel is open (switches back to the keyboard)"
+  },
+  "msgChatEmojiSearch": "ইমোজি খুঁজুন",
+  "@msgChatEmojiSearch": {
+    "description": "Emoji panel: search box"
+  },
+  "msgChatEmojiRecent": "সাম্প্রতিক",
+  "@msgChatEmojiRecent": {
+    "description": "Emoji panel: recent tab and heading"
+  },
+  "msgChatEmojiFaces": "মুখ ও মানুষ",
+  "@msgChatEmojiFaces": {
+    "description": "Emoji panel: faces tab and heading"
+  },
+  "msgChatEmojiNature": "প্রকৃতি",
+  "@msgChatEmojiNature": {
+    "description": "Emoji panel: nature tab and heading"
+  },
+  "msgChatEmojiFood": "খাবার",
+  "@msgChatEmojiFood": {
+    "description": "Emoji panel: food tab and heading"
+  },
+  "msgChatEmojiLove": "ভালোবাসা",
+  "@msgChatEmojiLove": {
+    "description": "Emoji panel: hearts tab and heading"
+  },
+  "msgChatEmojiFlags": "পতাকা",
+  "@msgChatEmojiFlags": {
+    "description": "Emoji panel: flags tab and heading"
+  },
+  "msgChatVoiceType": "বলে লিখুন",
+  "@msgChatVoiceType": {
+    "description": "Composer: speech-to-text button inside the pill"
+  },
+  "msgChatListening": "শুনছি…",
+  "@msgChatListening": {
+    "description": "Composer: small green line while voice typing listens"
+  },
+  "msgChatVoiceTypeDenied": "মাইকের অনুমতি দেওয়া হয়নি — বলে লেখা যাবে না",
+  "@msgChatVoiceTypeDenied": {
+    "description": "Toast when voice typing has no microphone permission"
+  },
+  "msgChatVoiceTypeFailed": "শোনা গেল না — আবার বলুন",
+  "@msgChatVoiceTypeFailed": {
+    "description": "Toast when the recogniser failed"
+  }
+}

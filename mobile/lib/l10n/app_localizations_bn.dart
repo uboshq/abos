@@ -12015,4 +12015,355 @@ class AppL10nBn extends AppL10n {
   String menuPageAppVersion(String version) {
     return 'ABOS অ্যাপ $version';
   }
+
+  @override
+  String get msgChatBack => 'পেছনে';
+
+  @override
+  String get msgChatOnline => 'অনলাইন';
+
+  @override
+  String msgChatGroupStatus(int members, int online) {
+    return '$members জন সদস্য · $online জন অনলাইন';
+  }
+
+  @override
+  String msgChatGroupMembers(int members) {
+    return '$members জন সদস্য';
+  }
+
+  @override
+  String get msgChatVideoCall => 'ভিডিও কল';
+
+  @override
+  String get msgChatVoiceCall => 'ভয়েস কল';
+
+  @override
+  String get msgChatGroupVideo => 'ভিডিও';
+
+  @override
+  String get msgChatGroupCall => 'কল';
+
+  @override
+  String get msgChatMore => 'আরও';
+
+  @override
+  String get msgChatSoonGroupVideo =>
+      'শীঘ্রই আসছে — গ্রুপ ভিডিও সভা দ্বিতীয় ধাপে';
+
+  @override
+  String get msgChatSoonGroupCall => 'শীঘ্রই আসছে — গ্রুপ কল দ্বিতীয় ধাপে';
+
+  @override
+  String get msgChatMenuSearch => 'কথোপকথনে খুঁজুন';
+
+  @override
+  String get msgChatMenuMedia => 'ছবি-ফাইল-কাগজ';
+
+  @override
+  String get msgChatMenuMute => 'নোটিফিকেশন বন্ধ (মিউট)';
+
+  @override
+  String get msgChatMenuUnmute => 'নোটিফিকেশন চালু করুন';
+
+  @override
+  String get msgChatMenuMembers => 'সদস্যের তালিকা';
+
+  @override
+  String get msgChatMutedToast => 'নোটিফিকেশন বন্ধ হলো';
+
+  @override
+  String get msgChatUnmutedToast => 'নোটিফিকেশন চালু হলো';
+
+  @override
+  String get msgChatToday => 'আজ';
+
+  @override
+  String get msgChatYesterday => 'গতকাল';
+
+  @override
+  String msgChatReadBy(int count) {
+    return '$count জন পড়েছেন';
+  }
+
+  @override
+  String get msgChatTypingNow => 'লিখছেন…';
+
+  @override
+  String msgChatTyping(String name) {
+    return '$name লিখছেন…';
+  }
+
+  @override
+  String get msgChatTickSending => 'যাচ্ছে';
+
+  @override
+  String get msgChatTickSent => 'পাঠানো';
+
+  @override
+  String get msgChatTickDelivered => 'পৌঁছেছে';
+
+  @override
+  String get msgChatTickRead => 'পড়েছে';
+
+  @override
+  String get msgChatFailedRetry => 'যায়নি — আবার পাঠাতে চাপুন';
+
+  @override
+  String get msgChatPaperOpen => 'খুলুন';
+
+  @override
+  String get msgChatPaperNoPermission => 'এই কাগজ খোলার অনুমতি আপনার নেই';
+
+  @override
+  String get msgChatPaperOpenFailed => 'কাগজ খোলা গেল না';
+
+  @override
+  String get msgChatPhoto => 'ছবি';
+
+  @override
+  String get msgChatVoice => 'ভয়েস বার্তা';
+
+  @override
+  String get msgChatVoicePlay => 'শুনুন';
+
+  @override
+  String get msgChatVoicePause => 'থামান';
+
+  @override
+  String get msgChatVoiceFailed => 'ভয়েস বার্তা চালানো গেল না';
+
+  @override
+  String get msgChatDownload => 'নামিয়ে খুলুন';
+
+  @override
+  String get msgChatDownloadFailed => 'ফাইল নামানো গেল না';
+
+  @override
+  String get msgChatLocation => 'অবস্থান';
+
+  @override
+  String get msgChatOpenMap => 'মানচিত্রে খুলুন';
+
+  @override
+  String get msgChatHint => 'বার্তা লিখুন…';
+
+  @override
+  String get msgChatEmoji => 'ইমোজি';
+
+  @override
+  String get msgChatAttach => 'জুড়ুন';
+
+  @override
+  String get msgChatCamera => 'ক্যামেরা';
+
+  @override
+  String get msgChatMic => 'ভয়েস বার্তা — চেপে ধরে বলুন';
+
+  @override
+  String get msgChatMicHint => 'চেপে ধরে বলুন, ছেড়ে দিলে যাবে';
+
+  @override
+  String get msgChatMicDenied => 'মাইকের অনুমতি দেওয়া হয়নি';
+
+  @override
+  String get msgChatRecordingCancel => 'বাতিল করতে বাঁয়ে সরান';
+
+  @override
+  String get msgChatSend => 'পাঠান';
+
+  @override
+  String get msgChatTrayFile => 'ফাইল';
+
+  @override
+  String get msgChatTrayPaper => 'ERP কাগজ';
+
+  @override
+  String get msgChatPaperPickTitle => 'কোন কাগজ পাঠাবেন?';
+
+  @override
+  String get msgChatPaperPickEmpty =>
+      'সাম্প্রতিক কাগজ নেই — কাগজটা খুলে ⋯ থেকে বার্তায় পাঠান';
+
+  @override
+  String get msgChatLocationOff => 'ফোনের অবস্থান (GPS) বন্ধ';
+
+  @override
+  String get msgChatLocationDenied => 'অবস্থানের অনুমতি দেওয়া হয়নি';
+
+  @override
+  String get msgChatLocationFailed => 'অবস্থান পাওয়া গেল না';
+
+  @override
+  String get msgChatAttachFailed => 'জোড়া গেল না';
+
+  @override
+  String get msgChatDoorsMissing => 'বার্তা এখনো চালু হয়নি';
+
+  @override
+  String get msgChatNotAllowed => 'আপনার বার্তার অনুমতি নেই';
+
+  @override
+  String get msgChatLoadFailed => 'বার্তা আনা গেল না';
+
+  @override
+  String get msgChatRetry => 'আবার চেষ্টা করুন';
+
+  @override
+  String get msgChatNotFound => 'কথোপকথন পাওয়া গেল না';
+
+  @override
+  String get msgChatSearchHint => 'খুঁজুন…';
+
+  @override
+  String msgChatSearchCount(int at, int of) {
+    return '$at/$of';
+  }
+
+  @override
+  String get msgChatSearchNone => 'মেলেনি';
+
+  @override
+  String get msgChatSearchPrev => 'আগেরটা';
+
+  @override
+  String get msgChatSearchNext => 'পরেরটা';
+
+  @override
+  String get msgChatSearchClose => 'খোঁজা বন্ধ';
+
+  @override
+  String get msgChatMediaEmpty => 'এখনো কোনো ছবি, ফাইল বা কাগজ নেই';
+
+  @override
+  String get msgChatMembersEmpty => 'সদস্য নেই';
+
+  @override
+  String get msgChatClose => 'বন্ধ';
+
+  @override
+  String get msgChatUnselect => 'বাছাই বাতিল';
+
+  @override
+  String get msgChatActReply => 'উত্তর দিন';
+
+  @override
+  String get msgChatActForward => 'ফরোয়ার্ড';
+
+  @override
+  String get msgChatActCopy => 'কপি';
+
+  @override
+  String get msgChatActDelete => 'মুছুন';
+
+  @override
+  String get msgChatActInfo => 'তথ্য';
+
+  @override
+  String get msgChatCopied => 'কপি হলো';
+
+  @override
+  String get msgChatDeleteAsk => 'বার্তাটি মুছবেন?';
+
+  @override
+  String get msgChatDeleteEveryone => 'সবার কাছ থেকে মুছুন';
+
+  @override
+  String get msgChatDeleteMe => 'আমার কাছ থেকে মুছুন';
+
+  @override
+  String get msgChatCancel => 'বাতিল';
+
+  @override
+  String get msgChatDeleted => 'এই বার্তাটি মুছে ফেলা হয়েছে';
+
+  @override
+  String get msgChatDeleteFailed => 'মোছা গেল না';
+
+  @override
+  String get msgChatInfoTitle => 'বার্তার তথ্য';
+
+  @override
+  String get msgChatInfoReceived => 'পেয়েছেন';
+
+  @override
+  String get msgChatInfoNotYet => 'এখনো নয়';
+
+  @override
+  String get msgChatInfoFailed => 'তথ্য আনা গেল না';
+
+  @override
+  String get msgChatOk => 'ঠিক আছে';
+
+  @override
+  String get msgChatYou => 'আপনি';
+
+  @override
+  String get msgChatReplyCancel => 'উত্তর বাতিল';
+
+  @override
+  String get msgChatForwardChats => 'কথোপকথন';
+
+  @override
+  String get msgChatForwardPeople => 'মানুষ';
+
+  @override
+  String get msgChatForwardTitle => 'কাকে ফরোয়ার্ড করবেন?';
+
+  @override
+  String msgChatForwardSend(int count) {
+    return 'পাঠান · $count জন';
+  }
+
+  @override
+  String get msgChatForwarded => 'ফরোয়ার্ড হলো';
+
+  @override
+  String get msgChatForwardFailed => 'ফরোয়ার্ড করা গেল না';
+
+  @override
+  String get msgChatForwardEmpty => 'কোনো কথোপকথন নেই';
+
+  @override
+  String get msgChatPaperSent => 'কাগজ পাঠানো হলো';
+
+  @override
+  String get msgChatPaperSendFailed => 'কাগজ পাঠানো গেল না';
+
+  @override
+  String get msgChatKeyboard => 'কিবোর্ড';
+
+  @override
+  String get msgChatEmojiSearch => 'ইমোজি খুঁজুন';
+
+  @override
+  String get msgChatEmojiRecent => 'সাম্প্রতিক';
+
+  @override
+  String get msgChatEmojiFaces => 'মুখ ও মানুষ';
+
+  @override
+  String get msgChatEmojiNature => 'প্রকৃতি';
+
+  @override
+  String get msgChatEmojiFood => 'খাবার';
+
+  @override
+  String get msgChatEmojiLove => 'ভালোবাসা';
+
+  @override
+  String get msgChatEmojiFlags => 'পতাকা';
+
+  @override
+  String get msgChatVoiceType => 'বলে লিখুন';
+
+  @override
+  String get msgChatListening => 'শুনছি…';
+
+  @override
+  String get msgChatVoiceTypeDenied =>
+      'মাইকের অনুমতি দেওয়া হয়নি — বলে লেখা যাবে না';
+
+  @override
+  String get msgChatVoiceTypeFailed => 'শোনা গেল না — আবার বলুন';
 }
