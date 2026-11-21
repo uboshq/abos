@@ -121,9 +121,15 @@
     ];
 
     $glyph = $drawn ? null : ($glyphs[$name] ?? null);
+
+    /* ⭐ Copilot's mark — in the ABOS looks the living "Ai" mark replaces the brain everywhere (owner, 21 Nov 2026);
+       SAP, Dynamic and the other looks keep the brain exactly as before ([[AiMark]]) */
+    $aiMark = in_array($name, ['brain', 'assistant'], true) && \App\Core\Support\AiMark::shows();
 @endphp
 
-@if ($glyph)
+@if ($aiMark)
+    <x-ui.ai-mark :size="$size" {{ $attributes }} />
+@elseif ($glyph)
     {{-- ইমোজি একটা অক্ষর, তাই মাপটা `font-size`-এ। মোড়কে সেই একই
          `.icon` ক্লাস, যাতে আঁকাগুলোর চারপাশের সব নিয়ম এখানেও খাটে। --}}
     <span aria-hidden="true"

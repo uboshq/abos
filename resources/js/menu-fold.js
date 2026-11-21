@@ -1,8 +1,9 @@
 /*
  * ⭐ বাঁয়ের মেনুর দল ভাঁজ করা — মালিক, ২০ নভেম্বর ২০২৬ (D365/SAP/Oracle-এর বাঁ নেভিগেশন: মডিউল → দল → পাতা)।
- *   · দলের মাথা একটা বোতাম: দলের নিজের চিহ্ন + নাম, কোনো তীর নেই (মালিক: আন্তর্জাতিক মানে তীর থাকে না)
+ *   · দলের মাথা একটা বোতাম: দলের নিজের রঙের টাইলে চিহ্ন + নাম, ডানে তীর › (মালিক, ২১ নভেম্বর ২০২৬, নমুনা "বাঁয়ের মেনু — ভাঁজ")
  *   · পাতা খুললে সব দল বন্ধ, কেবল যে দলে এই পাতা সেটা খোলা
- *   · চাপলে খোলে/বন্ধ হয়; কোন দল খোলা তা মডিউল ধরে মনে থাকে (localStorage — না পেলেও পাতা চলে)
+ *   · ⭐ একবারে একটাই দল খোলা — অন্যটা খুললে আগেরটা বন্ধ; খোলাটা চাপলে বন্ধ (মালিক, ২১ নভেম্বর ২০২৬)
+ *   · কোন দল শেষবার খোলা ছিল তা মডিউল ধরে মনে থাকে (localStorage — না পেলেও পাতা চলে); এই পাতার দল থাকলে সেটাই খোলে
  *   · Enter/Space বোতাম নিজেই চাপে; `aria-expanded` মাথায়, বন্ধ দলের সারিতে `hidden`
  * ⓘ কেবল তিন ABOS রূপে — "ABOS" (rose), ABOS Navy, ABOS Blue (মালিক, ২০ নভেম্বর ২০২৬); বাকি রূপে বোতামই আঁকা হয় না
  *   ([[shell.sidebar]], [[Ui::foldsMenuGroups()]]), আর এখানেও রূপ দেখে থামে।
@@ -80,11 +81,26 @@ function showAllWhileFiltering (nav, heads, store, module) {
     })
 }
 
+/** একটাই দল খোলা (বা কোনোটাই না) — বাকি সব বন্ধ */
+export function openOnly (nav, heads, key) {
+    heads.forEach(head => setOpen(nav, head, key !== null && head.dataset.menuFold === key))
+}
+
+/** কোন দল খুলবে: এই পাতার দল; না থাকলে শেষবার খোলা দল (যদি এখনো মেনুতে থাকে); নইলে কোনোটাই না */
+export function groupToOpen (heads, saved) {
+    const here = heads.find(head => head.hasAttribute('data-menu-fold-here'))
+
+    if (here) {
+        return here.dataset.menuFold
+    }
+
+    const remembered = heads.find(head => saved[head.dataset.menuFold] === true)
+
+    return remembered ? remembered.dataset.menuFold : null
+}
+
 function apply (nav, heads, saved) {
-    heads.forEach(head => {
-        const here = head.hasAttribute('data-menu-fold-here')
-        setOpen(nav, head, here || saved[head.dataset.menuFold] === true)
-    })
+    openOnly(nav, heads, groupToOpen(heads, saved))
 }
 
 /**
@@ -122,12 +138,11 @@ export function foldMenuGroups (root = document, { store = defaultStore(), ui } 
                 return
             }
 
+            // ⭐ একবারে একটাই দল — খোলাটা চাপলে সব বন্ধ, অন্যটা চাপলে কেবল সেটা খোলা
             const open = head.getAttribute('aria-expanded') !== 'true'
-            setOpen(nav, head, open)
+            openOnly(nav, heads, open ? head.dataset.menuFold : null)
 
-            const saved = readSaved(store, module)
-            saved[head.dataset.menuFold] = open
-            save(store, module, saved)
+            save(store, module, open ? { [head.dataset.menuFold]: true } : {})
         })
 
         showAllWhileFiltering(nav, heads, store, module)

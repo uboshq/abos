@@ -196,6 +196,26 @@
     color: var(--abos-menu-group);
 }
 
+/* ⭐ ভাঁজ-করা মেনু — নমুনার মতো দলগুলো মেনুর পুরো চওড়ায় (প্যানেলের ১৪px/৬px ফাঁক বাদ), খোলা দলের জমিন নমুনার #1b55c4
+   (মালিক, ২১ নভেম্বর ২০২৬, নমুনা "বাঁয়ের মেনু — ভাঁজ"; বাকি নিয়ম app.css-এ, তিন ABOS রূপে) */
+:root[data-ui='rose'] [data-site-map] nav[data-menu-fold-nav] {
+    margin-inline: -14px -6px;
+}
+
+:root[data-ui='rose'] [data-site-map] {
+    --fold-deep: #1b55c4;
+}
+
+:root[data-ui='rose'][data-theme='dark'] [data-site-map] {
+    --fold-deep: color-mix(in srgb, var(--abos-frame) 86%, #000000);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root[data-ui='rose']:not([data-theme='light']):not([data-theme='dark']) [data-site-map] {
+        --fold-deep: color-mix(in srgb, var(--abos-frame) 86%, #000000);
+    }
+}
+
 /* ⓘ মেনুর তালিকার স্ক্রলবার নীলের উপর হালকা */
 :root[data-ui='rose'] [data-site-map] nav {
     scrollbar-color: rgb(255 255 255 / 0.3) transparent;
