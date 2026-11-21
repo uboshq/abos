@@ -55,8 +55,13 @@ final class EveryReportNamesTheKeyItsWebDoorAsksForTest extends TestCase
         // অনুমতির আগেই ৪০৪ দেয়, আর তখন চাবির প্রশ্নটা কখনো জিজ্ঞেসই হত না
         app(SettingsService::class)->set('inventory.batch_enabled', true);
 
+        // ⓘ a module with no menu row (the messenger, 21 Nov 2026) has no switch — nothing to turn on, nothing that 404s
+        $declared = app(SettingsService::class)->definitions();
         foreach (app(ModuleRegistry::class)->all() as $module) {
-            app(SettingsService::class)->set(app(MenuSwitches::class)->forModule($module->code), true);
+            $switch = app(MenuSwitches::class)->forModule($module->code);
+            if (isset($declared[$switch])) {
+                app(SettingsService::class)->set($switch, true);
+            }
         }
     }
 

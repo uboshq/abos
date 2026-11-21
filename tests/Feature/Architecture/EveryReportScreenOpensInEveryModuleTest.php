@@ -75,10 +75,13 @@ final class EveryReportScreenOpensInEveryModuleTest extends TestCase
          * ⭐ তাই উল্টো পথ: সুইচগুলো **চালু করে** মাপা। ⓘ পাহারাটার কাজ
          * কোডটা কাজ করে কি না বলা, কোন কোম্পানি কী কিনেছে তা নয়।
          */
+        // ⓘ a module with no menu row (the messenger, 21 Nov 2026) has no switch — nothing to turn on, nothing that 404s
+        $declared = app(SettingsService::class)->definitions();
         foreach (app(ModuleRegistry::class)->all() as $module) {
-            app(SettingsService::class)->set(
-                app(MenuSwitches::class)->forModule($module->code), true
-            );
+            $switch = app(MenuSwitches::class)->forModule($module->code);
+            if (isset($declared[$switch])) {
+                app(SettingsService::class)->set($switch, true);
+            }
         }
     }
 

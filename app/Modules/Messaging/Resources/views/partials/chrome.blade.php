@@ -107,7 +107,7 @@
                     </button>
                     <span data-msgr-mute-label>{{ __('messaging::call.screen.mute') }}</span>
                 </div>
-                <div class="msgr-cb msgr-cb--dev">
+                <div class="msgr-cb">
                     <button type="button" class="msgr-cc" data-msgr-speaker aria-haspopup="menu" aria-expanded="false" aria-label="{{ __('messaging::call.screen.speaker') }}">
                         <x-ui.icon name="speaker" :size="27" />
                     </button>
@@ -160,7 +160,7 @@
             <div class="msgr-share__fb">
                 <button type="button" class="msgr-share__cn" data-msgr-share-close>{{ __('messaging::call.share.cancel') }}</button>
                 <button type="button" class="msgr-share__go" data-msgr-share-send disabled>
-                    <x-ui.icon name="send" :size="18" /><span data-msgr-share-send-label></span>
+                    <x-ui.icon name="send" :size="18" /><span data-msgr-share-send-label>{{ __('messaging::call.share.send', ['count' => 0]) }}</span>
                 </button>
             </div>
         </div>

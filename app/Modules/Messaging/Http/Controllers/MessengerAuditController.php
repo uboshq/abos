@@ -6,6 +6,7 @@ namespace App\Modules\Messaging\Http\Controllers;
 
 use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Messaging\Models\Member;
@@ -52,7 +53,8 @@ final class MessengerAuditController extends Controller implements HasMiddleware
                 $like = '%'.addcslashes($q, '%_\\').'%';
                 $query->where(fn ($w) => $w->where('title', 'like', $like)
                     ->orWhereIn('id', Member::query()->select('thread_id')
-                        ->whereIn('user_id', User::query()->select('id')->where('name', 'like', $like))));
+                        ->whereIn('user_id', User::query()->select('id')->where('name', 'like', $like)
+                            ->whereHas('companies', fn ($c) => $c->whereKey(CompanyContext::id())))));
             })
             ->orderByDesc('last_at')
             ->paginate(30)

@@ -56,6 +56,7 @@
             </table>
         </section>
 
-        {{ $threads->links() }}
+        <x-ui.pager :rows="$threads" />
+        <x-ui.list-totals :rows="$threads" />
     </div>
 </x-layouts.app>

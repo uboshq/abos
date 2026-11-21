@@ -188,6 +188,16 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
         // পুরো কারণটা এখানে; ওখানে কেবল এই ফাইলের দিকে ইশারা।
         'App\Modules\Backup\Models\BackupRun' => 'রাতের কাজ নিজে লেখে; কে চালাল তা triggered_by-তেই আছে',
         'App\Modules\Backup\Models\BackupVerification' => 'ফিরিয়ে আনার পরীক্ষার ফল — যন্ত্রের নিজের খাতা, শুধু যোগের',
+
+        // ── বার্তা ও কল (মালিক "ok", ২১ নভেম্বর ২০২৬) ──────────────────
+        // ⓘ দুই জায়গায়, Backup-এর মতোই: এখানে আর `app/Modules/Messaging/module.php`-এর `audit_exempt`-এ।
+        // ⭐ থ্রেড নিজে অডিটে ([[Thread]]), আর অন্যের বার্তা পড়া কেবল লিখিত কারণের অডিট-দরজা দিয়ে — সেটাও খাতায় ওঠে।
+        'App\Modules\Messaging\Models\Message' => 'গোপনীয়তা — খাতা প্রতিটা বার্তার কপি রাখত; অন্যের বার্তা কেবল লিখিত কারণের অডিট-দরজা দিয়ে, যা নিজেই খাতায় ওঠে',
+        'App\Modules\Messaging\Models\MessageFile' => 'বার্তারই অংশ, একই গোপনীয়তা; আসার পর আর বদলায় না',
+        'App\Modules\Messaging\Models\Member' => 'পৌঁছানো/পড়ার চিহ্ন প্রতিটা জিজ্ঞাসায় এগোয় — খাতা টিকে ভরে যেত',
+        'App\Modules\Messaging\Models\MemberMark' => 'চিহ্ন এগোলে একবার লেখা হয় — সারিটাই ইতিহাস',
+        'App\Modules\Messaging\Models\HiddenMessage' => '"আমার কাছ থেকে মুছুন" — নিজের চ্যাট গোছানো; বার্তাটা অটুট থাকে',
+        'App\Modules\Messaging\Models\Call' => 'সারিটাই কলের খাতা; বদলায় কেবল কলের নিজের ধাপে (বাজছে, ধরা, শেষ)',
     ];
 
     /**

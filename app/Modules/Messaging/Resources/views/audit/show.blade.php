@@ -35,5 +35,6 @@
         </ol>
     </section>
 
-    {{ $messages->links() }}
+    <x-ui.pager :rows="$messages" />
+    <x-ui.list-totals :rows="$messages" />
 </x-layouts.app>

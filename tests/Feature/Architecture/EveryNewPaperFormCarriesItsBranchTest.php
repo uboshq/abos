@@ -102,6 +102,12 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'master_data.location.install' => 'installs the location list, no paper',
         'mfa.begin' => 'two-step sign in',
         'mfa.confirm' => 'two-step sign in',
+        // ⓘ বার্তা ও কল (মালিক "ok", ২১ নভেম্বর ২০২৬) — কথা কোম্পানি-জুড়ে, শাখার নয়; কোনো কাগজ বা টাকা নয়
+        'messaging.x.direct' => 'opens (or finds) a 1:1 chat thread with a colleague, company-wide; no paper, no money, no branch (claimed: tests/Feature/Modules/Messaging)',
+        'messaging.x.groups' => 'creates a chat group, behind messaging.group.create; no paper, no money, no branch',
+        'messaging.x.forward' => 'copies messages the person can already read into other chats; no paper, no money',
+        'messaging.x.papers' => 'sends a card that points at an existing paper (opens only for those with its view key); the paper itself is untouched, no money',
+        'messaging.x.calls.start' => 'rings a colleague for a 1:1 call (a call-log row and a LiveKit token); no paper, no money, no branch',
         'notification.center.archive' => 'personal notifications',
         'notification.channels.vapid' => 'push channel keys',
         'notification.quiet.save' => 'personal quiet hours',

@@ -159,6 +159,16 @@ class EveryUserListAsksWhichCompanyTest extends TestCase
          * **কাকে ঢোকাবে জানত না** — অর্থাৎ ছাঁকনিটা লগইনই ভাঙত।
          */
         '->whereKeyNot($user->getKey())' => 'ইমেইল দখল হয়ে আছে কি না — অনন্যতা গোটা ব্যবস্থার, কোম্পানির নয়',
+
+        /*
+         * ⓘ বার্তা ও কল (২১ নভেম্বর ২০২৬): যাকে লেখা/ডাকা হবে, তাকে id ধরে তোলা — তালিকা নয়, পর্দায় কোনো নাম যায় না।
+         * ⛔ দেয়ালটা ঠিক পরের ধাপে, এক জায়গায়: [[MessengerAccess::mayTalk()]] — দুইজনই এই কোম্পানির সক্রিয় সদস্য না হলে
+         * ৪০৩। ⚠️ এখানে ছাঁকলে অন্য কোম্পানির মানুষ ৪০৩-এর বদলে ৪০৪ পেত, আর দেয়ালের দাবিটা
+         * (MessengerThreadsTest::test_a_person_of_another_company_is_never_reached…) ঐ ৪০৩-ই দেখে।
+         */
+        "->find((int) \$data['person'])" => 'বার্তা: একজনের সাথে চ্যাট — id ধরে একজন; দেয়াল MessengerAccess::mayTalk (৪০৩)',
+        '->find((int) $person)' => 'কল: যাঁকে ডাকা হবে — id ধরে একজন; দেয়াল MessengerAccess::mayTalk (৪০৩)',
+        "->whereIn('id', array_map('intval', \$data['people']))" => 'বার্তা: দলে যাঁদের যোগ করা হবে — প্রত্যেকে MessengerAccess::mayTalk পেরোয়, নইলে গোটা অনুরোধ ৪০৩',
     ];
 
     /**

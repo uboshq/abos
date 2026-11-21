@@ -10,7 +10,7 @@
 <a href="{{ route('messaging.index') }}"
    data-msgr-topbar
    @if ($onMessages) data-msgr-here aria-current="page" @endif
-   class="msgr-topbar relative flex size-(--spacing-touch) items-center justify-center rounded-(--radius-field)
+   class="relative flex size-(--spacing-touch) items-center justify-center rounded-(--radius-field)
           transition-colors hover:bg-(--color-surface-hover)"
    title="{{ __('messaging::call.topbar.title') }}"
    aria-label="{{ __('messaging::call.topbar.title') }}">

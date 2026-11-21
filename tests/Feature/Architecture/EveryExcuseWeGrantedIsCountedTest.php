@@ -529,7 +529,21 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     //      সেশনে। আগের `can:backup.view` দিন/মাস বন্ধকারীকে ৪০৩ দিত আর পপআপ সরত না — মালিকের নিয়ম "সতর্কবার্তা কাজ আটকায় না"
     //   +২ EveryListCarriesItsTotalsBarTest::EXEMPT — ডেলিভারি খরচ আর ক্রয় খরচের রিপোর্ট: টেবিলের নিজের মোটের সারি পুরো রিপোর্টের,
     //      মালিকের অনুমোদিত নমুনার (খরচের নমুনা v6) মতো একটাই; পট্টি দিলে একই যোগ দুবার — নমুনা থেকে সরে যেত
-    private const CEILING = 537;
+    // ⭐ ৫৩৭ → ৫৫৩ (২১ নভেম্বর ২০২৬, ১.৩.৯ — বার্তা ও কল, মালিক "ok"; Mac targeted run of 1a34b3477, count_excuses.php মাপল ৫৫৩):
+    //   +৬ EveryChangeableRowRemembersWhoChangedItTest::EXEMPT — Message, MessageFile (গোপনীয়তা: খাতা প্রতিটা বার্তার কপি রাখত;
+    //      অন্যের বার্তা কেবল লিখিত কারণের অডিট-দরজা দিয়ে, যা নিজেই খাতায়), Member (টিক প্রতিটা জিজ্ঞাসায় এগোয়), MemberMark
+    //      (সারিটাই ইতিহাস), HiddenMessage ("আমার কাছ থেকে মুছুন"), Call (সারিটাই কলের খাতা); থ্রেড নিজে অডিটে। Messaging/module.php-র
+    //      audit_exempt-এ একই ছয়টা, Backup-এর মতো দুই জায়গায়
+    //   +৫ EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — messaging.x.direct/.groups/.forward/.papers/.calls.start: চ্যাট খোলা,
+    //      দল, ফরওয়ার্ড, কাগজের কার্ড পাঠানো (কাগজটা অটুট), কল বাজানো — কথা কোম্পানি-জুড়ে, কোনো কাগজ নয়, টাকা নড়ে না, শাখা লাগে না
+    //   +৩ EveryUserListAsksWhichCompanyTest::EXEMPT_QUERY — চ্যাট/দল/কলে যাঁকে ডাকা হবে, id ধরে তোলা (তালিকা নয়); দেয়াল ঠিক পরের
+    //      ধাপে MessengerAccess::mayTalk — অন্য কোম্পানি ৪০৩, যা MessengerThreadsTest-এর দেয়ালের দাবি দেখে। ⓘ অডিটের নাম-খোঁজ ছাড়
+    //      নেয়নি — সেখানে whereHas('companies') বসেছে
+    //   +২ MoneyIsNeverAFloatTest::FLOAT_IS_DELIBERATE — ভয়েস বার্তার ঢেউয়ের দাগ (০–১, আঁকার মাপ) আর পাঠানো অবস্থানের অক্ষাংশ/দ্রাঘিমাংশ;
+    //      টাকা বা পরিমাণ নয়
+    //   ⓘ ছাড় নেয়নি: বার্তার দুই অডিট-তালিকায় পট্টি বসেছে; বান্ডিলে নেই এমন তিন শ্রেণি আর নামহীন বোতাম সারানো হয়েছে
+    //      (পাতার খোলস messaging.index NOT_REALLY_A_LIST-এ — চাহিদার তালিকা, গোনায় আসে না)
+    private const CEILING = 553;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

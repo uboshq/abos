@@ -179,7 +179,7 @@
             <div class="mibody" data-info-body></div>
         </aside>
 
-        <div class="mdlg-host" data-dialog-host></div>
+        <div data-dialog-host></div>
         <div class="mtoast" data-toast role="status" aria-live="polite" hidden></div>
     </div>
 </x-layouts.app>
