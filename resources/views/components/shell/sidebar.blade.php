@@ -551,7 +551,10 @@
                                      স্পষ্ট হয়েছে — দুইটা একে অন্যের বিপরীত
                                      নয়, ফাঁকটাই চিহ্নের জায়গা খাচ্ছিল। --}}
                                 {{-- ⭐ কোপাইলট — উপরের বারের একই জীবন্ত মগজ, স্থির ছবি নয় (মালিক, ১৩ নভেম্বর ২০২৬) --}}
-                                @if ((\App\Core\Navigation\MenuLook::LIVING_TILES[$module['code']] ?? null) === 'copilot-mark')
+                                {{-- ⭐ ABOS looks: the living "Ai" mark (owner, 21 Nov 2026); other looks keep the brain --}}
+                                @if ((\App\Core\Navigation\MenuLook::LIVING_TILES[$module['code']] ?? null) === 'copilot-mark' && \App\Core\Support\AiMark::shows())
+                                    <x-ui.ai-mark :size="22" data-rail-copilot />
+                                @elseif ((\App\Core\Navigation\MenuLook::LIVING_TILES[$module['code']] ?? null) === 'copilot-mark')
                                     <x-shell.copilot-mark size="bare" class="cq-rail" data-rail-copilot />
                                 @else
                                     <x-ui.icon :name="$module['icon']" :size="22" drawn />

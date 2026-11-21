@@ -21,13 +21,20 @@
                 ->filter(fn (string $e): bool => ! str_starts_with($e, 'assistant::'))->take(4)->values();
             // ⓘ x-data-র লেখায় একক উদ্ধৃতি থাকলে JS ভাঙত — বাংলা লেখায় নেই, ইংরেজিতে বাদ
             $say = fn (string $key): string => e(str_replace("'", '', (string) __($key)));
+            // ⭐ the living "Ai" mark — ABOS looks only (owner, 21 Nov 2026); SAP, Dynamic and the rest keep the brain
+            $aiMark = \App\Core\Support\AiMark::shows();
         @endphp
         <div class="hidden sm:flex ms-1 me-2" data-copilot-quick
              x-data="copilotQuick({ url: '{{ route('assistant.quick') }}', feedbackUrl: '{{ str_replace('999999999', '__ID__', route('assistant.feedback', ['event' => 999999999])) }}', csrf: '{{ csrf_token() }}', locale: '{{ app()->getLocale() }}', page: '{{ $routeName }}', failed: '{{ $say('assistant::quick.failed') }}', noKey: '{{ $say('assistant::quick.no_key') }}', ask: '{{ $say('assistant::quick.placeholder') }}', reply: '{{ $say('assistant::quick.reply') }}', micOn: '{{ $say('assistant::quick.mic') }}', micOff: '{{ $say('assistant::quick.mic_off') }}' })">
-            <button type="button" class="cq-btn" data-copilot-button @click="show()"
+            <button type="button" @class(['cq-btn', 'cq-btn-ai' => $aiMark]) data-copilot-button @click="show()"
                     title="{{ __('assistant::quick.open', ['name' => $copilot]) }}" aria-label="{{ __('assistant::quick.open', ['name' => $copilot]) }}">
-                <x-shell.copilot-mark size="bare" />
-                <span class="cq-label">{{ $copilot }}</span>
+                @if ($aiMark)
+                    {{-- ⓘ the mark alone, as tall as the search box; no "Copilot" text (owner, 21 Nov 2026) --}}
+                    <x-ui.ai-mark :size="40" x-bind:data-ai-busy="busy" />
+                @else
+                    <x-shell.copilot-mark size="bare" />
+                    <span class="cq-label">{{ $copilot }}</span>
+                @endif
             </button>
             {{-- ⓘ মগজের রঙের ঢাল — নীল → বেগুনি → গোলাপি → কমলা, ধীরে বদলায়; পাতায় একবার, প্রতিটা মগজ এটাই পড়ে --}}
             <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -46,7 +53,11 @@
                      aria-label="{{ __('assistant::quick.open', ['name' => $copilot]) }}" :data-glow="glow()" data-copilot-sheet>
                     <div class="cq-col">
                         <div class="cq-head">
-                            <x-shell.copilot-mark size="lg" x-bind:class="markState()" />
+                            @if ($aiMark)
+                                <x-ui.ai-mark :size="42" x-bind:data-ai-busy="busy || listening" />
+                            @else
+                                <x-shell.copilot-mark size="lg" x-bind:class="markState()" />
+                            @endif
                             <span class="cq-name">{{ $copilot }}</span>
                             @if ($here !== '')
                                 <span class="cq-ctx">{{ __('assistant::quick.here', ['page' => $here]) }}</span>
@@ -83,7 +94,11 @@
                                     <template x-if="item.me"><div style="display:flex;justify-content:flex-end"><div class="cq-me" x-text="item.text"></div></div></template>
                                     <template x-if="! item.me">
                                         <div class="cq-bot">
-                                            <x-shell.copilot-mark />
+                                            @if ($aiMark)
+                                                <x-ui.ai-mark :size="30" />
+                                            @else
+                                                <x-shell.copilot-mark />
+                                            @endif
                                             <div class="cq-ans">
                                                 <div class="cq-big" x-text="item.head"></div>
                                                 <div class="cq-rows" x-show="item.pairs.length > 0">

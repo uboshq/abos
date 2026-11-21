@@ -218,9 +218,11 @@ final class CopilotSeesOnlyWhatItsPersonMaySeeTest extends TestCase
         $this->assertStringContainsString('data-copilot-mic', $quick, '⛔ কথা বলার বোতাম নেই।');
         $this->assertStringContainsString(route('assistant.quick'), $quick);
         // ⭐ জীবন্ত মগজ — মালিকের "ঘ" (রঙের আংটি, রং-বদলানো মগজ, আলোর বিন্দু): বোতামে, মাথায় আর উত্তরের পাশে, ঢাল একবার
-        $this->assertGreaterThanOrEqual(3, substr_count($quick, 'cq-orb-mark'), '⛔ বোতাম, মাথা আর উত্তরে জীবন্ত মগজ নেই।');
+        // ⓘ ABOS looks draw the living "Ai" mark instead of the brain (owner, 21 Nov 2026; [[AiMark]]) — either way, three marks
+        $aiMark = \App\Core\Support\AiMark::shows();
+        $this->assertGreaterThanOrEqual(3, substr_count($quick, $aiMark ? 'data-ai-mark' : 'cq-orb-mark'), '⛔ বোতাম, মাথা আর উত্তরে জীবন্ত চিহ্ন নেই।');
         $this->assertSame(1, substr_count($html, 'id="cq-grad"'), '⛔ মগজের রঙের ঢাল পাতায় একবার নয়।');
-        $this->assertStringContainsString('animateMotion', $quick, '⛔ মগজের ভাঁজে আলোর বিন্দু ছোটে না।');
+        $this->assertStringContainsString($aiMark ? 'animateTransform' : 'animateMotion', $quick, '⛔ চিহ্নটা জীবন্ত নয়।');
         foreach (['data-finding', 'data-brief-part', route('assistant.audit'), 'href="'.route('assistant.today').'"'] as $other) {
             $this->assertStringNotContainsString($other, $quick, '⛔ দ্রুত জিজ্ঞাসায় পুরো কোপাইলটের পর্দা: '.$other);
         }

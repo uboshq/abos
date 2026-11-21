@@ -15,7 +15,12 @@
 
     <div class="space-y-4" data-assistant-page>
         <div class="flex flex-wrap items-center gap-3">
-            <span class="inline-flex size-10 items-center justify-center rounded-(--radius-card) bg-(--color-brand-500) text-white" aria-hidden="true"><x-ui.icon name="brain" :size="24" /></span>
+            {{-- ⭐ ABOS looks: the living "Ai" mark, no tile behind it (owner, 21 Nov 2026); other looks keep the brain tile --}}
+            @if (\App\Core\Support\AiMark::shows())
+                <x-ui.ai-mark :size="40" />
+            @else
+                <span class="inline-flex size-10 items-center justify-center rounded-(--radius-card) bg-(--color-brand-500) text-white" aria-hidden="true"><x-ui.icon name="brain" :size="24" /></span>
+            @endif
             <div class="min-w-0">
                 <h1 class="text-lg font-semibold">{{ $name }}<x-ui.page-info :text="__('assistant::page.lede')" /></h1>
                 {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
