@@ -43,7 +43,21 @@ final class MessengerService
 
     public const FILE_EXT = ['pdf', 'xlsx', 'xls', 'docx', 'doc', 'csv', 'txt', 'zip'];
 
-    public const VOICE_MIME = ['audio/mp4', 'audio/aac', 'audio/x-m4a', 'audio/m4a', 'audio/mpeg4-generic', 'video/mp4'];
+    /**
+     * Voice notes: what the file really is (sniffed) → [stored extension, served type].
+     * ⓘ The phone records m4a/aac; a browser records mp4 where it can (Chrome, Safari) and webm/ogg where it cannot
+     * (Firefox, older Chrome) — the web page (sample v7) sends whatever its browser makes.
+     */
+    public const VOICE_TYPES = [
+        'audio/mp4' => ['m4a', 'audio/mp4'], 'audio/x-m4a' => ['m4a', 'audio/mp4'], 'audio/m4a' => ['m4a', 'audio/mp4'],
+        'audio/mpeg4-generic' => ['m4a', 'audio/mp4'], 'video/mp4' => ['m4a', 'audio/mp4'],
+        'audio/aac' => ['aac', 'audio/aac'], 'audio/x-hx-aac-adts' => ['aac', 'audio/aac'],
+        'audio/webm' => ['webm', 'audio/webm'], 'video/webm' => ['webm', 'audio/webm'],
+        'audio/ogg' => ['ogg', 'audio/ogg'], 'application/ogg' => ['ogg', 'audio/ogg'], 'video/ogg' => ['ogg', 'audio/ogg'],
+    ];
+
+    /** ⓘ when the sniffer only says "octet-stream", the name's extension decides */
+    private const VOICE_EXT = ['m4a' => 'audio/mp4', 'aac' => 'audio/aac', 'webm' => 'audio/webm', 'ogg' => 'audio/ogg'];
 
     public function __construct(
         private readonly MessengerAccess $access,
@@ -687,12 +701,15 @@ final class MessengerService
             if ($kb > self::VOICE_KB) {
                 throw ValidationException::withMessages(['file' => __('messaging::messenger.too_big', ['mb' => 5])]);
             }
-            if (! in_array($mime, self::VOICE_MIME, true) && ! in_array($ext, ['m4a', 'aac'], true)) {
+            $type = self::VOICE_TYPES[$mime]
+                ?? ($mime === 'application/octet-stream' && isset(self::VOICE_EXT[$ext]) ? self::VOICE_TYPES[self::VOICE_EXT[$ext]] : null);
+            if ($type === null) {
                 throw ValidationException::withMessages(['file' => __('messaging::messenger.bad_type')]);
             }
-            $path = $file->storeAs($dir, Str::uuid7().'.'.($ext === 'aac' ? 'aac' : 'm4a'), ['disk' => MessageFile::DISK]);
+            [$voiceExt, $voiceMime] = $type;
+            $path = $file->storeAs($dir, Str::uuid7().'.'.$voiceExt, ['disk' => MessageFile::DISK]);
 
-            return ['kind' => 'voice', 'path' => (string) $path, 'name' => $name, 'mime' => $ext === 'aac' ? 'audio/aac' : 'audio/mp4',
+            return ['kind' => 'voice', 'path' => (string) $path, 'name' => $name, 'mime' => $voiceMime,
                 'size' => (int) $file->getSize(), 'duration_ms' => max(0, min(15 * 60 * 1000, (int) ($data['duration_ms'] ?? 0))),
                 'waveform' => $this->waveform($data['waveform'] ?? null)];
         }

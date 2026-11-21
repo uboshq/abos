@@ -125,7 +125,10 @@
                         {{-- ⭐ "দেখুন" — সাধারণ লিংক, তাই মালিকের নিয়মে তালিকার উপর পপআপে খোলে ([[peek]]);
                              লেবেলে কাগজের নম্বর, যাতে স্ক্রিন-রিডার বলে কোনটা খুলবে। --}}
                         @if ($rowMenu ?? null)
+                            {{-- ⓘ সারিটা মেনুকে জানানো — কাগজ হলে "বার্তায় পাঠান" ([[MessengerChrome::ROW]], [[x-ui.row-actions]]) --}}
+                            @php(request()->attributes->set(\App\Modules\Messaging\Support\MessengerChrome::ROW, $row))
                             <td data-label="{{ __('core.table.action_menu') }}" class="text-end" data-row-menu>{{ ($rowMenu)($row) }}</td>
+                            @php(request()->attributes->remove(\App\Modules\Messaging\Support\MessengerChrome::ROW))
                         @elseif ($viewUrl ?? null)
                             {{--
                                 ⭐ সাধারণ "অ্যাকশন ▾" — যে তালিকা কেবল দেখার ঠিকানা দেয় (আগে একটা 👁), তারও এখন কাগজের তালিকার একই মেনু
@@ -149,7 +152,7 @@
                             @endphp
                             <td data-label="{{ __('core.table.action_menu') }}" class="text-end" data-row-menu data-row-menu-generic>
                                 @if ($menu !== [])
-                                    <x-ui.row-actions :items="$menu" :label="__('core.table.action_menu')" />
+                                    <x-ui.row-actions :items="$menu" :label="__('core.table.action_menu')" :paper="$row" />
                                 @endif
                             </td>
                         @endif

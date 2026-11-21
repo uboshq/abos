@@ -115,7 +115,16 @@ class ContentSecurityPolicy
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
 
-            "connect-src 'self'",
+            /*
+             * ⭐ The office LiveKit (messenger calls, owner "ok" 21 Nov 2026) — only its own origin, only when it is set
+             * ([[LiveKitToken]]). ⓘ The signalling socket is the one connection CSP governs; the voice/picture (WebRTC)
+             * is not a fetch and needs no entry.
+             */
+            trim("connect-src 'self' ".$this->callServer()),
+            /*
+             * ⓘ Voice messages: the recording is heard back from a blob: before it is sent; received ones come from 'self'.
+             */
+            "media-src 'self' blob:",
             /*
              * ⭐ WhatsApp-এর দুইটা ঠিকানা — কেবল এই দুইটা (১০ নভেম্বর ২০২৬, পার্টির WhatsApp-এ)।
              * ⓘ "হোয়াটসঅ্যাপে পাঠান" ফর্মটা আমাদের সার্ভারে যায়, খাতায় লেখে, তারপর wa.me-তে ফেরত পাঠায়
@@ -128,6 +137,19 @@ class ContentSecurityPolicy
             "frame-ancestors 'self'",
             "object-src 'none'",
         ];
+    }
+
+    /** The LiveKit origin (`wss://host[:port]`), or '' when calls are not set up. */
+    private function callServer(): string
+    {
+        $url = (string) config('services.livekit.url', '');
+        $parts = $url === '' ? false : parse_url($url);
+
+        if (! is_array($parts) || ! in_array($parts['scheme'] ?? '', ['wss', 'ws', 'https'], true) || empty($parts['host'])) {
+            return '';
+        }
+
+        return $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
     }
 
     public function handle(Request $request, Closure $next): Response
@@ -259,7 +281,11 @@ class ContentSecurityPolicy
 
         if (! $response->headers->has('Permissions-Policy')) {
             $response->headers->set('Permissions-Policy', implode(', ', [
-                'camera=()',
+                // ⭐ the messenger's video call — own site only (owner "ok", 21 Nov 2026); `()` made the browser say no
+                //   without asking. ⓘ The scanner's file-input camera never needed it.
+                'camera=(self)',
+                // ⓘ screen share in a call — own site only
+                'display-capture=(self)',
                 // ⭐ কোপাইলটের মাইক — কেবল নিজের সাইট (মালিক, ১৩ নভেম্বর ২০২৬: "মাইক্রোফোনে চাপ দিলে দেখা যায় মাইক্রোফোন নট অ্যালাউ")।
                 //   ⓘ `()` থাকলে ব্রাউজার অনুমতি না চেয়েই "না" বলত; এখন প্রথমবার মাইক চাপলে একবার জিজ্ঞেস করে। বাইরের ফ্রেম পায় না।
                 'microphone=(self)',

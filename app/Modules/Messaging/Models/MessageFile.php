@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Messaging\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MessageFile extends Model
 {
     use BelongsToCompany;
+    use HasPublicId;
 
     public const DISK = 'local';
 

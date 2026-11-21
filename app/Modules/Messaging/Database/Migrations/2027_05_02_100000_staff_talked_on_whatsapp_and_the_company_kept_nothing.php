@@ -45,6 +45,7 @@ return new class extends Migration
 
         Schema::create('messenger_members', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('thread_id')->constrained('messenger_threads')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
@@ -61,6 +62,7 @@ return new class extends Migration
 
         Schema::create('messenger_messages', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('thread_id')->constrained('messenger_threads')->cascadeOnDelete();
             /* ⓘ null on system lines ("X added Y") */
@@ -93,6 +95,7 @@ return new class extends Migration
 
         Schema::create('messenger_files', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('message_id')->constrained('messenger_messages')->cascadeOnDelete();
             $table->string('kind', 10);                     // image | file | voice
@@ -111,6 +114,7 @@ return new class extends Migration
         /* ⓘ "delete for me" — hidden for that one member only */
         Schema::create('messenger_hidden', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('message_id')->constrained('messenger_messages')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -127,6 +131,7 @@ return new class extends Migration
          */
         Schema::create('messenger_marks', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('member_id')->constrained('messenger_members')->cascadeOnDelete();
             $table->string('kind', 10);                     // delivered | read

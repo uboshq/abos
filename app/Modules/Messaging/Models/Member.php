@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Messaging\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Member extends Model
 {
     use BelongsToCompany;
+    use HasPublicId;
 
     protected $table = 'messenger_members';
 

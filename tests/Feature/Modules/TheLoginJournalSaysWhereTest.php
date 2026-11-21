@@ -96,7 +96,7 @@ final class TheLoginJournalSaysWhereTest extends TestCase
         $header = (string) $this->get(route('login'))->headers->get('Permissions-Policy');
 
         $this->assertStringContainsString('geolocation=(self)', $header, '⛔ ব্রাউজার লোকেশন চাইতেই পারবে না — না চেয়েই "না" বলবে।');
-        $this->assertStringContainsString('camera=()', $header, 'বাকি যন্ত্রগুলো আগের মতোই বন্ধ থাকার কথা।');
+        $this->assertStringContainsString('payment=()', $header, 'বাকি যন্ত্রগুলো আগের মতোই বন্ধ থাকার কথা।');
     }
 
     public function test_the_name_keeps_the_nearby_place_then_the_town(): void

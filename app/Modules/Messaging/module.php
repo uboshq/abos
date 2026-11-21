@@ -2,6 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Modules\Messaging\Models\Call;
+use App\Modules\Messaging\Models\HiddenMessage;
+use App\Modules\Messaging\Models\Member;
+use App\Modules\Messaging\Models\MemberMark;
+use App\Modules\Messaging\Models\Message;
+use App\Modules\Messaging\Models\MessageFile;
+
 /**
  * Messenger — messages and 1:1 calls inside ABOS, phase 1 (owner "ok", 21 Nov 2026).
  *
@@ -59,7 +66,21 @@ return [
             'label' => 'messaging::settings.who_may_talk',
             'type' => 'json',
             'default' => null,
-            'group' => 'messaging',
+            // ⓘ one switch only — the core "general" group, already named in core.settings_group
+            'group' => 'general',
         ],
+    ],
+
+    /*
+     * ⛔ Not audited, each on purpose — the full reasons sit in each model's docblock and in
+     * EveryChangeableRowRemembersWhoChangedItTest. The thread itself IS audited ([[Thread]]), and so is every audit reading.
+     */
+    'audit_exempt' => [
+        Message::class => 'privacy — the trail would copy every message; the messages of another person are read only through the written-reason audit door',
+        MessageFile::class => 'part of its message, same privacy; never changes after it lands',
+        Member::class => 'the delivered/read marks move on every poll — the trail would fill with ticks',
+        MemberMark::class => 'written once when a mark moves; the row is itself the history',
+        HiddenMessage::class => '"delete for me" — one person tidying their own chat; the message is untouched',
+        Call::class => 'the row is the call log itself; only the steps of the call itself move it',
     ],
 ];

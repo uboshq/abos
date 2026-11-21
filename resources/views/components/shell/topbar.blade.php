@@ -335,6 +335,10 @@
         {{-- ⭐ সই হয়েছে, পোস্ট হয়নি — অনুমোদনের ঠিক পাশে, সংখ্যার ব্যাজসহ (মালিকের নিজের আইকন, ১১ অক্টোবর; লাইভ-হটফিক্স ২১ অক্টোবর
              ২০২৬: ঘণ্টার ভেতরে লুকিয়ে ছিল, মালিক বারে খুঁজে পাননি)। শূন্যে ব্যাজ নেই, আইকন থাকে। ঘণ্টার প্যানেলেরটাও থাকে। --}}
         <x-shell.signed-unposted bar />
+        {{-- ⭐ বার্তা — ঘণ্টার আগে, কেবল তিন ABOS রূপে আর `messaging.use` চাবিতে (ওয়েব নমুনা M1UddRxK v7; [[MessengerChrome]]) --}}
+        @if (class_exists(\App\Modules\Messaging\Support\MessengerChrome::class) && \App\Modules\Messaging\Support\MessengerChrome::on())
+            @include('messaging::partials.topbar-chat')
+        @endif
         <x-shell.notification-bell />
         <x-shell.profile-menu :user="$user" :company="$company" :branch="$branch" />
     </div>
