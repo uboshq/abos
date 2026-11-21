@@ -53,6 +53,13 @@ class FareNarrations extends Command
             ->when($this->option('company'), fn ($q, $code) => $q->where('code', $code))
             ->get();
 
+        // ⛔ অচেনা কোড চুপচাপ "০টা বদলাবে" নয় — জোরে থামা
+        if (filled($this->option('company')) && $companies->isEmpty()) {
+            $this->error('  কোনো কোম্পানির কোড "'.$this->option('company').'" নয় — কিছুই দেখা বা লেখা হয়নি।');
+
+            return self::FAILURE;
+        }
+
         $rows = [];
         $changed = 0;
         $skipped = 0;
@@ -90,12 +97,16 @@ class FareNarrations extends Command
                         continue;
                     }
 
+                    // ⓘ লেখার সময় তালার ভেতরে আবার দেখা হয় — এর মধ্যে বদলালে বা অনুমোদন বসলে বাদ, আর গোনাও হয় না
+                    if ($apply && ! $this->write($voucher, $old, $new)) {
+                        $skipped++;
+                        $rows[] = [$company->code, $voucher->document_no, $paper->document_no, $old, __('sales::fare.narration_skip_approval')];
+
+                        continue;
+                    }
+
                     $changed++;
                     $rows[] = [$company->code, $voucher->document_no, $paper->document_no, $old, $new];
-
-                    if ($apply) {
-                        $this->write($voucher, $old, $new);
-                    }
                 }
             });
         }
@@ -159,14 +170,15 @@ class FareNarrations extends Command
     }
 
     /** কেবল বিবরণ — মাথার, আর নিজের সারির যেগুলো আগের লেখার সমান; অঙ্ক নয় */
-    private function write(Voucher $voucher, string $old, string $new): void
+    private function write(Voucher $voucher, string $old, string $new): bool
     {
-        DB::transaction(function () use ($voucher, $old, $new): void {
+        return DB::transaction(function () use ($voucher, $old, $new): bool {
             $fresh = Voucher::query()->withoutGlobalScopes()->lockForUpdate()->find($voucher->id);
 
-            // ⛔ এর মধ্যে কেউ বদলালে তাঁর লেখা থাকে
-            if ($fresh === null || (string) $fresh->narration !== $old) {
-                return;
+            // ⛔ এর মধ্যে কেউ বদলালে তাঁর লেখা থাকে; আর অনুমোদনের সারি এর মধ্যে বসলে ছোঁয়া নয় — দেখাটা তালার ভেতরে
+            //   (স্বাধীন রিভিউ, ২১ নভেম্বর ২০২৬: আগে দেখা তালার বাইরে ছিল, মাঝে অনুমোদন বসলে ছাপ ভাঙত)
+            if ($fresh === null || (string) $fresh->narration !== $old || $this->hasApprovals($fresh)) {
+                return false;
             }
 
             $fresh->forceFill(['narration' => $new])->save();
@@ -176,6 +188,8 @@ class FareNarrations extends Command
                 ->where('narration', $old)
                 ->get()
                 ->each(fn (VoucherLine $line) => $line->forceFill(['narration' => $new])->save());
+
+            return true;
         });
     }
 }

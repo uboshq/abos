@@ -113,6 +113,16 @@ final class OldFareNarrationsAreRewrittenOnlyWhenUntouchedTest extends TestCase
         $this->assertSame($old, $voucher->fresh()->narration, '⛔ অনুমোদনের সারি থাকা ভাউচারের বিবরণ বদলাল — সই "বদলেছে" দেখাত।');
     }
 
+    public function test_an_unknown_company_code_fails_loudly_and_writes_nothing(): void
+    {
+        $shop = Customer::query()->firstOrFail();
+        [$voucher] = $this->oldFareVoucher($shop, '400');
+        $old = (string) $voucher->fresh()->narration;
+
+        $this->artisan('sales:fare-narrations', ['--apply' => true, '--company' => 'NO-SUCH-CODE'])->assertFailed();
+        $this->assertSame($old, $voucher->fresh()->narration, '⛔ অচেনা কোম্পানির কোডে কিছু লেখা হলো।');
+    }
+
     // ── যন্ত্রপাতি ──
 
     /**
