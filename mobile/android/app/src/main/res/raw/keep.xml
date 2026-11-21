@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The notification small icon is named by a string from Dart (lib/core/push/local_alerts.dart),
+     which the release resource shrinker cannot see; without this a release build may drop it and
+     foreground notifications would fail silently. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@mipmap/ic_launcher_monochrome" />

@@ -1,5 +1,7 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:abos_mobile/core/api_client/api_client.dart';
 import 'package:abos_mobile/core/auth/auth_controller.dart';
 import 'package:abos_mobile/core/auth/auth_state.dart';
 import 'package:abos_mobile/core/auth/auth_user.dart';
@@ -73,19 +75,60 @@ void main() {
     expect(controller.state.status, AuthStatus.signedOut);
   });
 
-  test(
-      'restoreSession signs out on a token with no saved profile, rather '
-      'than showing an identity-less user', () async {
-    // A state this app's own login flow never produces — see
-    // AuthController.restoreSession's own doc comment — but one an older
-    // build (from before SessionRepository existed) could leave behind.
-    await TokenStorage.instance
-        .saveTokens(accessToken: 'access-1', refreshToken: 'refresh-1');
+  // ⛔ রিভিউ A2, ২১ নভেম্বর ২০২৬: টোকেন আছে, প্রোফাইল নেই — আগে পুরো সেশন মুছে বের করে দিত, মানুষ না চাইতেই
+  test('a token with no saved profile rebuilds the profile from /me instead of signing out', () async {
+    await TokenStorage.instance.saveTokens(accessToken: 'access-1', refreshToken: 'refresh-1');
+    var asked = 0;
+    final controller = AuthController(fetchMe: () async {
+      asked++;
+      return savedUser;
+    });
+    await controller.restoreSession();
 
-    final controller = AuthController();
+    expect(asked, 1, reason: '⛔ প্রোফাইল /me থেকে গড়া হলো না');
+    expect(controller.state.status, AuthStatus.signedIn, reason: '⛔ প্রোফাইল হারানোয় মানুষ বের হলেন');
+    expect(controller.state.user?.id, savedUser.id);
+    expect((await SessionRepository.instance.readUser())?.id, savedUser.id, reason: '⛔ গড়া প্রোফাইল রাখা হলো না');
+    expect(await TokenStorage.instance.refreshToken(), 'refresh-1');
+  });
+
+  test('a corrupt saved profile is rebuilt from /me too, never a sign-out', () async {
+    await TokenStorage.instance.saveTokens(accessToken: 'access-1', refreshToken: 'refresh-1');
+    // ⓘ নষ্ট প্রোফাইল — SessionRepository-র নিজের চাবিতে অচেনা মান
+    await const FlutterSecureStorage().write(key: 'abos_session_user', value: '{not json');
+    expect(await SessionRepository.instance.readUser(), isNull);
+
+    final controller = AuthController(fetchMe: () async => savedUser);
+    await controller.restoreSession();
+
+    expect(controller.state.status, AuthStatus.signedIn);
+  });
+
+  test('no network and no profile keeps the tokens: the next open with a network comes back in', () async {
+    await TokenStorage.instance.saveTokens(accessToken: 'access-1', refreshToken: 'refresh-1');
+    final offline = AuthController(fetchMe: () async => throw Exception('no network'));
+    await offline.restoreSession();
+
+    expect(offline.state.status, AuthStatus.signedOut, reason: 'এবারের জন্য লগইনের পর্দা');
+    expect(await TokenStorage.instance.refreshToken(), 'refresh-1', reason: '⛔ নেট নেই বলে টোকেন মুছে বের করে দিল');
+
+    final online = AuthController(fetchMe: () async => savedUser);
+    await online.restoreSession();
+    expect(online.state.status, AuthStatus.signedIn, reason: '⛔ নেট ফেরার পরের খোলায় সেশন ফিরল না');
+  });
+
+  test('only the refresh door refusing ends a session with no profile', () async {
+    await TokenStorage.instance.saveTokens(accessToken: 'access-1', refreshToken: 'refresh-1');
+    final controller = AuthController(fetchMe: () async {
+      // ⓘ আসল ApiClient-এর মতো: নবায়নে ৪০১/৪০৩ → টোকেন মোছা → onSessionExpired
+      await TokenStorage.instance.clear();
+      ApiClient.onSessionExpired?.call();
+      throw Exception('401');
+    });
     await controller.restoreSession();
 
     expect(controller.state.status, AuthStatus.signedOut);
+    expect(await TokenStorage.instance.refreshToken(), isNull);
   });
 
   test('logout clears the token, the saved profile, and the reference cache',

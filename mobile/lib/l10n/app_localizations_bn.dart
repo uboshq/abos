@@ -637,8 +637,14 @@ class AppL10nBn extends AppL10n {
   String get lockScreenPinTwice => 'দুইবার একই PIN লিখুন।';
 
   @override
-  String get lockScreenTooManyTries =>
-      'পাঁচবার ভুল PIN — আবার পাসওয়ার্ড দিয়ে ঢুকুন।';
+  String lockScreenPinWait(int count, String shown) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'অনেকবার ভুল PIN — $shown সেকেন্ড পরে আবার চেষ্টা করুন।',
+    );
+    return '$_temp0';
+  }
 
   @override
   String lockScreenPinWrong(int count, String shown) {
@@ -902,6 +908,13 @@ class AppL10nBn extends AppL10n {
 
   @override
   String get commonSign => 'অনুমোদন দিন';
+
+  @override
+  String get pushChannelAlertsName => 'জরুরি বার্তা';
+
+  @override
+  String get pushChannelAlertsDescription =>
+      'অনুমোদন, জমা, বার্তা আর কল — অ্যাপ বন্ধ, পেছনে বা খোলা, সব অবস্থায়';
 
   @override
   String get voucherTypeReceipt => 'আদায় ভাউচার';

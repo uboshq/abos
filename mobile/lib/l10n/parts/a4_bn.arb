@@ -840,9 +840,17 @@
   "@lockScreenPinTwice": {
     "description": "Setting a PIN: the two PINs differ"
   },
-  "lockScreenTooManyTries": "পাঁচবার ভুল PIN — আবার পাসওয়ার্ড দিয়ে ঢুকুন।",
-  "@lockScreenTooManyTries": {
-    "description": "Lock screen: too many wrong PINs"
+  "lockScreenPinWait": "{count, plural, other{অনেকবার ভুল PIN — {shown} সেকেন্ড পরে আবার চেষ্টা করুন।}}",
+  "@lockScreenPinWait": {
+    "description": "Lock screen: too many wrong PINs, wait before the next try (never a sign-out); shown is the seconds in the reader's digits",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "shown": {
+        "type": "String"
+      }
+    }
   },
   "lockScreenPinWrong": "{count, plural, other{PIN মেলেনি — আর {shown}বার চেষ্টা করা যাবে।}}",
   "@lockScreenPinWrong": {
@@ -1186,5 +1194,13 @@
   "commonSign": "অনুমোদন দিন",
   "@commonSign": {
     "description": "Button: sign (approve) a paper — fe: the action is \"সই দিন\""
+  },
+  "pushChannelAlertsName": "জরুরি বার্তা",
+  "@pushChannelAlertsName": {
+    "description": "Android notification channel name (phone Settings → Notifications) for approvals, deposits, messages and calls"
+  },
+  "pushChannelAlertsDescription": "অনুমোদন, জমা, বার্তা আর কল — অ্যাপ বন্ধ, পেছনে বা খোলা, সব অবস্থায়",
+  "@pushChannelAlertsDescription": {
+    "description": "Android notification channel description shown under the channel name in phone settings"
   }
 }

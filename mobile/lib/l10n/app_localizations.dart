@@ -1237,11 +1237,11 @@ abstract class AppL10n {
   /// **'দুইবার একই PIN লিখুন।'**
   String get lockScreenPinTwice;
 
-  /// Lock screen: too many wrong PINs
+  /// Lock screen: too many wrong PINs, wait before the next try (never a sign-out); shown is the seconds in the reader's digits
   ///
   /// In bn, this message translates to:
-  /// **'পাঁচবার ভুল PIN — আবার পাসওয়ার্ড দিয়ে ঢুকুন।'**
-  String get lockScreenTooManyTries;
+  /// **'{count, plural, other{অনেকবার ভুল PIN — {shown} সেকেন্ড পরে আবার চেষ্টা করুন।}}'**
+  String lockScreenPinWait(int count, String shown);
 
   /// Lock screen: a wrong PIN and the tries left; shown is the count in the reader's digits
   ///
@@ -1710,6 +1710,18 @@ abstract class AppL10n {
   /// In bn, this message translates to:
   /// **'অনুমোদন দিন'**
   String get commonSign;
+
+  /// Android notification channel name (phone Settings → Notifications) for approvals, deposits, messages and calls
+  ///
+  /// In bn, this message translates to:
+  /// **'জরুরি বার্তা'**
+  String get pushChannelAlertsName;
+
+  /// Android notification channel description shown under the channel name in phone settings
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমোদন, জমা, বার্তা আর কল — অ্যাপ বন্ধ, পেছনে বা খোলা, সব অবস্থায়'**
+  String get pushChannelAlertsDescription;
 
   /// Voucher type name when the server sends none: receipt
   ///

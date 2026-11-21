@@ -65,6 +65,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // ⓘ flutter_local_notifications (সামনে খোলা অ্যাপের বার্তা, ২০ নভেম্বর ২০২৬) java.time-এর desugaring চায়
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -212,6 +214,17 @@ if (!hasPlayKey) {
     }
 }
 
+/*
+ * ⭐ app/google-services.json না থাকলেও বিল্ড চলে (২০ নভেম্বর ২০২৬) — ফাইলটা git-এ নেই (.gitignore), তাই নতুন worktree-তে
+ * মালিকের Firebase ফাইল বসানোর আগে বিল্ড থামত ("File google-services.json is missing")। এখন কেবল সতর্কবার্তা: অ্যাপ ঠিকই
+ * চলে, শুধু বার্তা (push) বন্ধ — Firebase.initializeApp() ব্যর্থ হয়, [[PushService.init]] চুপচাপ বাদ দেয়।
+ * ⛔ রিলিজের আগে ফাইলটা বসানো চাই, আর তাতে দুই ফ্লেভারের প্যাকেজই (com.abos.abos_mobile, univer.abos) — নইলে বার্তা আসবে না।
+ */
+googleServices {
+    missingGoogleServicesStrategy =
+        com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.WARN
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
@@ -229,4 +242,6 @@ dependencies {
     implementation("androidx.glance:glance-material3:1.1.1")
     // ⓘ glance-material3 Material 3-এর রং-পরিবার (lightColorScheme, dynamic…) নিজে আনে না — compileOnly
     implementation("androidx.compose.material3:material3:1.3.1")
+    // ⓘ flutter_local_notifications 22-এর নিজের সাথে একই সংস্করণ
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

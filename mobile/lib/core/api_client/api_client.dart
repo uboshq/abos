@@ -18,8 +18,10 @@ import '../locale/app_locale.dart';
 ///  - attaches the Bearer access token from the keystore;
 ///  - on a 401, refreshes the token once and replays the request, so a
 ///    short-lived access token never surfaces as an error to the user;
-///  - if the refresh itself fails, clears the session and fires
-///    [onSessionExpired] so the app returns to the login screen.
+///  - if the server definitely refuses the refresh (its own 401/403), clears
+///    the session and fires [onSessionExpired] so the app returns to the
+///    login screen. Any other failure (no network, 5xx, 429, 422, an odd
+///    answer, a keystore hiccup) keeps the tokens — see [_isDefiniteRefusal].
 ///
 /// <p><b>What the server must provide for this to work</b> — see
 /// docs/Contract — মোবাইল সিঙ্ক প্রোটোকল.md:
@@ -133,14 +135,15 @@ class ApiClient {
             return handler.next(error);
           }
 
-          final String? token = await _refreshAccessToken();
-          if (token == null && _lastRefreshWasTransient) {
-            // ⛔ নেট নেই, সার্ভার ব্যস্ত (৫xx, ৪২৯) — সেশন শেষ নয়; টোকেন থাকে, মানুষ বের হন না, অফলাইন তালিকাও মোছে না
-            // (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬)। পরের ডাকে আবার নবায়ন।
+          final renewal = await _renew();
+          final String? token = renewal.token;
+          if (token == null && !renewal.refused) {
+            // ⛔ নেট নেই, সার্ভার ব্যস্ত (৫xx, ৪২৯), ৪২২, অচেনা উত্তর, ভাণ্ডারের ভুল — সেশন শেষ নয়; টোকেন থাকে, মানুষ বের
+            // হন না, অফলাইন তালিকাও মোছে না (ফোন লাইন-ধরে নিরীক্ষা, ১৫ অক্টোবর ২০২৬; মালিক, ২০ নভেম্বর ২০২৬)। পরের ডাকে আবার নবায়ন।
             return handler.next(error);
           }
           if (token == null) {
-            // Refresh token missing, expired or rejected — the session is over.
+            // ⛔ সার্ভার নিশ্চিত "না" বলেছে ([[_isDefiniteRefusal]]) — বের হন, টোকেন বাতিল; সেশন শেষ।
             await TokenStorage.instance.clear();
             onSessionExpired?.call();
             return handler.next(error);
@@ -167,7 +170,11 @@ class ApiClient {
   /// which it should, and which the contract document requires — parallel
   /// refreshes would invalidate each other and sign the user out for no
   /// reason at all.
-  static Future<String>? _inFlightRefresh;
+  ///
+  /// <p>⭐ যে অপেক্ষা করে সে পুরো ফলটাই পায় — টোকেন, আর না পেলে "সার্ভার না বলেছে" কি না। আগে একটা static পতাকা
+  /// (`_lastRefreshWasTransient`) পরের ডাক শুরুতেই মুছে দিত, তাই একসাথে অপেক্ষারত দ্বিতীয় অনুরোধ নেটের ভুলকেও "না" পড়ে
+  /// মানুষকে বের করে দিতে পারত (মালিক, ২০ নভেম্বর ২০২৬: "লগআউট না চাপলে বের নয়")।
+  static Future<_Renewal>? _inFlightRefresh;
 
   /// শেষ নবায়নে যে refresh টোকেন পাঠানো হয়েছিল — ব্যর্থ হলে মিলিয়ে দেখার জন্য ([[_someoneElseRefreshed]])
   static String? _sentRefresh;
@@ -176,41 +183,64 @@ class ApiClient {
   @visibleForTesting
   static Duration raceWait = const Duration(milliseconds: 1500);
 
-  /// শেষ নবায়ন ব্যর্থ হয়েছে নেট বা সার্ভারের সাময়িক কারণে (সার্ভার "না" বলেনি) — তখন সেশন শেষ ধরা হয় না
-  static bool _lastRefreshWasTransient = false;
-
-  static Future<String?> _refreshAccessToken() async {
-    _lastRefreshWasTransient = false;
+  /// ⭐ একটাই নবায়ন একসাথে (single-flight) — যারা এর মধ্যে আসে, তারা একই ফল পায়; ⛔ কখনো ছোড়ে না
+  static Future<_Renewal> _renew() {
     final existing = _inFlightRefresh;
-    if (existing != null) {
-      try {
-        return await existing;
-      } catch (_) {
-        return null;
-      }
-    }
-
-    final started = _performRefresh();
+    if (existing != null) return existing;
+    final started = _renewOnce();
     _inFlightRefresh = started;
+    started.whenComplete(() {
+      if (identical(_inFlightRefresh, started)) _inFlightRefresh = null;
+    });
+    return started;
+  }
+
+  static Future<_Renewal> _renewOnce() async {
     try {
-      return await started;
+      return _Renewal.got(await _performRefresh());
     } catch (error, stackTrace) {
       debugPrint('ABOS token refresh failed: $error');
-      final status = error is DioException ? error.response?.statusCode : null;
-      if (error is DioException && (isNetworkError(error) || (status != null && (status >= 500 || status == 429)))) {
-        _lastRefreshWasTransient = true;
-        return null;
+      if (!_isDefiniteRefusal(error)) {
+        // ⛔ নেট, ব্যস্ত সার্ভার, ৪২২/৪০৪, অচেনা উত্তর, ফোনের ভাণ্ডারের ভুল — সেশন থাকে
+        return const _Renewal.transient();
       }
       assert(() {
         debugPrintStack(stackTrace: stackTrace);
         return true;
       }());
-      return _someoneElseRefreshed();
-    } finally {
-      if (_inFlightRefresh == started) {
-        _inFlightRefresh = null;
+      try {
+        final access = await _someoneElseRefreshed();
+        return access == null ? const _Renewal.refused() : _Renewal.got(access);
+      } catch (_) {
+        // ⓘ ভাণ্ডার পড়া গেল না — নিশ্চিত নয়, তাই সেশন থাকে
+        return const _Renewal.transient();
       }
     }
+  }
+
+  /// ⛔ কেবল এই দুটোই সেশন শেষ করে (মালিক, ২০ নভেম্বর ২০২৬):
+  ///  - নবায়নের দরজার নিজের ৪০১ (টোকেন বাতিল — লগআউট, ওয়েবে ফোন সরানো, পাসওয়ার্ড বদল, মানুষ বন্ধ) বা ৪০৩ (দুই ধাপ
+  ///    বসানো নেই; ফায়ারওয়ালের ৪০৩ আগেই নেটের ভুল বানানো, [[FirewallBlocked]]);
+  ///  - ফোনে refresh টোকেনই নেই — নবায়নের কিছু নেই।
+  /// বাকি সব (নেট, ৫xx, ৪২৯, ৪২২, ৪০৪, অচেনা/অসম্পূর্ণ উত্তর, ভাণ্ডারের ভুল) সাময়িক — টোকেন থাকে।
+  static bool _isDefiniteRefusal(Object error) {
+    if (error is _NoRefreshToken) return true;
+    if (error is! DioException || isNetworkError(error) || error.error is FirewallBlocked) return false;
+    final status = error.response?.statusCode;
+    return status == 401 || status == 403;
+  }
+
+  /// ⭐ এখনই নবায়ন — পেছনের গোল ([[backgroundRound]]) ৩ দিনের পুরনো জোড়া আগেভাগে নতুন করে, যাতে ৩০ দিন না খুললেও
+  /// মানুষ বের না হন (মালিক, ২০ নভেম্বর ২০২৬)। একই single-flight নবায়ন ([[_renew]]); ফেরে নতুন জোড়া পেল কি না।
+  /// ⛔ নেটের বা সার্ভারের সাময়িক ভুলে টোকেন থাকে; কেবল সার্ভারের নিশ্চিত "না"-তে মোছে — ৪০১-এর পথের মতোই।
+  static Future<bool> renewNow() async {
+    final renewal = await _renew();
+    if (renewal.token != null) return true;
+    if (renewal.refused) {
+      await TokenStorage.instance.clear();
+      onSessionExpired?.call();
+    }
+    return false;
   }
 
   /// ⭐ নবায়ন ব্যর্থ, কিন্তু এর মধ্যে আরেক isolate (পটভূমির সিঙ্ক) একই টোকেনে নবায়ন করে নতুন জোড়া রেখে গেছে —
@@ -232,9 +262,11 @@ class ApiClient {
   }
 
   static Future<String> _performRefresh() async {
+    // ⓘ আগের নবায়নের পুরনো মান যেন "অন্য কেউ নবায়ন করেছে" যাচাইয়ে না ঢোকে
+    _sentRefresh = null;
     final refreshToken = await TokenStorage.instance.refreshToken();
     if (refreshToken == null || refreshToken.isEmpty) {
-      throw StateError('No refresh token stored');
+      throw const _NoRefreshToken();
     }
     _sentRefresh = refreshToken;
 
@@ -259,4 +291,28 @@ class ApiClient {
         .saveTokens(accessToken: newAccess, refreshToken: newRefresh);
     return newAccess;
   }
+}
+
+/// একটা নবায়নের ফল — নতুন access টোকেন, অথবা না পাওয়ার কারণ (সার্ভারের নিশ্চিত "না", নাকি সাময়িক)
+class _Renewal {
+  const _Renewal.got(String this.token) : refused = false;
+  const _Renewal.transient()
+      : token = null,
+        refused = false;
+  const _Renewal.refused()
+      : token = null,
+        refused = true;
+
+  final String? token;
+
+  /// সার্ভার নিশ্চিত "না" বলেছে, বা ফোনে নবায়নের টোকেনই নেই — কেবল তখনই সেশন শেষ
+  final bool refused;
+}
+
+/// ফোনে refresh টোকেন নেই — নবায়নের কিছু নেই
+class _NoRefreshToken implements Exception {
+  const _NoRefreshToken();
+
+  @override
+  String toString() => 'No refresh token stored';
 }

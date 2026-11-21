@@ -160,12 +160,13 @@ class _AbosAppState extends ConsumerState<AbosApp> {
       onChanged: () => _autoSync.runNow(),
     )..start();
 
-    _listenForWidgetTaps();
-
     final signedIn = ref.read(authStateProvider).status == AuthStatus.signedIn;
     if (signedIn) _askNotifications();
     _lock = AppLock(startLocked: signedIn)..signedIn = signedIn;
     WidgetsBinding.instance.addObserver(_lock);
+
+    // ⓘ তালার পরে — চাপ এলে তালা দেখে ধরে রাখতে ([[_openOrHold]])
+    _listenForWidgetTaps();
 
     // ⭐ বার্তায় চাপলে ট্র্যাকিং; নতুন করে ঢুকলে এই ফোনের টোকেন আবার জমা (অন্য কেউ এই ফোনে ঢুকে থাকলে
     // সার্ভার আগের জনের সারি থেকে টোকেন সরায় — [[PushTokenController]])।
@@ -203,11 +204,17 @@ class _AbosAppState extends ConsumerState<AbosApp> {
 
   /// ⭐ বার্তা বা উইজেটের চাপ — সাইন-ইন না থাকলে (বা সেশন এখনো খোঁজা হচ্ছে, ঠান্ডা শুরু) পথটা [DeepLinks]-এ মনে রেখে
   /// লগইন, তারপর ঠিক সেই পাতা; আগে লগইনের পরে কেবল হোম আসত। ওয়েবের লিংকের একই নিয়ম।
+  ///
+  /// <p>⛔ তালা থাকলে (বা সামনে ফিরলেই পড়বে) পথটা [AppLock] ধরে রাখে, খোলার পরপরই যায় — আগে তালার নিচেই পাতা খুলে তথ্য
+  /// আনত, "পড়া হলো" দাগাত (রিভিউ A3, ২১ নভেম্বর ২০২৬)। ফ্রেমের মুহূর্তে আবার দেখা — বিরতির মধ্যে আসা চাপের পরে
+  /// `resumed`-এ তালা পড়লে তখনও ধরে রাখে।
   void _openOrHold(String path) {
     DeepLinks.holdUnlessSignedIn(path, ref.read(authStateProvider).status);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ref.read(goRouterProvider).go(path);
+    _lock.openWhenUnlocked(path, (p) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _lock.openWhenUnlocked(p, ref.read(goRouterProvider).go);
+      });
     });
   }
 

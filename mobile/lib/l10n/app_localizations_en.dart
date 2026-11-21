@@ -642,8 +642,15 @@ class AppL10nEn extends AppL10n {
   String get lockScreenPinTwice => 'Type the same PIN twice.';
 
   @override
-  String get lockScreenTooManyTries =>
-      'Five wrong PINs — sign in with your password again.';
+  String lockScreenPinWait(int count, String shown) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Too many wrong PINs — try again in $shown seconds.',
+      one: 'Too many wrong PINs — try again in $shown second.',
+    );
+    return '$_temp0';
+  }
 
   @override
   String lockScreenPinWrong(int count, String shown) {
@@ -909,6 +916,13 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get commonSign => 'Approve';
+
+  @override
+  String get pushChannelAlertsName => 'Alerts';
+
+  @override
+  String get pushChannelAlertsDescription =>
+      'Approvals, deposits, messages and calls — whether the app is closed, in the background or open';
 
   @override
   String get voucherTypeReceipt => 'Collection voucher';
