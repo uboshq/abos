@@ -8,6 +8,7 @@ use App\Core\Contracts\GuardsThePrint;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\PhoneModules;
+use App\Core\Services\PhonePaperDoor;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Http\Middleware\RefuseWorkWithoutALicence;
@@ -21,7 +22,6 @@ use Illuminate\Routing\Route as RoutingRoute;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
-use ReflectionNamedType;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -71,7 +71,10 @@ final class DocumentApiController extends Controller
      * ⛔ এখানে না ছাঁকলে §৫ যে দরজা বন্ধ করেছিল, এই দরজা দিয়ে বেতনশিট ঠিকই
      * ফোনে নামত — আর দরজার নাম "documents", "payroll" নয়, তাই কেউ ধরত না।
      */
-    private const DESK_ONLY_PREFIX = 'hr_';
+    private const DESK_ONLY_PREFIX = PhonePaperDoor::DESK_ONLY_PREFIX;
+
+    /** ⭐ the paper words and who may open — shared with the messenger's paper card ([[PhonePaperDoor]], 21 Nov 2026) */
+    public function __construct(private readonly PhonePaperDoor $door) {}
 
     /** `GET /documents/{type}/{id}/pdf?paper=` — বাইট, ওয়েবের কাগজটাই। */
     public function pdf(Request $request, string $type, string $id): Response
@@ -119,7 +122,7 @@ final class DocumentApiController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        [$documentType, $class] = $this->printable()[$type] ?? abort(404);
+        [$documentType, $class] = $this->door->printable()[$type] ?? abort(404);
 
         /*
          * ⛔ ফোনে বন্ধ মডিউলের কাগজ — ৪০৩ `module_off` ([[PhoneModules]])। মডিউল
@@ -202,9 +205,11 @@ final class DocumentApiController extends Controller
      */
     private function mayOpen(User $user, string $documentType, string $class, Model $document): void
     {
-        $abilities = PaperTrail::abilitiesFor($documentType);
-
-        abort_if($abilities === [], 403);
+        /*
+         * ⭐ The rules below now live in [[PhonePaperDoor::mayOpen()]] (21 Nov 2026) — the messenger's paper card asks the same
+         * question, and two copies would drift. The comments stay here as the story of each rule.
+         */
+        abort_unless($this->door->mayOpen($user, $documentType, $document), 403);
 
         /*
          * ⭐ সইয়ের আগে কাগজটা — অনুরোধকারী বা যিনি সিদ্ধান্ত দিতে পারেন, কাগজের চাবি না থাকলেও (মালিক, ৭ অক্টোবর ২০২৬: "app e
@@ -212,24 +217,12 @@ final class DocumentApiController extends Controller
          * `$mayReadDocument`): কেবল **অপেক্ষমাণ** সইয়ে; সই হয়ে গেলে আগের মতো কাগজের নিজের চাবি। বেতনের কাগজ এমনিতেই এই
          * দরজার বাইরে ([[DESK_ONLY_PREFIX]])।
          */
-        if ($this->signsFor($user, $document)) {
-            return;
-        }
 
         /*
          * ⭐ ক্যাশিয়ার নিজের লেখা ভাউচার ছাপেন — আদায় বা পরিশোধের রসিদ পক্ষের হাতে দেওয়া এই কাজেরই অংশ (সমন্বয়ক, ৭ অক্টোবর
          * ২০২৬)। ⓘ রিপোর্টের চাবি (`accounts.report`) থাকলে সব ভাউচার, আগের মতো; না থাকলে কেবল লেখার চাবিওয়ালার নিজের লেখা
          * ভাউচার। শাখার দেয়াল মডেলের নিজের (খোঁজাতেই, [[ScopedToUserBranch]])।
          */
-        if ($documentType === 'accounts_voucher' && ! $user->can('accounts.report')) {
-            abort_unless($user->can('accounts.voucher.create') && (int) $document->getAttribute('created_by') === (int) $user->id, 403);
-
-            return;
-        }
-
-        foreach ($abilities as $ability) {
-            abort_unless($user->can($ability), 403);
-        }
 
         /*
          * ⓘ ক্রয়মূল্য এখানে আলাদা করে ফেরানো হয় না — ২৭ সেপ্টেম্বর ২০২৬ থেকে
@@ -237,19 +230,6 @@ final class DocumentApiController extends Controller
          * `41abd596`), আর ফোন সেই কাগজটাই পায়: চাবি ছাড়া দাম-ছাড়া, চাবিসহ দামসহ।
          */
 
-    }
-
-    /** এই কাগজের অপেক্ষমাণ সইয়ে এই মানুষ অনুরোধকারী বা সিদ্ধান্তদাতা কি না */
-    private function signsFor(User $user, Model $document): bool
-    {
-        $engine = app(\App\Core\Engines\Approval\ApprovalEngine::class);
-
-        return \App\Models\Approval::query()
-            ->where('approvable_type', $document->getMorphClass())
-            ->where('approvable_id', $document->getKey())
-            ->pending()
-            ->get()
-            ->contains(fn (\App\Models\Approval $a): bool => (int) $a->requested_by === (int) $user->id || $engine->canDecide($a, $user));
     }
 
     /**
@@ -302,33 +282,7 @@ final class DocumentApiController extends Controller
      */
     private function printable(): array
     {
-        $out = [];
-
-        foreach (PaperTrail::DOCUMENT_ROUTES as $documentType => $routeName) {
-            if (str_starts_with($documentType, self::DESK_ONLY_PREFIX)) {
-                continue;
-            }
-
-            $route = Route::getRoutes()->getByName($routeName);
-
-            foreach ($route?->signatureParameters(['subClass' => Model::class]) ?? [] as $parameter) {
-                $type = $parameter->getType();
-                $class = $type instanceof ReflectionNamedType ? $type->getName() : null;
-
-                if (is_string($class) && is_subclass_of($class, Model::class)) {
-                    /*
-                     * ⛔ প্রথমটাই থাকে (`??=`) — একই মডেলের দ্বিতীয় কাগজ ফোনের "ধরন" দখল করে না (১১ অক্টোবর ২০২৬)।
-                     * ⓘ চালানের গেট পাস (`sales_challan_gatepass`) আর DO (`sales_delivery_order`) বাঁধে চালান আর
-                     * অর্ডারের মডেলই; `=` থাকলে ফোন `DeliveryChallan` চাইলে দাম-ছাড়া গেট পাস পেত, `SalesOrder`-এ DO —
-                     * অন্য কাগজ, অন্য অনুমতি। ⭐ মূল কাগজ তালিকায় আগে বসানো, তাই সেটাই জেতে।
-                     */
-                    $out[class_basename($class)] ??= [$documentType, $class];
-
-                    break;
-                }
-            }
-        }
-
-        return $out;
+        // ⭐ one list, shared with the messenger's paper card ([[PhonePaperDoor::printable()]], 21 Nov 2026)
+        return $this->door->printable();
     }
 }

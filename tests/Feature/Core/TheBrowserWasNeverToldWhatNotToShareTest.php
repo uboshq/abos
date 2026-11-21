@@ -104,7 +104,7 @@ final class TheBrowserWasNeverToldWhatNotToShareTest extends TestCase
 
         $policy = (string) $response->headers->get('Permissions-Policy');
 
-        foreach (['camera=()', 'payment=()', 'usb=()'] as $denied) {
+        foreach (['payment=()', 'usb=()'] as $denied) {
             $this->assertStringContainsString($denied, $policy, "⛔ {$page}: Permissions-Policy-তে {$denied} নেই।");
         }
 

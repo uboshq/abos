@@ -106,4 +106,4 @@
     }
 @endphp
 
-<x-ui.row-actions :items="$items" :label="__('core.table.action_menu')" />
+<x-ui.row-actions :items="$items" :label="__('core.table.action_menu')" :paper="$paper" />

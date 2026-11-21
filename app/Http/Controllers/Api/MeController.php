@@ -110,6 +110,14 @@ class MeController extends Controller
                     && \Illuminate\Support\Facades\Route::has('api.users.profile'),
                 'cover_photo' => \Illuminate\Support\Facades\Route::has('api.me.cover.store')
                     && \Illuminate\Support\Facades\Route::has('api.users.cover'),
+                // ⭐ বার্তা ও কল (২১ নভেম্বর ২০২৬) — দরজা আছে, ফোনে মডিউল চালু, আর এই মানুষের চাবি; কল আলাদা: LiveKit বসানো থাকলে তবেই
+                'messaging' => \Illuminate\Support\Facades\Route::has('api.messaging.threads')
+                    && $this->phone->isReachable('messaging')
+                    && $request->user()->can('messaging.use'),
+                'calls' => \Illuminate\Support\Facades\Route::has('api.messaging.calls.start')
+                    && $this->phone->isReachable('messaging')
+                    && $request->user()->can('messaging.use')
+                    && app(\App\Modules\Messaging\Services\LiveKitToken::class)->configured(),
             ],
 
             /*

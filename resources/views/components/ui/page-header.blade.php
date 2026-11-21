@@ -40,6 +40,14 @@
                     }
                 }
             }
+
+            /*
+             * ⭐ "বার্তায় পাঠান" — কাগজের নিজের পাতার ⋯-তেও, তালিকার সারির মতো (বার্তার ওয়েব নমুনা v7, ট্যাব ঘ)।
+             * ⓘ কেবল তিন ABOS রূপে, `messaging.use` চাবিতে, আর ফোনের ছাপার দরজা যে কাগজ চেনে ([[MessengerChrome::shareItem()]]);
+             *   ⛔ SAP ও Dynamic-এ উত্তর null — মাথা হুবহু আগের মতো।
+             */
+            $headShare = $headPaper !== null && class_exists(\App\Modules\Messaging\Support\MessengerChrome::class)
+                && \App\Modules\Messaging\Support\MessengerChrome::shareItem($headPaper) !== null;
         @endphp
         <{{ $tag }} class="truncate text-xl font-semibold">{{ $title }}@if ($subtitle || filled($info))<span data-page-info class="hidden" title="{{ trim($subtitle.' '.$info) }}" aria-label="{{ trim($subtitle.' '.$info) }}"><x-ui.icon name="info" :size="15" /></span>@endif<x-ui.owner-self-mark :paper="$headPaper" class="ms-2 inline-block align-middle text-base font-normal" /></{{ $tag }}>
 
@@ -70,12 +78,12 @@
     <div data-gold-hairline aria-hidden="true"
          class="gold-hairline mt-3 rounded-full"></div>
 
-    @if (isset($actions) || $more !== [])
+    @if (isset($actions) || $more !== [] || $headShare)
         <div class="print-hide flex flex-wrap items-center gap-2" data-page-actions>
             {{ $actions ?? '' }}
 
-            @if ($more !== [])
-                <x-ui.row-actions :items="$more" />
+            @if ($more !== [] || $headShare)
+                <x-ui.row-actions :items="$more" :paper="$headShare ? $headPaper : null" />
             @endif
         </div>
     @endif

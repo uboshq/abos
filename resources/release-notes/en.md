@@ -1,5 +1,12 @@
 # What's new
 
+## 1.3.9 — 21-11-2026
+
+- Copilot's new live "Ai" mark: a small i with a golden dot, gently moving; in the three "ABOS" looks.
+- A new left menu in the three "ABOS" looks: a bar heads each group, its rows indented; one group open at a time.
+- New "Messages": chat with colleagues, sending pictures, files and ERP papers; sent, delivered and read ticks, who is typing and who is online. "Send in a message" on every paper's own page.
+- One-to-one audio and video calls: they switch on once the server's call service (LiveKit) is set up; until then no call buttons show.
+
 ## 1.3.8 — 21-11-2026
 
 - The left menu in the three "ABOS" looks comes in groups, each with its own icon; a group opens or folds on a click, the current page's group open.

@@ -1,0 +1,448 @@
+/*
+ * The web messages page — owner-approved sample M1UddRxK v7 (WhatsApp Web style).
+ * ⛔ Every rule lives under `.msgr` — nothing outside the messenger changes, in any look (SAP and Dynamic stay original).
+ * ⓘ Light colours are the sample's; dark follows the house theme switch (data-theme dark, or system + a dark device).
+ */
+.msgr {
+    --wa-wall: #efeae2;
+    --wa-doodle: #dcd3c6;
+    --wa-th: #fff;
+    --wa-me: #d9fdd3;
+    --wa-ink: #111b21;
+    --wa-meta: #667781;
+    --wa-chip: #fff;
+    --wa-chipInk: #54656f;
+    --wa-green: #00a884;
+    --wa-badge: #25d366;
+    --wa-unreadTime: #1daa61;
+    --wa-read: #53bdeb;
+    --wa-inset: rgba(11, 20, 26, .05);
+    --wa-lineIn: rgba(11, 20, 26, .09);
+    --wa-link: #008069;
+    --wa-ico: #54656f;
+    --m-bg: #fff;
+    --m-bg2: #f0f2f5;
+    --m-line: #e9edef;
+    --m-line2: #e1e5e8;
+    --m-sel: #f0f2f5;
+    --m-hover: #f5f6f6;
+    --m-pop: #fff;
+    --m-chipOn: #d9fdd3;
+    --m-chipOnInk: #008069;
+    --m-ph: #8696a0;
+    --m-frame: #dde3ec;
+    --m-shadow: 0 8px 24px rgba(11, 20, 26, .26);
+
+    position: relative;
+    height: calc(100dvh - var(--msgr-top, 190px) - var(--spacing-status-bar, 40px) - 26px);
+    min-height: 460px;
+    display: flex;
+    background: var(--m-bg);
+    border: 1px solid var(--m-frame);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(15, 30, 60, .06);
+    color: var(--wa-ink);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+:root[data-theme='dark'] .msgr {
+    --wa-wall: #0b141a;
+    --wa-doodle: #1a252c;
+    --wa-th: #202c33;
+    --wa-me: #005c4b;
+    --wa-ink: #e9edef;
+    --wa-meta: #8696a0;
+    --wa-chip: #182229;
+    --wa-chipInk: #8696a0;
+    --wa-inset: rgba(255, 255, 255, .06);
+    --wa-lineIn: rgba(255, 255, 255, .1);
+    --wa-link: #21c063;
+    --wa-ico: #aebac1;
+    --m-bg: #111b21;
+    --m-bg2: #202c33;
+    --m-line: #222d34;
+    --m-line2: #2a3942;
+    --m-sel: #2a3942;
+    --m-hover: #202c33;
+    --m-pop: #233138;
+    --m-chipOn: #0a332c;
+    --m-chipOnInk: #21c063;
+    --m-ph: #8696a0;
+    --m-frame: #2a3546;
+    --m-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+    color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']):not([data-theme='dark']) .msgr {
+        --wa-wall: #0b141a;
+        --wa-doodle: #1a252c;
+        --wa-th: #202c33;
+        --wa-me: #005c4b;
+        --wa-ink: #e9edef;
+        --wa-meta: #8696a0;
+        --wa-chip: #182229;
+        --wa-chipInk: #8696a0;
+        --wa-inset: rgba(255, 255, 255, .06);
+        --wa-lineIn: rgba(255, 255, 255, .1);
+        --wa-link: #21c063;
+        --wa-ico: #aebac1;
+        --m-bg: #111b21;
+        --m-bg2: #202c33;
+        --m-line: #222d34;
+        --m-line2: #2a3942;
+        --m-sel: #2a3942;
+        --m-hover: #202c33;
+        --m-pop: #233138;
+        --m-chipOn: #0a332c;
+        --m-chipOnInk: #21c063;
+        --m-ph: #8696a0;
+        --m-frame: #2a3546;
+        --m-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+        color-scheme: dark;
+    }
+}
+
+.msgr *, .msgr *::before, .msgr *::after { box-sizing: border-box; }
+.msgr [hidden] { display: none !important; }
+.msgr button { font: inherit; color: inherit; cursor: pointer; }
+.msgr button:disabled { cursor: default; }
+.msgr .n, .msgr time { font-variant-numeric: tabular-nums; }
+.msgr svg { flex: none; }
+.msgr .i { width: 18px; height: 18px; flex: none; }
+.msgr-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.msgr .mg-doodle-ink { stroke: var(--wa-doodle); }
+.msgr .mg-doodle-dot { fill: var(--wa-doodle); }
+.msgr :focus-visible { outline: 2px solid var(--wa-green); outline-offset: 1px; }
+
+/* avatars, ticks */
+.msgr .av { position: relative; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; flex: none; background: linear-gradient(135deg, #f59e0b, #ea580c); overflow: visible; }
+.msgr .av img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.msgr .av > svg { width: 55%; height: 55%; }
+.msgr .on-dot { position: absolute; right: 0; bottom: 0; width: 30%; height: 30%; min-width: 11px; min-height: 11px; border-radius: 50%; background: var(--wa-badge); border: 2.5px solid var(--m-bg); }
+.msgr .tkm { width: 17px; height: 12px; flex: none; }
+.msgr .tkm.rd { color: var(--wa-read); }
+
+/* ── the list ── */
+.msgr .mlist { width: 400px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--m-line); background: var(--m-bg); color: var(--wa-ink); min-height: 0; }
+.msgr .mlh { display: flex; align-items: center; gap: 10px; padding: 14px 16px 8px; }
+.msgr .mlh h1 { margin: 0; font-size: 22px; font-weight: 700; flex: 1; line-height: 1.3; }
+.msgr .newb { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border: 0; border-radius: 18px; background: var(--wa-green); color: #fff; font-weight: 700; font-size: 14px; }
+.msgr .newb svg { width: 17px; height: 17px; }
+.msgr .msrch { display: flex; align-items: center; gap: 10px; margin: 4px 14px 0; height: 38px; border-radius: 8px; padding: 0 14px; background: var(--m-bg2); color: var(--wa-meta); font-size: 14px; }
+.msgr .msrch svg { width: 17px; height: 17px; }
+.msgr .msrch input, .msgr .esr input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; color: var(--wa-ink); font: inherit; padding: 0; box-shadow: none; }
+.msgr .msrch input::placeholder, .msgr .esr input::placeholder { color: var(--wa-meta); opacity: 1; }
+.msgr .mchips { display: flex; gap: 8px; padding: 10px 14px 6px; }
+.msgr .mchips button { font-size: 13.5px; font-weight: 600; padding: 3px 13px; border-radius: 999px; background: var(--m-bg2); color: var(--wa-chipInk); border: 0; }
+.msgr .mchips button.on { background: var(--m-chipOn); color: var(--m-chipOnInk); }
+.msgr .mchips b:empty { display: none; }
+.msgr .mrows { flex: 1; min-height: 0; overflow-y: auto; }
+.msgr .mrows .none { padding: 30px 20px; text-align: center; color: var(--wa-meta); }
+.msgr .crow { width: 100%; display: flex; align-items: center; gap: 13px; padding: 0 14px 0 13px; border: 0; background: none; text-align: left; color: inherit; }
+.msgr .crow:hover { background: var(--m-hover); }
+.msgr .crow.sel { background: var(--m-sel); }
+.msgr .crow .av { width: 49px; height: 49px; font-size: 18px; }
+.msgr .crow .tx { flex: 1; min-width: 0; line-height: 1.3; padding: 10px 0; border-bottom: 1px solid var(--m-line); }
+.msgr .crow.sel .tx { border-bottom-color: transparent; }
+.msgr .crow .l1 { display: flex; align-items: baseline; gap: 6px; }
+.msgr .crow .l1 b { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msgr .crow .l1 time { margin-left: auto; font-size: 12px; color: var(--wa-meta); flex: none; }
+.msgr .crow small { display: block; font-size: 12px; color: var(--wa-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msgr .crow .l3 { display: flex; align-items: center; gap: 6px; margin-top: 1px; }
+.msgr .crow .last { flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px; font-size: 14px; color: var(--wa-meta); white-space: nowrap; overflow: hidden; }
+.msgr .crow .last span { overflow: hidden; text-overflow: ellipsis; }
+.msgr .crow .last .i { width: 16px; height: 16px; }
+.msgr .crow .last .typ { color: var(--wa-unreadTime); }
+.msgr .crow.un .last { color: var(--wa-ink); }
+.msgr .crow.un time { color: var(--wa-unreadTime) !important; font-weight: 700; }
+.msgr .crow .mutei { width: 16px; height: 16px; color: var(--wa-meta); }
+.msgr .badge { min-width: 21px; height: 21px; border-radius: 11px; background: var(--wa-badge); color: #fff; font-weight: 700; font-size: 11.5px; display: grid; place-items: center; padding: 0 6px; flex: none; }
+.msgr .ppr { display: inline-flex; align-items: center; gap: 3px; font-weight: 600; color: var(--wa-ink); }
+
+/* ── the chat ── */
+.msgr .mchat { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; background: var(--wa-wall); color: var(--wa-ink); }
+.msgr .mempty { position: relative; flex: 1; display: grid; place-items: center; }
+.msgr .mempty p { position: relative; margin: 0; padding: 6px 14px; border-radius: 8px; background: var(--wa-chip); color: var(--wa-chipInk); font-weight: 600; box-shadow: 0 1px .5px rgba(11, 20, 26, .13); }
+.msgr .wall { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.msgr .wh { position: relative; z-index: 5; display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 14px 0 16px; background: var(--m-bg2); border-bottom: 1px solid var(--m-line2); flex: none; }
+.msgr .wh .av { width: 42px; height: 42px; font-size: 16px; }
+.msgr .wh .on-dot { border-color: var(--m-bg2); }
+.msgr .wh .who { flex: 1; min-width: 0; line-height: 1.25; border: 0; background: none; padding: 0; text-align: left; }
+.msgr .wh .who b { display: block; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msgr .wh .who small { display: block; font-size: 13px; color: var(--wa-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msgr .wh .who small.typ { color: var(--wa-unreadTime); }
+.msgr .wh .back { display: none; }
+.msgr .hb { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; border: 0; background: none; padding: 0; color: var(--wa-ico); flex: none; }
+.msgr .hb svg { width: 22px; height: 22px; }
+.msgr .hb:hover, .msgr .hb.on { background: rgba(11, 20, 26, .1); }
+.msgr .soon2 { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 999px; background: #fef3c7; color: #92400e; white-space: nowrap; }
+.msgr .soon2 svg { width: 13px; height: 13px; }
+.msgr .km { position: absolute; right: 14px; top: 56px; z-index: 10; min-width: 230px; background: var(--m-pop); color: var(--wa-ink); border-radius: 10px; box-shadow: var(--m-shadow); padding: 8px 0; }
+.msgr .km button { width: 100%; display: flex; align-items: center; gap: 13px; padding: 10px 20px; font-size: 14.5px; white-space: nowrap; border: 0; background: none; text-align: left; }
+.msgr .km button:hover { background: var(--m-sel); }
+.msgr .km .i { color: var(--wa-ico); width: 19px; height: 19px; }
+
+.msgr .cwrap { position: relative; flex: 1; min-height: 0; }
+.msgr .cbody { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
+.msgr .msgs { margin-top: auto; display: flex; flex-direction: column; padding: 8px 7% 12px; }
+.msgr .more { align-self: center; margin: 6px 0; font-size: 12.5px; color: var(--wa-chipInk); }
+.msgr .mr { position: relative; display: flex; flex-direction: column; max-width: 62%; margin-top: 2px; }
+.msgr .mr.tl { margin-top: 10px; }
+.msgr .mr.me { align-self: flex-end; align-items: flex-end; }
+.msgr .mr.th { align-self: flex-start; align-items: flex-start; }
+.msgr .mr.wa2 { flex-direction: row; align-items: flex-start; }
+.msgr .mr.wa2 > .av { width: 30px; height: 30px; font-size: 12px; margin-right: 6px; }
+.msgr .mr.wa2 > .avsp { width: 36px; flex: none; }
+.msgr .mr.flash .bub { animation: msgr-flash 1.4s ease-out; }
+@keyframes msgr-flash { 0%, 40% { filter: brightness(.82); } 100% { filter: none; } }
+.msgr .bub { position: relative; padding: 6px 8px 7px 9px; border-radius: 7.5px; font-size: 14.5px; line-height: 1.4; box-shadow: 0 1px .5px rgba(11, 20, 26, .13); color: var(--wa-ink); overflow-wrap: anywhere; min-width: 0; }
+.msgr .bub::after { content: ""; display: table; clear: both; }
+.msgr .th .bub { background: var(--wa-th); }
+.msgr .me .bub { background: var(--wa-me); }
+.msgr .th .bub.tail { border-top-left-radius: 0; }
+.msgr .me .bub.tail { border-top-right-radius: 0; }
+.msgr .th .bub.tail::before { content: ""; position: absolute; top: 0; left: -8px; width: 8px; height: 13px; background: var(--wa-th); clip-path: polygon(0 0, 100% 0, 100% 100%); }
+.msgr .me .bub.tail::before { content: ""; position: absolute; top: 0; right: -8px; width: 8px; height: 13px; background: var(--wa-me); clip-path: polygon(0 0, 100% 0, 0 100%); }
+.msgr .bub .txt { white-space: pre-wrap; }
+.msgr .mt { float: right; position: relative; top: 5px; display: inline-flex; align-items: center; gap: 3px; margin: 4px 0 0 12px; font-size: 11px; color: var(--wa-meta); white-space: nowrap; }
+.msgr .mt svg { width: 17px; height: 12px; }
+.msgr .mt .rd { color: var(--wa-read); }
+.msgr .mt .pend { width: 13px; height: 13px; }
+.msgr .mt.blk { float: none; top: 0; display: flex; justify-content: flex-end; margin: 3px 2px -2px 0; }
+.msgr .bub.fail { outline: 1.5px solid #ea0038; cursor: pointer; }
+.msgr .bub .failtx { display: block; font-size: 12px; color: #ea0038; }
+.msgr .sn { display: block; font-size: 13px; font-weight: 700; margin-bottom: 1px; }
+.msgr .fwd { display: flex; align-items: center; gap: 4px; font-size: 12.5px; font-style: italic; color: var(--wa-meta); margin-bottom: 2px; }
+.msgr .fwd svg { width: 14px; height: 14px; }
+.msgr .tomb { display: inline-flex; align-items: center; gap: 6px; font-style: italic; color: var(--wa-meta); }
+.msgr .tomb svg { width: 15px; height: 15px; }
+.msgr .dsep, .msgr .sysl { align-self: center; font-size: 12.5px; font-weight: 600; padding: 4px 12px; border-radius: 7.5px; background: var(--wa-chip); color: var(--wa-chipInk); box-shadow: 0 1px .5px rgba(11, 20, 26, .13); margin: 12px 0 4px; text-align: center; max-width: 80%; }
+.msgr .sysl { font-weight: 500; }
+
+/* paper card */
+.msgr .bub.pp, .msgr .bub.fl, .msgr .bub.im { padding: 4px 4px 6px; }
+.msgr .paper { background: var(--wa-inset); border-radius: 6px; padding: 9px 10px 0; width: 290px; max-width: 100%; display: flex; flex-direction: column; gap: 7px; color: var(--wa-ink); }
+.msgr .paper .pr { display: flex; gap: 10px; align-items: center; }
+.msgr .pic { width: 42px; height: 42px; border-radius: 8px; display: grid; place-items: center; color: #fff; background: #2563eb; flex: none; }
+.msgr .pic.g { background: #16a34a; }
+.msgr .pic svg { width: 23px; height: 23px; }
+.msgr .paper .ptx { line-height: 1.3; min-width: 0; }
+.msgr .paper .ptx b { display: block; font-size: 14.5px; }
+.msgr .paper .ptx small { display: block; font-size: 12.5px; color: var(--wa-meta); }
+.msgr .paper .st { align-self: flex-start; font-size: 11.5px; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #fef3c7; color: #92400e; }
+.msgr .paper .open { display: block; margin: 0 -10px; padding: 8px 0; border: 0; border-top: 1px solid var(--wa-lineIn); background: none; color: var(--wa-link); font-weight: 700; font-size: 14.5px; text-align: center; }
+.msgr .bub .cap2 { padding: 5px 5px 0; }
+
+/* photo */
+.msgr .photo { display: block; border-radius: 6px; overflow: hidden; max-width: 330px; background: var(--wa-inset); }
+.msgr .photo img { display: block; width: 100%; height: auto; max-height: 360px; object-fit: cover; }
+
+/* voice */
+.msgr .voice { display: flex; align-items: center; gap: 8px; width: 300px; max-width: 100%; padding: 2px 0 0; }
+.msgr .voice > .av { width: 46px; height: 46px; font-size: 16px; }
+.msgr .voice .mb { position: absolute; right: -3px; bottom: -2px; width: 18px; height: 18px; border-radius: 50%; background: var(--wa-green); color: #fff; display: grid; place-items: center; border: 2px solid var(--wa-me); }
+.msgr .th .voice .mb { border-color: var(--wa-th); }
+.msgr .voice .mb svg { width: 10px; height: 10px; }
+.msgr .voice .pl { width: 30px; height: 30px; display: grid; place-items: center; flex: none; border: 0; background: none; padding: 0; color: var(--wa-ico); }
+.msgr .voice .pl svg { width: 24px; height: 24px; }
+.msgr .voice .wf { position: relative; flex: 1; display: flex; align-items: center; gap: 2px; height: 30px; cursor: pointer; }
+.msgr .voice .wf i { flex: 1; border-radius: 2px; background: var(--wa-meta); opacity: .55; }
+.msgr .voice .wf i.pd { background: var(--wa-green); opacity: 1; }
+.msgr .voice .knob { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--wa-green); }
+.msgr .vfoot { display: flex; align-items: center; justify-content: space-between; padding-left: 92px; margin-top: -2px; }
+.msgr .vfoot .dur { font-size: 11px; color: var(--wa-meta); }
+.msgr .vfoot .mt { float: none; top: 0; margin: 0; }
+
+/* file */
+.msgr .file { display: flex; align-items: center; gap: 10px; width: 300px; max-width: 100%; padding: 9px 10px; border-radius: 6px; background: var(--wa-inset); color: inherit; text-decoration: none; }
+.msgr .file .fic { width: 34px; height: 40px; border-radius: 5px; background: #e5484d; color: #fff; display: grid; place-items: end center; padding-bottom: 5px; font-weight: 700; font-size: 9px; flex: none; text-transform: uppercase; }
+.msgr .file .fic.x { background: #16a34a; }
+.msgr .file .fic.w { background: #2563eb; }
+.msgr .file .fic.o { background: #64748b; }
+.msgr .file .ftx { flex: 1; min-width: 0; line-height: 1.3; }
+.msgr .file .ftx b { display: block; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+.msgr .file .ftx small { display: block; font-size: 11.5px; color: var(--wa-meta); }
+.msgr .file .dl { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--wa-meta); color: var(--wa-meta); flex: none; }
+.msgr .file .dl svg { width: 16px; height: 16px; }
+
+/* location */
+.msgr .loc { display: flex; align-items: center; gap: 10px; width: 260px; max-width: 100%; padding: 10px; border-radius: 6px; background: var(--wa-inset); color: inherit; text-decoration: none; }
+.msgr .loc .pic { background: #e5484d; }
+.msgr .loc b { display: block; font-size: 14px; }
+.msgr .loc small { display: block; font-size: 12px; color: var(--wa-link); font-weight: 600; }
+
+/* reply quote */
+.msgr .quote { display: block; border-left: 4px solid #5b61d6; background: rgba(11, 20, 26, .05); border-radius: 6px; padding: 5px 10px 6px; margin: -2px -4px 6px -5px; font-size: 13px; color: var(--wa-chipInk); line-height: 1.35; cursor: pointer; text-align: left; width: calc(100% + 9px); border-top: 0; border-right: 0; border-bottom: 0; }
+.msgr .quote b { display: block; color: #5b61d6; font-size: 13px; }
+.msgr .quote svg { width: 13px; height: 13px; vertical-align: -2px; margin-right: 3px; }
+.msgr .quote span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* the ⌄ menu on a bubble */
+.msgr .chev { position: absolute; top: 2px; right: 3px; z-index: 2; width: 30px; height: 22px; border: 0; padding: 0 2px 0 0; border-radius: 0 7px 0 12px; display: none; place-items: center end; color: #8696a0; }
+.msgr .chev svg { width: 20px; height: 20px; }
+.msgr .th .chev { background: linear-gradient(90deg, transparent, var(--wa-th) 40%); }
+.msgr .me .chev { background: linear-gradient(90deg, transparent, var(--wa-me) 40%); }
+.msgr .bub:hover > .chev, .msgr .bub.hov > .chev, .msgr .chev:focus-visible { display: grid; }
+.msgr .bm { position: absolute; top: 24px; z-index: 20; width: 240px; background: var(--m-pop); color: var(--wa-ink); border-radius: 10px; box-shadow: var(--m-shadow); padding: 7px 0; font-size: 14.5px; line-height: 1.3; }
+.msgr .bm.up { top: auto; bottom: 24px; }
+.msgr .me .bm { right: 0; }
+.msgr .th .bm { left: 0; }
+.msgr .bm > button, .msgr .bm > div { position: relative; width: 100%; display: flex; align-items: center; gap: 12px; padding: 9px 18px; white-space: nowrap; border: 0; background: none; text-align: left; }
+.msgr .bm > button:hover, .msgr .bm > .on { background: var(--m-sel); }
+.msgr .bm .i { color: var(--wa-ico); width: 18px; height: 18px; }
+.msgr .bm .ar { margin-left: auto; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 6px solid #8696a0; }
+.msgr .bm .inf { flex-direction: column; align-items: flex-start; gap: 2px; }
+.msgr .bm .inf > span { display: flex; align-items: center; gap: 12px; }
+.msgr .bm .inf small { display: flex; align-items: center; gap: 5px; padding-left: 30px; font-size: 12px; color: var(--wa-meta); white-space: normal; }
+.msgr .bm .inf small svg { width: 16px; height: 11px; }
+.msgr .bm .inf small .rd { color: var(--wa-read); }
+.msgr .bm > .delrow { display: block; padding: 0; }
+.msgr .bm .delrow > button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 9px 18px; white-space: nowrap; border: 0; background: none; text-align: left; }
+.msgr .bm .delrow.on > button, .msgr .bm .delrow > button:hover { background: var(--m-sel); }
+.msgr .bm .sub { position: absolute; top: -7px; right: calc(100% + 6px); width: 200px; background: var(--m-pop); border-radius: 10px; box-shadow: var(--m-shadow); padding: 7px 0; }
+.msgr .th .bm .sub { right: auto; left: calc(100% + 6px); }
+.msgr .bm .sub button { width: 100%; display: block; padding: 9px 18px; border: 0; background: none; text-align: left; }
+.msgr .bm .sub button:hover { background: var(--m-sel); }
+.msgr .bm .sub .dl2 { color: #ea0038; }
+
+/* composer */
+.msgr .comp { position: relative; z-index: 4; display: flex; align-items: flex-end; gap: 6px; padding: 8px 16px; background: var(--m-bg2); flex: none; }
+.msgr .comp > .hb { margin-bottom: 1px; }
+.msgr .comp .hb.att svg { transform: rotate(-45deg); }
+.msgr .comp .hb.att.on, .msgr .comp .hb.emoon { color: var(--wa-green); background: rgba(0, 168, 132, .12); }
+.msgr .comp .hb.recon { color: #ea0038; }
+.msgr .cpill { position: relative; flex: 1; min-width: 0; min-height: 42px; border-radius: 8px; background: var(--m-bg); display: flex; align-items: center; gap: 8px; padding: 0 10px 0 14px; color: var(--wa-ink); font-size: 15px; }
+.msgr .cpill textarea { flex: 1; min-width: 0; border: 0; outline: 0; resize: none; background: none; color: var(--wa-ink); font: inherit; font-size: 15px; line-height: 1.4; padding: 10px 0; max-height: 140px; box-shadow: none; }
+.msgr .cpill textarea::placeholder { color: var(--m-ph); opacity: 1; }
+.msgr .dict { display: inline-flex; align-items: center; gap: 4px; color: var(--wa-green); font-size: 12px; font-weight: 600; white-space: nowrap; border: 0; background: none; padding: 4px 2px; align-self: center; }
+.msgr .dict svg { width: 18px; height: 18px; }
+.msgr .dict.live { color: #ea0038; }
+.msgr .dict.live svg { animation: msgr-pulse 1s ease-in-out infinite; }
+@keyframes msgr-pulse { 50% { opacity: .35; } }
+.msgr .dmenu { position: absolute; right: 0; bottom: 48px; z-index: 12; min-width: 170px; background: var(--m-pop); border-radius: 10px; box-shadow: var(--m-shadow); padding: 8px 0; font-size: 14px; }
+.msgr .dmenu b { display: block; padding: 2px 16px 6px; font-size: 12.5px; color: var(--wa-meta); }
+.msgr .dmenu button { width: 100%; display: block; padding: 8px 16px; border: 0; background: none; text-align: left; }
+.msgr .dmenu button.on { font-weight: 700; color: var(--wa-link); }
+.msgr .dmenu button:hover { background: var(--m-sel); }
+.msgr .rec { flex: 1; display: flex; align-items: center; gap: 10px; min-height: 42px; color: var(--wa-meta); }
+.msgr .rec .rdot { width: 10px; height: 10px; border-radius: 50%; background: #ea0038; animation: msgr-pulse 1s ease-in-out infinite; }
+.msgr .rec b { color: var(--wa-ink); }
+.msgr .rec .rlvl { flex: 1; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--wa-green) var(--lvl, 0%), var(--wa-lineIn) var(--lvl, 0%)); }
+.msgr .rec .hb { margin-left: auto; width: 34px; height: 34px; }
+.msgr .mic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 0; padding: 0; background: var(--wa-green); color: #fff; flex: none; margin-left: 4px; }
+.msgr .mic svg { width: 22px; height: 22px; }
+.msgr .mic:disabled { opacity: .45; }
+.msgr .atray { position: absolute; left: 16px; bottom: 64px; z-index: 10; background: var(--m-pop); border-radius: 14px; box-shadow: var(--m-shadow); padding: 10px 8px; display: flex; flex-direction: column; gap: 2px; min-width: 210px; }
+.msgr .atray button { display: flex; align-items: center; gap: 14px; padding: 7px 14px 7px 8px; border-radius: 10px; font-size: 14.5px; color: var(--wa-ink); border: 0; background: none; text-align: left; }
+.msgr .atray button:hover { font-weight: 700; background: var(--m-sel); }
+.msgr .atray i { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; }
+.msgr .atray i svg { width: 20px; height: 20px; }
+.msgr .atray .c1 { background: #7f66ff; }
+.msgr .atray .c2 { background: #bf59cf; }
+.msgr .atray .c3 { background: #00a884; }
+.msgr .atray .c4 { background: #ff2e74; }
+
+/* reply bar and staged files above the composer */
+.msgr .rbar { position: relative; z-index: 4; display: flex; align-items: center; gap: 10px; padding: 8px 16px 0 70px; background: var(--m-bg2); flex: none; }
+.msgr .rbar .quote { margin: 0; width: auto; flex: 1; background: var(--m-bg); cursor: default; }
+.msgr .stage { position: relative; z-index: 4; display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 16px 0 70px; background: var(--m-bg2); flex: none; }
+.msgr .stage .sf { position: relative; display: flex; align-items: center; gap: 8px; max-width: 260px; padding: 6px 34px 6px 6px; border-radius: 8px; background: var(--m-bg); font-size: 13px; }
+.msgr .stage .sf img { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; }
+.msgr .stage .sf .fic { width: 30px; height: 36px; border-radius: 5px; background: #e5484d; color: #fff; display: grid; place-items: end center; padding-bottom: 4px; font-size: 8px; font-weight: 700; text-transform: uppercase; flex: none; }
+.msgr .stage .sf span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msgr .stage .sf .hb { position: absolute; right: 2px; top: 50%; width: 28px; height: 28px; margin-top: -14px; }
+.msgr .stage .sf .hb svg { width: 16px; height: 16px; }
+
+/* emoji picker (docked above the composer) */
+.msgr .emo { flex: none; height: 300px; background: var(--m-bg); border-top: 1px solid var(--m-line2); display: flex; flex-direction: column; position: relative; z-index: 4; }
+.msgr .emo .ecat { display: flex; gap: 4px; padding: 6px 16px 0; border-bottom: 1px solid var(--m-line); }
+.msgr .emo .ecat button { width: 44px; height: 40px; display: grid; place-items: center; color: #8696a0; border: 0; border-bottom: 3px solid transparent; background: none; padding: 0; }
+.msgr .emo .ecat svg { width: 21px; height: 21px; }
+.msgr .emo .ecat button.on { color: var(--wa-green); border-bottom-color: var(--wa-green); }
+.msgr .emo .esr { display: flex; align-items: center; gap: 10px; margin: 10px 16px 4px; height: 36px; border-radius: 8px; background: var(--m-bg2); padding: 0 14px; color: var(--wa-meta); font-size: 14px; }
+.msgr .emo .esr svg { width: 16px; height: 16px; }
+.msgr .emo .elb { font-size: 13px; font-weight: 600; color: var(--wa-meta); padding: 6px 20px 2px; }
+.msgr .emo .egrid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fill, 46px); grid-auto-rows: 42px; gap: 4px; padding: 0 16px 8px; overflow-y: auto; }
+.msgr .emo .egrid button { width: 46px; height: 42px; display: grid; place-items: center; border-radius: 8px; border: 0; background: none; padding: 0; font-size: 28px; line-height: 1; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+.msgr .emo .egrid button:hover { background: var(--m-bg2); }
+
+/* info drawer */
+.msgr .minfo { width: 380px; flex: none; border-left: 1px solid var(--m-line); background: var(--m-bg); display: flex; flex-direction: column; color: var(--wa-ink); overflow: hidden; }
+.msgr .mih { display: flex; align-items: center; gap: 12px; height: 62px; padding: 0 14px 0 20px; background: var(--m-bg2); border-bottom: 1px solid var(--m-line2); flex: none; }
+.msgr .mih h3 { margin: 0; font-size: 16px; font-weight: 600; flex: 1; }
+.msgr .mibody { flex: 1; min-height: 0; overflow-y: auto; }
+.msgr .mitop { display: flex; flex-direction: column; align-items: center; padding: 20px 16px 16px; border-bottom: 8px solid var(--m-bg2); }
+.msgr .mitop .av { width: 96px; height: 96px; font-size: 34px; }
+.msgr .mitop b { font-size: 19px; margin-top: 10px; text-align: center; }
+.msgr .mitop small { font-size: 13.5px; color: var(--wa-meta); text-align: center; }
+.msgr .misec { padding: 12px 20px 6px; border-bottom: 8px solid var(--m-bg2); }
+.msgr .misec:last-child { border-bottom: 0; }
+.msgr .misec h4 { margin: 0 0 6px; font-size: 13.5px; font-weight: 600; color: var(--wa-meta); display: flex; }
+.msgr .misec h4 span { margin-left: auto; }
+.msgr .misec .none { padding: 6px 0 10px; color: var(--wa-meta); font-size: 13px; }
+.msgr .misrch { margin: 0 0 8px; }
+.msgr .mem { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.msgr .mem .av { width: 38px; height: 38px; font-size: 14px; }
+.msgr .mem .tx { flex: 1; min-width: 0; line-height: 1.25; }
+.msgr .mem b { display: block; font-size: 14.5px; font-weight: 600; }
+.msgr .mem small { font-size: 12.5px; color: var(--wa-meta); }
+.msgr .mem em { font-style: normal; font-size: 11.5px; font-weight: 600; color: var(--m-chipOnInk); background: var(--m-chipOn); border-radius: 6px; padding: 0 7px; white-space: nowrap; }
+.msgr .shp { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 0; border: 0; background: none; text-align: left; color: inherit; text-decoration: none; }
+.msgr .shp .pic { width: 34px; height: 34px; }
+.msgr .shp .pic svg { width: 18px; height: 18px; }
+.msgr .shp .pic.f { background: #e5484d; }
+.msgr .shp .pic.im { background: #bf59cf; }
+.msgr .shp .pic.v { background: #00a884; }
+.msgr .shp .tx { flex: 1; min-width: 0; line-height: 1.25; }
+.msgr .shp b { display: block; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msgr .shp small { font-size: 12.5px; color: var(--wa-meta); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msgr .shp time { font-size: 12px; color: var(--wa-meta); flex: none; }
+
+/* dialogs (new message, forward) — drawn as the sample's "বার্তায় পাঠান" dialog */
+.msgr .scrim { position: fixed; inset: 0; z-index: 60; background: rgba(10, 20, 40, .45); }
+.msgr .dlg { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 61; width: 540px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 48px); display: flex; flex-direction: column; background: var(--m-pop); color: var(--wa-ink); border-radius: 16px; padding: 18px 22px 20px; box-shadow: 0 24px 60px rgba(0, 0, 0, .35); }
+.msgr .dlg .tr { display: flex; align-items: center; gap: 8px; }
+.msgr .dlg .tr h4 { margin: 0; font-size: 19px; flex: 1; }
+.msgr .dlg .msrch { margin: 12px 0 0; }
+.msgr .dlg .lbl2 { font-size: 13px; font-weight: 700; color: var(--wa-link); margin: 12px 0 2px; }
+.msgr .dlg .plist { flex: 1; min-height: 80px; overflow-y: auto; }
+.msgr .dlg .plist .none { padding: 14px 0; color: var(--wa-meta); }
+.msgr .prow { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: none; padding: 0; text-align: left; color: inherit; }
+.msgr .prow .av { width: 42px; height: 42px; font-size: 15px; }
+.msgr .prow .tx { flex: 1; min-width: 0; line-height: 1.3; padding: 8px 0; border-bottom: 1px solid var(--m-line); }
+.msgr .prow:last-child .tx { border-bottom: 0; }
+.msgr .prow .tx b { font-size: 15px; font-weight: 600; }
+.msgr .prow .tx small { display: block; font-size: 12.5px; color: var(--wa-meta); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msgr .ck { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #8696a0; display: grid; place-items: center; flex: none; }
+.msgr .ck.on { background: var(--wa-green); border-color: var(--wa-green); color: #fff; }
+.msgr .ck svg { width: 14px; height: 14px; }
+.msgr .dlg .fb { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.msgr .dlg .go { height: 42px; border: 0; border-radius: 21px; background: var(--wa-green); color: #fff; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; padding: 0 20px; }
+.msgr .dlg .go:disabled { opacity: .45; }
+.msgr .dlg .go svg { width: 18px; height: 18px; }
+.msgr .dlg .cn { height: 42px; border: 1px solid var(--m-line2); border-radius: 21px; background: var(--m-pop); font-weight: 600; padding: 0 18px; }
+
+/* toast */
+.msgr .mtoast { position: absolute; left: 50%; bottom: 80px; transform: translateX(-50%); z-index: 70; max-width: min(520px, 90%); padding: 10px 18px; border-radius: 10px; background: #1f2c34; color: #e9edef; font-size: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); text-align: center; }
+
+/* narrower screens: one pane at a time; the drawer floats over the chat */
+@media (max-width: 1279px) {
+    .msgr .minfo { position: absolute; top: 0; right: 0; bottom: 0; z-index: 30; box-shadow: -8px 0 24px rgba(11, 20, 26, .18); max-width: 100%; }
+    .msgr .mlist { width: 340px; }
+}
+@media (max-width: 767px) {
+    .msgr { height: calc(100dvh - var(--msgr-top, 120px) - var(--spacing-bottom-nav, 72px) - 8px); border-radius: 12px; }
+}
+@media (max-width: 899px) {
+    .msgr .mlist { width: 100%; border-right: 0; }
+    .msgr.chat-open .mlist { display: none; }
+    .msgr:not(.chat-open) .mchat { display: none; }
+    .msgr .wh .back { display: grid; }
+    .msgr .mr { max-width: 85%; }
+    .msgr .msgs { padding: 8px 3% 12px; }
+    .msgr .soon2 { display: none; }
+    .msgr .rbar, .msgr .stage { padding-left: 16px; }
+}

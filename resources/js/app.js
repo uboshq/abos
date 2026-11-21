@@ -208,3 +208,10 @@ bootLiveLogos()
 
 // ⭐ "ফোনের মতো" রং — বান্ডেল লোড হওয়ামাত্র ([[followTheDevice]])
 followTheDevice()
+
+// ⭐ বার্তা — টপবারের ব্যাজ, কল আসার পপআপ, কলের পর্দা, "বার্তায় পাঠান" (ওয়েব নমুনা M1UddRxK v7)। ⓘ খোলস আঁকলে তবেই নামে —
+// কেবল তিন ABOS রূপে ([[MessengerChrome]]); livekit-client আরও পরে, কল শুরু হলে ([[messenger-call.js]])
+if (document.querySelector('[data-msgr-root]')) {
+    Promise.all([import('./messenger-call.js'), import('./messenger-share.js')])
+        .then(([call, share]) => { call.bootMessenger(); share.bootShare() })
+}

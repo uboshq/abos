@@ -1,6 +1,8 @@
 @props([
     'items' => [],
     'label' => null,
+    /* ⓘ সারির কাগজ — থাকলে "বার্তায় পাঠান" ([[MessengerChrome::shareItem()]]); না দিলে [[x-ui.table]] যে সারি আঁকছে সেটা */
+    'paper' => null,
 ])
 
 {{--
@@ -61,6 +63,16 @@
 
     $items = array_values(array_filter($items));
 
+    /*
+     * ⭐ "বার্তায় পাঠান" — ফোনের ছাপার দরজা যে কাগজ চেনে, তার মেনুতে একবারই, এখানে (বার্তার ওয়েব নমুনা M1UddRxK v7, ট্যাব ঘ)।
+     * ⓘ কেবল তিন ABOS রূপে আর `messaging.use` চাবিতে; SAP ও Dynamic-এ কিছুই বদলায় না ([[MessengerChrome]])।
+     */
+    $sharePaper = $paper ?? request()->attributes->get(\App\Modules\Messaging\Support\MessengerChrome::ROW);
+    if ($sharePaper !== null && class_exists(\App\Modules\Messaging\Support\MessengerChrome::class)
+        && ($shareItem = \App\Modules\Messaging\Support\MessengerChrome::shareItem($sharePaper)) !== null) {
+        $items = \App\Modules\Messaging\Support\MessengerChrome::placeIn($items, $shareItem);
+    }
+
     /* ⓘ শুরুতে, শেষে বা পরপর দুইটা ভাগ-রেখা আঁকা হয় না */
     $items = array_values(array_filter($items, function ($item, $i) use ($items) {
         if (! ($item['line'] ?? false)) {
@@ -72,7 +84,7 @@
     }, ARRAY_FILTER_USE_BOTH));
 
     /* ⓘ শুধু মাথা, শিরোনাম আর রেখা থাকলে বোতামই নয় */
-    $acts = array_filter($items, fn ($item) => isset($item['url']) || isset($item['off']));
+    $acts = array_filter($items, fn ($item) => isset($item['url']) || isset($item['off']) || isset($item['share']));
 @endphp
 
 @if ($acts !== [])
@@ -185,6 +197,12 @@
                             <span class="text-[11px] leading-snug" data-row-action-why>{{ $off }}</span>
                         </span>
                     </div>
+                @elseif (isset($item['share']))
+                    {{-- ⭐ বার্তায় পাঠান — কাকে পাঠাবেন, তার পপআপ খোলে ([[messenger-share.js]]) --}}
+                    <button type="button" role="menuitem" class="{{ $row }}" data-msgr-share="{{ json_encode($item['share'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}">
+                        <x-ui.icon :name="$item['icon']" :size="15" />
+                        <span class="min-w-0">{{ $item['label'] }}</span>
+                    </button>
                 @elseif (($item['method'] ?? null) === null)
                     <a href="{{ $item['url'] }}" role="menuitem" class="{{ $row }}"
                        @if ($item['blank'] ?? false) target="_blank" rel="noopener" @endif

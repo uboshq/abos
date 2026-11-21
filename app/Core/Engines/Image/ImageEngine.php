@@ -232,6 +232,20 @@ final class ImageEngine
     }
 
     /**
+     * ⭐ A photo as people took it — upright, ≤ PAPER_EDGE, ≤ PAPER_BYTES, every EXIF field (GPS too) gone by the
+     * re-encode; but never trimmed or brightened like a paper (messenger phase 1, 21 Nov 2026: a chat photo is a picture,
+     * not a scanned slip).
+     */
+    public function photo(string $path): string
+    {
+        $image = $this->open($path);
+        $image = $this->straighten($image, $path);
+        $image = $this->fit($image, self::PAPER_EDGE);
+
+        return $this->squeezeSmaller($image, self::PAPER_BYTES);
+    }
+
+    /**
      * ⭐ কাগজের চেহারা — ধূসর বা সাদা-কালো (মালিক, ১৬ নভেম্বর ২০২৬: CamScanner-এর মতো)।
      *
      * ⓘ ছায়া সরানো আর কাগজ সাদা করা ফোনের ব্রাউজারে হয় ([[resources/js/scan.js]] `enhance()`) — প্রতি বিন্দুর হিসাব PHP-তে

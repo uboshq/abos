@@ -564,6 +564,12 @@
          নিয়ম, যেটা ঠিক এই কাজের জন্যই আছে। --}}
     @stack('detached-forms')
 
+    {{-- ⭐ বার্তা — কল আসার পপআপ, ব্রাউজারের কলের পর্দা, "বার্তায় পাঠান"-এর পপআপ; কেবল তিন ABOS রূপে আর `messaging.use` চাবিতে
+         (ওয়েব নমুনা M1UddRxK v7; [[MessengerChrome]])। ⛔ SAP ও Dynamic-এ কিছুই বসে না --}}
+    @if (class_exists(\App\Modules\Messaging\Support\MessengerChrome::class) && \App\Modules\Messaging\Support\MessengerChrome::on())
+        @include('messaging::partials.chrome')
+    @endif
+
     @stack('scripts')
     {{-- ⭐ লোড হওয়ার পর্দা — পাতা বদলাতে দেরি হলে পুরো জীবন্ত লোগো (মালিক, ১ নভেম্বর ২০২৬: "loding eo Abos er full logo bosbe") --}}
     <div data-abos-loading class="abos-loading" aria-hidden="true"><x-brand.live-logo /></div>

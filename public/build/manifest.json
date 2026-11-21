@@ -1,6 +1,12 @@
 {
+  "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs": {
+    "file": "assets/livekit-client.esm-BkrmzZ0_.js",
+    "name": "livekit-client.esm",
+    "src": "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs",
+    "isDynamicEntry": true
+  },
   "resources/css/app.css": {
-    "file": "assets/app-DIxkRzmH.css",
+    "file": "assets/app-DDiTE_Gk.css",
     "name": "app",
     "names": [
       "app.css"
@@ -9,9 +15,43 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-CmqcXBRv.js",
+    "file": "assets/app-Bxv2QpEP.js",
     "name": "app",
     "src": "resources/js/app.js",
-    "isEntry": true
+    "isEntry": true,
+    "dynamicImports": [
+      "resources/js/messenger-call.js",
+      "resources/js/messenger-share.js"
+    ]
+  },
+  "resources/js/messenger-call.js": {
+    "file": "assets/messenger-call-CL5O_rtw.js",
+    "name": "messenger-call",
+    "src": "resources/js/messenger-call.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js"
+    ],
+    "dynamicImports": [
+      "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs"
+    ]
+  },
+  "resources/js/messenger-page.js": {
+    "file": "assets/messenger-page-BECDw7hZ.js",
+    "name": "messenger-page",
+    "src": "resources/js/messenger-page.js",
+    "isEntry": true,
+    "css": [
+      "assets/messenger-page-pjXjQ8_0.css"
+    ]
+  },
+  "resources/js/messenger-share.js": {
+    "file": "assets/messenger-share-t8gomY_i.js",
+    "name": "messenger-share",
+    "src": "resources/js/messenger-share.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/messenger-call.js"
+    ]
   }
 }
