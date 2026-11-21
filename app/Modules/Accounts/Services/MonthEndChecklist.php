@@ -157,7 +157,9 @@ final class MonthEndChecklist
             $branchCloses = $branchRows->isNotEmpty()
                 ? $branchRows->map(fn ($r) => $records->first(fn (DayClose $c) => $c->branch_id !== null && (int) $c->branch_id === (int) $r->branch_id))
                 : $records;
-            $branchless = $branchCloses->isEmpty() || $branchCloses->contains(null)
+            // ⛔ `contains(null)` নয় — Eloquent-এর সংগ্রহে এক যুক্তির `contains()` মডেলের চাবি (id) মেলায়, আর উপরের `get()` id আনে না:
+            //   প্রতিটা বন্ধের চাবি null, তাই "বন্ধ নেই" সবসময় সত্যি ছিল — শাখাহীন সারি কোনো শাখার বন্ধেই বন্ধ হত না (ম্যাক, ১.৩.৮)।
+            $branchless = $branchCloses->isEmpty() || $branchCloses->contains(fn ($c) => $c === null)
                 ? null
                 : $branchCloses->sortByDesc(fn (DayClose $c) => $c->closed_at?->getTimestamp() ?? 0)->first();
 
