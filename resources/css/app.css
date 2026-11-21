@@ -2302,73 +2302,201 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
     background: var(--menu-g);
 }
 
-/* ⭐ ভাঁজ-করা দলের মাথা — তিন ABOS রূপে (rose · navy · blue; মালিক, ২০ নভেম্বর ২০২৬): দলের চিহ্ন + নাম, তীর নেই, হোভারে হালকা ছোপ,
-   খোলা দলের নাম মোটা ([[menu-fold.js]], [[Ui::foldsMenuGroups()]])। ⓘ বোতামটা কেবল এই তিন রূপে আঁকা হয়, তবু প্রতিটা নিয়ম রূপে বাঁধা —
-   SAP, Dynamic আর বাকিরা একটা পিক্সেলও বদলায় না। */
-:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-head {
-    width: 100%;
-    min-height: 34px;
-    margin: 1px 0 0;
-    padding: 4px 10px;
-    gap: 8px;
-    border: 0;
-    border-radius: var(--radius-field);
-    background: transparent;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.25;
-    text-align: start;
-    cursor: pointer;
-    transition: background-color .15s;
+/* ⭐ ভাঁজ-করা মেনু — তিন ABOS রূপে (rose · navy · blue), মালিকের নমুনার হুবহু (মালিক, ২১ নভেম্বর ২০২৬, নমুনা "বাঁয়ের মেনু — ভাঁজ",
+   "নতুন" মেনুর `.grp`, `.gbtn`, `.it`; ২০ নভেম্বরের "তীর নেই, ছোট মাথা, সাদা ছোপের চিহ্ন" এর জায়গায়):
+     · মূল দল: পুরো চওড়া বোতাম, বাঁ ঘেঁষে (১০px), ১৪.৫px মোটা; দলের নিজের রঙের ২৬px টাইলে সাদা চিহ্ন; ডানে তীর ›, খোলা দলে ৯০° ঘোরে;
+       দুই দলের মাঝে সরু দাগ; খোলা দলের জমিন একটু গাঢ়
+     · উপ-সারি: ডানে সরানো (৪৬px), সাধারণ ওজন; বাঁয়ে ২৩px-এ সরু খাড়া দাগ; চিহ্ন খালি (১৬px), পেছনে কোনো সাদা ছোপ নেই
+     · এই পাতা: সাদা জমিন, নীল লেখা, আধা-মোটা, বাঁয়ে সোনালি (#fbbf24) দাগ, ডান কিনারা গোল
+   ⓘ রং `--fold-*` চলকে, রূপ নিজের মান বসায় (navy সাদা প্যানেলে — নিচে); না বসালে নমুনার নীল জমিনের মান।
+   ⓘ বোতাম আর দলের ঘর কেবল এই তিন রূপে আঁকা হয় ([[shell.sidebar]], [[Ui::foldsMenuGroups()]]), তবু প্রতিটা নিয়ম রূপে বাঁধা —
+   SAP, Dynamic আর বাকিরা একটা পিক্সেলও বদলায় না। ⓘ মাপ px-এ — এই অ্যাপে 1rem = 20px। */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] nav[data-menu-fold-nav] {
+    padding-inline: 0;
 }
 
-:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-head::before {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-grp {
+    margin: 0;
+    border-top: 1px solid var(--fold-line, rgb(255 255 255 / 0.12));
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] button.menu-fold-head {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 0;
+    margin: 0;
+    padding: 10px 12px 10px 10px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--fold-ink, #ffffff);
+    font-family: inherit;
+    font-size: 14.5px;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: normal;
+    text-transform: none;
+    text-align: left;
+    cursor: pointer;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] button.menu-fold-head::before {
     content: none;
     display: none;
 }
 
-:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-head:hover {
-    background: color-mix(in srgb, var(--menu-g) 10%, transparent);
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] button.menu-fold-head[aria-expanded='true'] {
+    background: var(--fold-deep, rgb(0 0 0 / 0.11));
 }
 
-:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-head[aria-expanded='true'] {
-    font-weight: 700;
-}
-
-:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-head:focus-visible {
-    outline: 2px solid var(--color-brand-gold);
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] button.menu-fold-head:focus-visible,
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row]:focus-visible {
+    outline: 2px solid #fbbf24;
     outline-offset: -2px;
 }
 
+/* দলের টাইল — রং markup-এর `style`-এ, দলের নিজের (resources/menu-look.php) */
 :root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-icon {
     display: grid;
     place-items: center;
     flex: none;
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     border-radius: 7px;
-    color: var(--menu-g);
-    background: color-mix(in srgb, var(--menu-g) 13%, transparent);
-}
-
-/* ⓘ নীল জমিনের দুই রূপ (rose, blue) — সাদা ছোপ, খোলা দল সাদা লেখায় */
-:root:is([data-ui='rose'], [data-ui='blue']) [data-site-map] .menu-fold-head:hover {
-    background: rgb(255 255 255 / 0.14);
-}
-
-:root:is([data-ui='rose'], [data-ui='blue']) [data-site-map] .menu-fold-head[aria-expanded='true'] {
     color: #ffffff;
 }
 
-:root:is([data-ui='rose'], [data-ui='blue']) [data-site-map] .menu-fold-icon {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-icon svg {
+    width: 15px;
+    height: 15px;
     color: #ffffff;
-    background: rgb(255 255 255 / 0.16);
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-name {
+    min-width: 0;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-chev {
+    flex: none;
+    margin-left: auto;
+    width: 16px;
+    height: 16px;
+    opacity: .85;
+    transition: transform .2s;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] button.menu-fold-head[aria-expanded='true'] .menu-fold-chev {
+    transform: rotate(90deg);
+}
+
+/* উপ-সারির ঘর — খোলা দলের গাঢ় জমিনে; একটাও সারি দেখা না গেলে (বন্ধ দল) ঘরটাও নেই */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items {
+    padding: 4px 0 8px;
+    background: var(--fold-deep, rgb(0 0 0 / 0.11));
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items:not(:has(> a[data-menu-fold-row]:not([hidden]))) {
+    display: none;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row] {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 0;
+    margin: 0;
+    padding: 6px 12px 6px 46px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: var(--fold-item-ink, rgb(255 255 255 / 0.9));
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.55;
+    text-decoration: none;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row]::before {
+    content: "";
+    position: absolute;
+    left: 23px;
+    top: 0;
+    bottom: 0;
+    border-left: 1px solid var(--fold-guide, rgb(255 255 255 / 0.28));
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row]:not([aria-current]):hover {
+    background: var(--fold-hover, rgb(255 255 255 / 0.1));
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row][aria-current] {
+    background: var(--fold-on-bg, #ffffff);
+    color: var(--fold-on-ink, #1b55c4);
+    font-weight: 600;
+    border-radius: 0 8px 8px 0;
+    margin-right: 10px;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row][aria-current]::before {
+    border-left: 3px solid #fbbf24;
+    left: 22px;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row][aria-disabled] {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+/* ⛔ উপ-সারির চিহ্ন খালি — সাদা বা স্বচ্ছ কোনো ছোপ নেই (মালিক, ২১ নভেম্বর ২০২৬: "সাদা বাক্স নেই, শুধু আইকন") */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row] .menu-icon {
+    display: block;
+    flex: none;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+    opacity: .9;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row][aria-current] .menu-icon {
+    background: none;
+    color: inherit;
+    opacity: 1;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row] .menu-icon svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] .menu-fold-items > a[data-menu-fold-row] > .line-clamp-2 {
+    padding-block: 0;
+    line-height: inherit;
 }
 
 /* ⛔ বন্ধ দলের সারি — সারির নিজের `flex` ক্লাস `hidden`-কে হারাতে না পারে */
 :root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-site-map] [data-menu-fold-row][hidden] {
     display: none !important;
+}
+
+/* ⓘ ABOS Navy — সাদা প্যানেল (অন্ধকারে গাঢ়), তাই নমুনার একই গড়ন রূপের নিজের লেখা, দাগ আর বাছা-সারির রঙে; সোনালি দাগ একই।
+   ⓘ "ABOS" (rose)-এর গাঢ় জমিন `abos-look.css`-এ; ABOS Blue নমুনার মানই নেয় (নীল প্যানেল)। */
+:root[data-ui='navy'] [data-site-map] {
+    --fold-ink: var(--color-ink);
+    --fold-item-ink: var(--color-ink-body);
+    --fold-line: var(--color-border);
+    --fold-guide: var(--color-border-strong);
+    --fold-deep: var(--color-surface-hover);
+    --fold-hover: color-mix(in srgb, var(--color-ink-body) 7%, transparent);
+    --fold-on-bg: var(--rail-item-on-bg);
+    --fold-on-ink: var(--rail-item-on-ink);
 }
 
 .rail-item.menu-coloured {

@@ -829,23 +829,42 @@
                                     $foldHere[$foldNow] = true;
                                 }
                             }
+                            /*
+                             * ⭐ ভাঁজের রূপে প্রতিটা দল নিজের ঘরে — মাথার বোতাম আর তার সারিগুলো একসাথে (মালিক, ২১ নভেম্বর ২০২৬, নমুনা
+                             * "বাঁয়ের মেনু — ভাঁজ", `.grp`/`.gbtn`/`.it`): দুই দলের মাঝে সরু দাগ, খোলা দলের জমিন একটু গাঢ়, সারিগুলো
+                             * ডানে সরানো বাঁয়ে খাড়া দাগসহ। ⓘ বাকি রূপে `$foldKey` সবসময় null, তাই ঘর আঁকা হয় না — markup আগের মতোই।
+                             */
+                            $foldOpenGroup = null;
                         @endphp
                         @foreach ($panelRows as $item)
                             @php($look = $menuLooks[$loop->index] ?? ['kind' => null, 'starts' => false, 'colour' => null, 'icon' => null, 'kind_icon' => null, 'name' => null])
                             @php($foldKey = $foldKeyOf[$loop->index] ?? null)
+                            @if ($foldOpenGroup !== null && $foldKey !== $foldOpenGroup)
+                                    </div>
+                                </div>
+                                @php($foldOpenGroup = null)
+                            @endif
                             @if ($look['kind'] !== null && $look['starts'] && $panelSections === [])
                                 @if ($foldKey !== null)
-                                    {{-- ⭐ দলের মাথা বোতাম — চিহ্ন + নাম, তীর নেই (মালিক, ২০ নভেম্বর ২০২৬); Enter/Space বোতাম নিজেই চাপে --}}
+                                    {{-- ⭐ দলের মাথা — পুরো চওড়া বোতাম, বাঁ ঘেঁষে মোটা নাম, দলের নিজের রঙের ছোট টাইলে সাদা চিহ্ন, ডানে তীর ›
+                                         যা খোলা দলে নিচে ঘোরে (মালিক, ২১ নভেম্বর ২০২৬, নমুনা "নতুন"; ২০ নভেম্বরের "তীর নেই" এর জায়গায়)।
+                                         ⓘ টাইলের রং দলের নিজের (resources/menu-look.php) — Blue রূপের `[data-mc]` ব্র্যান্ড-নীল এখানে খাটে না।
+                                         Enter/Space বোতাম নিজেই চাপে। --}}
+                                    <div class="menu-fold-grp" data-menu-fold-grp="{{ $foldKey }}">
                                     <button type="button" class="menu-kind-head menu-fold-head" data-menu-kind="{{ $look['kind'] }}"
                                             data-mc="{{ ltrim((string) $look['colour'], '#') }}" data-menu-fold="{{ $foldKey }}"
                                             @if (isset($foldHere[$foldKey])) data-menu-fold-here @endif
                                             aria-expanded="{{ isset($foldHere[$foldKey]) ? 'true' : 'false' }}"
                                             x-show="filter === ''">
                                         @if ($look['kind_icon'] ?? null)
-                                            <span class="menu-fold-icon" aria-hidden="true"><x-ui.licon :name="$look['kind_icon']" :size="15" /></span>
+                                            <span class="menu-fold-icon" data-menu-fold-tile="{{ $look['colour'] }}"
+                                                  style="background: {{ $look['colour'] }}" aria-hidden="true"><x-ui.licon :name="$look['kind_icon']" :size="15" /></span>
                                         @endif
-                                        <span class="min-w-0 truncate">{{ $look['name'] }}</span>
+                                        <span class="menu-fold-name">{{ $look['name'] }}</span>
+                                        <svg class="menu-fold-chev" data-menu-fold-chev width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                     </button>
+                                    <div class="menu-fold-items" data-menu-fold-items="{{ $foldKey }}">
+                                    @php($foldOpenGroup = $foldKey)
                                 @else
                                 <p class="menu-kind-head" data-menu-kind="{{ $look['kind'] }}" data-mc="{{ ltrim((string) $look['colour'], '#') }}"
                                    x-show="filter === ''">{{ $look['name'] }}</p>
@@ -940,6 +959,10 @@
                                     @endif
                                 </a>
                         @endforeach
+                        @if ($foldOpenGroup !== null)
+                                </div>
+                            </div>
+                        @endif
                     </nav>
 
                     {{-- রূপের নিজের নিচের অংশ — D365-এর এলাকা বদলের
