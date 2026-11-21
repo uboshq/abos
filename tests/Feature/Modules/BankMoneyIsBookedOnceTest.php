@@ -14,9 +14,9 @@ use App\Modules\Accounts\Services\CashTillService;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\VoucherService;
 use Database\Seeders\DemoSeeder;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Tests\Concerns\PutsMoneyInTheTill;
@@ -229,13 +229,20 @@ class BankMoneyIsBookedOnceTest extends TestCase
         $this->assertSame('TRX55', $wrong->fresh()->instrument_no);
     }
 
-    public function test_the_database_itself_refuses_the_pair(): void
+    /**
+     * ⭐ ২১ নভেম্বর ২০২৬ থেকে ডেটাবেস জোড়াটা আর ফেরায় না — একটা জমা কয়েকজন ডিলারের নামে ভাগ হয় (মালিক; RCV-0537/0538), তাই
+     * `(কোম্পানি, খাত, নম্বর)` আর অনন্য নয়। ⓘ পাহারা এখন পোস্টের লেনদেনে, টাকার খাতের সারিতে তালা নিয়ে
+     * ([[VoucherService::assertBankReferenceIsFree()]]); একই পক্ষ-তারিখ-খাতের জোড়া সেখানেই থামে
+     * ([[OneDepositCanBeSplitAcrossDealersTest]])। খোঁজার পথটা সাধারণ সূচিতে থাকে।
+     */
+    public function test_the_database_no_longer_refuses_the_pair_and_keeps_the_lookup_index(): void
     {
-        // সার্ভিসের যাচাই বন্ধুসুলভ বার্তার জন্য; আসল পাহারা ইনডেক্স।
-        // দুইজন একসাথে "পোস্ট" চাপলে যাচাই দুইটাই পাশ করতে পারত।
         $this->service()->post($this->draft($this->bank, $this->rent, 'RACE1'));
 
-        $this->expectException(QueryException::class);
+        $this->assertTrue(Schema::hasIndex('vouchers', 'vouchers_bank_reference_index'),
+            '⛔ খাত আর নম্বরের খোঁজার সূচি নেই');
+        $this->assertFalse(Schema::hasIndex('vouchers', 'vouchers_bank_reference_unique'),
+            '⛔ পুরনো অনন্য সূচি রয়ে গেছে — জমার ভাগ ডেটাবেসেই ভাঙবে');
 
         DB::table('vouchers')->insert([
             'company_id' => $this->company->id,
@@ -250,6 +257,9 @@ class BankMoneyIsBookedOnceTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
+        $this->assertSame(2, DB::table('vouchers')->where('money_account_id', $this->bank)->where('instrument_no', 'RACE1')->count(),
+            '⛔ ডেটাবেস জমার ভাগের দ্বিতীয় সারি ফেরাল');
     }
 
     // ── পর্দা ───────────────────────────────────────────────────────────

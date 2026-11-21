@@ -67,7 +67,7 @@ final class DepositClaimService
         $bills = $this->billsOf($customer, (array) ($data['bills'] ?? []), $amount);
 
         return DB::transaction(function () use ($customer, $data, $amount, $claimedOn, $bills) {
-            $this->assertReferenceIsFree($data, $customer);
+            $this->assertReferenceIsFree($data, $customer, $claimedOn);
 
             return $this->write($customer, $data, $amount, $claimedOn, $bills);
         });
@@ -81,9 +81,15 @@ final class DepositClaimService
      * একটা লেনদেন একজনেরই। ⛔ খাতের সারিতে তালা — একই মুহূর্তে দুই দরজা দিয়ে এলেও দ্বিতীয়টা প্রথমটাকে দেখে।
      * ⓘ ডিলারের দেয়াল বাদ দিয়ে খোঁজা — SR যে দোকান দেখেন না, তার বিজ্ঞপ্তিও একই স্লিপ ধরে রাখে; কোম্পানির দেয়াল থাকে।
      *
+     * ⭐ জমার ভাগ — মালিক, ২১ নভেম্বর ২০২৬ (৳১,০০,০০০ জমা, নম্বর 175300556, দুই ডিলারের ৫০,০০০ করে): একটা জমা কয়েকজন ডিলারের
+     * নামে ভাগ হতে পারে। তাই একই খবর কেবল একই রেফারেন্স + একই খাত + একই জমার দিন + **একই দোকান** — রসিদের পাহারার একই
+     * নিয়ম ([[VoucherService::sameDeposit()]])। ⛔ আগে "অন্য দোকানের নামেও থামে" ছিল; সেটা ভাগটাকেই আটকাত। ⓘ একই দোকানের একই
+     * স্লিপ SR আর দোকানি দুইবার পাঠালে আগের মতোই থামে। ⓘ জমার খবর কাগজের খসড়া নয় — খোলা খবরও দ্বিতীয়টাকে থামায়, কেবল
+     * প্রত্যাখ্যাতটা বাদ।
+     *
      * @param  array<string, mixed>  $data
      */
-    private function assertReferenceIsFree(array $data, Customer $customer): void
+    private function assertReferenceIsFree(array $data, Customer $customer, Carbon $claimedOn): void
     {
         $reference = self::plainReference($data['reference'] ?? null);
         $account = $data['bank_account_id'] ?? null;
@@ -106,6 +112,8 @@ final class DepositClaimService
             ->whereNull('deleted_at')
             ->when($account === null, fn ($q) => $q->whereNull('bank_account_id'), fn ($q) => $q->where('bank_account_id', $account))
             ->where('status', '!=', DepositClaim::REJECTED)
+            ->where('customer_id', $customer->getKey())
+            ->whereDate('claimed_on', $claimedOn->toDateString())
             ->whereNotNull('reference')
             ->whereRaw("UPPER(REPLACE(reference, ' ', '')) = ?", [$reference])
             ->exists();

@@ -158,6 +158,26 @@ describe('রেফারেন্সের চলতি উত্তর', () =>
         expect(data.slipUsed).toBe(true)
         expect(data.slip.message).toBe('আগে বসেছে')
     })
+
+    it('পক্ষের ঘর সবসময় যায়, আর জমার ভাগ ("split") তথ্য হিসেবে দেখায়, লাল নয় — মালিক, ২১ নভেম্বর ২০২৬', async () => {
+        const asked = []
+        vi.stubGlobal('fetch', vi.fn((url) => {
+            if (String(url).includes('reference-check')) {
+                asked.push(String(url))
+                return Promise.resolve({ ok: true, json: async () => ({ state: 'split', message: 'একই জমা আরও যে রসিদে: RCV-0538' }) })
+            }
+            return Promise.resolve({ ok: true, json: async () => ({ rows: [] }) })
+        }))
+        const data = await mount({ amount: '1000' })
+        document.querySelector('[name="instrument_no"]').value = '175300556'
+
+        await data.checkSlip()
+
+        expect(asked.at(-1), '⛔ রেফারেন্সের প্রশ্নে পক্ষের ঘর যায় না — সার্ভার জমার ভাগ চিনতে পারে না').toContain('party_type=')
+        expect(asked.at(-1)).toContain('party_id=')
+        expect(data.slipShown, '⛔ জমার ভাগের তথ্য পর্দায় দেখায় না').toBe(true)
+        expect(data.slipUsed, '⛔ জমার ভাগকে "আগে বসেছে"-র লাল রঙে দেখায়').toBe(false)
+    })
 })
 
 /*
