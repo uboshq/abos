@@ -123,6 +123,8 @@ return [
         'sales.gate_pass' => 'Gate pass',
         'sales.customer_target' => 'Customer monthly targets',
         'sales.margin' => 'Margin',
+        // ⓘ Delivery cost report — sales.delivery_cost.report (21 Nov 2026)
+        'sales.delivery_cost' => 'Delivery cost',
         'sales.price_list' => 'Price lists',
         'purchase.requisition' => 'Purchase requisitions',
         'purchase.contract' => 'Purchase contracts',

@@ -150,6 +150,8 @@ return [
         'sales.gate_pass' => 'গেট পাস',
         'sales.customer_target' => 'গ্রাহকের মাসিক লক্ষ্য',
         'sales.margin' => 'মার্জিন',
+        // ⓘ ডেলিভারি খরচের রিপোর্ট — sales.delivery_cost.report (২১ নভেম্বর ২০২৬)
+        'sales.delivery_cost' => 'ডেলিভারি খরচ',
         'sales.price_list' => 'দামের তালিকা',
         'purchase.requisition' => 'ক্রয়ের চাহিদা',
         'purchase.contract' => 'ক্রয় চুক্তি',

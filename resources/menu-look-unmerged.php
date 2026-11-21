@@ -499,6 +499,8 @@ return [
             'sales::menu.by_brand' => ['reports', 'award'],
             'sales::monthly.title' => ['reports', 'calendar'],
             'sales::margin.report_title' => ['reports', 'percent'],
+            // ⓘ ডেলিভারি খরচ — মার্জিনের ঠিক পরে, রিপোর্টের দলে (২১ নভেম্বর ২০২৬)
+            'sales::delivery_cost.menu' => ['reports', 'car'],
             'sales::return_reason.report_title' => ['reports', 'message-circle-question'],
             'sales::channel.report_title' => ['reports', 'signpost'],
             'sales::route.report_title' => ['reports', 'milestone'],
