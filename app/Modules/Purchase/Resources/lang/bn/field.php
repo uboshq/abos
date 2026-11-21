@@ -288,6 +288,7 @@ return [
     'carrier' => 'কে আনল',
     'carrier_name' => 'পরিবহনকারীর নাম',
     'transport_cost' => 'ভাড়া',
+    'other_cost' => 'অন্যান্য খরচ',
     'vehicle_no' => 'গাড়ি নম্বর',
     'driver_name' => 'চালক',
     'requested_by' => 'চেয়েছেন',

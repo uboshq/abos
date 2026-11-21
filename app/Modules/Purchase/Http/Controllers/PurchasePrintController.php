@@ -95,6 +95,9 @@ class PurchasePrintController extends Controller implements HasMiddleware
                 'purchase::field.supplier' => $bill->supplier?->name() ?? '',
                 'purchase::field.supplier_bill_no' => (string) ($bill->supplier_bill_no ?? ''),
                 'supplier::labour.unloading' => $unloading,
+                // ⭐ অন্যান্য খরচ — থাকলে তবেই; খালি ঘর কাগজে বসে না (নমুনা v6 গ, ২১ নভেম্বর ২০২৬)
+                'purchase::field.other_cost' => $price && bccomp((string) ($bill->other_cost ?? '0'), '0', 4) > 0
+                    ? $this->money($bill->other_cost) : '',
             ],
             lines: $this->lines($bill->lines, 'qty', money: $price),
             totals: $price ? $this->totals($bill) : [],
@@ -208,6 +211,7 @@ class PurchasePrintController extends Controller implements HasMiddleware
                 'bill_discount' => bccomp($billDiscount, '0', 4) > 0 ? $this->money($billDiscount) : '',
                 'tax' => $blank($bill->tax) ? '' : $this->money($bill->tax),
                 'transport' => $blank($bill->transport_cost) ? '' : $this->money($bill->transport_cost),
+                'other_cost' => $blank($bill->other_cost ?? '0') ? '' : $this->money($bill->other_cost),
                 'total' => $this->money($bill->total),
                 'paid' => $this->money($bill->paidAmount()),
                 'due' => $this->money($bill->dueAmount()),

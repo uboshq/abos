@@ -174,6 +174,7 @@
                     @if ($bill['sums']['bill_discount'] !== '')<tr><td>{{ $L('bill_discount') }}</td><td class="num fig">{{ $bill['sums']['bill_discount'] }}</td></tr>@endif
                     @if ($bill['sums']['tax'] !== '')<tr><td>{{ $L('vat') }}</td><td class="num fig">{{ $bill['sums']['tax'] }}</td></tr>@endif
                     @if ($bill['sums']['transport'] !== '')<tr><td>{{ $L('transport') }}</td><td class="num fig">{{ $bill['sums']['transport'] }}</td></tr>@endif
+                    @if (($bill['sums']['other_cost'] ?? '') !== '')<tr data-other-cost><td>{{ $L('other_cost') }}</td><td class="num fig">{{ $bill['sums']['other_cost'] }}</td></tr>@endif
                     <tr class="grand"><td>{{ $L('grand') }}</td><td class="num fig">{{ $bill['sums']['total'] }}</td></tr>
                     <tr><td>{{ $L('paid') }}</td><td class="num fig">{{ $bill['sums']['paid'] }}</td></tr>
                     <tr class="due"><td>{{ $L('due') }}</td><td class="num fig">{{ $bill['sums']['due'] }}</td></tr>

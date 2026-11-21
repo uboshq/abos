@@ -69,6 +69,7 @@ return [
         'purchase.receipt' => 'Goods receipts',
         'purchase.return' => 'Purchase returns',
         'purchase.settlement' => 'Settlements',
+        'purchase.cost' => 'Purchase landed cost',
         'restaurant' => 'Whole restaurant module',
         'restaurant.kitchen' => 'Kitchen',
         'restaurant.production' => 'Cooking',

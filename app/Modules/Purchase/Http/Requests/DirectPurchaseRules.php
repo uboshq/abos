@@ -137,6 +137,8 @@ final class DirectPurchaseRules
                     && blank($input['carrier_name'] ?? null))],
             'carrier_name' => ['nullable', 'string', 'max:120'],
             'transport_cost' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            // ⭐ অন্যান্য খরচ (ঘাট, টোল …) — ঐচ্ছিক; ভাড়ার মতোই আনার খরচ (নমুনা v6 গ, ২১ নভেম্বর ২০২৬)
+            'other_cost' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
 
             /*
              * গোটা বিলের ছাড় — টাকায় বা শতাংশে (মালিকের ছবি, সিদ্ধান্ত ক)।

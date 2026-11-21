@@ -22,6 +22,7 @@ return [
     'paying_now' => 'Paying now',
     'owed' => 'Left owed to the supplier',
     'transport' => 'Freight (:who), added to the cost of the goods',
+    'other_cost' => 'Other costs, added to the cost of the goods',
     'signature' => 'This bill needs an approval. Confirming saves it as a draft awaiting approval; until it is approved, the goods do not enter stock or the books.',
     'return_title' => 'Purchase return :no: overview',
     'return_of_bill' => 'Return of bill',

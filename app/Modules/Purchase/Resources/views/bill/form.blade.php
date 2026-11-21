@@ -247,6 +247,13 @@
                 <p class="text-xs text-(--color-ink-muted) sm:col-span-2">{{ __('purchase::field.withheld_note') }}</p>
             </div>
 
+            {{-- ⭐ অন্যান্য খরচ (ঘাট, টোল …) — ঐচ্ছিক; ভাড়ার মতোই মালের দামে বসে (নমুনা v6 গ, ২১ নভেম্বর ২০২৬) --}}
+            <div class="mt-3 grid gap-3 sm:grid-cols-2" data-other-cost>
+                <x-ui.field name="other_cost" type="number" step="0.01" min="0" inputmode="decimal" numeric
+                            :label="__('purchase::field.other_cost')"
+                            :value="old('other_cost', bccomp((string) ($bill->other_cost ?? '0'), '0', 4) > 0 ? $bill->other_cost : null)" />
+            </div>
+
             <div class="mt-3">
                 <x-ui.field name="narration" :label="__('purchase::field.narration')"
                             :value="old('narration', $bill->narration)" />

@@ -66,6 +66,7 @@ final class PurchaseBillPaper extends PurchasePhonePaper
                 __('purchase::field.discount') => self::moneyIfAny($paper->discount),
                 __('purchase::field.tax') => self::moneyIfAny($paper->tax),
                 __('purchase::field.transport_cost') => self::moneyIfAny($paper->transport_cost),
+                __('purchase::field.other_cost') => self::moneyIfAny($paper->other_cost),
                 __('purchase::field.created_by') => $paper->creator?->name,
                 __('purchase::field.narration') => $paper->narration,
             ],

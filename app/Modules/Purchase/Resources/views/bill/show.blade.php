@@ -104,7 +104,10 @@
                     'purchase::field.due_on' => \App\Core\Support\DateFormat::format($bill->due_on) ?: '-',
                     'purchase::field.supplier_bill_no' => $bill->supplier_bill_no ?: '-',
                     'purchase::field.narration' => $bill->narration ?: '-',
-                ] as $label => $value)
+                ]
+                + (bccomp((string) ($bill->transport_cost ?? '0'), '0', 4) > 0 ? ['purchase::field.transport_cost' => '৳'.\App\Core\Support\Money::format((string) $bill->transport_cost)] : [])
+                + (bccomp((string) ($bill->other_cost ?? '0'), '0', 4) > 0 ? ['purchase::field.other_cost' => '৳'.\App\Core\Support\Money::format((string) $bill->other_cost)] : [])
+                as $label => $value)
                     <div>
                         <dt class="text-(--color-ink-muted)">{{ __($label) }}</dt>
                         <dd class="mt-0.5">{{ $value }}</dd>

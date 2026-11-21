@@ -303,6 +303,7 @@ return [
     'carrier' => 'Who brought it',
     'carrier_name' => 'Carrier name',
     'transport_cost' => 'Freight',
+    'other_cost' => 'Other costs',
     'vehicle_no' => 'Vehicle no.',
     'driver_name' => 'Driver',
     'requested_by' => 'Asked by',

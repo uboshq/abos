@@ -34,6 +34,7 @@ return [
     'bill_discount' => 'Less: bill discount',
     'vat' => 'Add: VAT',
     'transport' => 'Add: transport',
+    'other_cost' => 'Other costs',
     'grand' => 'Bill Total',
     'paid' => 'Paid',
     'due' => 'Balance Due',

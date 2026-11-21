@@ -465,6 +465,8 @@ return [
             'purchase::menu.supplier_performance' => ['reports', 'gauge'],
             'purchase::menu.price_history' => ['reports', 'history'],
             'purchase::menu.by_supplier' => ['reports', 'truck'],
+            // ⓘ ক্রয়ের খরচ — ইনভয়েস/GRN ধরে আনা-নামানোর খরচ (২১ নভেম্বর ২০২৬)
+            'purchase::cost_report.menu' => ['reports', 'container'],
             'supplier::menu.settlement' => ['settle', 'handshake'],
             'supplier::menu.return_on_capital' => ['settle', 'piggy-bank'],
             // ⭐ এক করা মডিউলের অতিথিরা (মালিক, ২০ নভেম্বর ২০২৬) — প্রত্যেকে নিজের দলে; আইকন এই মেনুতে আবার না আসে বলে কয়েকটা বদলানো

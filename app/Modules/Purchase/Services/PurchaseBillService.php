@@ -296,6 +296,8 @@ final class PurchaseBillService
                 'carrier_id' => $data['carrier_id'] ?? null,
                 'carrier_name' => $data['carrier_name'] ?? null,
                 'transport_cost' => $data['transport_cost'] ?? 0,
+                // ⭐ অন্যান্য খরচ — ভাড়ার সাথে একই আনার খরচে ([[bringingInCost()]]; নমুনা v6 গ, ২১ নভেম্বর ২০২৬)
+                'other_cost' => self::otherCostOf($data, '0'),
                 'vehicle_no' => $data['vehicle_no'] ?? null,
                 'driver_name' => $data['driver_name'] ?? null,
 
@@ -373,6 +375,8 @@ final class PurchaseBillService
                 'ait_amount' => self::withheldField($data, 'ait_amount'),
                 'vds_amount' => self::withheldField($data, 'vds_amount'),
                 'narration' => $data['narration'] ?? null,
+                // ⓘ ঘরটা না পাঠালে (API, পুরনো ফর্ম) আগের অঙ্কই থাকে — খালি মানে শূন্য নয়
+                'other_cost' => self::otherCostOf($data, (string) ($bill->other_cost ?? '0')),
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
             ]);
 
@@ -705,7 +709,28 @@ final class PurchaseBillService
      */
     private function bringingInCost(PurchaseBill $bill): string
     {
-        return (string) ($bill->transport_cost ?? '0');
+        /*
+         * ⭐ অন্যান্য খরচও — নমুনা v6 গ (মালিক, ২১ নভেম্বর ২০২৬)। ⓘ উপরের কথামতো ঠিক এই একটা জায়গায় যোগ: ভাড়ার মতোই
+         *   টাকার অনুপাতে সারিতে ভাগ হয়ে মালের দামে ([[bringingInShares()]]), আর খাতায় Dr মজুদ / Cr পরিবহনের প্রদেয় ([[postBringingIn()]]);
+         *   চালানের মালের অংশটা ক্রয়-দর-পার্থক্যে। ⓘ পুরনো প্রতিটা বিলে ঘরটা ০ — তাদের দাখিলা হুবহু আগের মতো।
+         */
+        return bcadd((string) ($bill->transport_cost ?? '0'), (string) ($bill->other_cost ?? '0'), 4);
+    }
+
+    /**
+     * ⭐ ফর্মের "অন্যান্য খরচ" — না পাঠালে `$kept`, খালি পাঠালে ০ (নমুনা v6 গ)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private static function otherCostOf(array $data, string $kept): string
+    {
+        if (! array_key_exists('other_cost', $data)) {
+            return $kept;
+        }
+
+        $given = $data['other_cost'];
+
+        return is_numeric($given) && bccomp((string) $given, '0', 4) > 0 ? bcadd((string) $given, '0', 4) : '0';
     }
 
     /**
@@ -1444,6 +1469,8 @@ final class PurchaseBillService
                 'ait_amount' => self::withheldField($data, 'ait_amount'),
                 'vds_amount' => self::withheldField($data, 'vds_amount'),
                 'narration' => $data['narration'] ?? null,
+                // ⓘ পুরনো দাখিলা উপরে উল্টে গেছে, নিচে নতুন করে বসে — নতুন অঙ্কটাই খাতায় যায়
+                'other_cost' => self::otherCostOf($data, (string) ($bill->other_cost ?? '0')),
                 'financial_year_id' => $this->resolveFinancialYear($trxDate)->id,
             ]);
 

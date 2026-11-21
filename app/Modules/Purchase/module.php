@@ -242,6 +242,10 @@ return [
             ['label' => 'purchase::menu.by_supplier', 'icon' => 'supplier', 'route' => 'purchase.report.show',
                 'route_params' => ['slug' => 'by-supplier'], 'permission' => 'purchase.report'],
 
+            // ⭐ ক্রয়ের খরচ — ক্রয় ইনভয়েস অনুযায়ী (নমুনা v6 গ, ২১ নভেম্বর ২০২৬); নিজের চাবি — প্রতিটা সারিতে ক্রয় মূল্য
+            ['label' => 'purchase::cost_report.menu', 'icon' => 'scale', 'route' => 'purchase.cost_report.index',
+                'permission' => 'purchase.cost.report'],
+
             /*
              * মাসের নিষ্পত্তি — পরিবেশক ডিপোর সবচেয়ে দরকারি কাগজ।
              *
@@ -360,6 +364,9 @@ return [
         'purchase.return.cancel',
 
         'purchase.report',
+
+        // ⭐ ক্রয়ের খরচ রিপোর্ট — ক্রয় মূল্য আর আনা-নামানোর খরচ এক পাতায় (নমুনা v6 গ, ২১ নভেম্বর ২০২৬)
+        'purchase.cost.report',
 
         /*
          * মার্জিন দেখার চাবি — বকেয়া দেখার চাবির চেয়ে আলাদা।
@@ -601,6 +608,17 @@ return [
     ],
 
     'settings' => [
+        /*
+         * ⭐ ক্রয়ের খরচ রিপোর্টের সীমা % — এর উপরে গেলে সারি আর দণ্ড কমলা (নমুনা v6 গ, ২১ নভেম্বর ২০২৬; [[PurchaseCostReport]])।
+         * ⓘ কেবল দেখানোর সীমা — কিছু থামায় না; রিপোর্টের ছাঁকনিতে এক দিনের জন্য বদলানো যায়।
+         */
+        [
+            'key' => 'purchase.cost_report.threshold_percent',
+            'label' => 'purchase::cost_report.setting_threshold',
+            'type' => 'number',
+            'default' => 3,
+            'group' => 'screens',
+        ],
         /*
          * ⭐ কোন কাগজে ছাপা হবে — মালিকের সিদ্ধান্ত, যন্ত্রের নয়।
          *

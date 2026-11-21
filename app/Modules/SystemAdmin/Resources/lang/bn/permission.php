@@ -92,6 +92,7 @@ return [
         'purchase.receipt' => 'মাল বুঝে নেওয়া',
         'purchase.return' => 'ক্রয় ফেরত',
         'purchase.settlement' => 'হিসাব মেটানো',
+        'purchase.cost' => 'ক্রয়ের খরচ (আনা-নামানো)',
 
         'restaurant' => 'পুরো রেস্টুরেন্ট মডিউল',
         'restaurant.kitchen' => 'রান্নাঘর',

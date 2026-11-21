@@ -112,6 +112,12 @@ final class DirectPurchaseOverview
             $o->money(__('purchase::overview_confirm.transport', ['who' => $carrier ?? '—']), Money::format($transport));
         }
 
+        // ⭐ অন্যান্য খরচ — ভাড়ার মতোই মালের খরচে (নমুনা v6 গ, ২১ নভেম্বর ২০২৬)
+        $other = $this->money($data['other_cost'] ?? null);
+        if (bccomp($other, '0', 4) > 0) {
+            $o->money(__('purchase::overview_confirm.other_cost'), Money::format($other));
+        }
+
         // ── কার সই লাগবে ─────────────────────────────────────────────
         if ($this->approvals->requires('purchase', 'bill', $totals['total'], class_basename(PurchaseBill::class))) {
             $o->note(__('purchase::overview_confirm.signature'), 'warn');
