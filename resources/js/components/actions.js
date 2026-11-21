@@ -195,6 +195,39 @@ export function wireActions (root = document) {
     })
 
     /*
+     * ⓘ ছবি বাছলেই আগে সোজা করার পর্দা ([[scanner.js]]), তারপর জমা — প্রোফাইলের ছবি।
+     * ⚠️ আগে লেখা ছিল `x-on:change="$store.scanner ? … : …"`, কিন্তু ঘরটা কোনো x-data-র ভেতরে ছিল না,
+     * আর CSP-র Alpine ওরকম লেখা চালায়ও না — তাই এখানে।
+     * ⓘ পর্দা না থাকলে (store নেই) সোজা জমা।
+     */
+    root.addEventListener('change', (event) => {
+        const field = event.target.closest?.('[data-action="scan-and-submit"]')
+
+        if (! field) {
+            return
+        }
+
+        const scanner = window.Alpine?.store?.('scanner')
+
+        if (scanner && typeof scanner.begin === 'function') {
+            scanner.begin(field, field.dataset.scanMode || 'paper', { submit: true })
+            return
+        }
+
+        const form = field.form ?? field.closest('form')
+
+        if (! form) {
+            return
+        }
+
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit()
+        } else {
+            form.submit()
+        }
+    })
+
+    /*
      * ⓘ বাছলেই অন্য ঠিকানায় — ক্রয় ও বিক্রয় ফেরতের বিল বাছাই।
      *
      * ⚠️ ওখানে আগে লেখা ছিল `onchange="if (this.value) { window.location
