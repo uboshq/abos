@@ -303,7 +303,8 @@ class _CopilotQuickSheetState extends State<CopilotQuickSheet> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.xs, 0),
                 child: Row(children: [
-                  CopilotMark(size: 30, listening: _listening),
+                  // ⓘ শোনা বা উত্তর ভাবার সময় চিহ্ন দ্বিগুণ জোরে চলে
+                  CopilotMark(size: 30, busy: _listening || _asking),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -339,7 +340,7 @@ class _CopilotQuickSheetState extends State<CopilotQuickSheet> {
                           for (final (i, t) in _turns.indexed) ...[
                             _MyBubble(text: t.question),
                             if (t.answer == null)
-                              _CopilotBubble(child: Text(l.copilotQuickThinking, style: TextStyle(color: p.onSurfaceMuted)))
+                              _CopilotBubble(busy: true, child: Text(l.copilotQuickThinking, style: TextStyle(color: p.onSurfaceMuted)))
                             else
                               _AnswerBubble(
                                 answer: t.answer!,
@@ -415,9 +416,12 @@ class _CopilotQuickSheetState extends State<CopilotQuickSheet> {
 
 /// কোপাইলটের বুদবুদ — বাঁয়ে, মগজের পাশে
 class _CopilotBubble extends StatelessWidget {
-  const _CopilotBubble({required this.child});
+  const _CopilotBubble({required this.child, this.busy = false});
 
   final Widget child;
+
+  /// উত্তর ভাবছে — চিহ্ন দ্বিগুণ জোরে
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
@@ -425,7 +429,7 @@ class _CopilotBubble extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.sm, right: 32),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Padding(padding: EdgeInsets.only(top: 6), child: CopilotMark(size: 28)),
+        Padding(padding: const EdgeInsets.only(top: 6), child: CopilotMark(size: 28, busy: busy)),
         const SizedBox(width: AppSpacing.sm),
         Flexible(
           child: DecoratedBox(
@@ -568,7 +572,7 @@ class _ListeningView extends StatelessWidget {
     final l = context.l10n;
     final p = context.palette;
     return Column(key: const ValueKey('copilot-quick-listening'), mainAxisAlignment: MainAxisAlignment.center, children: [
-      const CopilotMark(size: 96, listening: true),
+      const CopilotMark(size: 96, busy: true),
       const SizedBox(height: AppSpacing.lg),
       Text(l.copilotQuickListening, style: TextStyle(color: p.onSurfaceMuted)),
       Padding(

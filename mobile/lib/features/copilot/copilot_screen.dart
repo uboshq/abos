@@ -7,6 +7,7 @@ import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import 'copilot_mark.dart';
 
 /// ⭐ ফোনের কোপাইলট — ওয়েবের একই ইঞ্জিন, একই সংখ্যা, একই চাবি (মালিক, ১১ নভেম্বর ২০২৬: "কোপাইলটটা মোবাইল অ্যাপে একই বিল্ডে দিয়ে দাও")।
 ///
@@ -233,7 +234,11 @@ class _CopilotScreenState extends State<CopilotScreen> {
       ]),
       const SizedBox(height: AppSpacing.sm),
       Wrap(spacing: 6, runSpacing: 6, children: [for (final e in examples) ActionChip(label: Text(e), onPressed: () => _ask(e))]),
-      if (_asking) const Padding(padding: EdgeInsets.all(AppSpacing.lg), child: Center(child: CircularProgressIndicator())),
+      // ⓘ উত্তর ভাবার সময় ঘোরা চাকার বদলে Copilot-এর নিজের চিহ্ন, দ্বিগুণ জোরে
+      if (_asking)
+        const Padding(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: Center(child: CopilotMark(key: ValueKey('copilot-thinking'), size: 48, busy: true))),
       if (a != null) ...[
         const SizedBox(height: AppSpacing.md),
         Text(_asked, style: TextStyle(color: p.onSurfaceMuted)),
