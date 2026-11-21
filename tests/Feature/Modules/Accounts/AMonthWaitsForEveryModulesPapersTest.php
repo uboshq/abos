@@ -88,7 +88,8 @@ final class AMonthWaitsForEveryModulesPapersTest extends TestCase
     private function close(): \Illuminate\Testing\TestResponse
     {
         return $this->from(route('accounts.period.index'))
-            ->post(route('accounts.period.close'), ['year' => $this->month->year, 'month' => $this->month->month]);
+            // ⓘ কারণসহ — ডেমোর টিল/ব্যাংকের বাকি কাজ থাকলে মাস বন্ধে কারণ লাগে ([[AMonthClosesOnlyWhenItsDaysAreClosedTest]]); এখানে প্রশ্ন কেবল কাগজ
+            ->post(route('accounts.period.close'), ['year' => $this->month->year, 'month' => $this->month->month, 'reason' => 'পরীক্ষা: বাকি কাজ জানা']);
     }
 
     private function lock(): ?PeriodLock

@@ -184,6 +184,26 @@ final class DayChecklist
         return $had ? $last : null;
     }
 
+    /**
+     * ⭐ বন্ধ-না-হওয়া মাসের বাকি কাজ, পপআপের জন্য — মালিক, ১৮ নভেম্বর ২০২৬: *"মাস শেষ হলে কিন্তু বন্ধ না হলে একই পপআপ আর চেকলিস্ট"*।
+     *
+     * ⓘ মাস বন্ধের পাতার একই তালিকা ([[MonthEndChecklist]]), কেবল যা বাকি — "প্রযোজ্য নয়" আর তালার সারি বাদ (তালাটাই তো পপআপের কথা)।
+     * ⓘ তালিকাটা ভারী (মাস জুড়ে এক ডজন প্রশ্ন), আর পপআপ প্রতি পাতায় আঁকা হয় — তাই কোম্পানি-মাস ধরে পাঁচ মিনিট মনে রাখা হয়;
+     *   ঠিক করার পরে সারিটা পাঁচ মিনিটের মধ্যে সরে যায়। লিংক এখানে বানানো হয় না, পপআপ বানায় (ক্যাশে ঠিকানা থাকে না)।
+     * ⛔ কিছু আটকায় না — কেবল দেখায়।
+     *
+     * @return list<array{key: string, count: int, route: string, params: array<string, mixed>}>
+     */
+    public function monthLeft(Carbon $month): array
+    {
+        $key = 'daycheck.month-left.'.CompanyContext::id().'.'.$month->format('Y-m');
+
+        return \Illuminate\Support\Facades\Cache::remember($key, 300, fn () => collect(app(MonthEndChecklist::class)->run(\Carbon\CarbonImmutable::parse($month->toDateString())))
+            ->filter(fn (array $r) => $r['state'] === MonthEndChecklist::PENDING && $r['key'] !== 'locked')
+            ->map(fn (array $r) => ['key' => $r['key'], 'count' => (int) $r['count'], 'route' => $r['route'], 'params' => $r['params']])
+            ->values()->all());
+    }
+
     private function cashMoved(string $d): bool
     {
         return ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')

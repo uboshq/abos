@@ -344,6 +344,9 @@
     <section class="{{ $card }} mb-4 px-4 py-3 text-sm" data-lock="{{ $lock['locked'] ? 'locked' : 'open' }}">
         @if ($lock['locked'])
             <b>{{ $t('lock.closed_title') }}</b> {{ $t('lock.closed', ['month' => $p['label'], 'by' => $lock['by'] ?? '—', 'at' => $lock['at'] ?? '—']) }}
+            @if (! empty($lock['left']) || ! empty($lock['reason']))
+                <span class="mt-1 block text-(--color-warning-hover)" data-lock-left>{{ $t('lock.left', ['items' => $lock['left'] ?? '—', 'reason' => $lock['reason'] ?? '—']) }}</span>
+            @endif
         @else
             <b>{{ $t('lock.open_title') }}</b> {{ $pending > 0 ? $t('lock.open_pending', ['month' => $p['label'], 'n' => $pending]) : $t('lock.open_ready', ['month' => $p['label']]) }}
             @can('accounts.period.close')

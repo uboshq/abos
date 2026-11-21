@@ -169,6 +169,7 @@ return [
     'period_note' => 'Once the month’s reports have gone out, close it — then its figures can no longer change.',
     'year_close_needs_key' => 'Closing the year needs the "close year" key — the owner, or whoever closes the months.',
     'period_closed' => ':month has been closed.',
+    'period_left' => 'Left when it closed: :items',
     'period_reopened' => ':month has been reopened.',
 
     // চেকের খাতা

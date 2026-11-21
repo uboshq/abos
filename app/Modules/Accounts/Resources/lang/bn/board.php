@@ -66,6 +66,8 @@ return [
             'cash_counted' => 'নগদ গণনা',
             'depreciated' => 'অবচয়',
             'balanced' => 'ডেবিট = ক্রেডিট',
+            'days_closed' => 'দিন বন্ধ',
+            'days_changed' => 'বন্ধ দিনে পরে যোগ',
             'reversals_stuck' => 'সমন্বয় উল্টানো',
             'locked' => 'মাস তালা',
         ],

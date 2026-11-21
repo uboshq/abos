@@ -49,6 +49,8 @@ return [
         'cash_counted' => ['Every cash till was counted at least once', 'Only confirmed counts count.'],
         'depreciated' => ['Depreciation posted for active assets', 'Assets acquired before month end.'],
         'balanced' => ['Debits equal credits for the month', 'If not, the books check shows where.'],
+        'days_closed' => ['Every working day with entries is closed in the day closing', 'The day closings add up to the month — a month with an open day does not close.'],
+        'days_changed' => ['Nothing was added to a closed day after it closed', 'If something was, see "added after the day closed" on that day; closing the month then needs a reason.'],
         'reversals_stuck' => ['Every adjusting journal due to reverse this month has reversed', 'A locked month stops the reversal, and the accrual is counted twice.'],
         'locked' => ['The month is closed', 'The last step. Nobody can date anything into a closed month.'],
     ],

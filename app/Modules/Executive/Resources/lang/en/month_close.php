@@ -274,7 +274,8 @@ return [
 
     'lock' => [
         'closed_title' => 'Month closed:',
-        'closed' => 'The books of :month are locked — a new or changed entry in this month now needs the owner’s approval. Closed by: :by, :at.',
+        'closed' => 'The books of :month are locked — no new or changed entry goes into this month; if one is needed, the owner reopens the month with a reason. Closed by: :by, :at.',
+        'left' => 'Closed with items left: :items — reason: :reason',
         'open_title' => 'Month open:',
         'open_pending' => ':month is not closed yet — :n checklist tasks remain.',
         'open_ready' => 'The checklist for :month is done — the month can be closed.',

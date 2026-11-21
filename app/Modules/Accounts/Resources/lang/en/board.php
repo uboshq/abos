@@ -66,6 +66,8 @@ return [
             'cash_counted' => 'Cash count',
             'depreciated' => 'Depreciation',
             'balanced' => 'Debit = credit',
+            'days_closed' => 'Days closed',
+            'days_changed' => 'Added after a day closed',
             'reversals_stuck' => 'Reversals',
             'locked' => 'Month lock',
         ],

@@ -14,6 +14,7 @@
       ২ · দিন আর মাস বন্ধ হয়নি — যাঁর দিন বন্ধের চাবি আছে (`accounts.day_close.close`): গত সাত দিনের বন্ধ-না-হওয়া কর্মদিবস
           ([[DayChecklist::openDays()]]), গত মাস ([[DayChecklist::openMonth()]]), আর সবচেয়ে নতুন খোলা দিনের চেকলিস্ট।
           নিয়ন্ত্রণ প্যানেলে "দেখাবে না" বাছলে কেবল এই ভাগটা চুপ।
+          ⓘ মাসের অংশ মাস বন্ধের চাবিওয়ালাকেও (`accounts.period.close`), সাথে মাসের বাকি কাজের তালিকা ([[DayChecklist::monthLeft()]]; ২১ নভেম্বর ২০২৬)।
     ⓘ "পরে মনে করাবেন" — এই লগইনে নিয়ন্ত্রণ প্যানেলের সময় পর্যন্ত (ডিফল্ট ১ ঘণ্টা) পুরো পপআপ লুকায়; তারপর যা তখনো বাকি তা নিয়ে আবার আসে
       ([[NotificationController::closeBanner()]] `later`, সবার জন্য খোলা — দিন বন্ধের চাবি ছাড়াও)।
     ⛔ পর্দা ঢাকে না: পেছনের পাতা চলতেই থাকে, দিন/মাস শেষের হিসাবের পাতায় নিজে আসে না, ছাপায় আসে না। জাভাস্ক্রিপ্ট ছাড়া।
@@ -25,6 +26,9 @@
     $month = null;
     $latest = null;
     $items = [];
+    $monthLeft = [];
+    $monthUrl = null;
+    $closesMonth = false;
     $hasNews = false;
 
     if ($user !== null
@@ -38,15 +42,29 @@
             fn (array $n): bool => ! in_array(sha1($n['text']), $closed, true),
         ) !== [];
 
-        // ── ২ · দিন আর মাস বন্ধ হয়নি — দিন বন্ধের চাবি যাঁর ──
+        // ── ২ · দিন আর মাস বন্ধ হয়নি — দিন বন্ধের চাবি যাঁর (দিন), আর দিন বা মাস বন্ধের চাবি যাঁর (মাস) ──
         // ⓘ "দেখাবে না" = `off` (আগের জমা `0`-ও) — [[DayChecklist::popupEvery()]]
-        if ($user->can('accounts.day_close.close') && \App\Modules\Accounts\Services\DayChecklist::popupEvery() !== null) {
+        // ⭐ মাসের ভাগ মাস বন্ধের চাবিওয়ালাকেও (`accounts.period.close`) — মালিক, ১৮ নভেম্বর ২০২৬: "যাঁরা বন্ধ করেন তাঁদের আর মালিককে";
+        //   মাস যিনি বন্ধ করেন তাঁর দিন বন্ধের চাবি না থাকলেও মাস বন্ধ হয়নি খবরটা তাঁরই। মাসের বাকি কাজও তালিকায় ([[DayChecklist::monthLeft()]])।
+        $closesDays = $user->can('accounts.day_close.close');
+        $closesMonth = $user->can('accounts.period.close');
+        if (($closesDays || $closesMonth) && \App\Modules\Accounts\Services\DayChecklist::popupEvery() !== null) {
             $check = app(\App\Modules\Accounts\Services\DayChecklist::class);
             $today = now()->startOfDay();
-            $days = $check->openDays($today);
+            if ($closesDays) {
+                $days = $check->openDays($today);
+                $latest = $days !== [] ? end($days) : null;
+                $items = $latest !== null ? $check->for($latest) : [];
+            }
             $month = $check->openMonth($today);
-            $latest = $days !== [] ? end($days) : null;
-            $items = $latest !== null ? $check->for($latest) : [];
+            $monthLeft = $month !== null ? $check->monthLeft($month) : [];
+            // ⓘ মাসের পাতা: মাস শেষের হিসাব (দেখার চাবি থাকলে), নইলে মাস বন্ধের পাতা
+            $monthUrl = match (true) {
+                $month === null => null,
+                \Illuminate\Support\Facades\Route::has('executive.month_close') && $user->can('accounts.report.month_close') => route('executive.month_close', ['month' => $month->format('Y-m')]),
+                $closesMonth && \Illuminate\Support\Facades\Route::has('accounts.period.index') => route('accounts.period.index'),
+                default => null,
+            };
         }
 
         $show = $hasNews || $days !== [] || $month !== null;
@@ -59,7 +77,7 @@
                  class="pointer-events-auto w-full max-w-xl overflow-hidden rounded-(--radius-card) border border-(--color-warning) bg-(--color-surface-card) shadow-xl">
             <header class="flex items-center gap-2 border-b border-(--color-border) bg-(--color-badge-warning-bg) px-4 py-2">
                 <x-ui.icon name="alert-triangle" :size="18" class="shrink-0 text-(--color-warning-hover)" />
-                <h2 id="day-popup-title" class="min-w-0 flex-1 font-semibold">{{ __($hasNews ? 'accounts::dayclose.popup.title_news' : 'accounts::dayclose.popup.title') }}</h2>
+                <h2 id="day-popup-title" class="min-w-0 flex-1 font-semibold">{{ __($hasNews ? 'accounts::dayclose.popup.title_news' : ($days === [] ? 'accounts::dayclose.popup.title_month' : 'accounts::dayclose.popup.title')) }}</h2>
                 <form method="POST" action="{{ route('notifications.banner.close') }}">
                     @csrf
                     <input type="hidden" name="later" value="1">
@@ -80,7 +98,7 @@
             <div class="grid gap-3 px-4 py-3 text-sm">
                 {{-- ⓘ ভাগের শিরোনাম কেবল জরুরি খবরও থাকলে — নইলে মাথার শিরোনামই "দিন বন্ধ হয়নি", দুবার নয় (লাইভে দেখা, ১৯ নভেম্বর ২০২৬) --}}
                 @if ($hasNews && ($days !== [] || $month !== null))
-                    <p class="font-semibold" data-popup-day-head>{{ __('accounts::dayclose.popup.title') }}</p>
+                    <p class="font-semibold" data-popup-day-head>{{ __($days === [] ? 'accounts::dayclose.popup.title_month' : 'accounts::dayclose.popup.title') }}</p>
                 @endif
 
                 @if ($days !== [])
@@ -96,13 +114,36 @@
                 @endif
 
                 @if ($month !== null)
+                    @php $monthName = $month->copy()->locale(app()->getLocale())->translatedFormat('F Y'); @endphp
                     <p class="flex flex-wrap items-center gap-2" data-open-month>
                         <x-ui.icon name="calendar" :size="16" class="text-(--color-warning-hover)" />
-                        <span class="flex-1">{{ __('accounts::dayclose.popup.month', ['month' => $month->copy()->locale(app()->getLocale())->translatedFormat('F Y')]) }}</span>
-                        @if (\Illuminate\Support\Facades\Route::has('executive.month_close') && $user->can('accounts.report.month_close'))
-                            <a href="{{ route('executive.month_close', ['month' => $month->format('Y-m')]) }}" class="font-medium text-(--color-link) hover:underline">{{ __('accounts::dayclose.popup.month_go') }} →</a>
+                        <span class="flex-1">{{ __('accounts::dayclose.popup.month', ['month' => $monthName]) }}</span>
+                        @if ($monthUrl !== null)
+                            <a href="{{ $monthUrl }}" class="font-medium text-(--color-link) hover:underline">{{ __('accounts::dayclose.popup.month_go') }} →</a>
                         @endif
                     </p>
+
+                    {{-- ⭐ মাসের বাকি কাজ — মাস বন্ধের পাতার একই চেকলিস্ট, কেবল যা বাকি, প্রতিটা লিংকসহ ([[DayChecklist::monthLeft()]]) --}}
+                    <div class="rounded border border-(--color-border) px-3 py-2" data-month-left="{{ $month->format('Y-m') }}">
+                        <p class="mb-1 font-semibold">{{ __('accounts::dayclose.popup.month_left', ['month' => $monthName]) }}</p>
+                        @if ($monthLeft === [])
+                            <p class="text-(--color-success)" data-month-ready>
+                                <x-ui.icon name="check-circle" :size="16" class="inline align-text-bottom" /> {{ __('accounts::dayclose.popup.month_ready') }}
+                            </p>
+                        @else
+                            <ul class="grid gap-1">
+                                @foreach ($monthLeft as $row)
+                                    <li class="flex items-start gap-2" data-month-check="{{ $row['key'] }}">
+                                        <x-ui.icon name="alert-triangle" :size="16" class="mt-0.5 shrink-0 text-(--color-warning-hover)" />
+                                        <span class="min-w-0 flex-1">{{ __('accounts::control.checks.'.$row['key'])[0] ?? $row['key'] }} <span class="tabular font-semibold">({{ $row['count'] }})</span></span>
+                                        @if (\Illuminate\Support\Facades\Route::has($row['route']))
+                                            <a href="{{ route($row['route'], $row['params']) }}" class="shrink-0 font-medium text-(--color-link) underline-offset-2 hover:underline">{{ __('accounts::dayclose.check.go') }} →</a>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
                 @endif
 
                 @if ($latest !== null)
@@ -123,6 +164,8 @@
                 </form>
                 @if ($latest !== null)
                     <x-ui.button :href="route('executive.dayclose', ['date' => $latest->toDateString()])" tone="primary">{{ __('accounts::dayclose.popup.close_day') }}</x-ui.button>
+                @elseif ($month !== null && $closesMonth && \Illuminate\Support\Facades\Route::has('accounts.period.index'))
+                    <x-ui.button :href="route('accounts.period.index')" tone="primary" data-popup-close-month>{{ __('accounts::dayclose.popup.close_month') }}</x-ui.button>
                 @endif
             </footer>
         </section>
