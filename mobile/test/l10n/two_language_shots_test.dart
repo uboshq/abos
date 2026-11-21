@@ -157,6 +157,8 @@ Widget _screen(String screen, bool en) => switch (screen) {
             leading: TopBarLeading.menu,
             onLeading: () {},
             onSearch: () {},
+            // ⓘ HomeShell-এর মতোই উপরে ＋ (দ্রুত কাজ) — 0.4.63 থেকে হোমে নিচের "＋ নতুন" নেই
+            onCreate: () {},
             onBell: () {},
             unread: 3,
             avatarName: _owner.name,

@@ -12,6 +12,7 @@ import 'package:abos_mobile/core/orders/deposit_request_api.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
 import 'package:abos_mobile/core/records/money.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
+import 'package:abos_mobile/core/theme/app_look.dart';
 import 'package:abos_mobile/core/update/app_version_check.dart';
 import 'package:abos_mobile/core/web_inside/web_inside.dart';
 import 'package:abos_mobile/features/customers/deposit_request_screen.dart';
@@ -272,5 +273,74 @@ void main() {
       await tester.pumpAndSettle();
       expect(opened, ['deposit-report']);
     });
+
+    // ⭐ 0.4.63: ক্লাসিকের হোমের নিচের পুরনো "＋ নতুন" বাদ — উপরের ＋ আর ≡ একই দ্রুত কাজ খোলে, আর পুরনো বোতামের সব
+    // (অর্ডার, টাকা জমার খবর, নতুন খরচ, নতুন ভাউচার, খরচের দাবি) এখন সেখানেই
+    for (final look in AppLook.values) {
+      testWidgets('${look.name}: the top ＋ opens the same quick actions as ≡, with everything the old home ＋ নতুন offered',
+          (tester) async {
+        final saved = AppLooks.instance;
+        addTearDown(() => AppLooks.instance = saved);
+        AppLooks.instance = AppLooks(read: (_) async => null, write: (_, __) async {})..look.value = look;
+        final opened = <String>[];
+        await tester.pumpWidget(ProviderScope(
+          overrides: [
+            authStateProvider.overrideWith((ref) => _SignedIn(const AuthUser(
+                id: 'u1',
+                name: 'মালিক',
+                email: 'o@t.local',
+                roles: ['Owner'],
+                permissions: ['sales.order.create', 'sales.claim.submit', 'accounts.voucher.create', 'hr.claim.self']))),
+          ],
+          child: MaterialApp(
+            home: HomeShell(
+              loadHome: (_) async => HomeMenu(items: [
+                item('new-order', 'নতুন অর্ডার'),
+                item('deposit-report', 'টাকা জমার খবর'),
+                item('vouchers', 'সব ভাউচার'),
+                item('vouchers/expense', 'খরচ'),
+                item('claims', 'খরচের দাবি'),
+              ]),
+              fetchToday: () async => const TodayRecord({}),
+              lastKnownToday: () => null,
+              readCachedOrg: () async => null,
+              cacheOrg: (_) async {},
+              checkUpdate: () async => UpdateStatus.fine,
+              fetchNoticeBar: () async => const [],
+              fetchPending: () async => throw StateError('not an approver'),
+              syncNow: () async {},
+              prefs: MemoryNavPrefsStore(),
+              openPath: (path) async => opened.add(path),
+              findCustomers: (_) => const [],
+              customerName: (_) => null,
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        const all = ['deposit-report', 'new-order', 'vouchers/expense', 'vouchers', 'claims'];
+        List<String> shown() => [
+              for (final p in all)
+                if (find.byKey(ValueKey('quick-$p')).evaluate().isNotEmpty) p,
+            ];
+
+        await tester.tap(find.byKey(const ValueKey('top-create')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const ValueKey('quick-actions')), findsOneWidget);
+        final fromPlus = shown();
+        expect(fromPlus, all, reason: 'পুরনো "＋ নতুন"-এর প্রতিটা কাজ উপরের ＋-এ');
+        for (final name in ['নতুন খরচ', 'নতুন ভাউচার', 'খরচের দাবি']) {
+          expect(find.descendant(of: find.byKey(const ValueKey('quick-actions')), matching: find.text(name)), findsOneWidget,
+              reason: name);
+        }
+        await tester.tap(find.byKey(const ValueKey('quick-vouchers/expense')));
+        await tester.pumpAndSettle();
+        expect(opened, ['vouchers/expense']);
+
+        await tester.tap(find.byKey(const ValueKey('top-leading')));
+        await tester.pumpAndSettle();
+        expect(shown(), fromPlus, reason: '≡ আর ＋ একই দ্রুত কাজ');
+      });
+    }
   });
 }

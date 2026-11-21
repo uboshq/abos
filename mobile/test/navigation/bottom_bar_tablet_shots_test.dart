@@ -42,6 +42,8 @@ Widget _realHome() => Scaffold(
         unread: 3,
         avatarName: ownerUser.name,
         onSearch: () {},
+        // ⓘ HomeShell-এর মতোই উপরে ＋ (দ্রুত কাজ) — 0.4.63 থেকে হোমে খাড়া বারের মাথায় "＋ নতুন" নেই
+        onCreate: () {},
         onBell: () {},
         onLeading: () {},
         onAvatar: (_) {},

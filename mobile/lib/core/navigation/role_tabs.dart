@@ -270,17 +270,11 @@ class RoleTabs {
   /// ⭐ ＋ নতুন — কেবল যে পাতায় কিছু বানানো যায় (অর্ডার, খরচ, ভাউচার; আদায়ের তালিকায় টাকা জমার খবর), আর কেবল যার সেই
   /// লেখার চাবি আছে। ⛔ ২০ নভেম্বর ২০২৬ থেকে `/me`-র `mayCollect` আর কিছু খোলে না — ফোনে আদায় লেখা নেই।
   ///
-  /// <p>হোমে (মালিকের হোমের নমুনা, ২০ অক্টোবর ২০২৬) "＋ নতুন" — চাপলে ভূমিকার যা যা বানানো যায় তার তালিকা
-  /// ([createChoices]); কিছুই না থাকলে বোতামও নেই।
+  /// <p>⛔ হোমে আর নিচের "＋ নতুন" নেই (0.4.63) — উপরের বারের ＋ তিন রূপেই একই কাজ খোলে (দ্রুত কাজ: অর্ডার, টাকা জমার
+  /// খবর, খরচ, ভাউচার, খরচের দাবি …; `HomeShell`-এর `_quickActions`), তাই হোমে দুটো ＋ ছিল।
   static FabSpec? fabFor(String location, Iterable<String> permissions, {Set<String>? modulesOn}) {
     var rest = Uri.parse(location).path;
     final p = permissions.toSet();
-    if (rest == '/home') {
-      final choices = createChoices(p, modulesOn: modulesOn);
-      return choices.isEmpty
-          ? null
-          : FabSpec(label: AppLocale.l10n.navFabNew, drawnByScreen: false, choices: choices);
-    }
     if (!rest.startsWith('/home/')) return null;
     rest = rest.substring('/home/'.length);
     final l = AppLocale.l10n;
@@ -298,25 +292,6 @@ class RoleTabs {
     };
     if (spec == null) return null;
     return ModuleGate.allows(modulesOn, rest) ? spec : null;
-  }
-
-  /// ⭐ হোমের "＋ নতুন"-এর তালিকা — অর্ডার, টাকা জমার খবর, খরচ, ভাউচার, খরচের দাবি; কেবল যার চাবি আর সুইচ আছে
-  static List<FabChoice> createChoices(Iterable<String> permissions, {Set<String>? modulesOn}) {
-    final p = permissions.toSet();
-    final l = AppLocale.l10n;
-    return [
-      if (p.contains('sales.order.create'))
-        FabChoice(label: l.navFabNewOrder, route: '/home/new-order', icon: Symbols.shopping_cart),
-      // ⛔ "নতুন আদায়"-এর জায়গায় "টাকা জমার খবর" (মালিক, ২০ নভেম্বর ২০২৬: ফোন থেকে আদায় লেখা বন্ধ)
-      if (p.contains('sales.claim.submit'))
-        FabChoice(label: l.lookQuickDeposit, route: '/home/$depositReportPath', icon: Symbols.payments),
-      if (p.contains('accounts.voucher.create')) ...[
-        FabChoice(label: l.navFabNewExpense, route: '/home/vouchers/expense', icon: Symbols.shopping_bag),
-        FabChoice(label: l.navFabNewVoucher, route: '/home/vouchers', icon: Symbols.receipt_long),
-      ],
-      if (p.contains('hr.claim.self'))
-        FabChoice(label: l.navFabExpenseClaim, route: '/home/claims', icon: Symbols.request_quote),
-    ].where((c) => ModuleGate.allows(modulesOn, c.route.substring('/home/'.length))).toList();
   }
 
   /// ⭐ লাল গোনা —১ থেকে ৯৯, তার বেশি "99+", গোনা জানা না থাকলে (আরও আছে, কত জানা নেই) শুধু বিন্দু
@@ -353,23 +328,11 @@ enum BarLayout { bottom, rail, extendedRail }
 /// বসায় (অর্ডার, [route] সহ) — কাঠামো তখন দ্বিতীয়টা আঁকে না।
 @immutable
 class FabSpec {
-  const FabSpec({required this.label, this.route, required this.drawnByScreen, this.choices = const []});
+  const FabSpec({required this.label, this.route, required this.drawnByScreen});
 
   final String label;
   final String? route;
   final bool drawnByScreen;
-
-  /// হোমের "＋ নতুন": চাপলে এই তালিকা
-  final List<FabChoice> choices;
-}
-
-@immutable
-class FabChoice {
-  const FabChoice({required this.label, required this.route, required this.icon});
-
-  final String label;
-  final String route;
-  final IconData icon;
 }
 
 enum TabBadgeKind { none, dot, text }

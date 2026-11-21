@@ -509,7 +509,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   }
 
   /// ⭐ দ্রুত কাজের ঘর — এই মানুষের মেনুতে যা আছে কেবল তা-ই, ক্রমে: টাকা জমার খবর, নতুন অর্ডার, অনুমোদন, আজকের হিসাব,
-  /// দোকান খুঁজুন (মালিক, ১৬ নভেম্বর ২০২৬: "এক চাপে রোজের কাজ", পদ ধরে; নমুনা ২০ নভেম্বর "ok")। ⓘ পদ ধরে বাছাই মেনু থেকেই
+  /// দোকান খুঁজুন, নতুন খরচ, নতুন ভাউচার, খরচের দাবি (মালিক, ১৬ নভেম্বর ২০২৬: "এক চাপে রোজের কাজ", পদ ধরে; নমুনা ২০ নভেম্বর "ok")। ⓘ পদ ধরে বাছাই মেনু থেকেই
   /// আসে — SR-এর মেনুতে জমা, অর্ডার, দোকান; হিসাবের মেনুতে অনুমোদন।
   /// ⛔ "আদায়" আর দ্রুত কাজে নেই — মাঠের টাকা কেবল টাকা জমার খবর (মালিক, ২০ নভেম্বর ২০২৬: টাকা নেওয়ার এক কাগজ); আদায়ের
   /// তালিকা কেবল দেখা, মেনুতে থাকে।
@@ -522,6 +522,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         (Symbols.fact_check, 'approvals', l10n.navScreenApprovals),
         (Symbols.insights, 'today', l10n.navScreenToday),
         (Symbols.storefront, 'customers', l10n.lookQuickFindShop),
+        // ⭐ ক্লাসিকের হোমের পুরনো "＋ নতুন" যা খুলত, তার বাকিটা — খরচ, ভাউচার, খরচের দাবি (0.4.63: উপরের ＋ এখন
+        // সব রূপে, তাই নিচের পুরনো বোতাম বাদ; কিছুই হারায় না)। ⓘ মেনুর একই চাবি আর মডিউলের সুইচ
+        (Symbols.shopping_bag, 'vouchers/expense', l10n.navFabNewExpense),
+        (Symbols.receipt_long, 'vouchers', l10n.navFabNewVoucher),
+        (Symbols.request_quote, 'claims', l10n.navFabExpenseClaim),
       ])
         if (_tree.screen(path) != null) QuickAction(icon: icon, path: path, label: label),
     ];

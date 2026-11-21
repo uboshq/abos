@@ -1261,17 +1261,16 @@ void main() {
       expect(api.sent, isEmpty);
     });
 
-    // ⛔ মালিক, ২০ নভেম্বর ২০২৬: হোমের "＋ নতুন"-এ আদায় কারো নেই — জমার খবরের চাবিতে "টাকা জমার খবর"
-    test('18 · the home\'s "＋ নতুন" offers no collection to anyone; the deposit-report key offers the deposit report', () {
-      const sr = ['sales.order.create', 'sales.collection.view', 'sales.collection.create'];
-      expect(RoleTabs.createChoices(sr).map((c) => c.route), isNot(contains('/home/collections')),
-          reason: '⛔ SR-এর "＋ নতুন"-এ আদায়');
-      expect(RoleTabs.createChoices(sr).map((c) => c.route), contains('/home/new-order'));
-      const office = ['sales.collection.create', 'accounts.voucher.create'];
-      expect(RoleTabs.createChoices(office).map((c) => c.route), isNot(contains('/home/collections')),
-          reason: '⛔ অফিসের "＋ নতুন"-এ আদায়');
-      const field = ['sales.order.create', 'sales.claim.submit'];
-      expect(RoleTabs.createChoices(field).map((c) => c.route), contains('/home/deposit-report'));
+    // ⛔ মালিক, ২০ নভেম্বর ২০২৬: হোমে আদায়ের কোনো বোতাম কারো নেই। ⓘ 0.4.63 থেকে হোমের নিচের "＋ নতুন"-ই নেই — উপরের ＋-এর
+    // দ্রুত কাজে আদায় নেই, জমার খবর আছে (home_shell_test আর app_0458/looks_test)
+    test('18 · the home has no bottom "＋ নতুন" for anyone, so no collection button there', () {
+      for (final p in [
+        ['sales.order.create', 'sales.collection.view', 'sales.collection.create'],
+        ['sales.collection.create', 'accounts.voucher.create'],
+        ['sales.order.create', 'sales.claim.submit'],
+      ]) {
+        expect(RoleTabs.fabFor('/home', p), isNull, reason: '$p');
+      }
     });
 
     for (final (typed, blocked) in [('5.00', false), ('6.00', true)]) {

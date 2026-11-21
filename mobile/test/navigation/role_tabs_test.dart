@@ -152,19 +152,15 @@ void main() {
       }
     });
 
-    test('the home\'s ＋ নতুন lists what this role may create', () {
-      final owner = RoleTabs.fabFor('/home', [...rolePermissions['owner']!, 'sales.claim.submit'])!;
-      expect(owner.label, 'নতুন');
-      // ⛔ "নতুন আদায়" নয় — "টাকা জমার খবর" (মালিক, ২০ নভেম্বর ২০২৬)
-      expect([for (final c in owner.choices) c.label],
-          ['নতুন অর্ডার', 'টাকা জমার খবর', 'নতুন খরচ', 'নতুন ভাউচার', 'খরচের দাবি']);
-      expect([for (final c in RoleTabs.fabFor('/home', rolePermissions['sr']!)!.choices) c.label], ['নতুন অর্ডার']);
-      expect(RoleTabs.fabFor('/home', rolePermissions['depot']!), isNull);
+    // ⛔ 0.4.63: হোমের নিচের "＋ নতুন" বাদ — উপরের ＋ একই দ্রুত কাজ খোলে (app_0458/deposit_and_back_test)
+    test('the home has no bottom ＋ নতুন for any role — the top ＋ carries its choices', () {
+      for (final role in ['owner', 'sr', 'accounts', 'depot']) {
+        expect(RoleTabs.fabFor('/home', [...rolePermissions[role]!, 'sales.claim.submit']), isNull, reason: role);
+      }
     });
 
-    test('a switched-off module takes its choice and its button away', () {
+    test('a switched-off module takes its button away', () {
       expect(RoleTabs.fabFor('/home/orders', rolePermissions['sr']!, modulesOn: {'customer'}), isNull);
-      expect(RoleTabs.fabFor('/home', rolePermissions['sr']!, modulesOn: {'customer'}), isNull);
     });
   });
 

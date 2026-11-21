@@ -402,15 +402,14 @@ void main() {
       expect(find.byKey(const ValueKey('frame-fab')), findsNothing);
     });
 
-    testWidgets('the owner\'s home: ＋ নতুন lists what may be created', (tester) async {
+    // ⛔ 0.4.63: হোমের নিচের "＋ নতুন" বাদ — উপরের ＋ একই দ্রুত কাজ খোলে (app_0458/deposit_and_back_test)
+    testWidgets('the owner\'s home: no bottom ＋ নতুন any more, on a phone or a tablet', (tester) async {
       await pump(tester, 'owner', mayCollect: true);
-      expect(find.byKey(const ValueKey('frame-fab')), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('frame-fab')));
-      await tester.pumpAndSettle();
-      expect(find.text('নতুন খরচ'), findsOneWidget);
-      await tester.tap(find.byKey(const ValueKey('fab-choice-/home/vouchers/expense')));
-      await tester.pumpAndSettle();
-      expect(find.text('VOUCHER KIND'), findsOneWidget);
+      expect(find.byKey(const ValueKey('frame-fab')), findsNothing);
+      expect(find.byKey(const ValueKey('action-bar')), findsNothing);
+      await pump(tester, 'owner', mayCollect: true, size: const Size(1280, 800));
+      expect(find.byKey(const ValueKey('frame-fab')), findsNothing);
+      expect(find.byKey(const ValueKey('rail-fab')), findsNothing);
     });
 
     testWidgets('no button where nothing is created, or for a role that creates nothing', (tester) async {
