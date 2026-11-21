@@ -8,7 +8,7 @@ declare(strict_types=1);
 return [
     'menu' => 'Purchase cost',
     'title' => 'Purchase cost — by purchase invoice',
-    'title_en' => '',
+    'title_en' => 'Purchase cost — by purchase invoice',
     'setting_threshold' => 'Purchase cost report: limit %',
 
     'group_label' => 'Show',

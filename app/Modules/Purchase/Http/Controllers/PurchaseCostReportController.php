@@ -10,6 +10,7 @@ use App\Core\ListFilter\FilterSet;
 use App\Core\ListFilter\Panel;
 use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\PerPage;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\User;
@@ -19,6 +20,7 @@ use App\Modules\Purchase\Services\PurchaseCostReport;
 use App\Modules\Supplier\Models\Supplier;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Carbon;
@@ -60,13 +62,16 @@ final class PurchaseCostReportController extends Controller implements HasMiddle
 
         $default = $this->report->defaultThreshold();
         $raw = $request->query('threshold');
-        $threshold = is_scalar($raw) && is_numeric($raw) && (float) $raw >= 0 && (float) $raw <= 100
+        // ⓘ সীমা bc-তে মাপা, float-এ নয় ([[MoneyIsNeverAFloatTest]])
+        $threshold = is_scalar($raw) && is_numeric((string) $raw)
+            && bccomp((string) $raw, '0', 4) >= 0 && bccomp((string) $raw, '100', 4) <= 0
             ? bcadd((string) $raw, '0', 4) : bcadd($default, '0', 4);
 
         $by = is_string($request->query('by')) && in_array($request->query('by'), PurchaseCostReport::GROUPS, true)
             ? (string) $request->query('by') : 'invoice';
 
-        $suppliers = Supplier::query()->orderBy('id')->get()
+        // ⓘ পিকারে কেবল মাথায় বাছা শাখার সরবরাহকারী ([[Supplier::scopeInViewedBranch()]])
+        $suppliers = Supplier::query()->inViewedBranch()->orderBy('id')->get()
             ->mapWithKeys(fn (Supplier $s) => [(string) $s->id => $s->name()])->sort()->all();
         $products = Product::query()->orderBy('id')->get()
             ->mapWithKeys(fn (Product $p) => [(string) $p->id => $p->name()])->sort()->all();
@@ -83,6 +88,8 @@ final class PurchaseCostReportController extends Controller implements HasMiddle
             'supplier_id' => $supplierId, 'product_id' => $productId,
             'threshold' => $threshold, 'by' => $by,
         ]);
+
+        $result['rows'] = $this->paginate($result['rows'], $request);
 
         return view('purchase::cost-report.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -126,6 +133,28 @@ final class PurchaseCostReportController extends Controller implements HasMiddle
             ], $none, fn (array $v) => __('purchase::cost_report.threshold').': '.$v['threshold'].'%'))
                 ->look('amber', '%'),
         ]);
+    }
+
+    /**
+     * ⭐ দেখানো সারি পাতায় ভাগ — ৫০টা করে ([[PerPage]]); ⓘ মোট, কার্ড আর চার্ট গোটা ছাঁকা রিপোর্ট থেকে, আগেই গোনা — পাতার নয়।
+     * ⓘ রিপোর্টের সারি গোটা সময়কালের চালান/কাগজ থেকে গোনা (ট্রিপের ভাড়া চালানগুলোয় ভাগ, GRN-এর বিল একবার) — তাই ভাগটা
+     *   গোনার পরে, সারির তালিকায়। ⓘ রপ্তানি সব পাতা জোড়া দেয় ([[ExportListing]]), তাই ফাইলে গোটা রিপোর্ট।
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return LengthAwarePaginator<int, array<string, mixed>>
+     */
+    private function paginate(array $rows, Request $request): LengthAwarePaginator
+    {
+        $perPage = PerPage::of();
+        $page = max(1, LengthAwarePaginator::resolveCurrentPage());
+
+        return (new LengthAwarePaginator(
+            array_slice($rows, ($page - 1) * $perPage, $perPage),
+            count($rows),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'pageName' => 'page'],
+        ))->withQueryString();
     }
 
     /** মাথায় বাছা শাখা — একটা হলে তার নাম, নইলে "সব শাখা" */

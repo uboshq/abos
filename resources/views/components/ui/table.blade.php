@@ -193,7 +193,7 @@
                         <tr @class(['font-semibold' => $loop->last]) @if ($loop->last) data-grand-total-row @endif>
                             @foreach ($normalised as $i => $column)
                                 <td data-label="{{ $column['label'] }}" @class(['num' => $column['numeric'],
-                                    'text-(--color-danger)' => $column['total'] !== null && \App\View\Components\Ui\Table::negative($line[$i])])>
+                                    'text-(--color-danger)' => in_array($column['total'], ['money', 'quantity'], true) && \App\View\Components\Ui\Table::negative($line[$i])])>
                                     @if ($i === 0 && $column['total'] === null)
                                         <span class="text-(--color-ink-muted)">{{ $line[$i] }}</span>
                                     @else

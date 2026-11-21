@@ -21,6 +21,7 @@ use App\Modules\Supplier\Models\Supplier;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\View;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -100,8 +101,25 @@ final class APurchaseCostReportShowsWhatBringingTheGoodsInCostTest extends TestC
         $this->get(route('purchase.bill.show', $bill))->assertOk()
             ->assertSee(__('purchase::field.other_cost'))->assertSee('750');
 
-        $this->get(route('purchase.print.bill', $bill))->assertOk()
-            ->assertSee(__('purchase::bill_paper.other_cost'));
+        /*
+         * ⓘ ছাপাটা PDF — ভেতরের লেখা সংকুচিত, পড়া যায় না। তাই যে ছাঁচে আঁকা হলো সেটাই ধরে
+         * আবার আঁকা, অন্য ছাপার পরীক্ষার মতো ([[TheNewPurchaseBillPaperTest]])।
+         */
+        $seen = [];
+        View::composer('purchase::print.bill-modern', function ($view) use (&$seen): void {
+            $seen = $view->getData();
+        });
+
+        $this->get(route('purchase.print.bill', ['bill' => $bill->id, 'paper' => 'a4']))->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+
+        $this->assertNotSame([], $seen, '⛔ বিলের ছাপা নতুন কাগজে আঁকা হয়নি।');
+        View::flushState();
+        $html = view('purchase::print.bill-modern', $seen)->render();
+
+        $this->assertStringContainsString('data-other-cost', $html, '⛔ বিলের ছাপায় অন্যান্য খরচের সারি নেই।');
+        $this->assertStringContainsString(e(__('purchase::bill_paper.other_cost')), $html);
+        $this->assertStringContainsString('750', $html);
     }
 
     // ── ২ · চাবি ─────────────────────────────────────────────────────────────

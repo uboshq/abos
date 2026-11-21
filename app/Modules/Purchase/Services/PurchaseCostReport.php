@@ -42,6 +42,19 @@ final class PurchaseCostReport
 
     public const GROUPS = ['invoice', 'supplier', 'month', 'product'];
 
+    /**
+     * ⓘ চার কার্ডের দুই রং — গাঢ় থেকে উজ্জ্বল; তালিকার রঙিন কার্ডের মতো PHP-তে ([[ListCard]], ডেলিভারি খরচের কার্ড),
+     *   পাতায় হাতে লেখা নয়। নমুনা v6 গ-এর হুবহু রং।
+     *
+     * @var array<string, array{0: string, 1: string}>
+     */
+    public const CARD_GRADIENTS = [
+        'value' => ['#2563eb', '#3b82f6'],
+        'cost' => ['#7c3aed', '#a855f7'],
+        'pct' => ['#059669', '#22c55e'],
+        'per_carton' => ['#e11d48', '#f43f5e'],
+    ];
+
     public function __construct(private readonly SettingsService $settings) {}
 
     /** সীমা % — সেটিংস থেকে, না থাকলে ৩ */
@@ -49,7 +62,7 @@ final class PurchaseCostReport
     {
         $value = $this->settings->get(self::SETTING);
 
-        return is_numeric($value) && (float) $value >= 0 ? (string) $value : '3';
+        return is_numeric($value) && bccomp((string) $value, '0', 4) >= 0 ? (string) $value : '3';
     }
 
     /**
@@ -115,10 +128,13 @@ final class PurchaseCostReport
             ->when($supplierId !== null, fn ($q) => $q->where('supplier_id', $supplierId))
             ->get(['id', 'document_no', 'trx_date', 'supplier_id', 'unload_mode', 'unload_amount', 'unload_cartons']);
 
-        $receiptLines = $receipts->isEmpty() ? collect() : DB::table('pur_receipt_lines')
-            ->whereIn('purchase_receipt_id', $receipts->pluck('id'))
-            ->orderBy('line_no')->orderBy('id')
-            ->get(['id', 'purchase_receipt_id', 'product_id', 'received_qty', 'rate', 'unload_cartons', 'unload_cost']);
+        // ⓘ লাইনের টেবিলে কোম্পানি নেই — রসিদের মাথা ধরে কোম্পানির ছাঁকনি ([[EveryRawQueryNamesItsCompanyTest]])
+        $receiptLines = $receipts->isEmpty() ? collect() : DB::table('pur_receipt_lines as rl')
+            ->join('pur_receipts as rr', 'rr.id', '=', 'rl.purchase_receipt_id')
+            ->where('rr.company_id', CompanyContext::id())
+            ->whereIn('rl.purchase_receipt_id', $receipts->pluck('id'))
+            ->orderBy('rl.line_no')->orderBy('rl.id')
+            ->get(['rl.id', 'rl.purchase_receipt_id', 'rl.product_id', 'rl.received_qty', 'rl.rate', 'rl.unload_cartons', 'rl.unload_cost']);
 
         // ⓘ GRN-এর মালের পাকা বিলগুলো — শাখা যেটাই হোক, ভাড়া ঐ GRN-এর
         $linkedBillIds = $receiptLines->isEmpty() ? collect() : DB::table('pur_bill_lines as l')
@@ -140,6 +156,7 @@ final class PurchaseCostReport
         $billIds = $linkedBillIds->merge($directBills->pluck('id'))->unique()->values();
 
         $bills = $billIds->isEmpty() ? collect() : DB::table('pur_bills')
+            ->where('company_id', CompanyContext::id())
             ->whereIn('id', $billIds)
             ->get(['id', 'transport_cost', 'other_cost'])->keyBy('id');
 
@@ -498,7 +515,7 @@ final class PurchaseCostReport
      */
     private function sortByPct(array $rows): array
     {
-        usort($rows, fn (array $a, array $b) => (float) ($b['pct'] ?? -1) <=> (float) ($a['pct'] ?? -1));
+        usort($rows, fn (array $a, array $b) => bccomp((string) ($b['pct'] ?? '-1'), (string) ($a['pct'] ?? '-1'), 4));
 
         return $rows;
     }

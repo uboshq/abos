@@ -341,11 +341,22 @@ final class DeliveryCostReport
             usort($groups, fn (array $a, array $b) => bccomp((string) $a['percent'], (string) $b['percent'], 2));
         }
 
-        $highest = array_reduce($groups, fn (float $m, array $g) => max($m, (float) $g['percent']), 0.0);
-        $max = max(1, (int) ceil(max($highest, (float) $threshold + 1)));
-        $step = $max <= 10 ? 1 : (int) ceil($max / 5);
-        $max = (int) (ceil($max / $step) * $step);
-        $width = fn (string $v) => Money::round(bcdiv(bcmul($v, '100', 8), (string) $max, 8), 2);
+        // ⓘ অক্ষের মাপ bc-তে, float-এ নয় ([[MoneyIsNeverAFloatTest]]) — সবচেয়ে বড় % আর সীমা + ১-এর বড়টা, উপরে পূর্ণ সংখ্যায়
+        $highest = bcadd($threshold, '1', 4);
+        foreach ($groups as $g) {
+            if (bccomp((string) $g['percent'], $highest, 4) > 0) {
+                $highest = (string) $g['percent'];
+            }
+        }
+        $max = max(1, self::wholeAbove($highest));
+        $step = $max <= 10 ? 1 : intdiv($max + 4, 5);
+        $max = intdiv($max + $step - 1, $step) * $step;
+        // ⓘ চওড়া আর দাগ ০–১০০-এ আটকানো — পাতা কোনো cast ছাড়াই বসায়
+        $width = function (string $v) use ($max): string {
+            $w = Money::round(bcdiv(bcmul($v, '100', 8), (string) $max, 8), 2);
+
+            return bccomp($w, '100', 2) > 0 ? '100.00' : (bccomp($w, '0', 2) < 0 ? '0.00' : $w);
+        };
 
         return [
             'by' => $chartBy,
@@ -362,6 +373,14 @@ final class DeliveryCostReport
                 'total' => $g['total'],
             ], $groups),
         ];
+    }
+
+    /** ধনাত্মক সংখ্যার উপরের পূর্ণ সংখ্যা (ceil), bc-তে */
+    private static function wholeAbove(string $value): int
+    {
+        $whole = bcadd($value, '0', 0);
+
+        return (int) (bccomp($value, $whole, 8) > 0 ? bcadd($whole, '1', 0) : $whole);
     }
 
     /**

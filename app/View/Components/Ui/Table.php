@@ -88,6 +88,12 @@ class Table extends Component
         public array $grand = [],
 
         /*
+         * ⭐ সর্বমোটের সারির লেবেল — না দিলে "সর্বমোট"। ⓘ রিপোর্ট নিজের মোট নিজে গোনে আর নিজের নামে ডাকে
+         *   ("মোট (১২ চালান)" — ডেলিভারি ও ক্রয়ের খরচের রিপোর্ট, নমুনা v6; ২১ নভেম্বর ২০২৬)।
+         */
+        public ?string $grandLabel = null,
+
+        /*
          * ⭐ "দেখুন" — প্রতিটা সারিতে চোখের বোতাম, কাগজটা খোলে (মালিক, ১ অক্টোবর ২০২৬: *"view botam ba icon dite dawni keno"*)।
          *
          * সারি => ঠিকানা। ⓘ এটা একটা সাধারণ লিংক, তাই মালিকের নিয়মে তালিকার উপর পপআপে খোলে ([[peek]]); Ctrl-ক্লিকে নতুন
@@ -132,10 +138,16 @@ class Table extends Component
                 'render' => $column['render'] ?? null,
 
                 // ⭐ সর্বমোটের ধরন — 'money' বা 'quantity'; না দিলে যোগ নয়
-                'total' => in_array($column['total'] ?? null, ['money', 'quantity'], true) ? $column['total'] : null,
+                // ⓘ 'shown' — রিপোর্টের নিজের সাজানো সর্বমোট (যেমন মোট থেকে খরচ %, সীমার চিহ্নসহ), যেমন দেওয়া তেমনই বসে;
+                //   "এই পাতা"-র যোগে নেই — % বা হারের পাতা-যোগ অর্থহীন (২১ নভেম্বর ২০২৬)
+                'total' => in_array($column['total'] ?? null, ['money', 'quantity', 'shown'], true) ? $column['total'] : null,
 
                 // ⓘ "এই পাতা"-র যোগের জন্য সারির কাঁচা সংখ্যা; না দিলে সারির একই নামের ঘর
                 'raw' => $column['raw'] ?? null,
+
+                // ⭐ ঘরটা বাক্য ধরে — `data-wrap` বসে, ভাঙা না-ভাঙা রূপের CSS ঠিক করে (app.css)। ⛔ আগে এই চাবি এখানে
+                //   ছিল না, তাই ঘরে চিহ্নটা কখনো বসত না (২১ নভেম্বর ২০২৬)
+                'wrap' => (bool) ($column['wrap'] ?? false),
             ];
         }
 
@@ -221,6 +233,7 @@ class Table extends Component
     public function showsPageTotal(): bool
     {
         return $this->hasGrand()
+            && collect($this->normalised)->contains(fn ($c) => in_array($c['total'], ['money', 'quantity'], true))
             && $this->rows instanceof LengthAwarePaginator
             && $this->rows->lastPage() > 1;
     }
@@ -232,13 +245,17 @@ class Table extends Component
      */
     public function grandLine(): array
     {
-        return $this->line(fn (array $c) => $this->grand[$c['key']] ?? null, __('core.table.grand_total'));
+        return $this->line(fn (array $c) => $this->grand[$c['key']] ?? null, $this->grandLabel ?? __('core.table.grand_total'));
     }
 
     /** @return list<string> */
     public function pageLine(): array
     {
         return $this->line(function (array $c) {
+            if ($c['total'] === 'shown') {
+                return null;
+            }
+
             $sum = '0';
 
             foreach ($this->rows as $row) {
@@ -266,6 +283,14 @@ class Table extends Component
             }
 
             $amount = $value($column);
+
+            if ($column['total'] === 'shown') {
+                // ⓘ সাজানো লেখা (HtmlString হলে চিহ্নসহ) — আবার সাজানো নয়
+                $out[] = $amount ?? '';
+
+                continue;
+            }
+
             $out[] = $amount === null ? '' : self::format((string) $amount, $column['total']);
         }
 

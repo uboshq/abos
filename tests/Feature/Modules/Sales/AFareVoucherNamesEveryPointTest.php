@@ -198,10 +198,14 @@ final class AFareVoucherNamesEveryPointTest extends TestCase
 
     private function shop(string $code, string $en, string $bn, ?Location $place): Customer
     {
-        return Customer::query()->create([
+        $shop = Customer::query()->create([
             'company_id' => $this->company->id, 'branch_id' => $this->company->defaultBranch()?->id,
             'code' => $code, 'name_en' => $en, 'name_bn' => $bn, 'location_id' => $place?->id, 'is_active' => true,
         ]);
+        // ⓘ সীমা পরম (মালিক) — নতুন দোকানের সীমা ০, তাই নিশ্চিত করতে সীমা বসানো, অন্য চালানের পরীক্ষার মতো
+        $shop->forceFill(['credit_limit' => '1000000000'])->save();
+
+        return $shop;
     }
 
     /** @param  array<string, mixed>  $transport */
