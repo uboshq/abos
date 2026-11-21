@@ -589,6 +589,7 @@ class EveryRouteIsGuardedTest extends TestCase
          */
         'notifications.open' => 'নিজের খবর — মালিকানা কন্ট্রোলারে যাচাই হয়',
         'notifications.read-all' => 'নিজের ঘণ্টা খালি করা',
+        'notifications.banner.close' => 'নিজের পপআপ/ফিতা "পরে মনে করাবেন" — কেবল এই লগইনের সেশনে লেখে; পপআপ যায় দিন ও মাস বন্ধের চাবিওয়ালার কাছেও, চাবি লাগালে তিনি পপআপ সরাতে পারতেন না',
         // ⭐ বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১ — নিজের খবরের পাতা ও কাজ; সব নিজের সারিতে, অন্যেরটায় ৪০৩ (NotificationService::mine())
         'notifications.index' => 'আমার বিজ্ঞপ্তি — কেবল নিজের খবর, নাগালের শাখার',
         'notifications.unread-count' => 'নিজের না-পড়া গোনা — ঘণ্টার polling, সুইচে বাঁধা',

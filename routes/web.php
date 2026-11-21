@@ -110,9 +110,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])
         ->name('notifications.read-all');
     // ⭐ উপরের হলুদ ব্যানার একবার বন্ধ — এই লগইনে (পাতা সাজানো ধাপ ১, ১০ অক্টোবর ২০২৬; [[StatusNotices::forBanner()]])
-    // ⓘ ব্যানারটা কেবল ব্যাকআপ দেখার অধিকার যাঁর তাঁর পাতায় আসে ([[StatusNotices::backupNotice()]]) — বন্ধ করার দরজাও তাঁরই
+    // ⛔ চাবি ছাড়া — এটা মাঝখানের পপআপের "পরে মনে করাবেন"-এরও দরজা ([[shell.day-check]]), আর পপআপ যায় দিন বন্ধ আর মাস বন্ধের
+    //   চাবিওয়ালার কাছেও, যাঁর ব্যাকআপ দেখার চাবি নেই। আগে এখানে `can:backup.view` ছিল: "পরে" চাপলে ৪০৩, পপআপ আর সরত না —
+    //   মালিকের নিয়ম "পপআপ কাজ আটকায় না" ভাঙত (লাইভ হটফিক্স ১.৩.৭, ২১ নভেম্বর ২০২৬)। লেখে কেবল নিজের লগইনের সেশনে।
     Route::post('/notifications/banner/close', [NotificationController::class, 'closeBanner'])
-        ->middleware('can:backup.view')
         ->name('notifications.banner.close');
 
     /*
