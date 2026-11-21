@@ -524,7 +524,12 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     //   +১ EveryNewPaperFormCarriesItsBranchTest::EXCLUDED — profile.cover: ছবি, কাগজ নয়, শাখা লাগে না
     //   ⓘ অন্যের পাতা (people.profile, api.users.profile) ছাড় নেয়নি: পাহারা নীতিতে, `authorize('seeProfile')` →
     //      UserPolicy::seeProfile, সহকর্মী না হলে ৪০৪ — মুখের দরজার (`seeFace`) একই সিদ্ধান্ত
-    private const CEILING = 534;
+    // ⭐ ৫৩৪ → ৫৩৭ (২১ নভেম্বর ২০২৬, ১.৩.৮ আর লাইভ হটফিক্স 436ee0093):
+    //   +১ EveryRouteIsGuardedTest::ANY_SIGNED_IN_USER — notifications.banner.close: পপআপের "পরে মনে করাবেন"; লেখে কেবল নিজের লগইনের
+    //      সেশনে। আগের `can:backup.view` দিন/মাস বন্ধকারীকে ৪০৩ দিত আর পপআপ সরত না — মালিকের নিয়ম "সতর্কবার্তা কাজ আটকায় না"
+    //   +২ EveryListCarriesItsTotalsBarTest::EXEMPT — ডেলিভারি খরচ আর ক্রয় খরচের রিপোর্ট: টেবিলের নিজের মোটের সারি পুরো রিপোর্টের,
+    //      মালিকের অনুমোদিত নমুনার (খরচের নমুনা v6) মতো একটাই; পট্টি দিলে একই যোগ দুবার — নমুনা থেকে সরে যেত
+    private const CEILING = 537;
 
     /*
      * ── ⚠️ ২২২ → ২২৪, ২৩ সেপ্টেম্বর ২০২৬ ───────────────────────────

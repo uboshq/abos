@@ -75,7 +75,8 @@ final class AFareVoucherNamesEveryPointTest extends TestCase
         app(DeliveryChallanService::class)->confirm($challan->fresh(['lines']));
         $voucher = Voucher::query()->with('lines')->findOrFail($challan->fresh()->fare_voucher_id);
 
-        $expected = "গাড়ি ভাড়া — চালান {$challan->document_no}, পয়েন্ট: উত্তরা, গাড়ি ঢাকা মেট্রো-ট 14-6789 (ড্রাইভার: রফিক)";
+        // ⓘ নিশ্চিত করলে খসড়ার নম্বর (DRF-…) চূড়ান্ত নম্বরে (CHA-…) বদলায় — ভাউচার চূড়ান্ত নম্বরটাই বলে
+        $expected = "গাড়ি ভাড়া — চালান {$challan->fresh()->document_no}, পয়েন্ট: উত্তরা, গাড়ি ঢাকা মেট্রো-ট 14-6789 (ড্রাইভার: রফিক)";
         $this->assertSame($expected, $voucher->narration, '⛔ নতুন ভাড়ার ভাউচারের বিবরণ মালিকের ক্রমে নয়।');
         foreach ($voucher->lines as $line) {
             $this->assertSame($expected, $line->narration, '⛔ ভাউচারের সারিতে আগের বিবরণ রয়ে গেল।');
