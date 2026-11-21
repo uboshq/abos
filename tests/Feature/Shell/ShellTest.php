@@ -257,14 +257,37 @@ class ShellTest extends TestCase
         $this->assertNotEmpty($menu, 'মালিকের মেনু খালি — তাহলে কিছুই যাচাই হত না।');
 
         foreach ($menu as $module) {
-            $shown = array_keys($module['groups']);
+            /*
+             * ⓘ এক করা মডিউল (মালিক, ২০ নভেম্বর ২০২৬): অতিথির দলগুলো আশ্রয়দাতার দলের পরে, `অতিথি:দল` চাবিতে
+             *   ([[MenuBuilder::settleGuestsIntoTheirHosts()]])। তাই প্রতিটা সদস্যের দল আলাদা করে মাপা হয় — আশ্রয়দাতা আগে,
+             *   প্রতিটা অতিথির দল একসাথে, আর প্রত্যেক সদস্যের ভিতরে নির্দিষ্ট ক্রম।
+             */
+            $byMember = [];
+            $memberOrder = [];
 
-            // যেগুলো দেখানো হচ্ছে সেগুলো নির্দিষ্ট ক্রমেরই একটা উপ-ক্রম
-            $this->assertSame(
-                array_values(array_intersect($canonical, $shown)),
-                $shown,
-                "{$module['code']} মডিউলের গ্রুপের ক্রম ঠিক নেই।",
-            );
+            foreach (array_keys($module['groups']) as $key) {
+                [$member, $group] = str_contains((string) $key, ':')
+                    ? explode(':', (string) $key, 2)
+                    : [$module['code'], (string) $key];
+
+                if (end($memberOrder) !== $member) {
+                    $this->assertNotContains($member, $memberOrder, "{$module['code']}: {$member}-এর দলগুলো একসাথে নেই।");
+                    $memberOrder[] = $member;
+                }
+
+                $byMember[$member][] = $group;
+            }
+
+            $this->assertSame($module['code'], $memberOrder[0] ?? null, "{$module['code']}: আশ্রয়দাতার নিজের দল আগে নয়।");
+
+            foreach ($byMember as $member => $shown) {
+                // যেগুলো দেখানো হচ্ছে সেগুলো নির্দিষ্ট ক্রমেরই একটা উপ-ক্রম
+                $this->assertSame(
+                    array_values(array_intersect($canonical, $shown)),
+                    $shown,
+                    "{$module['code']} মডিউলের ({$member}) গ্রুপের ক্রম ঠিক নেই।",
+                );
+            }
         }
     }
 

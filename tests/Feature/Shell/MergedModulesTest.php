@@ -15,7 +15,6 @@ use Database\Seeders\DemoSeeder;
 use DOMDocument;
 use DOMXPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Route;
 use Tests\Concerns\SignsInPastTheSecondStep;
 use Tests\TestCase;
 
@@ -60,8 +59,15 @@ final class MergedModulesTest extends TestCase
 
     public function test_every_member_row_is_in_the_merged_module_at_the_same_address(): void
     {
+        $this->owner->forceFill(['ui' => 'rose'])->save();
         $menu = $this->menu();
-        $registry = app(ModuleRegistry::class);
+
+        /*
+         * ⓘ মাপকাঠি = এক না করা মেনু (SAP/Dynamic-এর মতো, [[MenuBuilder::forUser()]] `merged: false`) — প্রতিটা সদস্য একা থাকলে
+         *   ঠিক যে সারিগুলো দেখাত। ⛔ module.php-র সব সারি নয়: সুইচে বন্ধ পর্দা (যেমন কাউন্টার, `sales.screen_pos` ডিফল্ট বন্ধ)
+         *   একা থাকলেও দেখায় না, তাই এক করার পরেও না থাকাটাই ঠিক (Mac run, ২১ নভেম্বর ২০২৬: sales › sales::menu.pos)।
+         */
+        $apart = app(MenuBuilder::class)->forUser($this->owner->fresh(), merged: false);
         $checked = 0;
 
         foreach (self::FAMILIES as $host => $family) {
@@ -72,16 +78,13 @@ final class MergedModulesTest extends TestCase
             foreach ([$host, ...$family['guests']] as $member) {
                 $this->assertContains($member, $entry['codes'], "⛔ {$member} {$host}-এর ভিতরে নেই");
 
-                foreach ($registry->get($member)->menu as $group => $items) {
-                    foreach ($items as $item) {
-                        if (($item['planned'] ?? false) || ! Route::has($item['route'])) {
-                            continue;
-                        }
-
-                        $url = route($item['route'], $item['route_params'] ?? []);
-                        $this->assertContains($url, $urls, "⛔ {$member} › {$item['label']} ({$url}) — {$host}-এর মেনুতে নেই, সারিটা হারিয়েছে");
-                        $checked++;
+                foreach (collect($this->entry($apart, $member)['groups'])->flatten(1) as $row) {
+                    if (($row['url'] ?? null) === null) {
+                        continue;
                     }
+
+                    $this->assertContains($row['url'], $urls, "⛔ {$member} › {$row['key']} ({$row['url']}) — {$host}-এর মেনুতে নেই, সারিটা হারিয়েছে");
+                    $checked++;
                 }
             }
         }
@@ -117,6 +120,7 @@ final class MergedModulesTest extends TestCase
 
     public function test_the_guests_are_no_longer_modules_of_their_own(): void
     {
+        $this->owner->forceFill(['ui' => 'rose'])->save();
         $codes = array_column($this->menu(), 'code');
 
         foreach (self::FAMILIES as $host => $family) {
@@ -127,7 +131,9 @@ final class MergedModulesTest extends TestCase
         }
 
         // ⓘ রেল (ABOS Navy / Blue) আর ABOS-এর মডিউল-বাছাই — দুইটাই মেনু থেকে আঁকা
-        foreach (['navy', 'blue', 'rose', 'tiles', 'dynamic'] as $look) {
+        // ⛔ কেবল এক করা রূপগুলো — SAP (tiles) আর Dynamic আগের মতো আলাদা (মালিক, ২০ নভেম্বর ২০২৬: "100% অরিজিনাল"),
+        //   ওদের দাবি [[test_sap_and_dynamic_keep_the_modules_apart_as_before()]]-এ
+        foreach (['navy', 'blue', 'rose'] as $look) {
             $this->owner->forceFill(['ui' => $look])->save();
             $html = (string) $this->actingAs($this->owner->fresh())->get(route('module.dashboard', ['module' => 'accounts']))->assertOk()->getContent();
 

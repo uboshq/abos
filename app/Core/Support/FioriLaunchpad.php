@@ -121,7 +121,9 @@ final class FioriLaunchpad
                 $title = (string) $look['name'];
             } else {
                 $key = 'group:'.$row['group'];
-                $title = __('core.menu.'.$row['group']);
+                // ⓘ অতিথির দল (`customer:dashboard`) এলে মেনুর নিজের দেওয়া নাম ("গ্রাহক · ড্যাশবোর্ড"), কাঁচা চাবি নয় — SAP-এ
+                //   মডিউল আলাদা থাকে বলে এমন দল আসার কথা নয় ([[Ui::keepsModulesApart()]]); এটা কেবল শেষ ভরসা
+                $title = $module['group_titles'][$row['group']] ?? __('core.menu.'.$row['group']);
             }
 
             if (! isset($at[$key])) {
