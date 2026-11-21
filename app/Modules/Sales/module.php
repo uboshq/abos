@@ -1002,6 +1002,11 @@ return [
         \App\Modules\Sales\Forecasts\ProductSalesHistory::class,
     ],
 
+    // ⭐ প্রোফাইলের "এই মাসে আমার কাজ" — বিক্রি, অর্ডার, লক্ষ্যের %, মেলানো জমা ([[ContributesToAProfile]]; ২১ নভেম্বর ২০২৬)
+    'profile' => [
+        \App\Modules\Sales\Profile\SalesProfile::class,
+    ],
+
     'phone_papers' => [
         \App\Modules\Sales\Phone\SalesReturnPaper::class,
         \App\Modules\Sales\Phone\GatePassPaper::class,

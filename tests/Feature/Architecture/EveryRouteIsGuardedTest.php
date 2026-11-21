@@ -317,6 +317,11 @@ class EveryRouteIsGuardedTest extends TestCase
         'api.me.photo.destroy' => 'নিজের ছবি সরানো — কেবল নিজের সারিতে; abilities:app চায়',
         'api.me.devices.index' => 'নিজের ফোনের তালিকা — কেবল নিজের টোকেন; abilities:app চায় ([[MeDevicesController]])',
         'api.me.devices.destroy' => 'নিজের একটা ফোন বের করা — কেবল নিজের টোকেনে খোঁজা, অন্যের id ৪০৪; abilities:app চায়',
+        // ⭐ প্রোফাইল পাতা, মলাট আর আজকের তিন সংখ্যা (২০ নভেম্বর ২০২৬) — নিজের জিনিস; অন্যের পাতা `api.users.profile` authorize('seeProfile')-এ, ৪০৪
+        'api.me.profile' => 'নিজের প্রোফাইল — কেবল নিজের তথ্য, কাজের তালিকা নাগাল আর অনুমতি ধরে ছাঁকা ([[ProfileFacts]]); abilities:app চায়',
+        'api.me.today' => 'নিজের তিন সংখ্যা — নিজের অপেক্ষার অনুমোদন, নিজের না-পড়া খবর, আর দিন বন্ধের ঘর কেবল accounts.day_close.close-এ; abilities:app চায় ([[MeTodayController]])',
+        'api.me.cover.store' => 'নিজের মলাট ছবি — কেবল নিজের সারিতে, ছবির বাইট দেখে; abilities:app চায় ([[MeCoverController]])',
+        'api.me.cover.destroy' => 'নিজের মলাট ছবি সরানো — কেবল নিজের সারিতে; abilities:app চায়',
         'api.web-handoff' => 'নিজের জন্য অ্যাপের ভিতরে ওয়েব খোলার চাবি — ওয়েবে নিজের চেয়ে বেশি কিছু দেয় না (প্রতিটা পর্দা নিজের চাবি দেখে); কোম্পানির সুইচ, হ্যান্ডসেট, গন্তব্য আর দুই ধাপ নিয়ামকে; abilities:app চায় ([[WebHandoffApiController]])',
         'api.workspace' => 'নিজের কোম্পানি/শাখা বদল — ওয়েবের company.switch-এর মতো; সদস্যপদ ও শাখার নাগাল User::switchCompany() দেখে; abilities:app চায়',
         'api.dashboard.today' => 'প্রতিটা ঘর নিজের চাবি দেখে; চাবি না থাকলে ঘরটাই নেই; রুটে can: নেই',
@@ -546,6 +551,17 @@ class EveryRouteIsGuardedTest extends TestCase
         'profile.update' => 'নিজের প্রোফাইল',
         'profile.avatar' => 'নিজের ছবি',
         'profile.avatar.remove' => 'নিজের ছবি',
+
+        /*
+         * ⭐ নতুন প্রোফাইল পাতা (মালিক, ২০ নভেম্বর ২০২৬; নমুনা গ "ok") — `profile`-এর মতোই নিজের জিনিস।
+         *
+         * ⓘ চারটাই কেবল `$request->user()` ধরে কাজ করে — ঠিকানায় অন্য কারও id নেই। ⛔ অন্যের পাতা
+         * (`people.profile`) এখানে নয়: সেটা `$this->authorize('seeProfile')`-এ, সহকর্মী না হলে ৪০৪।
+         */
+        'me.profile' => 'নিজের প্রোফাইল পাতা — কেবল নিজের তথ্য; কাজের তালিকা দেখার নাগাল আর অনুমতি ধরে ছাঁকা ([[ProfileFacts]])',
+        'me.devices.forget' => 'নিজের একটা ফোন বের করা — কেবল নিজের টোকেনে খোঁজা, অন্যের id ৪০৪ (api.me.devices.destroy-র একই পথ)',
+        'profile.cover' => 'নিজের মলাট ছবি — কেবল নিজের সারিতে, ছবির বাইট দেখে ([[ProfileCoverController]])',
+        'profile.cover.remove' => 'নিজের মলাট ছবি সরানো — কেবল নিজের সারিতে',
         'appearance' => 'নিজের চেহারা-পছন্দ',
         'appearance.save' => 'নিজের চেহারা-পছন্দ',
         'theme.switch' => 'নিজের থিম',

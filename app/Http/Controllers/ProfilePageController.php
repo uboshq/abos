@@ -41,6 +41,9 @@ final class ProfilePageController extends Controller
 
         abort_if($owner === null || ! $this->facts->opens($viewer, $owner), 404);
 
+        // ⛔ সহকর্মী না হলে ৪০৪ — নীতিতেও একই প্রশ্ন ([[UserPolicy::seeProfile()]]); কোম্পানিহীন মানুষ মিডলওয়্যারেই ৪০৪ পান
+        $this->authorize('seeProfile', $owner);
+
         // ⓘ নিজের লিংক খুললে নিজের পাতা — "অন্যরা যেমন দেখে" বোতাম `?as=other` দিয়ে আসে
         if ((int) $owner->getKey() === (int) $viewer->getKey() && $request->query('as') !== 'other') {
             return redirect()->route('me.profile');

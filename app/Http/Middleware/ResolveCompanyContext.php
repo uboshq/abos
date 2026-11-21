@@ -33,6 +33,15 @@ class ResolveCompanyContext
      */
     public const WITHOUT_A_COMPANY = ['logout', 'locale.switch'];
 
+    /**
+     * ⛔ অন্য একজন মানুষের পাতা, ছবি বা মলাট — কোম্পানিহীন কর্মী পান ৪০৪, ৪০৩ নয় (২১ নভেম্বর ২০২৬)।
+     *
+     * ⓘ যাঁর কোনো কোম্পানি নেই তাঁর কোনো সহকর্মীও নেই, তাই উত্তরটা বাইরের কোম্পানির মানুষের মতোই "এমন কেউ নেই"
+     *   ([[AvatarService::visibleTo()]], [[ProfileFacts::opens()]])। ⚠️ ৪০৩ বলত "মানুষটা আছেন, কেবল আপনার জন্য নয়" — অর্থাৎ
+     *   public_id ধরে ধরে কে আছেন তা যাচাই করা যেত ([[ProfilePageTest::test_someone_outside_the_company_gets_404_on_the_web_and_the_api]])।
+     */
+    public const ANOTHER_PERSON = ['people.profile', 'users.photo', 'users.cover', 'api.users.profile', 'api.users.photo', 'api.users.cover'];
+
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
@@ -97,6 +106,9 @@ class ResolveCompanyContext
                  * ⛔ ভাঙা পাতা নয়, একটা পরিষ্কার কথা — কোম্পানি ছাড়া কোনো পর্দাই চলে না।
                  * ⓘ ত্রুটির পাতার নিজের খোলস আছে ([[errors/layout]]), তাই সেটা কোম্পানি ছাড়াই আঁকা যায়।
                  */
+                // ⛔ অন্যের পাতা — সহকর্মী নেই, তাই "এমন কেউ নেই" ([[ANOTHER_PERSON]])
+                abort_if($request->routeIs(...self::ANOTHER_PERSON), 404);
+
                 if (! $request->routeIs(...self::WITHOUT_A_COMPANY)) {
                     /* ⓘ সাধারণ ৪০৩ পাতা "অনুমতি নেই" বলে — এখানে কারণটাই বলা দরকার */
                     abort_if($request->expectsJson(), 403, __('core.no_company'));

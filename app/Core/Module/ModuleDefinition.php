@@ -544,6 +544,14 @@ final class ModuleDefinition
          * @var list<class-string<\App\Core\Engines\Forecast\ForecastSource>>
          */
         public readonly array $forecasts = [],
+
+        /**
+         * ⭐ প্রোফাইলে এই মডিউলের যা বলার আছে — পরিচয়ের ঘর আর "এই মাসে আমার কাজ"-এর সংখ্যা ([[ContributesToAProfile]];
+         *   [[ProfileFacts]] এখান থেকে পড়ে, কোর মডিউলের নাম জানে না)।
+         *
+         * @var list<class-string<\App\Core\Contracts\ContributesToAProfile>>
+         */
+        public readonly array $profile = [],
     ) {}
 
     /**
@@ -759,6 +767,7 @@ final class ModuleDefinition
             approvalFallbacks: self::validateApprovalFallbacks($raw['approval_fallbacks'] ?? [], $raw['approvals'] ?? [], $path),
             assistantTools: self::validateImplements($raw['assistant_tools'] ?? [], \App\Core\Engines\Assistant\AssistantTool::class, 'assistant tool', $path),
             forecasts: self::validateImplements($raw['forecasts'] ?? [], \App\Core\Engines\Forecast\ForecastSource::class, 'forecast source', $path),
+            profile: self::validateImplements($raw['profile'] ?? [], \App\Core\Contracts\ContributesToAProfile::class, 'profile provider', $path),
         );
     }
 
