@@ -37,7 +37,7 @@ export function sayOf (answer) {
     return [head, ...rows].filter((s) => s.trim() !== '').join('। ')
 }
 
-export function copilotQuick ({ url, feedbackUrl, csrf, locale, page, failed, noKey, ask, reply, micOn, micOff }) {
+export function copilotQuick ({ url, feedbackUrl, csrf, locale, page, failed, noKey, ask, reply, micOn, micOff, chatUrl = '' }) {
     return {
         open: false,
         listening: false,
@@ -59,8 +59,10 @@ export function copilotQuick ({ url, feedbackUrl, csrf, locale, page, failed, no
         init () {
             window.addEventListener('keydown', (e) => {
                 if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 'j') {
+                    // ⓘ on the full Copilot page the page's own box takes Ctrl+J ([[copilot-page.js]])
+                    if (document.querySelector('[data-copilot-page]')) return
                     e.preventDefault()
-                    this.toggle()
+                    this.ctrlJ()
                 } else if (e.key === 'Escape' && this.open) {
                     this.close()
                 }
@@ -100,6 +102,15 @@ export function copilotQuick ({ url, feedbackUrl, csrf, locale, page, failed, no
             this.open = false
         },
         toggle () { return this.open ? this.close() : this.show() },
+        /** ⭐ Ctrl+J opens the quick ask; pressed again, the full Copilot page (owner's web sample, tab গ, 21 Nov 2026) */
+        ctrlJ () {
+            if (this.open && chatUrl) {
+                this.close()
+                window.location.assign(chatUrl)
+                return
+            }
+            this.toggle()
+        },
 
         /*
          * ⭐ যতক্ষণ মানুষ থামান না, ততক্ষণ শোনা (মালিক, ১৩ নভেম্বর ২০২৬: "Claude অ্যাপের মতো — যতক্ষণ মন চায় কথা বলা, শেষ হলে

@@ -31,5 +31,9 @@ return [
     'no_key' => 'You do not have the key to see this answer.',
     'hint_enter' => 'send',
     'hint_toggle' => 'open / close',
+    // ⭐ ABOS looks (owner's web sample copilot-web-sample, tab গ, 21 Nov 2026)
+    'hint_page' => 'again for the full Copilot page',
+    'here_page' => 'About this page: :page',
+    'listening_now' => 'Listening… go ahead',
     'safe' => 'Copilot posts nothing and sends nothing — it shows only what your keys allow. Your voice is not stored.',
 ];

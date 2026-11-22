@@ -27,6 +27,17 @@ Route::middleware('auth')->prefix('copilot')->group(function () {
     Route::post('/quick', [\App\Modules\Assistant\Http\Controllers\CopilotApiController::class, 'ask'])
         ->name('quick')
         ->middleware(['can:assistant.use', 'throttle:30,1']);
+    // ⭐ the full-screen Copilot page — start screen, talks with history (owner's web sample copilot-web-sample, 21 Nov 2026);
+    //   the same engine, keys and log as the quick ask; talks per person and per company ([[CopilotPageController]])
+    Route::get('/chat', [\App\Modules\Assistant\Http\Controllers\CopilotPageController::class, 'show'])
+        ->name('chat')
+        ->middleware('can:assistant.use');
+    Route::get('/c/{conversation}', [\App\Modules\Assistant\Http\Controllers\CopilotPageController::class, 'show'])
+        ->whereUuid('conversation')->name('chat.show')
+        ->middleware('can:assistant.use');
+    Route::post('/chat/ask', [\App\Modules\Assistant\Http\Controllers\CopilotPageController::class, 'ask'])
+        ->name('chat.ask')
+        ->middleware(['can:assistant.use', 'throttle:30,1']);
     Route::post('/answers/{event}/feedback', [AskController::class, 'feedback'])
         ->whereNumber('event')->name('feedback')
         ->middleware(['can:assistant.use', 'throttle:30,1']);

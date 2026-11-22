@@ -19,6 +19,8 @@
         'threads' => route('messaging.x.threads'),
         'papers' => route('messaging.x.papers'),
         'direct' => route('messaging.x.direct'),
+        // ⓘ "বার্তায় পাঠান" with text (Copilot's answer) — one plain message into each chosen chat ([[messenger-share.js]] sendText)
+        'send' => route('messaging.x.send', ['thread' => '__THREAD__']),
     ];
     $msgrWords = trans('messaging::call');
 @endphp
