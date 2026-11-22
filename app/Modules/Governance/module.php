@@ -36,7 +36,9 @@ return [
      * দলগুলোর তালিকা আর কেন এটা `depends_on`-এর থেকে আলাদা:
      * [[ModuleDefinition::NAV_SECTIONS]].
      */
-    'nav' => ['section' => 'people', 'order' => 20],
+    // ⭐ এক করা মডিউল (মালিক, ২৩ নভেম্বর ২০২৬: "সিস্টেম ও প্রশাসন") — কেবল মেনুতে কোথায় বসে; রুট, চাবি, ঠিকানা, ডাটা আগের মতো ([[MenuBuilder::settleGuestsIntoTheirHosts()]])
+    // ⓘ `dashboard_label` — সিস্টেম ও প্রশাসনের ভিতরে দুইটা "ড্যাশবোর্ড" সারি পাশাপাশি না বসে; SAP/Dynamic-এ (আলাদা থাকে) সারিটা আগের নামেই
+    'nav' => ['section' => 'people', 'order' => 20, 'under' => 'system_admin', 'dashboard_label' => 'governance::menu.dashboard'],
 
     // কারও উপর নির্ভর করে না: অডিট কোরের ইঞ্জিন, কোনো মডিউলের নয়
     'depends_on' => [

@@ -88,7 +88,8 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['business', 'restaurant'],
 
         ['people', 'hr'],
-        ['people', 'governance'],
+        // ⓘ নিয়ন্ত্রণ ও নিরীক্ষা এখন "সিস্টেম ও প্রশাসন"-এর ভিতরে (মালিক, ২৩ নভেম্বর ২০২৬) — নিজের টাইল নেই; ভিতরে বসা
+        //   [[test_a_guest_module_sits_inside_its_host()]] দেখে
         ['people', 'approval'],
 
         /*
@@ -121,14 +122,10 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         ['system', 'assistant'],
 
         /*
-         * ⭐ ব্যাকআপ সবার শেষে — মালিকের সিদ্ধান্ত।
-         *
-         * ⓘ বছরে দুইবারের কাজ, রোজকার নয়। ⚠️ তবু মেনুতে **থাকতেই
-         * হবে**: ২৫ আগস্ট ব্যাকআপ ঠিক আছে কি না জানতে সার্ভারে ssh
-         * করতে হয়েছিল, আর যিনি ssh করতে পারেন না তিনি ধরে নেন সব
-         * ঠিক আছে — ব্যাকআপের ব্যর্থতা ঠিক এভাবেই নীরব থাকে।
+         * ⓘ ব্যাকআপ আগে এখানে সবার শেষে নিজের টাইলে বসত (মালিকের সিদ্ধান্ত: বছরে দুইবারের কাজ, তবু মেনুতে থাকতেই হবে — ২৫ আগস্ট
+         * ssh ছাড়া জানা যেত না ব্যাকআপ ঠিক আছে কি না)। ⭐ ২৩ নভেম্বর ২০২৬ থেকে "সিস্টেম ও প্রশাসন"-এর ভিতরে, শেষ ভাগে — মেনুতে
+         * আছে, টাইল নেই; ভিতরে বসা [[test_a_guest_module_sits_inside_its_host()]] দেখে।
          */
-        ['system', 'backup'],
     ];
 
     protected function setUp(): void

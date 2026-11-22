@@ -30,6 +30,12 @@ use Tests\TestCase;
  *   ৫. কোনো সদস্য বন্ধ হলে তার সারি আর ট্যাব নেই; আশ্রয়দাতা বন্ধ হলে অতিথি নিজের টাইলে ফেরে
  *   ৬. ফোনের মেনুও একই — অতিথির সারি আশ্রয়দাতার ভিতরে, ফোনে বন্ধ সদস্যের সারি নেই
  *   ৭. হিসাব ও অর্থের নয়টা ভাগ মালিকের ক্রমে
+ *
+ * ⭐ ২৩ নভেম্বর ২০২৬ (মালিক: "কোনো মেনু যাতে না হারায়, কোনো মেনু যাতে এক না হয়") — চতুর্থ এক করা মডিউল:
+ *   সিস্টেম ও প্রশাসন = সিস্টেম প্রশাসন + নিয়ন্ত্রণ ও নিরীক্ষা + ব্যাকআপ (D365 System administration, SAP Basis)। উপরের সব দাবি
+ *   এটারও; আর ৮. অতিথিদের সারি নিজের নিজের ভাগে, আশ্রয়দাতার ভাগগুলোর পরে — নিরীক্ষা আগে, ব্যাকআপ পরে।
+ *   ৯. বিজ্ঞপ্তির তিন ভাগ মালিকের ক্রমে (আমার নোটিশ → গ্রাহককে বার্তা → সেটআপ ও নজরদারি); বার্তা (messenger) মডিউলের কোনো
+ *   মেনু-সারি নেই, তাই কিছু মেশানো হয়নি — বানানো সারিও নেই।
  */
 final class MergedModulesTest extends TestCase
 {
@@ -41,6 +47,8 @@ final class MergedModulesTest extends TestCase
         'accounts' => ['guests' => ['finance', 'fixed_assets'], 'tabs' => ['হিসাব', 'অর্থ / ট্রেজারি', 'স্থায়ী সম্পদ'], 'label' => 'হিসাব ও অর্থ'],
         'sales' => ['guests' => ['customer', 'credit_control', 'promotion'], 'tabs' => ['বিক্রয়', 'গ্রাহক', 'বাকি নিয়ন্ত্রণ', 'অফার'], 'label' => 'বিক্রয়'],
         'purchase' => ['guests' => ['supplier'], 'tabs' => ['ক্রয়', 'সরবরাহকারী'], 'label' => 'ক্রয়'],
+        // ⭐ মালিক, ২৩ নভেম্বর ২০২৬
+        'system_admin' => ['guests' => ['governance', 'backup'], 'tabs' => ['সিস্টেম প্রশাসন', 'নিয়ন্ত্রণ ও নিরীক্ষা', 'ব্যাকআপ ও পুনরুদ্ধার'], 'label' => 'সিস্টেম ও প্রশাসন'],
     ];
 
     private User $owner;
@@ -108,7 +116,7 @@ final class MergedModulesTest extends TestCase
         }
 
         // ⓘ পুরনো ঠিকানাগুলো আগের মতোই খোলে — বুকমার্ক ভাঙেনি
-        foreach (['finance', 'customer', 'credit_control', 'promotion', 'supplier'] as $code) {
+        foreach (['finance', 'customer', 'credit_control', 'promotion', 'supplier', 'governance', 'backup'] as $code) {
             $this->assertStringEndsWith('/dashboard/'.$code, route('module.dashboard', ['module' => $code]));
             $this->get(route('module.dashboard', ['module' => $code]))->assertOk();
         }
@@ -116,6 +124,8 @@ final class MergedModulesTest extends TestCase
         $this->get(route('finance.budget.index'))->assertOk();
         $this->get(route('customer.index'))->assertOk();
         $this->get(route('supplier.index'))->assertOk();
+        $this->get(route('governance.audit.index'))->assertOk();
+        $this->get(route('backup.index'))->assertOk();
     }
 
     public function test_the_guests_are_no_longer_modules_of_their_own(): void
@@ -137,11 +147,12 @@ final class MergedModulesTest extends TestCase
             $this->owner->forceFill(['ui' => $look])->save();
             $html = (string) $this->actingAs($this->owner->fresh())->get(route('module.dashboard', ['module' => 'accounts']))->assertOk()->getContent();
 
-            foreach (['finance', 'fixed_assets', 'customer', 'credit_control', 'promotion', 'supplier'] as $guest) {
+            foreach (['finance', 'fixed_assets', 'customer', 'credit_control', 'promotion', 'supplier', 'governance', 'backup'] as $guest) {
                 $this->assertStringNotContainsString('data-rail-module="'.$guest.'"', $html, "⛔ {$look}: {$guest}-এর আলাদা টাইল রেলে");
             }
 
             $this->assertStringContainsString('হিসাব ও অর্থ', $html, "⛔ {$look}: এক করা মডিউলের নাম পাতায় নেই");
+            $this->assertStringContainsString('সিস্টেম ও প্রশাসন', $html, "⛔ {$look}: সিস্টেম ও প্রশাসনের নাম পাতায় নেই");
         }
     }
 
@@ -149,7 +160,8 @@ final class MergedModulesTest extends TestCase
     {
         $this->owner->forceFill(['ui' => 'rose'])->save();
 
-        foreach (['finance.budget.index' => 'accounts', 'customer.index' => 'sales', 'supplier.index' => 'purchase'] as $route => $host) {
+        foreach (['finance.budget.index' => 'accounts', 'customer.index' => 'sales', 'supplier.index' => 'purchase',
+            'governance.audit.index' => 'system_admin', 'backup.index' => 'system_admin'] as $route => $host) {
             $xpath = $this->xpath((string) $this->actingAs($this->owner->fresh())->get(route($route))->assertOk()->getContent());
             $panel = $xpath->query('//*[@data-site-map]')->item(0);
             $this->assertNotNull($panel);
@@ -167,6 +179,8 @@ final class MergedModulesTest extends TestCase
             'sales' => [route('module.dashboard', ['module' => 'sales']), route('module.dashboard', ['module' => 'customer']),
                 route('module.dashboard', ['module' => 'credit_control']), route('module.dashboard', ['module' => 'promotion'])],
             'purchase' => [route('module.dashboard', ['module' => 'purchase']), route('module.dashboard', ['module' => 'supplier'])],
+            'system_admin' => [route('module.dashboard', ['module' => 'system_admin']), route('module.dashboard', ['module' => 'governance']),
+                route('module.dashboard', ['module' => 'backup'])],
         ];
 
         foreach ($pages as $host => $urls) {
@@ -284,6 +298,63 @@ final class MergedModulesTest extends TestCase
     }
 
     /**
+     * ⭐ সিস্টেম ও প্রশাসন (মালিক, ২৩ নভেম্বর ২০২৬) — আশ্রয়দাতার বাঁয়ের মেনু ভাগে ভাগে (`panel_sections`), তাই অতিথিরা নিজের নিজের
+     *   ভাগে, আশ্রয়দাতার সাতটা ভাগের পরে: নিয়ন্ত্রণ ও নিরীক্ষা, তারপর ব্যাকআপ। প্রতিটা ভাগের মাথায় নাম, কাঁচা চাবি নয়; দুইটা
+     *   "ড্যাশবোর্ড" সারি একই নামে নয়।
+     */
+    public function test_system_and_administration_keeps_each_guest_in_its_own_part_after_the_hosts(): void
+    {
+        $this->owner->forceFill(['ui' => 'rose'])->save();
+        $entry = $this->entry($this->menu(), 'system_admin');
+
+        $this->assertSame(['home', 'org', 'people', 'modules', 'comms', 'data', 'audit', 'governance', 'backup'], $entry['panel_sections'],
+            '⛔ সিস্টেম ও প্রশাসনের ভাগ: আশ্রয়দাতার সাতটা, তারপর নিরীক্ষা, তারপর ব্যাকআপ');
+
+        foreach (collect($entry['groups'])->flatten(1) as $row) {
+            if ($row['module'] !== 'system_admin') {
+                $this->assertSame($row['module'], $row['section'], "⛔ {$row['key']}: অতিথির সারি নিজের ভাগে নেই");
+            }
+        }
+
+        foreach (['governance', 'backup'] as $guest) {
+            $this->assertNotSame('system_admin::menu.section_'.$guest, __('system_admin::menu.section_'.$guest), "⛔ {$guest}-এর ভাগের নাম অনুবাদে নেই");
+        }
+
+        $dashboards = collect($entry['groups'])->flatten(1)->where('route', 'module.dashboard')->pluck('label')->all();
+        $this->assertSame(count($dashboards), count(array_unique($dashboards)), '⛔ দুইটা ড্যাশবোর্ড সারি একই নামে');
+
+        $html = (string) $this->actingAs($this->owner->fresh())->get(route('governance.audit.index'))->assertOk()->getContent();
+        foreach (['governance', 'backup'] as $guest) {
+            $this->assertStringContainsString('data-panel-section="'.$guest.'"', $html, "⛔ বাঁয়ের মেনুতে {$guest}-এর ভাগের মাথা নেই");
+        }
+    }
+
+    /**
+     * ⭐ বিজ্ঞপ্তি — তিন ভাগ, মালিকের ক্রমে (২৩ নভেম্বর ২০২৬); বার্তা (messenger) মডিউলের কোনো মেনু-সারি নেই, তাই কিছু মেশে না,
+     *   আর কোনো সারি বানানো হয়নি।
+     */
+    public function test_notifications_stand_in_three_parts_and_the_messenger_has_no_row_to_merge(): void
+    {
+        $this->owner->forceFill(['ui' => 'rose'])->save();
+        $messaging = app(ModuleRegistry::class)->get('messaging');
+
+        $this->assertSame([], $messaging?->menu ?? [], '⛔ বার্তার মেনু-সারি এসেছে — এখন সেটা যোগাযোগে মেশানোর কথা');
+        $this->assertNull($messaging?->nav['under'] ?? null);
+        $this->assertSame(['start', 'my_notices', 'party_msg', 'setup_watch'], MenuLook::data()['order']['notification']);
+
+        $entry = $this->entry($this->menu(), 'notification');
+        $rows = MenuLook::arrange('notification', collect($entry['groups'])->flatten(1)->values()->all());
+        $kinds = [];
+        foreach (MenuLook::forRows('notification', $rows) as $look) {
+            $this->assertNotNull($look['kind'], '⛔ বিজ্ঞপ্তির একটা সারি কোনো ভাগে নেই');
+            if ($look['starts']) {
+                $kinds[] = $look['kind'];
+            }
+        }
+        $this->assertSame(['start', 'my_notices', 'party_msg', 'setup_watch'], $kinds, '⛔ তিন ভাগ মালিকের ক্রমে নয়, বা একটা ভাগ দুইবার');
+    }
+
+    /**
      * ⛔ মালিক, ২০ নভেম্বর ২০২৬: "সাপ এবং ডাইনামিকের রূপ 100% মানে 100% অরিজিনাল" — ওই দুই রূপে মডিউলগুলো আগের মতো আলাদা,
      *   নাম আগের, অর্থের ড্যাশবোর্ড-সারির নাম আগের, রঙের তালিকা এক করার আগেরটা, ট্যাব নেই। ফোন তবু এক করা।
      */
@@ -317,6 +388,10 @@ final class MergedModulesTest extends TestCase
         $body = (string) $this->actingAs($this->owner->fresh())->getJson(route('search', ['q' => 'গ্রাহক']))->assertOk()->getContent();
         $this->assertStringContainsString('বিক্রয় › গ্রাহক', json_encode(json_decode($body, true), JSON_UNESCAPED_UNICODE),
             '⛔ "গ্রাহক" লিখে মডিউলটা পাওয়া গেল না — এক করার পর নিজের টাইল নেই, খোঁজার ঘরও ভুলে গেল');
+
+        $body = (string) $this->actingAs($this->owner->fresh())->getJson(route('search', ['q' => 'ব্যাকআপ']))->assertOk()->getContent();
+        $this->assertStringContainsString('সিস্টেম ও প্রশাসন › ব্যাকআপ ও পুনরুদ্ধার', json_encode(json_decode($body, true), JSON_UNESCAPED_UNICODE),
+            '⛔ "ব্যাকআপ" লিখে মডিউলটা পাওয়া গেল না');
     }
 
     /** @return list<array<string, mixed>> */

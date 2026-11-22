@@ -9,4 +9,6 @@ return [
     'error_log' => 'What broke',
     'my_sessions' => 'Where I am logged in',
     'retention' => 'What is kept how long',
+    // ⭐ inside System & Administration — the dashboard row (owner, 23 Nov 2026)
+    'dashboard' => 'Governance dashboard',
 ];
