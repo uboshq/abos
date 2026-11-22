@@ -262,6 +262,11 @@ final class SalesReturnService
             $this->putCostBackInLayers($return);
             $this->postToLedger($return);
 
+            // ⭐ ফেরত মূল বিলের মানুষের খাতায়, নাহলে ফেরতের দিনে দায়িত্বে যিনি (মালিক, ২৩ নভেম্বর ২০২৬; [[SalesResponsibility::forReturn()]])
+            if ($return->sales_person_id === null) {
+                $return->sales_person_id = app(SalesResponsibility::class)->forReturn($return);
+            }
+
             $return->update(['status' => DocumentStatus::CONFIRMED]);
 
             return $return->fresh(['lines']);

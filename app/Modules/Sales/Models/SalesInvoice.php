@@ -94,6 +94,13 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
         'bill_discount',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
+
+        /*
+         * ⭐ বিক্রির কৃতিত্ব যাঁর — দায়িত্বে থাকা বিক্রয়কর্মী, বিল যিনি কেটেছেন তিনি নন
+         * (মালিক, ২৩ নভেম্বর ২০২৬; SAP "sales employee", D365 "sales responsible")।
+         * ⓘ পাকা করার সময় একবার বসে ([[SalesResponsibility]]); `created_by` = "বিল করেছেন", আলাদা থাকে।
+         */
+        'sales_person_id',
     ];
 
     protected function casts(): array
@@ -145,6 +152,12 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** ⭐ দায়িত্বে থাকা বিক্রয়কর্মী — কৃতিত্ব এঁর (মালিক, ২৩ নভেম্বর ২০২৬)। */
+    public function salesPerson(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sales_person_id');
     }
 
     /**

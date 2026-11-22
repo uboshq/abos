@@ -13,6 +13,7 @@ use App\Modules\Sales\Integrity\SalesChecks;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\SalesDefaults;
+use App\Modules\Sales\Services\SalesResponsibility;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CommissionClaim;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -1405,6 +1406,20 @@ return [
             'key' => 'sales.price_tolerance_percent',
             'label' => 'sales::settings.price_tolerance_percent',
             'type' => 'integer',
+            'default' => 0,
+            'group' => 'entry',
+        ],
+        /*
+         * ⭐ দায়িত্বে কেউ না থাকলে বিক্রি কার খাতায় — ডিলারে বা এলাকায় কেউ বাঁধা না থাকলে শেষ ধাপ
+         *   (মালিক, ২৩ নভেম্বর ২০২৬; [[SalesResponsibility]])।
+         * ⓘ বাছাই কেবল এই কোম্পানির চালু ব্যবহারকারী; ফাঁকা (০) = কারো খাতায় নয়।
+         * ⛔ অন্য কোম্পানির কেউ বসে থাকলেও খাটে না — [[SalesResponsibility]] সদস্যপদ মিলিয়ে নেয়।
+         */
+        [
+            'key' => SalesResponsibility::SETTING,
+            'label' => 'sales::settings.default_sales_person',
+            'type' => 'integer',
+            'options' => [SalesResponsibility::class, 'choices'],
             'default' => 0,
             'group' => 'entry',
         ],

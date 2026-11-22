@@ -54,6 +54,8 @@ class SalesReturn extends Model implements Drillable
         'trx_date', 'subtotal', 'tax', 'total', 'cost_of_goods',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
+        // ⭐ দায়িত্বে থাকা বিক্রয়কর্মী — পাকা করার সময় বসে ([[SalesResponsibility::forReturn()]]); `created_by` আলাদা
+        'sales_person_id',
     ];
 
     protected function casts(): array
@@ -101,6 +103,12 @@ class SalesReturn extends Model implements Drillable
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /** ⭐ দায়িত্বে থাকা বিক্রয়কর্মী — মূল বিলের জনই, ফেরতও তাঁর খাতায় (মালিক, ২৩ নভেম্বর ২০২৬)। */
+    public function salesPerson(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'sales_person_id');
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder

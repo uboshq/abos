@@ -47,6 +47,7 @@ return [
     'field_transport' => 'Transport panel (vehicle · driver · fare)',
     'field_shipment' => 'Shipment panel',
     'price_tolerance_percent' => 'How far from the standard price a rate may sit (%)',
+    'default_sales_person' => 'Sales person when nobody is responsible',
     'price_policy' => 'What happens beyond that',
     'price_policy_below' => 'Apply below the standard price too',
     'price_policy_above' => 'Apply above the standard price too',
