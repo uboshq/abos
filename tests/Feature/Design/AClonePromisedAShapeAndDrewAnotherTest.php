@@ -494,7 +494,11 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
             $menu = app(MenuBuilder::class)->forUser($this->user->fresh());
             $covered = collect($menu)->flatMap(fn (array $m) => $m['codes'] ?? [$m['code']])->all();
 
-            foreach (array_keys(app(ModuleRegistry::class)->all()) as $code) {
+            foreach (app(ModuleRegistry::class)->all() as $code => $module) {
+                // ⓘ মেনুর সারি নেই এমন মডিউল (বার্তা, ২১ নভেম্বর ২০২৬ — ঢোকার পথ উপরের বারের চ্যাট চিহ্ন) মেনুতে আসে না, ঘোষণাতেই `'menu' => []`
+                if ($module->menu === []) {
+                    continue;
+                }
                 $this->assertContains($code, $covered, "রূপ {$look}: মডিউল {$code} মেনুর কোথাও নেই — না নিজে, না কারও ভিতরে");
             }
 
