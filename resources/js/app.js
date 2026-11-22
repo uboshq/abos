@@ -9,6 +9,7 @@ import { listKeys } from './list-keys.js'
 import { approvalKeys } from './approval-keys.js'
 import { searchAsYouType } from './search-as-you-type.js'
 import { guardOneSubmit } from './one-submit.js'
+import { watchMatchTotals } from './match-total.js'
 import { bootLiveLogos } from './live-logo.js'
 import { guardConfirmOverview } from './confirm-overview.js'
 import { stockPlacement } from './placement.js'
@@ -186,6 +187,8 @@ guardAllBranchesView()
 // ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ — একবার-জমার পাহারার আগে (capture), মালিক ৪ অক্টোবর ২০২৬ ([[confirm-overview.js]])
 guardConfirmOverview()
 guardOneSubmit()
+// ⭐ এক ব্যাংক-সারি, কয়েকটা কাগজ — টিকের চলতি মোট (মালিক, ২১ নভেম্বর ২০২৬; [[match-total.js]])
+watchMatchTotals()
 
 // ⭐ "ABOS" রূপে টাকার পাতার মাথা টুলবারের এক সারিতে — Alpine-এর আগে, তাই সরানো বোতামগুলো নতুন জায়গাতেই জাগে ([[abos-list-head.js]])
 mergeMoneyHead()

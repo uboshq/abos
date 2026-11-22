@@ -338,6 +338,9 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::get('/bank', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'index'])->name('match.index');
         Route::post('/bank/statement', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'load'])->name('match.load');
         Route::post('/bank/line', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'line'])->name('match.line');
+        // ⭐ এক ব্যাংক-সারি, কয়েকটা খবর (মালিক, ২১ নভেম্বর ২০২৬; [[DepositMatchController::matchLine()]])
+        Route::post('/bank/{line}/match', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'matchLine'])
+            ->whereNumber('line')->name('match.many');
         Route::post('/{claim}/match', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'match'])
             ->whereNumber('claim')->name('match.store');
         Route::post('/{claim}/unmatch', [\App\Modules\Sales\Http\Controllers\DepositMatchController::class, 'unmatch'])

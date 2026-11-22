@@ -357,8 +357,19 @@ final class DepositClaimService
                     throw ValidationException::withMessages(['account_id' => __('sales::deposit.other_bank_account')]);
                 }
                 $accountId = (int) $line->bank_account_id;
-                $overrides['amount'] = (string) $line->credit;
                 $overrides['trx_date'] = $line->trx_date->toDateString();
+
+                /*
+                 * ⭐ এক ব্যাংক-সারি কয়েকটা খবরের হলে (মালিক, ২১ নভেম্বর ২০২৬; ৳১,০০,০০০ = দুই ডিলারের ৳৫০,০০০ করে) প্রতিটা খবরের
+                 * ভাগ তার নিজের অঙ্ক — দলের মোট সারির অঙ্কের হুবহু ([[DepositMatchService::matchMany()]]), তাই চার্জ নেই।
+                 * ⓘ একটা খবর হলে আগের মতো: অঙ্ক ব্যাংকে যা এসেছে, চার্জ অফিস লেখেন।
+                 */
+                if (DepositMatchService::reportsOnLine((int) $line->id) > 1) {
+                    $overrides['amount'] = (string) $claim->amount;
+                    $overrides['bank_charge'] = '0';
+                } else {
+                    $overrides['amount'] = (string) $line->credit;
+                }
             }
 
             if ($accountId === null) {
@@ -656,6 +667,14 @@ final class DepositClaimService
 
             // ⭐ ফেরত খবর ব্যাংকের সারি ছেড়ে দেয়, আর সইয়ের অপেক্ষার খসড়া আদায় বাতিল (ধাপ গ, ১৮ নভেম্বর ২০২৬)
             app(DepositMatchService::class)->dropTheWaitingDraft($claim, $reason);
+
+            /*
+             * ⭐ সারিটা কয়েকটা খবরের হলে দলের বাকি খোলা খবরও ছাড়া পায় (মালিক, ২১ নভেম্বর ২০২৬) — একজন ফেরত গেলে বাকিদের মোট
+             * আর সারির অঙ্ক মেলে না। ⓘ খাতায় ওঠা খবর থাকে; সারিটা আবার মেলানো যায়, মোট হুবহু হলে।
+             */
+            if ($claim->statement_line_id !== null && DepositMatchService::reportsOnLine((int) $claim->statement_line_id) > 1) {
+                app(DepositMatchService::class)->releaseTheLine((int) $claim->statement_line_id, $reason, except: (int) $claim->id);
+            }
 
             $claim->update([
                 'statement_line_id' => null,

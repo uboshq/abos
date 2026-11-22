@@ -107,6 +107,47 @@
                 : '',
         ],
     ];
+
+    /*
+        ⭐ এক ব্যাংক-সারি, কয়েকটা কাগজ — মালিক, ২১ নভেম্বর ২০২৬ (৳১,০০,০০০ = RCV-0537 + RCV-0538)।
+        ⓘ খোলা মিলকরণে, মেলানোর অনুমতিতে: না-মেলা সারিতে কাগজে টিক আর চলতি মোট; নিচে এই মাসের মেলা সারি, মিল খোলাসহ।
+    */
+    $canMatch = $recon->isDraft() && auth()->user()?->can('accounts.reconciliation.manage');
+    if ($canMatch) {
+        $bankColumns[] = [
+            'key' => 'act',
+            'label' => __('core.table.action_menu'),
+            'width' => '22rem',
+            'render' => fn ($b) => view('accounts::reconciliation.partials.match-papers',
+                ['line' => $b, 'recon' => $recon, 'papers' => ($candidates ?? [])[$b->id] ?? null]),
+        ];
+    }
+
+    $matchedColumns = [
+        $bankColumns[0],
+        $bankColumns[2],
+        [
+            'key' => 'amount',
+            'label' => __('accounts::recon.line_amount'),
+            'numeric' => true,
+            'width' => '10rem',
+            'render' => fn ($b) => view('accounts::reconciliation.partials.money',
+                ['value' => bccomp((string) $b->debit, '0', 4) > 0 ? $b->debit : $b->credit]),
+        ],
+        [
+            'key' => 'papers',
+            'label' => __('accounts::recon.matched_with'),
+            'render' => fn ($b) => view('accounts::reconciliation.partials.matched-papers', ['line' => $b]),
+        ],
+    ];
+    if ($canMatch) {
+        $matchedColumns[] = [
+            'key' => 'act',
+            'label' => __('core.table.action_menu'),
+            'width' => '8rem',
+            'render' => fn ($b) => view('accounts::reconciliation.partials.unmatch-papers', ['line' => $b, 'recon' => $recon]),
+        ];
+    }
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -218,6 +259,18 @@
             </header>
 
             <x-ui.table :rows="$fromBank" :columns="$bankColumns" :empty="'—'" />
+        </section>
+    @endif
+
+    @if (($matchedLines ?? collect())->isNotEmpty())
+        <section data-boxed data-matched-lines
+                 class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
+                        bg-(--color-surface-card)">
+            <header class="border-b border-(--color-border) px-4 py-2">
+                <h2 class="text-sm font-semibold">{{ __('accounts::recon.matched_in_books') }}</h2>
+            </header>
+
+            <x-ui.table :rows="$matchedLines" :columns="$matchedColumns" :empty="'—'" />
         </section>
     @endif
 

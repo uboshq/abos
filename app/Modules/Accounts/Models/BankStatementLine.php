@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * ব্যাংকের স্টেটমেন্টের একটা সারি — ব্যাংকের বক্তব্য, আমাদের খতিয়ান নয়।
@@ -70,6 +71,15 @@ class BankStatementLine extends Model
     public function matcher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'matched_by');
+    }
+
+    /**
+     * ⭐ খাতার যে সারিগুলোর সাথে মিলেছে — এক ব্যাংক-সারি, কয়েকটা কাগজ (মালিক, ২১ নভেম্বর ২০২৬; [[BankStatementMatch]])।
+     * ⓘ `matched_line_id` থাকে "খাতায় মিলেছে" চিহ্ন হয়ে (দলের প্রথম সারি) — পুরনো ছাঁকনি আর বোর্ড বদলায় না।
+     */
+    public function matches(): HasMany
+    {
+        return $this->hasMany(BankStatementMatch::class, 'statement_line_id');
     }
 
     /**

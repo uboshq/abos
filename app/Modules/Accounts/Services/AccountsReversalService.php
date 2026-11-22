@@ -7,7 +7,6 @@ namespace App\Modules\Accounts\Services;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\OpenPeriod;
 use App\Models\User;
-use App\Modules\Accounts\Models\BankStatementLine;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Models\Reversal;
 use App\Modules\Accounts\Models\Voucher;
@@ -139,7 +138,7 @@ final class AccountsReversalService
         $lineIds = $voucher->lines()->pluck('id');
 
         if ($voucher->lines()->whereNotNull('reconciliation_id')->exists()
-            || BankStatementLine::query()->whereIn('matched_line_id', $lineIds)->exists()) {
+            || \App\Modules\Accounts\Models\BankStatementMatch::holdsAnyOf($lineIds)) {
             throw ValidationException::withMessages(['cancel_reason' => __('accounts::reversal.reconciled', ['no' => $voucher->document_no])]);
         }
     }

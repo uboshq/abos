@@ -31,7 +31,7 @@ use App\Models\UserDataScope;
 use App\Modules\Accounts\Events\VoucherCancelled;
 use App\Modules\Accounts\Events\VoucherPosted;
 use App\Modules\Accounts\Models\Account;
-use App\Modules\Accounts\Models\BankStatementLine;
+use App\Modules\Accounts\Models\BankStatementMatch;
 use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\InterCompanyTransfer;
 use App\Modules\Accounts\Models\ComplianceObligation;
@@ -647,7 +647,7 @@ final class VoucherService
         $lineIds = $voucher->lines->pluck('id');
 
         if ($voucher->lines->whereNotNull('reconciliation_id')->isNotEmpty()
-            || BankStatementLine::query()->withoutGlobalScopes()->whereIn('matched_line_id', $lineIds)->exists()) {
+            || BankStatementMatch::holdsAnyOf($lineIds)) {
             throw ValidationException::withMessages([
                 'cancel_reason' => __('accounts::reversal.reconciled', ['no' => $voucher->document_no]),
             ]);
@@ -1002,7 +1002,7 @@ final class VoucherService
         $voucher->loadMissing('lines');
 
         if ($voucher->lines->whereNotNull('reconciliation_id')->isNotEmpty()
-            || BankStatementLine::query()->withoutGlobalScopes()->whereIn('matched_line_id', $voucher->lines->pluck('id'))->exists()) {
+            || BankStatementMatch::holdsAnyOf($voucher->lines->pluck('id'))) {
             return __('accounts::revision.reconciled', ['no' => $voucher->document_no]);
         }
 

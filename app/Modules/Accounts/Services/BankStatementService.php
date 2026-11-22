@@ -6,10 +6,14 @@ namespace App\Modules\Accounts\Services;
 
 use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
+use App\Modules\Accounts\Models\BankReconciliation;
 use App\Modules\Accounts\Models\BankStatementLine;
+use App\Modules\Accounts\Models\BankStatementMatch;
 use App\Modules\Accounts\Models\VoucherLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * ব্যাংকের স্টেটমেন্টের সারিগুলো — পড়া, বসানো, আর মেলানো।
@@ -199,22 +203,9 @@ final class BankStatementService
              * ব্যাংক যখন টাকা **নেয়** (ব্যাংকের ডেবিট), আমাদের খাতায়
              * ব্যাংক খাতটা **ক্রেডিট** হয় — টাকা বেরিয়ে গেছে।
              */
-            $candidates = VoucherLine::query()
-                ->where('account_id', $account->id)
-                ->whereNull('reconciliation_id')
-                /*
-                 * ⛔ Accounts-Finance অডিট ম৭, ৪ অক্টোবর ২০২৬ — দুইটা শর্ত যা ছিল না:
-                 *  · বইয়ের যে সারি আগেই আরেকটা ব্যাংক সারির সাথে মেলানো, সেটা আর নয়। ⚠️ আগে একই দিনে একই অঙ্কের দুই
-                 *    ব্যাংক সারি পরপর দুই চালানোয় (বা একই চালানোয়) বইয়ের একটা সারিতেই বসত — ব্যাংক বলত দুইবার, বই একবার।
-                 *  · কেবল পাকা ভাউচার। ⚠️ বাতিল বা খসড়া ভাউচারের সারিও মিলত — যে টাকা খাতায় নেই তার সাথে ব্যাংকের টাকা "মিলে গেল"।
-                 */
-                ->whereNotIn('id', BankStatementLine::query()->whereNotNull('matched_line_id')->select('matched_line_id'))
-                ->whereHas('voucher', fn ($q) => $q
-                    ->posted()
-                    ->whereBetween('trx_date', [
-                        Carbon::parse($line->trx_date)->subDays(7)->toDateString(),
-                        Carbon::parse($line->trx_date)->addDays(7)->toDateString(),
-                    ]))
+            $free = $this->freeBookLines($line);
+
+            $candidates = (clone $free)
                 ->when($line->bankTookMoney(),
                     fn ($q) => $q->where('credit', $line->debit)->where('debit', 0),
                     fn ($q) => $q->where('debit', $line->credit)->where('credit', 0));
@@ -227,21 +218,232 @@ final class BankStatementService
 
             $ours = $byNumber->count() === 1 ? $byNumber : $candidates->limit(2)->get();
 
+            /*
+             * ⭐ এক ব্যাংক-সারি, কয়েকটা রসিদ — মালিক, ২১ নভেম্বর ২০২৬ (৳১,০০,০০০ = RCV-0537 + RCV-0538, নম্বর 175300556)।
+             * ⓘ একটা জোড়া না পেলে: ব্যাংক-সারির রেফারেন্স যে পাকা কাগজগুলোর লেনদেন নম্বরের হুবহু, একই দিকের, সাত দিনের ভিতরে —
+             * দুই বা বেশি, আর তাদের মোট সারির অঙ্কের হুবহু হলে, পুরো দলটাই জোড়া। ⛔ মোট না মিললে কিছুই নয় (মানুষের সামনে)।
+             */
+            if ($ours->count() !== 1 && $reference !== '') {
+                $group = $this->groupByReference($line, $free, $reference);
+
+                if ($group !== null) {
+                    $this->writeMatch($line, $group);
+                    $matched++;
+                }
+
+                continue;
+            }
+
             // ⛔ শূন্য বা একাধিক — দুইটাই "জানি না", আর জানি না মানে ছোঁব না
             if ($ours->count() !== 1) {
                 continue;
             }
 
-            $line->forceFill([
-                'matched_line_id' => $ours->first()->id,
-                'matched_at' => Carbon::now(),
-                'matched_by' => auth()->id(),
-            ])->save();
+            $this->writeMatch($line, $ours);
 
             $matched++;
         }
 
         return $matched;
+    }
+
+    /**
+     * ⭐ হাতে মেলানো — এক ব্যাংক-সারি, এক বা কয়েকটা খাতার সারি (মালিক, ২১ নভেম্বর ২০২৬; one-to-many reconciliation)।
+     *
+     *   · ⛔ মোট = ব্যাংক-সারির অঙ্ক, হুবহু — নিজে থেকে মেলানোর একই নিয়ম (সেখানে কোনো ছাড় নেই, তাই এখানেও নেই)।
+     *   · ⛔ প্রতিটা খাতার সারি একবারই (টেবিলের unique শেষ পাহারা); ব্যাংক-সারি আগে মেলানো থাকলে আগে মিল খুলুন।
+     *   · ⛔ কেবল পাকা কাগজ, একই ব্যাংক খাত, একই দিক (ব্যাংকে জমা = খাতায় ডেবিট)।
+     *
+     * @param  list<int>  $voucherLineIds
+     */
+    public function matchBooks(BankStatementLine $line, array $voucherLineIds): BankStatementLine
+    {
+        $ids = array_values(array_unique(array_map('intval', $voucherLineIds)));
+
+        if ($ids === []) {
+            throw ValidationException::withMessages(['lines' => __('accounts::recon.pick_a_paper')]);
+        }
+
+        return DB::transaction(function () use ($line, $ids) {
+            $row = BankStatementLine::query()->whereKey($line->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($row->matched_line_id !== null || $row->matches()->exists()) {
+                throw ValidationException::withMessages(['line' => __('accounts::recon.line_already_matched')]);
+            }
+
+            $ours = VoucherLine::query()->whereKey($ids)->lockForUpdate()->with('voucher')->get();
+
+            if ($ours->count() !== count($ids)) {
+                throw ValidationException::withMessages(['lines' => __('accounts::recon.paper_not_found')]);
+            }
+
+            foreach ($ours as $ourLine) {
+                $voucher = $ourLine->voucher;
+
+                if ($voucher === null || ! $voucher->isPosted() || $voucher->isCancelled()) {
+                    throw ValidationException::withMessages(['lines' => __('accounts::recon.paper_not_final', ['no' => (string) $voucher?->document_no])]);
+                }
+                if ((int) $ourLine->account_id !== (int) $row->bank_account_id) {
+                    throw ValidationException::withMessages(['lines' => __('accounts::recon.paper_other_bank', ['no' => $voucher->document_no])]);
+                }
+
+                $rightWay = $row->bankTookMoney()
+                    ? bccomp((string) $ourLine->credit, '0', 4) > 0 && bccomp((string) $ourLine->debit, '0', 4) === 0
+                    : bccomp((string) $ourLine->debit, '0', 4) > 0 && bccomp((string) $ourLine->credit, '0', 4) === 0;
+                if (! $rightWay) {
+                    throw ValidationException::withMessages(['lines' => __('accounts::recon.paper_other_way', ['no' => $voucher->document_no])]);
+                }
+            }
+
+            if (BankStatementMatch::holdsAnyOf($ids)) {
+                throw ValidationException::withMessages(['lines' => __('accounts::recon.paper_already_matched')]);
+            }
+
+            $total = $ours->reduce(fn (string $sum, VoucherLine $l) => bcadd($sum, self::sizeOf($l), 4), '0');
+            $want = $row->bankTookMoney() ? (string) $row->debit : (string) $row->credit;
+
+            if (bccomp($total, $want, 4) !== 0) {
+                throw ValidationException::withMessages(['lines' => __('accounts::recon.total_must_equal', [
+                    'total' => \App\Core\Support\Money::format($total),
+                    'line' => \App\Core\Support\Money::format($want),
+                ])]);
+            }
+
+            $this->writeMatch($row, $ours);
+
+            return $line->setRawAttributes($row->refresh()->getAttributes(), true);
+        });
+    }
+
+    /**
+     * ⭐ মিল খোলা — দলের সবগুলো একসাথে ছাড়া পায় (এক-এক মিলও)। ⛔ নিশ্চিত মিলকরণে টিক পড়া সারি থাকলে নয় — আগে সেটা খুলুন।
+     */
+    public function unmatchBooks(BankStatementLine $line): BankStatementLine
+    {
+        return DB::transaction(function () use ($line) {
+            $row = BankStatementLine::query()->whereKey($line->getKey())->lockForUpdate()->firstOrFail();
+
+            $ids = $row->matches()->pluck('voucher_line_id')->push($row->matched_line_id)->filter()->unique()->values();
+
+            if ($ids->isEmpty()) {
+                throw ValidationException::withMessages(['line' => __('accounts::recon.line_not_matched')]);
+            }
+
+            $confirmed = VoucherLine::query()->whereKey($ids->all())->whereNotNull('reconciliation_id')
+                ->whereHas('reconciliation', fn ($q) => $q->where('status', BankReconciliation::CONFIRMED))
+                ->exists();
+            if ($confirmed) {
+                throw ValidationException::withMessages(['line' => __('accounts::recon.line_in_a_confirmed_recon')]);
+            }
+
+            $row->matches()->delete();
+            $row->forceFill(['matched_line_id' => null, 'matched_at' => null, 'matched_by' => null])->save();
+
+            return $line->setRawAttributes($row->refresh()->getAttributes(), true);
+        });
+    }
+
+    /**
+     * ⓘ হাতে মেলানোর প্রার্থী — এই খাতের, একই দিকের, ব্যাংক-সারির ±সাত দিনের, এখনো কোনো ব্যাংক-সারিতে না-বসা পাকা কাগজের সারি।
+     *
+     * @return Collection<int, VoucherLine>
+     */
+    public function candidatesFor(BankStatementLine $line): Collection
+    {
+        return $this->freeBookLines($line)
+            ->when($line->bankTookMoney(),
+                fn ($q) => $q->where('credit', '>', 0)->where('debit', 0)->where('credit', '<=', $line->debit),
+                fn ($q) => $q->where('debit', '>', 0)->where('credit', 0)->where('debit', '<=', $line->credit))
+            ->with('voucher')
+            ->orderBy('id')
+            ->limit(50)
+            ->get();
+    }
+
+    /**
+     * ⓘ খাতার যে সারি এই ব্যাংক-সারির জন্য খোলা — একই খাত, টিকহীন, কোনো ব্যাংক-সারিতে বসেনি, পাকা কাগজ, ±সাত দিন।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<VoucherLine>
+     */
+    private function freeBookLines(BankStatementLine $line): \Illuminate\Database\Eloquent\Builder
+    {
+        return VoucherLine::query()
+            ->where('account_id', $line->bank_account_id)
+            ->whereNull('reconciliation_id')
+            /*
+             * ⛔ Accounts-Finance অডিট ম৭, ৪ অক্টোবর ২০২৬ — দুইটা শর্ত যা ছিল না:
+             *  · বইয়ের যে সারি আগেই আরেকটা ব্যাংক সারির সাথে মেলানো, সেটা আর নয়। ⚠️ আগে একই দিনে একই অঙ্কের দুই
+             *    ব্যাংক সারি পরপর দুই চালানোয় (বা একই চালানোয়) বইয়ের একটা সারিতেই বসত — ব্যাংক বলত দুইবার, বই একবার।
+             *  · কেবল পাকা ভাউচার। ⚠️ বাতিল বা খসড়া ভাউচারের সারিও মিলত — যে টাকা খাতায় নেই তার সাথে ব্যাংকের টাকা "মিলে গেল"।
+             * ⓘ ২১ নভেম্বর ২০২৬ থেকে মিলের টেবিলও ([[BankStatementMatch]]) — এক ব্যাংক-সারির দলের সারিগুলোও আর নয়।
+             */
+            ->whereNotIn('id', BankStatementLine::query()->whereNotNull('matched_line_id')->select('matched_line_id'))
+            ->whereNotIn('id', BankStatementMatch::query()->select('voucher_line_id'))
+            ->whereHas('voucher', fn ($q) => $q
+                ->posted()
+                ->whereBetween('trx_date', [
+                    Carbon::parse($line->trx_date)->subDays(7)->toDateString(),
+                    Carbon::parse($line->trx_date)->addDays(7)->toDateString(),
+                ]));
+    }
+
+    /**
+     * ⓘ রেফারেন্সের দল — একই লেনদেন নম্বরের দুই বা বেশি সারি, একই দিকের, মোট = ব্যাংক-সারির অঙ্ক; না হলে null।
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<VoucherLine>  $free
+     * @return Collection<int, VoucherLine>|null
+     */
+    private function groupByReference(BankStatementLine $line, \Illuminate\Database\Eloquent\Builder $free, string $reference): ?Collection
+    {
+        $group = (clone $free)
+            ->whereHas('voucher', fn ($q) => $q->where('instrument_no', $reference))
+            ->when($line->bankTookMoney(),
+                fn ($q) => $q->where('credit', '>', 0)->where('debit', 0),
+                fn ($q) => $q->where('debit', '>', 0)->where('credit', 0))
+            ->orderBy('id')
+            ->limit(50)
+            ->get();
+
+        if ($group->count() < 2) {
+            return null;
+        }
+
+        $total = $group->reduce(fn (string $sum, VoucherLine $l) => bcadd($sum, self::sizeOf($l), 4), '0');
+        $want = $line->bankTookMoney() ? (string) $line->debit : (string) $line->credit;
+
+        return bccomp($total, $want, 4) === 0 ? $group : null;
+    }
+
+    /**
+     * ⓘ মিল লেখা — প্রতিটা খাতার সারি মিলের টেবিলে; ব্যাংক-সারির চিহ্নে দলের প্রথমটা।
+     *
+     * @param  Collection<int, VoucherLine>  $ours
+     */
+    private function writeMatch(BankStatementLine $line, Collection $ours): void
+    {
+        $now = Carbon::now();
+
+        foreach ($ours as $ourLine) {
+            BankStatementMatch::query()->create([
+                'company_id' => $line->company_id,
+                'statement_line_id' => $line->id,
+                'voucher_line_id' => $ourLine->id,
+                'amount' => self::sizeOf($ourLine),
+                'matched_by' => auth()->id(),
+                'matched_at' => $now,
+            ]);
+        }
+
+        $line->forceFill([
+            'matched_line_id' => $ours->first()->id,
+            'matched_at' => $now,
+            'matched_by' => auth()->id(),
+        ])->save();
+    }
+
+    private static function sizeOf(VoucherLine $line): string
+    {
+        return bccomp((string) $line->debit, '0', 4) > 0 ? (string) $line->debit : (string) $line->credit;
     }
 
     /**

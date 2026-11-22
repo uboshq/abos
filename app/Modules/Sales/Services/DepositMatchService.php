@@ -30,7 +30,8 @@ use Illuminate\Validation\ValidationException;
  *     (N = সেটিং [[DepositClaim::MATCH_DAYS]])। রেফারেন্স দুই দিকেই থাকলে আগে রেফারেন্স। ⛔ একাধিক প্রার্থী — দুই দিকের
  *     যেকোনো দিকে — হলে কোনো প্রস্তাব নয়; ভুল জোড়া কেউ কোনোদিন খুঁজে পেত না, তার চেয়ে মানুষটাকে দুইটাই দেখানো।
  *   · প্রস্তাব নিজে কিছু লেখে না — অফিস এক চাপে মেলান ([[match()]]); হাতেও মেলানো যায় (অঙ্ক আলাদা হলে — ব্যাংক চার্জ)।
- *   · ⛔ একটা ব্যাংক-সারি একটাই খবরে, আর একটা খবর একটাই সারিতে — সেবা তালা দিয়ে দেখে, আর টেবিলের unique শেষ পাহারা।
+ *   · ⛔ একটা খবর একটাই সারিতে। ⭐ একটা ব্যাংক-সারি কয়েকটা খবরে (মালিক, ২১ নভেম্বর ২০২৬; [[matchMany()]]) — তখন মোট = সারির
+ *     অঙ্ক, হুবহু; খালি সারিতে একটা খবর আগের মতো (অঙ্ক আলাদা হলেও, ব্যাংক চার্জ)। সেবা তালা দিয়ে দেখে।
  *   · ⛔ যে ব্যাংক-সারি মিলকরণে আগেই খাতার কোনো সারির সাথে মিলেছে (টাকা খাতায় আগেই উঠেছে), সেটা খবরের জন্য নয় — নইলে একই
  *     টাকা দুইবার খাতায় উঠত।
  *   · মিল খোলা ([[unmatch()]]) কারণসহ; অনুমোদনের অপেক্ষার খসড়া আদায় থাকলে সেটা বাতিল, অপেক্ষার অনুরোধ তুলে নেওয়া।
@@ -199,6 +200,59 @@ final class DepositMatchService
     }
 
     /**
+     * ⭐ দলের প্রস্তাব — এক ব্যাংক-সারি, কয়েকটা খবর (মালিক, ২১ নভেম্বর ২০২৬; 175300556 = দুই ডিলারের ৳৫০,০০০ করে)।
+     *
+     * ⓘ সারির রেফারেন্স হুবহু যে খোলা খবরগুলোর রেফারেন্স (লেনদেন নম্বর) — একই খাত (বা খাতহীন খবর), তারিখ ±N দিন — দুই বা বেশি,
+     * আর তাদের মোট সারির অঙ্কের হুবহু হলে পুরো দলটাই প্রস্তাব। ⛔ মোট না মিললে কিছুই নয়; একটা খবর একটাই দলে।
+     * ⓘ প্রস্তাব নিজে কিছু লেখে না — অফিস এক চাপে দলটা মেলান ([[matchMany()]])।
+     *
+     * @return list<array{line: BankStatementLine, claims: \Illuminate\Support\Collection<int, DepositClaim>, total: string}>
+     */
+    public function groupSuggestions(): array
+    {
+        $days = $this->windowDays();
+        $claims = $this->waitingClaims()->whereNotNull('reference')->where('reference', '!=', '')
+            ->with(['customer.location.parent', 'customer.branch', 'bankAccount'])->orderBy('claimed_on')->orderBy('id')->get();
+
+        if ($claims->count() < 2) {
+            return [];
+        }
+
+        $lines = $this->freeLines()->whereNotNull('reference')->where('reference', '!=', '')
+            ->with('bankAccount')->orderBy('trx_date')->orderBy('id')->limit(500)->get();
+
+        $taken = [];
+        $groups = [];
+
+        foreach ($lines as $line) {
+            $reference = self::plain($line->reference);
+
+            $members = $claims->filter(fn (DepositClaim $claim) => ! isset($taken[(int) $claim->id])
+                && self::plain($claim->reference) === $reference
+                && ($claim->bank_account_id === null || (int) $claim->bank_account_id === (int) $line->bank_account_id)
+                && abs(Carbon::parse($line->trx_date)->startOfDay()->diffInDays(Carbon::parse($claim->claimed_on)->startOfDay(), false)) <= $days)
+                ->values();
+
+            if ($members->count() < 2) {
+                continue;
+            }
+
+            $total = $members->reduce(fn (string $s, DepositClaim $c) => bcadd($s, (string) $c->amount, 4), '0');
+            if (bccomp($total, (string) $line->credit, 4) !== 0) {
+                continue;
+            }
+
+            foreach ($members as $member) {
+                $taken[(int) $member->id] = true;
+            }
+
+            $groups[] = ['line' => $line, 'claims' => $members, 'total' => $total];
+        }
+
+        return $groups;
+    }
+
+    /**
      * ⓘ প্রস্তাবের তিন শর্ত — হুবহু অঙ্ক, একই খাত, তারিখ ±N দিন। হাতে মেলানো এগুলো চায় না।
      */
     public static function fits(DepositClaim $claim, BankStatementLine $line, int $days): bool
@@ -211,20 +265,37 @@ final class DepositMatchService
     }
 
     /**
-     * ⭐ মেলানো — খবরটা এই ব্যাংক-সারির সাথে। এক সারি এক খবর, এক খবর এক সারি।
+     * ⭐ মেলানো — একটা খবর এই ব্যাংক-সারির সাথে ([[matchMany()]]-এর এক খবরের রূপ)।
+     * ⓘ খালি সারিতে এক খবর — আগের নিয়ম: অঙ্ক আলাদা হলেও চলে (ব্যাংক চার্জ, "অনুমোদন দিন"-এ লেখা হয়)।
+     * ⓘ সারিতে আগে থেকে খবর থাকলে — দলের নিয়ম: সব মিলিয়ে মোট = সারির অঙ্ক, হুবহু।
      */
     public function match(DepositClaim $claim, BankStatementLine $line): DepositClaim
     {
-        return DB::transaction(function () use ($claim, $line) {
-            $fresh = DepositClaim::query()->whereKey($claim->getKey())->lockForUpdate()->firstOrFail();
+        $this->matchMany($line, [$claim]);
 
-            if (! $fresh->isOpen()) {
-                throw ValidationException::withMessages(['claim' => __('sales::portal.already_decided')]);
-            }
-            if ($fresh->statement_line_id !== null) {
-                throw ValidationException::withMessages(['claim' => __('sales::deposit.claim_already_matched')]);
-            }
+        return $claim->setRawAttributes(DepositClaim::query()->withoutGlobalScopes()->findOrFail($claim->getKey())->getAttributes(), true);
+    }
 
+    /**
+     * ⭐ এক ব্যাংক-সারি, কয়েকটা জমার খবর — মালিক, ২১ নভেম্বর ২০২৬ (৳১,০০,০০০ = দুই ডিলারের ৳৫০,০০০ করে; one-to-many)।
+     *
+     *   · ⛔ মোট = সারির অঙ্ক, হুবহু — সারিতে আগে থেকে বসা খবর (খোলা বা খাতায়) + নতুন টিক। একমাত্র ছাড়: খালি সারিতে একটাই খবর
+     *     (আগের এক-এক নিয়ম, ব্যাংক চার্জের জন্য)।
+     *   · ⛔ প্রতিটা খবর একবারই মেলে (খবরের নিজের একটাই ঘর), আর কেবল খোলা খবর — ফেরত বা খাতায় ওঠা নয়।
+     *   · ⛔ খাতায় আগে মেলা সারি (মিলকরণ) খবরের জন্য নয়; খবরের খাত আর সারির খাত এক।
+     *
+     * @param  iterable<DepositClaim>  $claims
+     * @return list<DepositClaim>
+     */
+    public function matchMany(BankStatementLine $line, iterable $claims): array
+    {
+        $ids = collect($claims)->map(fn (DepositClaim $c) => (int) $c->getKey())->unique()->values();
+
+        if ($ids->isEmpty()) {
+            throw ValidationException::withMessages(['claims' => __('sales::deposit.pick_a_report')]);
+        }
+
+        return DB::transaction(function () use ($line, $ids) {
             $row = BankStatementLine::query()->whereKey($line->getKey())->lockForUpdate()->first();
             if ($row === null || bccomp((string) $row->credit, '0', 4) <= 0 || bccomp((string) $row->debit, '0', 4) !== 0) {
                 throw ValidationException::withMessages(['line' => __('sales::deposit.line_not_a_deposit')]);
@@ -233,31 +304,58 @@ final class DepositMatchService
                 throw ValidationException::withMessages(['line' => __('sales::deposit.line_in_the_books')]);
             }
 
-            $taken = DepositClaim::query()->withoutGlobalScopes()->where('statement_line_id', $row->id)->whereNull('deleted_at')->exists();
-            if ($taken) {
-                throw ValidationException::withMessages(['line' => __('sales::deposit.line_already_used')]);
+            $fresh = DepositClaim::query()->whereKey($ids->all())->orderBy('id')->lockForUpdate()->get();
+            if ($fresh->count() !== $ids->count()) {
+                throw ValidationException::withMessages(['claims' => __('sales::deposit.report_not_found')]);
             }
 
-            if ($fresh->bank_account_id !== null && (int) $fresh->bank_account_id !== (int) $row->bank_account_id) {
-                throw ValidationException::withMessages(['line' => __('sales::deposit.other_bank_account')]);
+            foreach ($fresh as $claim) {
+                if (! $claim->isOpen()) {
+                    throw ValidationException::withMessages(['claim' => __('sales::portal.already_decided')]);
+                }
+                if ($claim->statement_line_id !== null) {
+                    throw ValidationException::withMessages(['claim' => __('sales::deposit.claim_already_matched')]);
+                }
+                if ($claim->bank_account_id !== null && (int) $claim->bank_account_id !== (int) $row->bank_account_id) {
+                    throw ValidationException::withMessages(['line' => __('sales::deposit.other_bank_account')]);
+                }
             }
 
-            $fresh->update([
-                'statement_line_id' => $row->id,
-                // ⓘ খবরে খাত না থাকলে (বিকাশ, নগদ) ব্যাংক যে খাতে টাকা পেল সেটাই
-                'bank_account_id' => $row->bank_account_id,
-                'matched_by' => Actor::userId(),
-                'matched_at' => now(),
-                // ⓘ মেলানোই যাচাই — দোকানি আর SR দেখেন কেউ ধরেছেন
-                'status' => $fresh->status === DepositClaim::PENDING ? DepositClaim::VERIFYING : $fresh->status,
-            ]);
+            // ⓘ সারিতে আগে বসা খবর — খোলা বা খাতায়; ফেরত খবর সারি ছেড়ে দেয় ([[DepositClaimService::reject()]]), তাই এখানে আসে না
+            $already = DepositClaim::query()->withoutGlobalScopes()->where('statement_line_id', $row->id)
+                ->whereNull('deleted_at')->lockForUpdate()->get(['id', 'amount']);
 
-            return $claim->setRawAttributes($fresh->refresh()->getAttributes(), true);
+            if (! ($already->isEmpty() && $fresh->count() === 1)) {
+                $total = $already->concat($fresh)->reduce(fn (string $s, $c) => bcadd($s, (string) $c->amount, 4), '0');
+
+                if (bccomp($total, (string) $row->credit, 4) !== 0) {
+                    throw ValidationException::withMessages(['line' => $already->isEmpty()
+                        ? __('sales::deposit.total_must_equal', ['total' => Money::format($total), 'line' => Money::format((string) $row->credit)])
+                        : __('sales::deposit.line_already_used')]);
+                }
+            }
+
+            $now = now();
+            foreach ($fresh as $claim) {
+                $claim->update([
+                    'statement_line_id' => $row->id,
+                    // ⓘ খবরে খাত না থাকলে (বিকাশ, নগদ) ব্যাংক যে খাতে টাকা পেল সেটাই
+                    'bank_account_id' => $row->bank_account_id,
+                    'matched_by' => Actor::userId(),
+                    'matched_at' => $now,
+                    // ⓘ মেলানোই যাচাই — দোকানি আর SR দেখেন কেউ ধরেছেন
+                    'status' => $claim->status === DepositClaim::PENDING ? DepositClaim::VERIFYING : $claim->status,
+                ]);
+            }
+
+            return $fresh->all();
         });
     }
 
     /**
-     * ⭐ মিল খোলা — কারণসহ। অনুমোদনের অপেক্ষার খসড়া আদায় থাকলে সেটা বাতিল, অপেক্ষার অনুরোধ তুলে নেওয়া।
+     * ⭐ মিল খোলা — কারণসহ। ⓘ সারিটা কয়েকটা খবরের হলে দলের সব খোলা খবর একসাথে ছাড়া পায় (মালিক, ২১ নভেম্বর ২০২৬) —
+     * নইলে বাকিদের মোট আর সারির অঙ্ক মিলত না। ⛔ খাতায় ওঠা খবর ছোঁয় না (তার টাকা পাকা কাগজে, উল্টো কাগজের পথে)।
+     * ⓘ অনুমোদনের অপেক্ষার খসড়া থাকলে সেটা বাতিল, অপেক্ষার অনুরোধ তুলে নেওয়া।
      */
     public function unmatch(DepositClaim $claim, string $reason): DepositClaim
     {
@@ -275,17 +373,44 @@ final class DepositMatchService
                 throw ValidationException::withMessages(['claim' => __('sales::deposit.not_matched')]);
             }
 
-            $this->dropTheWaitingDraft($fresh, $reason);
+            $this->releaseTheLine((int) $fresh->statement_line_id, $reason);
 
-            $fresh->update([
+            return $claim->setRawAttributes($fresh->refresh()->getAttributes(), true);
+        });
+    }
+
+    /**
+     * ⓘ এক ব্যাংক-সারির সব খোলা খবর ছেড়ে দেওয়া — মিল খোলা আর ফেরতের একই পথ। খাতায় ওঠা খবর থাকে।
+     *
+     * @return int কয়টা খবর ছাড়া পেল
+     */
+    public function releaseTheLine(int $lineId, string $reason, ?int $except = null): int
+    {
+        $members = DepositClaim::query()->withoutGlobalScopes()->where('statement_line_id', $lineId)
+            ->whereNull('deleted_at')->whereIn('status', DepositClaim::OPEN)
+            ->when($except !== null, fn ($q) => $q->whereKeyNot($except))
+            ->orderBy('id')->lockForUpdate()->get();
+
+        foreach ($members as $member) {
+            $this->dropTheWaitingDraft($member, $reason);
+
+            $member->update([
                 'statement_line_id' => null,
                 'matched_by' => null,
                 'matched_at' => null,
                 'unmatch_reason' => trim($reason),
             ]);
+        }
 
-            return $claim->setRawAttributes($fresh->refresh()->getAttributes(), true);
-        });
+        return $members->count();
+    }
+
+    /**
+     * ⓘ এই সারিতে কয়টা খবর বসেছে (খোলা বা খাতায়) — দুই বা বেশি হলে প্রতিটার নিজের অঙ্কই তার ভাগ, সারির পুরো অঙ্ক নয়।
+     */
+    public static function reportsOnLine(int $lineId): int
+    {
+        return DepositClaim::query()->withoutGlobalScopes()->where('statement_line_id', $lineId)->whereNull('deleted_at')->count();
     }
 
     /**
