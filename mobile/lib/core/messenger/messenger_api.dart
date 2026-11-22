@@ -13,6 +13,9 @@ import '../api_client/once_key.dart';
 ///   <li>`GET  /messenger/threads?filter=all|unread|groups|papers&q=` → `{data:[thread…], unread_total}`</li>
 ///   <li>`GET  /messenger/threads/{id}/messages?before=&after=` → `{data:[message…]}` (পুরনো→নতুন)</li>
 ///   <li>`POST /messenger/threads/{id}/messages` (json: text · paper · location; multipart: image · file · voice) → message</li>
+///   <li>`?after=`-এর উত্তরে `meta: {typing:[person], peer_online, states:[{id, state, read_count}]}` → [MessengerApi.poll]</li>
+///   <li>`POST /messenger/forward` · `DELETE /messenger/messages/{id}?for=everyone|me` · `GET /messenger/messages/{id}/info`</li>
+///   <li>`POST /messenger/threads/{id}/typing` · `GET /messenger/threads/{id}/search?q=`</li>
 ///   <li>`POST /messenger/threads/{id}/read` (`up_to`) · `POST /messenger/threads/{id}/mute` (`muted`)</li>
 ///   <li>`GET  /messenger/threads/{id}/members` · `GET /messenger/threads/{id}/media`</li>
 ///   <li>`GET  /messenger/people?q=` → যাঁদের বার্তা দেওয়া যায় (রোল দিয়ে ঠিক), প্রতিজনের `can_open_paper` (কাগজ পাঠানোর সময়)</li>
@@ -27,11 +30,34 @@ abstract interface class MessengerApi {
   /// পুরনো→নতুন। [before] দিলে তার আগের পাতা; [after] দিলে তার পরের নতুনগুলো (খোলা চ্যাটের ৩–৫ সেকেন্ডের টান)।
   Future<List<ChatMessage>> messages(String threadId, {String? before, String? after});
 
-  Future<ChatMessage> sendText(String threadId, String text, {required String clientId});
+  /// ⭐ খোলা চ্যাটের টান — `GET …/messages?after=` আর তার `meta` (কে লিখছেন, অন্যজন অনলাইন কি, আগের বার্তার নতুন টিক)।
+  /// [after] শেষ বার্তার নম্বর (বাড়তে থাকা সংখ্যা, লেখা হিসেবে)।
+  Future<MessagePoll> poll(String threadId, {required String after});
 
-  Future<ChatMessage> sendFile(String threadId, ChatUpload upload, {required String clientId, void Function(double sent)? onProgress});
+  /// "লিখছেন…" — লেখার সময় বড়জোর ৩ সেকেন্ডে একবার
+  Future<void> typing(String threadId);
 
-  Future<ChatMessage> sendLocation(String threadId, double lat, double lng, {required String clientId});
+  /// কথোপকথনে খোঁজা — `GET …/search?q=`
+  Future<List<ChatMessage>> search(String threadId, String query);
+
+  /// [replyToId] দিলে উত্তর — বুদবুদে আগের বার্তার উদ্ধৃতি (`reply_to_id`)
+  Future<ChatMessage> sendText(String threadId, String text, {required String clientId, String? replyToId});
+
+  Future<ChatMessage> sendFile(String threadId, ChatUpload upload,
+      {required String clientId, void Function(double sent)? onProgress, String? replyToId});
+
+  Future<ChatMessage> sendLocation(String threadId, double lat, double lng, {required String clientId, String? replyToId});
+
+  /// ⭐ ফরোয়ার্ড — `POST /messenger/forward {message_ids, to:["person:<id>","thread:<ulid>"], client_id}`; কাগজ হলে যিনি
+  /// পাঠাচ্ছেন তাঁর নিজের খোলার অনুমতি দেখা হয় (৪০৩ paper_denied)
+  Future<void> forward(List<String> messageIds, List<String> to, {required String clientId});
+
+  /// ⭐ মোছা — `DELETE /messenger/messages/{id}?for=everyone|me`; সবার কাছ থেকে কেবল নিজের বার্তা, পাঠানোর ১ ঘণ্টার মধ্যে
+  /// (না হলে ৪০৩ delete_not_allowed)
+  Future<void> deleteMessage(String messageId, {required bool everyone});
+
+  /// ⭐ বার্তার তথ্য — `GET /messenger/messages/{id}/info` → প্রতিজনের পৌঁছানো আর পড়ার সময়
+  Future<List<MessageReceipt>> info(String messageId);
 
   /// একটা কাগজ এক বা একাধিক মানুষ/গ্রুপে; [note] ইচ্ছা হলে
   Future<void> sendPaper(PaperRef paper, List<String> to, {String note = '', required String clientId});
@@ -207,7 +233,8 @@ class ThreadPage {
   final int unreadTotal;
 }
 
-enum MessageKind { text, image, file, voice, paper, location, system }
+/// [deleted] — সবার কাছ থেকে মোছা (লেখা, সংযুক্তি, কাগজ খালি আসে)
+enum MessageKind { text, image, file, voice, paper, location, system, deleted }
 
 /// পাঠানো · পৌঁছেছে · পড়েছে (নীল) — আর পাঠানোর পথে/ব্যর্থ (ফোনের নিজের অবস্থা)
 enum MessageState { sending, failed, sent, delivered, read }
@@ -229,6 +256,8 @@ class ChatMessage {
     this.paper,
     this.lat,
     this.lng,
+    this.replyTo,
+    this.forwarded = false,
   });
 
   final String id;
@@ -254,7 +283,17 @@ class ChatMessage {
   final double? lat;
   final double? lng;
 
-  ChatMessage copyWith({String? id, MessageState? state, int? readCount}) => ChatMessage(
+  /// উত্তর হলে আগের বার্তার উদ্ধৃতি (`reply_to`)
+  final ReplyRef? replyTo;
+
+  /// ফরোয়ার্ড করা কপি (`forwarded`)
+  final bool forwarded;
+
+  /// [deleted] সত্যি হলে বার্তাটা "মোছা" হয়ে যায় — লেখা, সংযুক্তি, কাগজ, উদ্ধৃতি সরে
+  ChatMessage copyWith({String? id, MessageState? state, int? readCount, bool deleted = false}) => deleted
+      ? ChatMessage(id: id ?? this.id, threadId: threadId, kind: MessageKind.deleted, at: at, clientId: clientId, mine: mine, sender: sender,
+          state: state ?? this.state, readCount: readCount ?? this.readCount)
+      : ChatMessage(
         id: id ?? this.id,
         threadId: threadId,
         kind: kind,
@@ -269,6 +308,8 @@ class ChatMessage {
         paper: paper,
         lat: lat,
         lng: lng,
+        replyTo: replyTo,
+        forwarded: forwarded,
       );
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
@@ -286,6 +327,44 @@ class ChatMessage {
         paper: j['paper'] is Map<String, dynamic> ? PaperRef.fromJson(j['paper'] as Map<String, dynamic>) : null,
         lat: (j['lat'] as num?)?.toDouble(),
         lng: (j['lng'] as num?)?.toDouble(),
+        replyTo: j['reply_to'] is Map<String, dynamic> ? ReplyRef.fromJson(j['reply_to'] as Map<String, dynamic>) : null,
+        forwarded: j['forwarded'] == true,
+      );
+}
+
+/// বুদবুদের ভেতরের উদ্ধৃতি — যে বার্তার উত্তর (`reply_to: {id, kind, text, sender, mine}`)
+@immutable
+class ReplyRef {
+  const ReplyRef({required this.id, this.kind = MessageKind.text, this.text = '', this.sender, this.mine = false});
+
+  final String id;
+  final MessageKind kind;
+  final String text;
+  final ChatPerson? sender;
+  final bool mine;
+
+  factory ReplyRef.fromJson(Map<String, dynamic> j) => ReplyRef(
+        id: '${j['id'] ?? ''}',
+        kind: MessageKind.values.firstWhere((k) => k.name == j['kind'], orElse: () => MessageKind.text),
+        text: '${j['text'] ?? ''}',
+        sender: j['sender'] is Map<String, dynamic> ? ChatPerson.fromJson(j['sender'] as Map<String, dynamic>) : null,
+        mine: j['mine'] == true,
+      );
+}
+
+/// বার্তার তথ্যের এক সারি — কে, কখন পৌঁছেছে, কখন পড়েছেন (না হলে null)
+@immutable
+class MessageReceipt {
+  const MessageReceipt({required this.person, this.deliveredAt, this.readAt});
+
+  final ChatPerson person;
+  final DateTime? deliveredAt;
+  final DateTime? readAt;
+
+  factory MessageReceipt.fromJson(Map<String, dynamic> j) => MessageReceipt(
+        person: j['person'] is Map<String, dynamic> ? ChatPerson.fromJson(j['person'] as Map<String, dynamic>) : const ChatPerson(id: '', name: ''),
+        deliveredAt: _date(j['delivered_at']),
+        readAt: _date(j['read_at']),
       );
 }
 
@@ -316,6 +395,52 @@ class ChatAttachment {
           for (final v in (j['waveform'] is List ? j['waveform'] as List : const [])) (v is num ? v.toDouble() : 0.0).clamp(0.0, 1.0),
         ],
       );
+}
+
+/// আগে পাঠানো একটা বার্তার নতুন অবস্থা (টানের `meta.states`)
+@immutable
+class MessageStateUpdate {
+  const MessageStateUpdate({required this.id, required this.state, this.readCount = 0, this.deleted = false});
+
+  final String id;
+  final MessageState state;
+  final int readCount;
+
+  /// `state: "deleted"` — বার্তাটা সবার কাছ থেকে মোছা হয়েছে
+  final bool deleted;
+
+  factory MessageStateUpdate.fromJson(Map<String, dynamic> j) => MessageStateUpdate(
+        id: '${j['id'] ?? ''}',
+        state: MessageState.values.firstWhere((s) => s.name == j['state'], orElse: () => MessageState.sent),
+        readCount: _int(j['read_count']),
+        deleted: j['state'] == 'deleted',
+      );
+}
+
+/// খোলা চ্যাটের একবারের টান — নতুন বার্তা আর `meta`
+@immutable
+class MessagePoll {
+  const MessagePoll({this.messages = const [], this.typing = const [], this.peerOnline, this.states = const []});
+
+  final List<ChatMessage> messages;
+
+  /// এই মুহূর্তে যাঁরা লিখছেন (আমি বাদে)
+  final List<ChatPerson> typing;
+
+  /// একজনের সাথের কথোপকথনে অন্যজন অনলাইন কি; গ্রুপে null
+  final bool? peerOnline;
+  final List<MessageStateUpdate> states;
+
+  factory MessagePoll.fromJson(Map<String, dynamic> j) {
+    final meta = j['meta'] is Map<String, dynamic> ? j['meta'] as Map<String, dynamic> : const <String, dynamic>{};
+    List<Map<String, dynamic>> rows(Object? v) => [for (final r in (v is List ? v : const [])) if (r is Map<String, dynamic>) r];
+    return MessagePoll(
+      messages: [for (final m in rows(j['data'])) ChatMessage.fromJson(m)],
+      typing: [for (final p in rows(meta['typing'])) ChatPerson.fromJson(p)],
+      peerOnline: meta['peer_online'] is bool ? meta['peer_online'] as bool : null,
+      states: [for (final s in rows(meta['states'])) MessageStateUpdate.fromJson(s)],
+    );
+  }
 }
 
 /// ফোন থেকে যাওয়া সংযুক্তি
@@ -463,14 +588,32 @@ class ServerMessengerApi implements MessengerApi {
       });
 
   @override
-  Future<ChatMessage> sendText(String threadId, String text, {required String clientId}) => _run(() async {
+  Future<MessagePoll> poll(String threadId, {required String after}) => _run(() async {
+        final r = await _dio.get<Map<String, dynamic>>('/messenger/threads/$threadId/messages', queryParameters: {'after': after});
+        return MessagePoll.fromJson(r.data ?? const {});
+      });
+
+  @override
+  Future<void> typing(String threadId) => _run(() async {
+        await _dio.post<void>('/messenger/threads/$threadId/typing');
+      });
+
+  @override
+  Future<List<ChatMessage>> search(String threadId, String query) => _run(() async {
+        final r = await _dio.get<Map<String, dynamic>>('/messenger/threads/$threadId/search', queryParameters: {'q': query});
+        return [for (final m in _list(r.data)) ChatMessage.fromJson(m)];
+      });
+
+  @override
+  Future<ChatMessage> sendText(String threadId, String text, {required String clientId, String? replyToId}) => _run(() async {
         final r = await OnceKey.of('msg:$clientId').send(() => _dio.post<Map<String, dynamic>>('/messenger/threads/$threadId/messages',
-            data: {'kind': 'text', 'text': text, 'client_id': clientId}));
+            data: {'kind': 'text', 'text': text, 'client_id': clientId, if (replyToId != null) 'reply_to_id': replyToId}));
         return ChatMessage.fromJson(_one(r.data));
       });
 
   @override
-  Future<ChatMessage> sendFile(String threadId, ChatUpload upload, {required String clientId, void Function(double sent)? onProgress}) =>
+  Future<ChatMessage> sendFile(String threadId, ChatUpload upload,
+          {required String clientId, void Function(double sent)? onProgress, String? replyToId}) =>
       _run(() async {
         final parts = upload.mime.split('/');
         final r = await OnceKey.of('msg:$clientId').send(() => _dio.post<Map<String, dynamic>>(
@@ -478,6 +621,7 @@ class ServerMessengerApi implements MessengerApi {
               data: FormData.fromMap({
                 'kind': upload.kind.name,
                 'client_id': clientId,
+                if (replyToId != null) 'reply_to_id': replyToId,
                 if (upload.durationMs > 0) 'duration_ms': upload.durationMs,
                 if (upload.waveform.isNotEmpty) 'waveform': upload.waveform.map((v) => v.toStringAsFixed(2)).join(','),
                 'file': MultipartFile.fromBytes(upload.bytes,
@@ -493,10 +637,27 @@ class ServerMessengerApi implements MessengerApi {
       });
 
   @override
-  Future<ChatMessage> sendLocation(String threadId, double lat, double lng, {required String clientId}) => _run(() async {
+  Future<ChatMessage> sendLocation(String threadId, double lat, double lng, {required String clientId, String? replyToId}) => _run(() async {
         final r = await OnceKey.of('msg:$clientId').send(() => _dio.post<Map<String, dynamic>>('/messenger/threads/$threadId/messages',
-            data: {'kind': 'location', 'lat': lat, 'lng': lng, 'client_id': clientId}));
+            data: {'kind': 'location', 'lat': lat, 'lng': lng, 'client_id': clientId, if (replyToId != null) 'reply_to_id': replyToId}));
         return ChatMessage.fromJson(_one(r.data));
+      });
+
+  @override
+  Future<void> forward(List<String> messageIds, List<String> to, {required String clientId}) => _run(() async {
+        await OnceKey.of('msg-forward:$clientId').send(
+            () => _dio.post<void>('/messenger/forward', data: {'message_ids': messageIds, 'to': to, 'client_id': clientId}));
+      });
+
+  @override
+  Future<void> deleteMessage(String messageId, {required bool everyone}) => _run(() async {
+        await _dio.delete<void>('/messenger/messages/$messageId', queryParameters: {'for': everyone ? 'everyone' : 'me'});
+      });
+
+  @override
+  Future<List<MessageReceipt>> info(String messageId) => _run(() async {
+        final r = await _dio.get<Map<String, dynamic>>('/messenger/messages/$messageId/info');
+        return [for (final x in _list(r.data)) MessageReceipt.fromJson(x)];
       });
 
   @override

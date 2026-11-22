@@ -12197,6 +12197,358 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
+  String get msgChatBack => 'Back';
+
+  @override
+  String get msgChatOnline => 'Online';
+
+  @override
+  String msgChatGroupStatus(int members, int online) {
+    return '$members members · $online online';
+  }
+
+  @override
+  String msgChatGroupMembers(int members) {
+    return '$members members';
+  }
+
+  @override
+  String get msgChatVideoCall => 'Video call';
+
+  @override
+  String get msgChatVoiceCall => 'Voice call';
+
+  @override
+  String get msgChatGroupVideo => 'Video';
+
+  @override
+  String get msgChatGroupCall => 'Call';
+
+  @override
+  String get msgChatMore => 'More';
+
+  @override
+  String get msgChatSoonGroupVideo =>
+      'Coming soon — group video meetings in phase two';
+
+  @override
+  String get msgChatSoonGroupCall => 'Coming soon — group calls in phase two';
+
+  @override
+  String get msgChatMenuSearch => 'Search in conversation';
+
+  @override
+  String get msgChatMenuMedia => 'Photos, files and papers';
+
+  @override
+  String get msgChatMenuMute => 'Mute notifications';
+
+  @override
+  String get msgChatMenuUnmute => 'Unmute notifications';
+
+  @override
+  String get msgChatMenuMembers => 'Members';
+
+  @override
+  String get msgChatMutedToast => 'Notifications muted';
+
+  @override
+  String get msgChatUnmutedToast => 'Notifications on';
+
+  @override
+  String get msgChatToday => 'Today';
+
+  @override
+  String get msgChatYesterday => 'Yesterday';
+
+  @override
+  String msgChatReadBy(int count) {
+    return 'Read by $count';
+  }
+
+  @override
+  String get msgChatTypingNow => 'typing…';
+
+  @override
+  String msgChatTyping(String name) {
+    return '$name is typing…';
+  }
+
+  @override
+  String get msgChatTickSending => 'Sending';
+
+  @override
+  String get msgChatTickSent => 'Sent';
+
+  @override
+  String get msgChatTickDelivered => 'Delivered';
+
+  @override
+  String get msgChatTickRead => 'Read';
+
+  @override
+  String get msgChatFailedRetry => 'Not sent — tap to send again';
+
+  @override
+  String get msgChatPaperOpen => 'Open';
+
+  @override
+  String get msgChatPaperNoPermission =>
+      'You do not have permission to open this paper';
+
+  @override
+  String get msgChatPaperOpenFailed => 'Could not open the paper';
+
+  @override
+  String get msgChatPhoto => 'Photo';
+
+  @override
+  String get msgChatVoice => 'Voice message';
+
+  @override
+  String get msgChatVoicePlay => 'Play';
+
+  @override
+  String get msgChatVoicePause => 'Pause';
+
+  @override
+  String get msgChatVoiceFailed => 'Could not play the voice message';
+
+  @override
+  String get msgChatDownload => 'Download and open';
+
+  @override
+  String get msgChatDownloadFailed => 'Could not download the file';
+
+  @override
+  String get msgChatLocation => 'Location';
+
+  @override
+  String get msgChatOpenMap => 'Open in maps';
+
+  @override
+  String get msgChatHint => 'Type a message…';
+
+  @override
+  String get msgChatEmoji => 'Emoji';
+
+  @override
+  String get msgChatAttach => 'Attach';
+
+  @override
+  String get msgChatCamera => 'Camera';
+
+  @override
+  String get msgChatMic => 'Voice message — hold to talk';
+
+  @override
+  String get msgChatMicHint => 'Hold to talk, release to send';
+
+  @override
+  String get msgChatMicDenied => 'Microphone permission was not given';
+
+  @override
+  String get msgChatRecordingCancel => 'Slide left to cancel';
+
+  @override
+  String get msgChatSend => 'Send';
+
+  @override
+  String get msgChatTrayFile => 'File';
+
+  @override
+  String get msgChatTrayPaper => 'ERP paper';
+
+  @override
+  String get msgChatPaperPickTitle => 'Which paper to send?';
+
+  @override
+  String get msgChatPaperPickEmpty =>
+      'No recent papers — open the paper and send it from its ⋯ menu';
+
+  @override
+  String get msgChatLocationOff => 'The phone\'s location (GPS) is off';
+
+  @override
+  String get msgChatLocationDenied => 'Location permission was not given';
+
+  @override
+  String get msgChatLocationFailed => 'Could not get the location';
+
+  @override
+  String get msgChatAttachFailed => 'Could not attach';
+
+  @override
+  String get msgChatDoorsMissing => 'Messages are not switched on yet';
+
+  @override
+  String get msgChatNotAllowed => 'You do not have permission for messages';
+
+  @override
+  String get msgChatLoadFailed => 'Could not load messages';
+
+  @override
+  String get msgChatRetry => 'Try again';
+
+  @override
+  String get msgChatNotFound => 'Conversation not found';
+
+  @override
+  String get msgChatSearchHint => 'Search…';
+
+  @override
+  String msgChatSearchCount(int at, int of) {
+    return '$at/$of';
+  }
+
+  @override
+  String get msgChatSearchNone => 'No match';
+
+  @override
+  String get msgChatSearchPrev => 'Previous';
+
+  @override
+  String get msgChatSearchNext => 'Next';
+
+  @override
+  String get msgChatSearchClose => 'Close search';
+
+  @override
+  String get msgChatMediaEmpty => 'No photos, files or papers yet';
+
+  @override
+  String get msgChatMembersEmpty => 'No members';
+
+  @override
+  String get msgChatClose => 'Close';
+
+  @override
+  String get msgChatUnselect => 'Clear selection';
+
+  @override
+  String get msgChatActReply => 'Reply';
+
+  @override
+  String get msgChatActForward => 'Forward';
+
+  @override
+  String get msgChatActCopy => 'Copy';
+
+  @override
+  String get msgChatActDelete => 'Delete';
+
+  @override
+  String get msgChatActInfo => 'Info';
+
+  @override
+  String get msgChatCopied => 'Copied';
+
+  @override
+  String get msgChatDeleteAsk => 'Delete this message?';
+
+  @override
+  String get msgChatDeleteEveryone => 'Delete for everyone';
+
+  @override
+  String get msgChatDeleteMe => 'Delete for me';
+
+  @override
+  String get msgChatCancel => 'Cancel';
+
+  @override
+  String get msgChatDeleted => 'This message was deleted';
+
+  @override
+  String get msgChatDeleteFailed => 'Could not delete';
+
+  @override
+  String get msgChatInfoTitle => 'Message info';
+
+  @override
+  String get msgChatInfoReceived => 'Received';
+
+  @override
+  String get msgChatInfoNotYet => 'Not yet';
+
+  @override
+  String get msgChatInfoFailed => 'Could not load the info';
+
+  @override
+  String get msgChatOk => 'OK';
+
+  @override
+  String get msgChatYou => 'You';
+
+  @override
+  String get msgChatReplyCancel => 'Cancel reply';
+
+  @override
+  String get msgChatForwardChats => 'Chats';
+
+  @override
+  String get msgChatForwardPeople => 'People';
+
+  @override
+  String get msgChatForwardTitle => 'Forward to whom?';
+
+  @override
+  String msgChatForwardSend(int count) {
+    return 'Send · $count';
+  }
+
+  @override
+  String get msgChatForwarded => 'Forwarded';
+
+  @override
+  String get msgChatForwardFailed => 'Could not forward';
+
+  @override
+  String get msgChatForwardEmpty => 'No conversations';
+
+  @override
+  String get msgChatPaperSent => 'Paper sent';
+
+  @override
+  String get msgChatPaperSendFailed => 'Could not send the paper';
+
+  @override
+  String get msgChatKeyboard => 'Keyboard';
+
+  @override
+  String get msgChatEmojiSearch => 'Search emoji';
+
+  @override
+  String get msgChatEmojiRecent => 'Recent';
+
+  @override
+  String get msgChatEmojiFaces => 'Faces and people';
+
+  @override
+  String get msgChatEmojiNature => 'Nature';
+
+  @override
+  String get msgChatEmojiFood => 'Food';
+
+  @override
+  String get msgChatEmojiLove => 'Love';
+
+  @override
+  String get msgChatEmojiFlags => 'Flags';
+
+  @override
+  String get msgChatVoiceType => 'Voice typing';
+
+  @override
+  String get msgChatListening => 'Listening…';
+
+  @override
+  String get msgChatVoiceTypeDenied =>
+      'Microphone permission was not given — voice typing is off';
+
+  @override
+  String get msgChatVoiceTypeFailed => 'Could not hear — please speak again';
+
+  @override
   String get msgListSearch => 'Search names or messages';
 
   @override

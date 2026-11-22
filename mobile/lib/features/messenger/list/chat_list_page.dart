@@ -435,6 +435,9 @@ class _LastLine extends StatelessWidget {
       case MessageKind.location:
         spans.add(icon(Symbols.location_on));
         spans.add(TextSpan(text: l.msgListLocation));
+      case MessageKind.deleted:
+        spans.add(icon(Symbols.block));
+        spans.add(TextSpan(text: l.msgChatDeleted, style: const TextStyle(fontStyle: FontStyle.italic)));
       case MessageKind.text:
       case MessageKind.system:
         spans.add(TextSpan(text: m.text));

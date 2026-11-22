@@ -70,3 +70,9 @@ bool messagingOn(BuildContext context) {
   if (context.getElementForInheritedWidgetOfExactType<UncontrolledProviderScope>() == null) return false;
   return ProviderScope.containerOf(context, listen: false).read(meFeaturesProvider)?.messaging ?? false;
 }
+
+/// ⭐ কল চালু কি — চ্যাটের কল/ভিডিও বোতাম; [messagingOn]-এর মতোই, `/me` না এলে false
+bool callsOn(BuildContext context) {
+  if (context.getElementForInheritedWidgetOfExactType<UncontrolledProviderScope>() == null) return false;
+  return ProviderScope.containerOf(context, listen: false).read(meFeaturesProvider)?.calls ?? false;
+}
