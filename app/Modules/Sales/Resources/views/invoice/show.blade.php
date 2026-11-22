@@ -165,6 +165,9 @@
                     <dd class="mt-0.5"><x-sales::status-badge :document="$invoice" /></dd>
                 </div>
 
+                {{-- ⭐ দায়িত্বে · বিল করেছেন (মালিক, ২৩ নভেম্বর ২০২৬) --}}
+                @include('sales::invoice.partials.responsibility-facts', ['paper' => $invoice->loadMissing(['salesPerson', 'creator'])])
+
                 {{-- ⭐ বাতিল-ইনভয়েসের সূত্র — আসল ইনভয়েস থাকে, পাশে কোন কাগজ এটা উল্টাল (মালিক, ৪ অক্টোবর ২০২৬) --}}
                 @php($cancellation = \App\Modules\Sales\Models\SalesInvoiceCancellation::query()->where('sales_invoice_id', $invoice->id)->first())
                 @if ($cancellation)

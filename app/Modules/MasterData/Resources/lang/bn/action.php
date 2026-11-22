@@ -16,4 +16,5 @@ return [
     'save_rate' => 'হার সংরক্ষণ',
     'back_to_currencies' => '← মুদ্রার তালিকা',
     'new_level' => 'নতুন :level',
+    'change_responsibility' => 'দায়িত্ব বদলান',
 ];
