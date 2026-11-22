@@ -248,6 +248,8 @@ Schedule::command('abos:notifications-schedule')->everyMinute()->withoutOverlapp
 Schedule::command('abos:notifications-digest')->hourly()->withoutOverlapping();
 // ⭐ অফিসের SMS ফোন — নিয়ে চুপ থাকা SMS আবার সারিতে, ২ ঘণ্টার বেশি অপেক্ষা হলে মালিককে খবর (নমুনা ধাপ ২; [[SmsWatch]])
 Schedule::command('abos:sms-watch')->everyFiveMinutes()->withoutOverlapping();
+// ⭐ বাকির তাগাদা, নিজে থেকে — পাঁচ মিনিট পরপর দেখে কার সময় হলো; একজন দিনে একবারই (নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ঙ; [[PartyReminders]])
+Schedule::command('abos:party-reminders')->everyFiveMinutes()->withoutOverlapping();
 // ⭐ কোপাইলটের সকালের খবর — সকাল ৮টায়, প্রত্যেকের নিজের চাবির নজর ([[CopilotMorning]])
 Schedule::command('abos:copilot-morning')->dailyAt('08:00')->withoutOverlapping();
 // ⭐ পণ্যের নামের মানে-ছাপ — রাতে, কেবল নতুন বা বদলানো নাম ([[CopilotMeaning]], ১৩ নভেম্বর ২০২৬)

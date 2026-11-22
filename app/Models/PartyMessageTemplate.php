@@ -26,8 +26,11 @@ class PartyMessageTemplate extends Model
 
     public const CHANNELS = [self::WHATSAPP, self::SMS];
 
-    /** ⓘ লেখায় যে নামগুলো বসানো যায় — এর বাইরের নাম রাখা যায় না */
-    public const VARIABLES = ['party', 'paper_no', 'amount', 'date', 'company', 'link'];
+    /**
+     * ⓘ লেখায় যে নামগুলো বসানো যায় — এর বাইরের নাম রাখা যায় না।
+     * ⭐ {due} — পার্টির এখনকার মোট বাকি (ধাপ ৩, নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব খ; [[PartyMessages::dueOf()]])।
+     */
+    public const VARIABLES = ['party', 'paper_no', 'amount', 'due', 'date', 'company', 'link'];
 
     protected $fillable = ['company_id', 'channel', 'document_type', 'name', 'body_bn', 'body_en', 'is_active', 'sort', 'created_by'];
 
@@ -40,25 +43,49 @@ class PartyMessageTemplate extends Model
     }
 
     /**
-     * ঐ কাগজে চলে এমন চালু লেখাগুলো — কাগজের নিজেরটা আগে, তারপর "যেকোনো কাগজ"।
-     *
-     * @param  Builder<self>  $query
-     * @return Builder<self>
+     * ⭐ লেখা বদলালে Meta-র অনুমোদন আর খাটে না — নতুন লেখাটা আবার অনুমোদনে যেতে হয় (ধাপ ৩)।
+     * ⓘ মডেলেই, কন্ট্রোলারে নয়: যে দরজা দিয়েই লেখা বদলাক, পুরনো "অনুমোদিত" দাগ নতুন লেখায় লেগে থাকে না।
      */
-    public function scopeUsableFor(Builder $query, string $channel, string $documentType): Builder
+    protected static function booted(): void
     {
-        return $query->where('channel', $channel)
-            ->where('is_active', true)
-            ->where(fn (Builder $q) => $q->where('document_type', $documentType)->orWhereNull('document_type'))
-            ->orderByRaw('document_type IS NULL')
-            ->orderBy('sort')
-            ->orderBy('id');
+        static::saving(function (self $template): void {
+            if ($template->exists && $template->isDirty(['body_bn', 'body_en'])) {
+                $template->setAttribute('wa_status', null);
+            }
+        });
     }
 
     /**
-     * ⭐ শুরুর লেখা — কাগজের ধরন, নাম, বাংলা, English। ⓘ অঙ্ক ইংরেজিতে, বাংলা লেখাতেও (মালিক, ২৪ অক্টোবর ২০২৬)।
+     * ঐ কাগজে চলে এমন চালু লেখাগুলো — কাগজের নিজেরটা আগে, তারপর "যেকোনো কাগজ"।
      *
-     * @var list<array{0: ?string, 1: string, 2: string, 3: string}>
+     * ⓘ কয়েকটা ধরন একসাথে দেওয়া যায় (কাগজের নিজের ধরন আর "পার্টির হিসাব") — দেওয়া ক্রমেই আগে-পরে।
+     *
+     * @param  Builder<self>  $query
+     * @param  string|list<string>  $documentType
+     * @return Builder<self>
+     */
+    public function scopeUsableFor(Builder $query, string $channel, string|array $documentType): Builder
+    {
+        $types = array_values(array_unique((array) $documentType));
+
+        $query->where('channel', $channel)
+            ->where('is_active', true)
+            ->where(fn (Builder $q) => $q->whereIn('document_type', $types)->orWhereNull('document_type'))
+            ->orderByRaw('document_type IS NULL');
+
+        if (count($types) > 1) {
+            $query->orderByRaw('CASE '.implode(' ', array_map(fn (int $i): string => 'WHEN document_type = ? THEN '.$i, array_keys($types))).' ELSE '.count($types).' END', $types);
+        }
+
+        return $query->orderBy('sort')->orderBy('id');
+    }
+
+    /**
+     * ⭐ শুরুর লেখা — কাগজের ধরন, নাম, বাংলা, English, (পথ — না দিলে WhatsApp)। ⓘ অঙ্ক ইংরেজিতে, বাংলা লেখাতেও (মালিক, ২৪ অক্টোবর ২০২৬)।
+     * ⓘ শেষের তিনটা ধাপ ৩-এর (নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব খ); আগে থেকে লেখা থাকা কোম্পানিতে migration
+     *   2027_05_10_120000 বসায়, নামে মিলিয়ে।
+     *
+     * @var list<array{0: ?string, 1: string, 2: string, 3: string, 4?: string}>
      */
     public const STARTERS = [
         [null, 'সাধারণ — যেকোনো কাগজ',
@@ -76,6 +103,17 @@ class PartyMessageTemplate extends Model
         ['accounts_voucher', 'পরিশোধের খবর',
             "প্রিয় {party},\n{company} আপনাকে ৳{amount} পরিশোধ করেছে — ভাউচার {paper_no} ({date})।\nবিস্তারিত: {link}",
             "Dear {party},\n{company} has paid you Tk {amount}, voucher {paper_no} dated {date}.\nDetails: {link}"],
+        [PartyMessage::PARTY_ACCOUNT, 'বাকির তাগাদা',
+            "প্রিয় {party},\n{company}-এ আপনার বাকি ৳{due} (সবচেয়ে পুরনো বিল {paper_no}, {date})।\nবিস্তারিত: {link}\nধন্যবাদ।",
+            "Dear {party},\nYour balance with {company} is Tk {due} (oldest bill {paper_no}, {date}).\nDetails: {link}\nThank you.",
+            self::SMS],
+        [PartyMessage::PARTY_ACCOUNT, 'হিসাব বিবরণী',
+            "প্রিয় {party},\n{company}-এ আপনার হিসাব বিবরণী — এখনকার বাকি ৳{due}।\nদেখতে ও নামাতে: {link}\nধন্যবাদ।",
+            "Dear {party},\nYour account statement with {company} — balance now Tk {due}.\nView and download: {link}\nThank you."],
+        ['sales_collection', 'টাকা পেয়েছি (ছোট)',
+            "প্রিয় {party},\nআপনার ৳{amount} পেয়েছি — রসিদ {paper_no} ({date})। বাকি এখন ৳{due}।\nধন্যবাদ, {company}",
+            "Dear {party},\nWe received Tk {amount} — receipt {paper_no} ({date}). Your balance now is Tk {due}.\nThank you, {company}",
+            self::SMS],
     ];
 
     /**
@@ -90,9 +128,11 @@ class PartyMessageTemplate extends Model
             return;
         }
 
-        foreach (self::STARTERS as $i => [$type, $name, $bn, $en]) {
+        foreach (self::STARTERS as $i => $starter) {
+            [$type, $name, $bn, $en] = $starter;
+
             static::query()->create([
-                'company_id' => $companyId, 'channel' => self::WHATSAPP, 'document_type' => $type,
+                'company_id' => $companyId, 'channel' => $starter[4] ?? self::WHATSAPP, 'document_type' => $type,
                 'name' => $name, 'body_bn' => $bn, 'body_en' => $en, 'is_active' => true, 'sort' => ($i + 1) * 10,
             ]);
         }

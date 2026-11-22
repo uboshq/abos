@@ -4,9 +4,43 @@ declare(strict_types=1);
 
 return [
     'templates_title' => 'Party messages — texts',
-    'templates_note' => 'The texts that go to a party on WhatsApp. After "Send" the person picks one text and a language here. The names below are replaced with the real values.',
+    // ⭐ step 3 — the texts page (sample HUXqpfhxng8823eEFrvH54 tab খ); no description line any more (owner, 19 Nov 2026 night)
+    'tabs_label' => 'Which texts',
+    'tabs' => ['all' => 'All', 'whatsapp' => 'WhatsApp', 'sms' => 'SMS', 'off' => 'Off'],
+    'cancel' => 'Cancel',
+    'preview_bn' => 'Preview — Bengali',
+    'count' => ':n characters in Bengali',
+    'count_sms' => ':n characters in Bengali · :k SMS',
+    // ⓘ sample values for the editor preview (the page adds the company name and the link itself)
+    'sample' => [
+        'party' => 'Rahman Enterprise',
+        'paper_no' => 'INV-2611-0517',
+        'amount' => '86,400.00',
+        'due' => '36,400.00',
+        'date' => '21-11-2026',
+    ],
+    'meta_submit' => 'Send to Meta for approval',
+    'wa_states' => [
+        'none' => 'Not sent to Meta',
+        'pending' => 'Waiting for Meta approval',
+        'approved' => 'Approved by Meta',
+        'rejected' => 'Rejected by Meta',
+        'paused' => 'Paused by Meta',
+        'disabled' => 'Disabled by Meta',
+    ],
+    // ⭐ the send popup on a paper (sample tab ক; [[x-ui.shared-link]])
+    'send' => [
+        'title' => 'Send to the party — :no',
+        'close' => 'Close',
+        'cancel' => 'Cancel',
+        'open_wa' => 'Open WhatsApp',
+        'hint_wa' => 'The button opens WhatsApp — you press Send there',
+        'hint_sms' => 'Goes from the SIM of :phone',
+        'hint_sms_any' => 'Goes from the office phone SIM',
+        'meta_unicode' => ':n characters · :k SMS (70 characters per SMS in Bengali)',
+        'meta_plain' => ':n characters · :k SMS',
+    ],
     'messages_title' => 'Party messages — log',
-    'messages_note' => 'Each row means WhatsApp was opened with the number and the text filled in. The browser cannot tell whether Send was pressed in the end.',
     'new' => 'New text',
     'back' => 'All texts',
     'save' => 'Save',
@@ -24,16 +58,19 @@ return [
     'active' => 'Active',
     'state' => 'State',
     'states' => ['active' => 'Active', 'inactive' => 'Off'],
-    'variables' => 'You can use',
+    'variables' => 'You can use — click to insert',
     'vars' => [
         'party' => 'Party name',
         'paper_no' => 'Paper number',
         'amount' => 'Total amount',
-        'date' => 'Paper date',
+        'due' => 'Amount due',
+        'date' => 'Date',
         'company' => 'Company name',
         'link' => 'Link to the paper',
     ],
     'unknown' => 'Unknown names: :names — only the names below can be used',
+    // ⓘ an automatic send found no open road ([[PartyMessageDispatcher::deliver()]])
+    'no_road' => 'No road is open — WhatsApp (Cloud API) is off, and there is no office SMS phone or the number is not a Bangladesh mobile',
     'when' => 'When',
     'who' => 'Sent by',
     'paper' => 'Paper',
@@ -49,6 +86,8 @@ return [
     'filter' => 'Show',
     'locales' => ['bn' => 'বাংলা', 'en' => 'English'],
     'types' => [
+        // ⭐ not one paper but the party's whole account — due reminder, account statement (step 3)
+        'party_account' => 'Party account',
         'sales_invoice' => 'Sales invoice',
         'sales_invoice_cancellation' => 'Cancelled invoice',
         'sales_challan' => 'Challan',
@@ -56,7 +95,8 @@ return [
         'sales_challan_gatepass' => 'Challan gate pass',
         'sales_gate_pass' => 'Gate pass',
         'sales_delivery_order' => 'Delivery order (DO)',
-        'sales_collection' => 'Money receipt',
+        // ⓘ the one money-in paper is RCV now; a money-in voucher gets these texts too ([[PartyMessages::messageType()]])
+        'sales_collection' => 'Receipt (RCV)',
         'purchase_bill' => 'Purchase bill',
         'purchase_order' => 'Purchase order',
         'purchase_receipt' => 'Goods received',

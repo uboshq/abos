@@ -102,8 +102,11 @@ return [
             // ⭐ পার্টিকে WhatsApp — লেখা (বাংলা/English) আর কে কাকে কী পাঠাল (মালিকের "ok", ১০ নভেম্বর ২০২৬)
             ['label' => 'notification::menu.party_templates', 'icon' => 'documents', 'route' => 'notification.party_templates.index', 'permission' => 'notification.party_templates'],
             ['label' => 'notification::menu.party_messages', 'icon' => 'list', 'route' => 'notification.party_messages.index', 'permission' => 'notification.party_messages'],
-            // ⭐ নিজের সিমে SMS — অফিসের Android ফোন (নমুনা ধাপ ২; চাবি কেবল মালিকের)
-            ['label' => 'notification::menu.sms_phones', 'icon' => 'phone', 'route' => 'notification.sms_phones.index', 'permission' => 'notification.sms_gateway'],
+            // ⭐ বার্তার পথ — wa.me বোতাম, Meta Cloud API, অফিসের ফোনের সিম; "SMS-এর ফোন" এখন এই পাতার একটা ট্যাব
+            //   (ধাপ ৩, মালিকের "ok" ২৩ নভেম্বর ২০২৬, নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ঘ)
+            ['label' => 'notification::party_roads.menu', 'icon' => 'send', 'route' => 'notification.party_roads.index', 'permission' => 'notification.party_roads'],
+            // ⭐ নিজে থেকে পাঠানো — বাকির তাগাদা আর টাকা পাওয়ার খবর (ধাপ ৩, নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ঙ)
+            ['label' => 'notification::party_auto.title', 'icon' => 'clock', 'route' => 'notification.party_auto.index', 'permission' => 'notification.party_auto'],
         ],
     ],
 
@@ -129,6 +132,8 @@ return [
         'notification.party_templates', // পার্টিকে পাঠানোর লেখা (WhatsApp) — বানানো, বদলানো, বন্ধ করা
         'notification.party_messages',  // কে কোন পার্টিকে কোন কাগজ কোন লেখায় পাঠাল — খাতা দেখা
         'notification.sms_gateway',     // অফিসের SMS ফোন বসানো, চাবি, দিনের সীমা, সারি দেখা — কেবল মালিক (কোনো ভূমিকায় নয়)
+        'notification.party_roads',     // বার্তার পথ — তিন পথের সুইচ, Meta-র চাবি, সংযোগ পরীক্ষা, খরচ — কেবল মালিক (কোনো ভূমিকায় নয়)
+        'notification.party_auto',      // নিজে থেকে পাঠানো — বাকির তাগাদা, টাকা পাওয়ার খবর, বাদ রাখা পার্টি — কেবল মালিক (কোনো ভূমিকায় নয়)
     ],
 
     'role_templates' => [
@@ -221,6 +226,33 @@ return [
             'default' => 365,
             'group' => 'retention',
         ],
+
+        // ── ⭐ বার্তার পথ — ধাপ ৩ (মালিকের "ok" ২৩ নভেম্বর ২০২৬, নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ঘ; [[PartyMessageDispatcher]]) ──
+        ['key' => 'notification.party.wame', 'label' => 'notification::party_roads.settings.wame', 'type' => 'boolean', 'default' => true, 'group' => 'party_roads'],
+        ['key' => 'notification.party.sms', 'label' => 'notification::party_roads.settings.sms', 'type' => 'boolean', 'default' => true, 'group' => 'party_roads'],
+        ['key' => 'notification.party.default_locale', 'label' => 'notification::party_roads.settings.default_locale', 'type' => 'select',
+            'options' => ['bn', 'en'], 'option_label' => 'notification::party_roads.order.', 'default' => 'bn', 'group' => 'party_roads'],
+        // ⓘ Meta-র প্রতি বার্তার হার — মালিক পরে বসাবেন; ফাঁকা থাকলে খরচের ঘরে কোনো দাম বানানো হয় না
+        ['key' => 'notification.party.cloud_rate', 'label' => 'notification::party_roads.settings.cloud_rate', 'type' => 'string', 'default' => '', 'group' => 'party_roads'],
+
+        // ── ⭐ নিজে থেকে পাঠানো — ধাপ ৩ (নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ঙ; [[PartyAutoSend]]) ──
+        ['key' => 'notification.auto.due.enabled', 'label' => 'notification::party_auto.settings.due_enabled', 'type' => 'boolean', 'default' => false, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.due.after_days', 'label' => 'notification::party_auto.settings.due_after_days', 'type' => 'integer', 'default' => 7, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.due.every_days', 'label' => 'notification::party_auto.settings.due_every_days', 'type' => 'integer', 'default' => 7, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.due.min_due', 'label' => 'notification::party_auto.settings.due_min_due', 'type' => 'string', 'default' => '5000', 'group' => 'party_auto'],
+        ['key' => 'notification.auto.due.time', 'label' => 'notification::party_auto.settings.due_time', 'type' => 'string', 'default' => '10:00', 'group' => 'party_auto'],
+        ['key' => 'notification.auto.due.days', 'label' => 'notification::party_auto.settings.due_days', 'type' => 'string', 'default' => 'sat_thu', 'group' => 'party_auto'],
+        ['key' => 'notification.auto.due.template_id', 'label' => 'notification::party_auto.settings.due_template_id', 'type' => 'integer', 'default' => 0, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.paid.enabled', 'label' => 'notification::party_auto.settings.paid_enabled', 'type' => 'boolean', 'default' => false, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.paid.when', 'label' => 'notification::party_auto.settings.paid_when', 'type' => 'string', 'default' => 'posted', 'group' => 'party_auto'],
+        ['key' => 'notification.auto.paid.min_amount', 'label' => 'notification::party_auto.settings.paid_min_amount', 'type' => 'string', 'default' => '0', 'group' => 'party_auto'],
+        ['key' => 'notification.auto.paid.template_id', 'label' => 'notification::party_auto.settings.paid_template_id', 'type' => 'integer', 'default' => 0, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.paid.with_link', 'label' => 'notification::party_auto.settings.paid_with_link', 'type' => 'boolean', 'default' => true, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.quiet', 'label' => 'notification::party_auto.settings.quiet', 'type' => 'boolean', 'default' => true, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.once_a_day', 'label' => 'notification::party_auto.settings.once_a_day', 'type' => 'boolean', 'default' => true, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.optout', 'label' => 'notification::party_auto.settings.optout', 'type' => 'boolean', 'default' => true, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.per_branch', 'label' => 'notification::party_auto.settings.per_branch', 'type' => 'boolean', 'default' => false, 'group' => 'party_auto'],
+        ['key' => 'notification.auto.branch_rules', 'label' => 'notification::party_auto.settings.branch_rules', 'type' => 'json', 'default' => null, 'group' => 'party_auto'],
     ],
 
     // ⭐ ধাপ ৪ — রিপোর্ট আর তার ছাঁকনি

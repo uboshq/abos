@@ -30,6 +30,12 @@ class NotificationChannel extends Model
 
     public const SMS = 'sms';
 
+    /**
+     * ⭐ পার্টিকে WhatsApp — Meta Cloud API ([[WhatsAppCloud]]; "বার্তার পথ" পাতা)।
+     * ⛔ ALL-এ নয়: ALL হলো নিজের মানুষের বিজ্ঞপ্তির মাধ্যমের পাতা, আর এটা পার্টির পথ।
+     */
+    public const PARTY_WHATSAPP = 'party_whatsapp';
+
     /** @var list<string> পর্দায় এই ক্রমে */
     public const ALL = [self::EMAIL, self::WEB_PUSH, self::MOBILE_PUSH, self::SMS];
 

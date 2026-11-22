@@ -50,15 +50,15 @@
         $items[] = ['label' => __('core.row_menu.print'), 'icon' => 'printer', 'url' => $print, 'blank' => true, 'key' => 'F10'];
         if ($isConfirmed) {
             $items[] = ['label' => __('core.row_menu.pdf'), 'icon' => 'download', 'url' => route('sales.print.invoice', ['invoice' => $invoice, 'download' => 1]), 'blank' => true];
-            $items[] = ['label' => __('core.row_menu.send'), 'icon' => 'share', 'url' => route('paper.share'), 'method' => 'post',
-                'fields' => [
-                    'route' => 'sales.print.invoice',
-                    'params[invoice]' => $invoice->id,
-                    'document_type' => 'sales_invoice',
-                    'document_id' => $invoice->id,
-                    'document_no' => $invoice->document_no,
-                    'paper' => \App\Core\Engines\Print\PaperSize::A4,
-                ]];
+            /* ⭐ লিংক কপি · WhatsApp-এ পাঠান · SMS পাঠান — পথ চালু থাকলে (ধাপ ৩; [[RowMenu::send()]]) */
+            array_push($items, ...\App\Core\Support\RowMenu::send([
+                'route' => 'sales.print.invoice',
+                'params[invoice]' => $invoice->id,
+                'document_type' => 'sales_invoice',
+                'document_id' => $invoice->id,
+                'document_no' => $invoice->document_no,
+                'paper' => \App\Core\Engines\Print\PaperSize::A4,
+            ]));
         }
     }
 

@@ -1,92 +1,141 @@
 {{--
-    ⭐ পার্টিকে বার্তা — খাতা: কে, কবে, কোন কাগজ, কোন পার্টি, কোন নম্বরে, কোন ভাষায়, ঠিক কোন লেখা (মালিকের "ok", ১০ নভেম্বর ২০২৬)।
+    ⭐ পার্টিকে বার্তা — খাতা: WhatsApp আর SMS এক তালিকায়, প্রতিটার অবস্থাসহ (ধাপ ৩, মালিকের "ok" ২৩ নভেম্বর ২০২৬; নমুনা
+    HUXqpfhxng8823eEFrvH54 ট্যাব গ)।
+    ⓘ মাথা: নাম · ট্যাব (সব / পৌঁছেছে / অপেক্ষায় / ব্যর্থ) · ছাঁকনি … নামান (Excel) — টুলবারের মান; শিরোনামের নিচে ব্যাখ্যার লাইন নেই
+      (মালিক, ১৯ নভেম্বর ২০২৬ রাত)। তারপর আজকের চার সংখ্যা, তারপর তালিকা।
+    ⓘ কলাম ঠিক নমুনার: কখন · পার্টি · নম্বর · কাগজ · পথ · কে/কীভাবে · অবস্থা · অ্যাকশন (⋯)।
     ⓘ শাখার দেয়ালের ভিতরে ([[ScopedToUserBranch]])।
 --}}
+@php
+    use App\Core\Support\DateFormat;
+    use App\Models\PartyMessage;
+    use Illuminate\Support\HtmlString;
+
+    $exporting = app(\App\Core\Services\ListExport::class)->wanted();
+    $clock = fn ($t) => $t === null ? '' : \Illuminate\Support\Carbon::parse($t)->format('H:i');
+
+    // ⓘ নমুনার মতো — আজকের সারিতে কেবল সময়, পুরনো সারিতে তারিখও
+    $when = fn (PartyMessage $m) => $m->created_at === null ? ''
+        : ($m->created_at->isToday() ? $clock($m->created_at) : DateFormat::format($m->created_at).' '.$clock($m->created_at));
+
+    // ⓘ বাংলাদেশের মোবাইল দেশের ভিতরের রূপে ("01711-234567"), বিদেশের নম্বর +দেশের কোড সহ
+    $phone = function (PartyMessage $m): string {
+        $p = (string) $m->phone;
+
+        return preg_match('/^880(1\d{3})(\d{6})$/', $p, $x) === 1 ? '0'.$x[1].'-'.$x[2] : ($p === '' ? '—' : '+'.$p);
+    };
+
+    // ⓘ কাগজের নম্বর; পার্টির হিসাবের সারিতে (বাকির তাগাদা) লেখার নাম, না থাকলে নিয়মের নাম
+    $paper = fn (PartyMessage $m) => $m->document_type === PartyMessage::PARTY_ACCOUNT
+        ? (string) ($m->template?->name ?? ($m->rule ? __('notification::party_log.rules.'.$m->rule) : '—'))
+        : (string) ($m->document_no ?? '—');
+
+    $roadName = fn (PartyMessage $m) => (string) __('notification::party.channels.'.($m->channel === 'sms' ? 'sms' : 'whatsapp'));
+
+    $how = function (PartyMessage $m) use ($phones): string {
+        if ($m->via === PartyMessage::AUTO) {
+            $road = $m->route === PartyMessage::CLOUD
+                ? __('notification::party_log.cloud')
+                : (($phones[(int) $m->sms_outbox_id] ?? null) ?: __('notification::party_log.office_phone'));
+
+            return (string) __('notification::party_log.auto', ['road' => $road]);
+        }
+
+        return (string) __('notification::party_log.button', ['who' => $m->sender?->name ?? '—']);
+    };
+
+    // ⭐ অবস্থা — পিলের লেখা, রং, আর ব্যর্থ হলে লাল কারণের লাইন ("এই নম্বরে WhatsApp নেই → SMS-এ গেছে")
+    $state = function (PartyMessage $m) use ($clock, $fellBack): array {
+        $why = null;
+        [$tone, $text] = match ($m->status) {
+            PartyMessage::OPENED => ['info', __('notification::party_log.states.opened')],
+            PartyMessage::WAITING => ['pending', __('notification::party_log.states.'.($m->route === PartyMessage::PHONE ? 'waiting_phone' : 'waiting'))],
+            PartyMessage::SENT => ['pending', __('notification::party_log.states.sent', ['time' => $clock($m->sent_at)])],
+            PartyMessage::DELIVERED => ['success', __('notification::party_log.states.delivered', ['time' => $clock($m->delivered_at)])],
+            PartyMessage::READ => ['success', __('notification::party_log.states.read', ['time' => $clock($m->read_at)])],
+            PartyMessage::FAILED => ['danger', __('notification::party_log.states.failed')],
+            default => ['draft', (string) $m->status],
+        };
+
+        if ($m->status === PartyMessage::FAILED) {
+            $reason = trim((string) $m->error) !== '' ? (string) $m->error : (string) __('notification::party_log.no_reason');
+            $why = isset($fellBack[(int) $m->id]) ? (string) __('notification::party_log.fell_back', ['reason' => $reason]) : $reason;
+        }
+
+        return ['tone' => $tone, 'text' => trim((string) $text), 'why' => $why];
+    };
+
+    $columns = [
+        ['key' => 'when', 'label' => __('notification::party_log.when'), 'width' => '7rem',
+            'render' => fn ($m) => $exporting ? $when($m) : new HtmlString('<span class="num whitespace-nowrap" data-party-message="'.(int) $m->id.'">'.e($when($m)).'</span>')],
+        ['key' => 'party', 'label' => __('notification::party_log.party'), 'wrap' => true, 'render' => fn ($m) => $m->party_name ?? '—'],
+        ['key' => 'phone', 'label' => __('notification::party_log.phone'), 'width' => '8.5rem',
+            'render' => fn ($m) => $exporting ? $phone($m) : new HtmlString('<span class="num whitespace-nowrap">'.e($phone($m)).'</span>')],
+        ['key' => 'paper', 'label' => __('notification::party_log.paper'), 'width' => '9rem',
+            'render' => fn ($m) => $exporting || $m->document_type === PartyMessage::PARTY_ACCOUNT ? $paper($m)
+                : new HtmlString('<span class="num" title="'.e(__('notification::party.types.'.$m->document_type)).'">'.e($paper($m)).'</span>')],
+        ['key' => 'road', 'label' => __('notification::party_log.road'), 'width' => '7rem',
+            'render' => fn ($m) => $exporting ? $roadName($m) : view('notification::party.partials.road', ['message' => $m, 'name' => $roadName($m)])],
+        ['key' => 'how', 'label' => __('notification::party_log.how'), 'wrap' => true, 'render' => fn ($m) => $how($m)],
+        ['key' => 'state', 'label' => __('notification::party_log.state'), 'wrap' => true,
+            'render' => function ($m) use ($exporting, $state) {
+                $s = $state($m);
+
+                return $exporting
+                    ? ($s['why'] !== null ? $s['text'].' — '.$s['why'] : $s['text'])
+                    : view('notification::party.partials.state', ['message' => $m, 'state' => $s]);
+            }],
+    ];
+@endphp
+
 <x-layouts.app :menu="$menu">
-    <x-slot:title>{{ __('notification::party.messages_title') }}</x-slot:title>
+    <x-slot:title>{{ $title }}</x-slot:title>
 
-    <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::party.messages_title')" :info="__('notification::party.messages_note')" :search="false" :export="false" :share="false" />
+    {{-- ⭐ সব · পৌঁছেছে · অপেক্ষায় · ব্যর্থ (`?tab=`); ABOS রূপে মাথার সারিতে নামের পাশে বসে ([[compactPageHead]]) --}}
+    <x-ui.list-tabs :tabs="$tabs" :label="__('notification::party_log.tabs_label')" />
 
-        {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
-        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::party.messages_note') }}</p>
+    <x-ui.filter-layout :filters="$filters" form="list-form" :noun="__('notification::party_log.noun')">
+        {{-- ⭐ আজকের চার সংখ্যা — আজ পাঠানো · পৌঁছেছে · অপেক্ষায় · ব্যর্থ (দেয়ালের ভিতরে, ছাঁকনি ছাড়া); তালিকার কার্ডের ছাঁচ, লিংক নয় --}}
+        <div class="list-cards" data-list-cards data-party-today>
+            @foreach ([
+                'sent' => ['#2346d8', '#3b82f6', 'send'],
+                'delivered' => ['#059669', '#10b981', 'check'],
+                'waiting' => ['#b45309', '#f59e0b', 'clock'],
+                'failed' => ['#be123c', '#f43f5e', 'alert-triangle'],
+            ] as $key => [$a, $b, $icon])
+                <div class="list-card" data-card="{{ $key }}" style="--a: {{ $a }}; --b: {{ $b }}">
+                    <span class="list-card-icon" aria-hidden="true"><x-ui.icon :name="$icon" :size="14" /></span>
+                    <span class="min-w-0">
+                        <span class="list-card-label">{{ __('notification::party_log.today.'.$key) }}</span>
+                        <span class="list-card-value num">{{ number_format($today[$key]) }}</span>
+                    </span>
+                </div>
+            @endforeach
+        </div>
 
-        <form method="GET" class="flex flex-wrap items-end gap-3 text-2xs text-(--color-ink-muted)">
-            <label class="grid gap-1">{{ __('notification::party.from') }}
-                <x-ui.date name="from" :value="$filters['from'] ?? null" />
-            </label>
-            <label class="grid gap-1">{{ __('notification::party.to') }}
-                <x-ui.date name="to" :value="$filters['to'] ?? null" />
-            </label>
-            <label class="grid gap-1">{{ __('notification::party.paper') }}
-                <select name="document_type" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('notification::party.any_paper') }}</option>
-                    @foreach (array_keys(\App\Core\Services\PaperTrail::DOCUMENT_ROUTES) as $type)
-                        <option value="{{ $type }}" @selected(($filters['document_type'] ?? '') === $type)>{{ __('notification::party.types.'.$type) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1">{{ __('notification::party.who') }}
-                <select name="sent_by" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('notification::party.anyone') }}</option>
-                    @foreach ($senders as $sender)
-                        <option value="{{ $sender->id }}" @selected((string) ($filters['sent_by'] ?? '') === (string) $sender->id)>{{ $sender->name }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1">{{ __('notification::party.search') }}
-                <input type="search" name="q" maxlength="60" value="{{ $filters['q'] ?? '' }}" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-            </label>
-            <button type="submit" class="h-(--spacing-field) rounded-(--radius-field) bg-(--color-brand-500) px-3 text-sm text-white">{{ __('notification::party.filter') }}</button>
-        </form>
+        <div data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <form id="list-form" method="GET" class="contents">
+                @if ($tab !== 'all')
+                    <input type="hidden" name="tab" value="{{ $tab }}">
+                @endif
+                <x-ui.toolbar :title="$title" :columns="$columns" :facets="$filters" :quiet="['tab']" :share="false"
+                              :search-placeholder="__('notification::party_log.search')" />
+            </form>
 
-        @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::party.log_empty') }}</p>
-        @else
-            <div class="overflow-x-auto">
-                <table class="ui-grid">
-                    <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
-                        <tr>
-                            <th class="text-start">{{ __('notification::party.when') }}</th>
-                            <th class="text-start">{{ __('notification::party.who') }}</th>
-                            <th class="text-start">{{ __('notification::party.paper') }}</th>
-                            <th class="text-start">{{ __('notification::party.party') }}</th>
-                            <th class="text-start">{{ __('notification::party.phone') }}</th>
-                            <th class="text-start">{{ __('notification::party.channel') }}</th>
-                            <th class="text-start">{{ __('notification::party.language') }}</th>
-                            <th class="text-start">{{ __('notification::party.text') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($rows as $row)
-                            <tr class="border-t border-(--color-border) align-top" data-party-message="{{ $row->id }}">
-                                <td class="whitespace-nowrap text-2xs tabular-nums">{{ \App\Core\Support\DateFormat::formatWithTime($row->created_at) }}</td>
-                                <td class="text-2xs">{{ $row->sender?->name ?? '—' }}</td>
-                                <td class="text-2xs">{{ __('notification::party.types.'.$row->document_type) }} <span class="tabular-nums">{{ $row->document_no }}</span></td>
-                                <td class="text-2xs">{{ $row->party_name ?? '—' }}</td>
-                                <td class="whitespace-nowrap text-2xs tabular-nums">+{{ $row->phone }}</td>
-                                {{-- ⓘ WhatsApp = খোলা হয়েছে; SMS = অফিসের ফোনের সারির অবস্থা (অপেক্ষায় → গেছে → পৌঁছেছে, বা যায়নি) --}}
-                                <td class="text-2xs" data-party-channel="{{ $row->channel }}">
-                                    {{ __('notification::party.channels.'.$row->channel) }}
-                                    @if ($row->channel === 'sms' && ($sms = ($smsStates ?? collect())->get($row->id)))
-                                        <span class="block text-(--color-ink-muted)" data-sms-state="{{ $sms->delivered_at !== null ? 'delivered' : $sms->status }}">{{ __('notification::sms.statuses.'.($sms->delivered_at !== null ? 'delivered' : $sms->status)) }}</span>
-                                    @endif
-                                </td>
-                                <td class="text-2xs">{{ __('notification::party.locales.'.$row->locale) }}</td>
-                                <td class="text-2xs">
-                                    <details>
-                                        <summary class="cursor-pointer">{{ $row->template?->name ?? \Illuminate\Support\Str::limit($row->body, 40) }}</summary>
-                                        <p class="mt-1 max-w-md whitespace-pre-line">{{ $row->body }}</p>
-                                    </details>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
+            {{-- ⓘ আবার পাঠানো বা অন্য পথে পাঠানোর ফল — কাজের উত্তর, ব্যাখ্যার লাইন নয় --}}
+            @if (session('saved') || session('failed') || $errors->any())
+                <div class="px-3 pt-2" data-party-resend-result>@include('notification::partials.flash')</div>
+            @endif
 
-        <x-ui.pager :rows="$rows" />
-        <x-ui.list-totals :rows="$rows" />
-    </div>
+            <x-ui.table
+                :empty="__('notification::party_log.empty')"
+                :rows="$rows"
+                :columns="$columns"
+                :compact="\App\Core\Support\Ui::compact()"
+                :row-menu="fn ($m) => view('notification::party.partials.row-menu', ['message' => $m, 'roads' => $roads, 'partyRoutes' => $partyRoutes])" />
+
+            <x-ui.pager :rows="$rows" />
+            <x-ui.list-totals :rows="$rows" />
+        </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

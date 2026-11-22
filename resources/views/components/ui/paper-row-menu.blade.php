@@ -71,15 +71,15 @@
             $items[] = ['label' => __('core.row_menu.pdf'), 'icon' => 'download', 'url' => $pdf, 'blank' => true];
         }
         if ($share) {
-            $items[] = ['label' => __('core.row_menu.send'), 'icon' => 'share', 'url' => route('paper.share'), 'method' => 'post',
-                'fields' => [
-                    'route' => $share['route'],
-                    'params['.$share['param'].']' => $paper->id,
-                    'document_type' => $share['type'],
-                    'document_id' => $paper->id,
-                    'document_no' => $paper->document_no,
-                    'paper' => \App\Core\Engines\Print\PaperSize::A4,
-                ]];
+            /* ⭐ লিংক কপি · WhatsApp-এ পাঠান · SMS পাঠান — পথ চালু থাকলে (ধাপ ৩; [[RowMenu::send()]]) */
+            array_push($items, ...\App\Core\Support\RowMenu::send([
+                'route' => $share['route'],
+                'params['.$share['param'].']' => $paper->id,
+                'document_type' => $share['type'],
+                'document_id' => $paper->id,
+                'document_no' => $paper->document_no,
+                'paper' => \App\Core\Engines\Print\PaperSize::A4,
+            ]));
         }
     }
 

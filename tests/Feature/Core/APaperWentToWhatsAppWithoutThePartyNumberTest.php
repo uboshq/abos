@@ -70,8 +70,9 @@ final class APaperWentToWhatsAppWithoutThePartyNumberTest extends TestCase
         $this->assertSame('8801712345678', $box['party']['phone'], 'পার্টির খাতার নম্বরটা WhatsApp-এর রূপে বসেনি।');
         $this->assertSame('পরিশোধের খবর', $box['choices'][0]['name'] ?? null,
             'ভাউচারের নিজের লেখা আগে আসার কথা, "যেকোনো কাগজ"-এর লেখা পরে।');
-        $this->assertSame(['পরিশোধের খবর', 'সাধারণ — যেকোনো কাগজ'], array_column($box['choices'], 'name'),
-            'অন্য কাগজের লেখা (বিল, রসিদ…) ভাউচারের বাক্সে এসেছে।');
+        // ⓘ ধাপ ৩: পার্টি জানা কাগজে "পার্টির হিসাব"-এর WhatsApp লেখাও (হিসাব বিবরণী) — কাগজের নিজেরটার পরে, "যেকোনো কাগজ"-এর আগে
+        $this->assertSame(['পরিশোধের খবর', 'হিসাব বিবরণী', 'সাধারণ — যেকোনো কাগজ'], array_column($box['choices'], 'name'),
+            'অন্য কাগজের লেখা (বিল, রসিদ…) ভাউচারের বাক্সে এসেছে, বা SMS-এর লেখা WhatsApp-এর তালিকায়।');
 
         $first = $box['choices'][0];
         $this->assertStringContainsString((string) $this->voucher->document_no, $first['bn']);
@@ -104,7 +105,8 @@ final class APaperWentToWhatsAppWithoutThePartyNumberTest extends TestCase
 
         $this->get(route('notification.party_messages.index'))->assertOk()
             ->assertSee('data-party-message="'.$row->id.'"', false)
-            ->assertSee('+8801712345678');
+            // ⓘ খাতা (ধাপ ৩, নমুনা ট্যাব গ) বাংলাদেশের মোবাইল দেশের রূপে দেখায় — "01712-345678"
+            ->assertSee('01712-345678');
     }
 
     public function test_the_text_is_built_on_the_server_not_taken_from_the_page(): void

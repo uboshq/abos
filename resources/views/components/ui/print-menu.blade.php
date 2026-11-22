@@ -158,12 +158,30 @@
                             <input type="hidden" name="document_no" value="{{ $document['no'] ?? '' }}">
                             <input type="hidden" name="paper" value="{{ $chosen ?? \App\Core\Engines\Print\PaperSize::A4 }}">
 
-                            <button type="submit"
-                                    class="w-full rounded-(--radius-field) border border-(--color-brand-500)
-                                           px-2 py-1 text-2xs font-medium text-(--color-brand-700)
-                                           transition-colors hover:bg-(--color-surface-hover)">
-                                {{ __('core.print.send_to_customer') }}
-                            </button>
+                            {{-- ⭐ ধাপ ৩ (নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ক): লিংক কপি · WhatsApp-এ পাঠান · SMS পাঠান — একই দরজা, পপআপটা
+                                 বাছা পথে খোলে; বন্ধ পথের বোতাম নেই ([[RowMenu::send()]]-এর একই শর্ত) --}}
+                            @php [$roadWa, $roadSms] = \App\Core\Support\RowMenu::roads(); @endphp
+                            <div class="grid gap-1" data-print-send>
+                                <button type="submit" data-send-channel="link"
+                                        class="flex w-full items-center gap-2 rounded-(--radius-field) border border-(--color-border)
+                                               px-2 py-1 text-2xs font-medium transition-colors hover:bg-(--color-surface-hover)">
+                                    <x-ui.icon name="link" :size="14" />{{ __('core.row_menu.copy_link') }}
+                                </button>
+                                @if ($roadWa)
+                                    <button type="submit" name="channel" value="whatsapp" data-send-channel="whatsapp"
+                                            class="flex w-full items-center gap-2 rounded-(--radius-field) border border-(--color-border)
+                                                   px-2 py-1 text-2xs font-medium transition-colors hover:bg-(--color-surface-hover)">
+                                        <x-ui.icon name="chat" :size="14" class="text-(--color-badge-success-ink)" />{{ __('core.row_menu.send_whatsapp') }}
+                                    </button>
+                                @endif
+                                @if ($roadSms)
+                                    <button type="submit" name="channel" value="sms" data-send-channel="sms"
+                                            class="flex w-full items-center gap-2 rounded-(--radius-field) border border-(--color-border)
+                                                   px-2 py-1 text-2xs font-medium transition-colors hover:bg-(--color-surface-hover)">
+                                        <x-ui.icon name="sms" :size="14" class="text-(--color-brand-600)" />{{ __('core.row_menu.send_sms') }}
+                                    </button>
+                                @endif
+                            </div>
                         </form>
                     </div>
                 @endisset

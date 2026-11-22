@@ -164,7 +164,12 @@ final class AnSmsHadNoWayOutOfTheOfficeTest extends TestCase
         $customer = Customer::query()->create(['company_id' => $this->company->id, 'code' => 'SMS-1', 'name_en' => 'Rahim', 'name_bn' => 'রহিম', 'phone' => '01712-345678', 'is_active' => true]);
         $share = $this->shareFor($customer);
         PartyMessageTemplate::ensureStarters((int) $this->company->id);
-        $template = PartyMessageTemplate::query()->usableFor(PartyMessageTemplate::WHATSAPP, 'accounts_voucher')->firstOrFail();
+        // ⓘ ধাপ ৩: SMS যায় কেবল SMS-এর লেখায় — ভাউচারের নিজের একটা SMS লেখা
+        $template = PartyMessageTemplate::query()->create([
+            'company_id' => $this->company->id, 'channel' => PartyMessageTemplate::SMS, 'document_type' => 'accounts_voucher',
+            'name' => 'পরিশোধ (SMS)', 'body_bn' => 'প্রিয় {party}, ৳{amount} — {paper_no}', 'body_en' => 'Dear {party}, Tk {amount} — {paper_no}',
+            'is_active' => true, 'sort' => 10,
+        ]);
 
         $this->post(route('paper.sms', $share), ['template_id' => $template->id, 'locale' => 'bn', 'phone' => '01712-345678'])
             ->assertRedirect()->assertSessionHas('sms_queued');

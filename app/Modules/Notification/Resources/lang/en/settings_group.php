@@ -7,4 +7,6 @@ return [
     'delivery' => 'Delivery',
     'quiet' => 'Quiet hours',
     'retention' => 'Retention',
+    'party_roads' => 'Message roads',
+    'party_auto' => 'Automatic sends',
 ];

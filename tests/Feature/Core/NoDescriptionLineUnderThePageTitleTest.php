@@ -55,7 +55,7 @@ final class NoDescriptionLineUnderThePageTitleTest extends TestCase
             'বার্তার পথ' => [$m.'Notification\\Http\\Controllers\\NotificationChannelController@index', 'notification::channel.note'],
             'পাঠানোর স্বাস্থ্য' => [$m.'Notification\\Http\\Controllers\\NotificationDeliveryController@health', 'notification::delivery.health_note'],
             'চুপ থাকার সময়' => [$m.'Notification\\Http\\Controllers\\NotificationQuietController@index', 'notification::quiet.note'],
-            'পক্ষের বার্তা' => [$m.'Notification\\Http\\Controllers\\PartyMessageController@messages', 'notification::party.messages_note'],
+            // ⓘ 'পক্ষের বার্তা' — খাতার ব্যাখ্যার লেখাটাই আর নেই (ধাপ ৩, নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব গ: শিরোনাম · ট্যাব · ছাঁকনি · Excel এক সারিতে)
             'SMS ফোন' => [$m.'Notification\\Http\\Controllers\\SmsPhoneController@index', 'notification::sms.note'],
             // ⓘ page-header-এর `info` — ⓘ-এ ব্যাখ্যা আর পাতার নিজের বাক্সের লেখা একসাথে
             'নতুন ডেবিট নোট' => [$m.'Accounts\\Http\\Controllers\\NoteController@create', null],

@@ -1226,6 +1226,10 @@ return [
             // ⭐ ভাউচারও — শেষ সইয়ে নিজে পোস্ট (মালিক, ১১ অক্টোবর ২০২৬; [[SignedPaperFinisher]])
             \App\Modules\Accounts\Listeners\PostTheVoucherOnTheLastSignature::class,
         ],
+        // ⭐ রসিদ পোস্ট হলে পার্টিকে "টাকা পেয়েছি" — কেবল সারিতে বসানো, পোস্ট আটকায় না (ধাপ ৩, ট্যাব ঙ; [[TellThePartyTheMoneyCame]])
+        VoucherPosted::class => [
+            \App\Modules\Accounts\Listeners\TellThePartyTheMoneyCame::class,
+        ],
     ],
 
     // ⭐ প্রোফাইলের "এই মাসে আমার কাজ" — পোস্ট করা ভাউচার ([[ContributesToAProfile]]; ২১ নভেম্বর ২০২৬)

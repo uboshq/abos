@@ -612,16 +612,40 @@ export function shareMenu ({ url }) {
 }
 
 /**
- * গ্রাহককে পাঠানোর লিংক — কপি করার বোতামসহ।
+ * ⓘ SMS-এ কয়টা ভাগে যাবে — বাংলা (ইউনিকোড) 70/67, ইংরেজি 160/153 অক্ষরে; সার্ভারের [[SmsOutbox::parts()]]-এর একই হিসাব।
+ *
+ * @returns {{ length: number, parts: number, unicode: boolean }}
+ */
+const smsMeasure = (text) => {
+    const unicode = /[^\x00-\x7F]/.test(text)
+    const length = Array.from(text).length
+    const [single, multi] = unicode ? [70, 67] : [160, 153]
+
+    return { length, parts: length === 0 ? 0 : (length <= single ? 1 : Math.ceil(length / multi)), unicode }
+}
+
+/**
+ * গ্রাহককে পাঠানোর লিংক — কপি করার বোতামসহ, আর "পার্টিকে পাঠান" পপআপ।
  *
  * ⭐ পার্টির WhatsApp-এ (মালিকের "ok", ১০ নভেম্বর ২০২৬): `choices` সার্ভারে আসল মান বসিয়ে দুই ভাষায় বানানো লেখা;
  * এখানে কেবল বাছাই আর ভাষা ধরে কোনটা দেখাবে, তা ঠিক হয়। ⓘ যা যায় তা সার্ভার আবার বানায়, এই লেখা নয়।
+ *
+ * ⭐ ধাপ ৩ (নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ক): একই পপআপে ওপরে পথ (WhatsApp / SMS) আর ভাষা; "লেখা" পথ ধরে বদলায়
+ * (`choices` WhatsApp-এর, `smsChoices` SMS-এর); SMS-এ অক্ষর আর ভাগের লাইন; নিচে কী ঘটবে তার এক লাইন।
+ * ⓘ ⋯ মেনুর "WhatsApp-এ পাঠান" / "SMS পাঠান" থেকে এলে পপআপ ঐ পথ বাছা অবস্থায় খোলা (`channel`); "লিংক কপি" থেকে বন্ধ।
  */
-export function sharedLink ({ url, choices = [], partsWord = '' }) {
+export function sharedLink ({ url, choices = [], smsChoices = [], channel = '', roads = [], locale = 'bn', templateId = '', words = {} }) {
+    const listOf = (road) => road === 'sms' ? smsChoices : choices
+    const firstOf = (road) => listOf(road).length > 0 ? String(listOf(road)[0].id) : ''
+    const start = roads.includes(channel) ? channel : (roads[0] || '')
+    const keep = templateId !== '' && listOf(start).some((c) => String(c.id) === String(templateId))
+
     return {
         copied: false,
-        locale: 'bn',
-        templateId: choices.length > 0 ? String(choices[0].id) : '',
+        open: roads.includes(channel),
+        channel: start,
+        locale: locale === 'en' ? 'en' : 'bn',
+        templateId: keep ? String(templateId) : firstOf(start),
 
         copy () {
             navigator.clipboard.writeText(url)
@@ -629,8 +653,50 @@ export function sharedLink ({ url, choices = [], partsWord = '' }) {
             setTimeout(() => { this.copied = false }, 2000)
         },
 
+        show (road) {
+            this.pick(road)
+            this.open = true
+        },
+
+        close () {
+            this.open = false
+        },
+
+        pick (road) {
+            if (! roads.includes(road) || road === this.channel) {
+                return
+            }
+
+            this.channel = road
+            this.templateId = firstOf(road)
+        },
+
+        lang (to) {
+            this.locale = to === 'en' ? 'en' : 'bn'
+        },
+
+        isChosen (choice) {
+            return String(choice.id) === String(this.templateId)
+        },
+
+        get isWa () {
+            return this.channel === 'whatsapp'
+        },
+
+        get isSms () {
+            return this.channel === 'sms'
+        },
+
+        get options () {
+            return listOf(this.channel)
+        },
+
+        get empty () {
+            return this.options.length === 0
+        },
+
         get preview () {
-            const chosen = choices.find((c) => String(c.id) === String(this.templateId))
+            const chosen = this.options.find((c) => String(c.id) === String(this.templateId))
 
             if (! chosen) {
                 return ''
@@ -639,18 +705,91 @@ export function sharedLink ({ url, choices = [], partsWord = '' }) {
             return this.locale === 'en' ? chosen.en : chosen.bn
         },
 
-        /*
-         * ⓘ SMS-এ কয়টা ভাগে যাবে — বাংলা (ইউনিকোড) 70/67, ইংরেজি 160/153 অক্ষরে; সার্ভারের [[SmsOutbox::parts()]]-এর একই হিসাব।
-         * ⓘ এক ভাগ হলে কিছু বলা হয় না।
-         */
-        get smsParts () {
-            const text = this.preview
-            const unicode = /[^\x00-\x7F]/.test(text)
-            const length = Array.from(text).length
-            const [single, multi] = unicode ? [70, 67] : [160, 153]
-            const parts = length <= single ? 1 : Math.ceil(length / multi)
+        /* ⓘ "<n> অক্ষর · <k> টি SMS (বাংলায় প্রতি SMS-এ 70 অক্ষর)" — ইংরেজি লেখায় বন্ধনীর কথাটা নেই */
+        get smsMeta () {
+            const m = smsMeasure(this.preview)
 
-            return parts <= 1 || partsWord === '' ? '' : partsWord.replace('#', String(parts))
+            if (m.length === 0) {
+                return ''
+            }
+
+            const line = (m.unicode ? (words.metaUnicode || '') : (words.metaPlain || ''))
+
+            return line.replace('#n', String(m.length)).replace('#k', String(m.parts))
+        },
+
+        get hint () {
+            return this.isSms ? (words.hintSms || '') : (words.hintWa || '')
+        },
+
+        /* ⓘ পুরনো ডাক — এক ভাগের বেশি হলে "<k> টা SMS ভাগে যাবে" */
+        get smsParts () {
+            const m = smsMeasure(this.preview)
+
+            return m.parts <= 1 || ! words.parts ? '' : words.parts.replace('#', String(m.parts))
+        },
+    }
+}
+
+/**
+ * ⭐ পার্টিকে বার্তা — লেখার সম্পাদক (ধাপ ৩, নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব খ)।
+ *
+ * ⓘ নামের চিপ চাপলে শেষ যে লেখার ঘরে (বাংলা বা English) মন ছিল, তার কার্সরের জায়গায় নামটা বসে।
+ * ⓘ নিচে বাংলা লেখার নমুনা — নমুনার মান বসিয়ে — আর অক্ষর গোনা; পথ SMS হলে কয়টা SMS-এ যাবে।
+ * ⓘ ঘরগুলো সার্ভারের আঁকা (`x-ref`), `x-model` নয় — পুরনো মান (ভুলের পরে ফেরা) HTML-ই রাখে।
+ */
+export function partyTemplateEditor ({ sample = {}, words = {} }) {
+    return {
+        bn: '',
+        channel: 'whatsapp',
+        last: null,
+
+        /* ⓘ ভিতরের x-ref-গুলো x-data-র init-এর পরে বসে — তাই এক টিক পরে পড়া */
+        init () {
+            this.$nextTick(() => {
+                this.last = this.last || this.$refs.bn || null
+                this.read()
+            })
+        },
+
+        read () {
+            this.bn = this.$refs.bn ? this.$refs.bn.value : ''
+            this.channel = this.$refs.channel ? this.$refs.channel.value : 'whatsapp'
+        },
+
+        focus (event) {
+            this.last = event.target
+        },
+
+        insert (name) {
+            const el = this.last || this.$refs.bn
+
+            if (! el) {
+                return
+            }
+
+            const token = '{' + name + '}'
+            const from = typeof el.selectionStart === 'number' ? el.selectionStart : el.value.length
+            const to = typeof el.selectionEnd === 'number' ? el.selectionEnd : from
+
+            el.value = el.value.slice(0, from) + token + el.value.slice(to)
+            el.focus()
+            el.setSelectionRange(from + token.length, from + token.length)
+            this.read()
+        },
+
+        get preview () {
+            return this.bn.replace(/\{([A-Za-z0-9_]+)\}/g, (m, k) => (Object.prototype.hasOwnProperty.call(sample, k) ? sample[k] : m)).trim()
+        },
+
+        get count () {
+            const m = smsMeasure(this.preview)
+
+            if (this.channel === 'sms') {
+                return (words.countSms || '').replace('#n', String(m.length)).replace('#k', String(m.parts))
+            }
+
+            return (words.count || '').replace('#n', String(m.length))
         },
     }
 }

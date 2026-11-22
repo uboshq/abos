@@ -14,7 +14,9 @@ use App\Modules\Notification\Http\Controllers\NotificationReportController;
 use App\Modules\Notification\Http\Controllers\NotificationRuleController;
 use App\Modules\Notification\Http\Controllers\NotificationScheduleController;
 use App\Modules\Notification\Http\Controllers\NotificationTemplateController;
+use App\Modules\Notification\Http\Controllers\PartyAutoController;
 use App\Modules\Notification\Http\Controllers\PartyMessageController;
+use App\Modules\Notification\Http\Controllers\PartyRoadsController;
 use App\Modules\Notification\Http\Controllers\SmsPhoneController;
 use Illuminate\Support\Facades\Route;
 
@@ -124,6 +126,16 @@ Route::middleware('auth')->prefix('notification')->group(function () {
         ->whereNumber('template')->middleware('can:notification.party_templates')->name('party_templates.update');
     Route::get('/party-messages', [PartyMessageController::class, 'messages'])
         ->middleware('can:notification.party_messages')->name('party_messages.index');
+    /*
+     * ⭐ খাতার সারির কাজ — লেখাটা দেখা, আবার পাঠানো, অন্য পথে পাঠানো (ধাপ ৩, নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব গ)। ⓘ চাবি খাতারই;
+     *   কাগজের সারিতে কাগজের নিজের ছাপার চাবি আর নাগালও লাগে ([[PartyMessageResender]]); সারিটা শাখার দেয়ালের ভিতরে (বাঁধনেই)।
+     */
+    Route::get('/party-messages/{message}', [PartyMessageController::class, 'message'])
+        ->whereNumber('message')->middleware('can:notification.party_messages')->name('party_messages.show');
+    Route::post('/party-messages/{message}/resend', [PartyMessageController::class, 'resend'])
+        ->whereNumber('message')->middleware(['can:notification.party_messages', 'throttle:30,1'])->name('party_messages.resend');
+    Route::post('/party-messages/{message}/other-road', [PartyMessageController::class, 'otherRoad'])
+        ->whereNumber('message')->middleware(['can:notification.party_messages', 'throttle:30,1'])->name('party_messages.other_road');
 
     // ⭐ অফিসের SMS ফোন — নমুনা ধাপ ২ (মালিকের "ok", ১০ নভেম্বর ২০২৬); চাবিটা কেবল মালিকের (migration-এ super_admin)
     Route::get('/sms-phones', [SmsPhoneController::class, 'index'])
@@ -134,4 +146,25 @@ Route::middleware('auth')->prefix('notification')->group(function () {
         ->whereNumber('phone')->middleware('can:notification.sms_gateway')->name('sms_phones.update');
     Route::post('/sms-phones/{phone}/token', [SmsPhoneController::class, 'token'])
         ->whereNumber('phone')->middleware(['can:notification.sms_gateway', 'throttle:6,1'])->name('sms_phones.token');
+
+    // ⭐ বার্তার পথ — wa.me, Meta Cloud API, অফিসের ফোন; কোন পথ আগে; খরচ (নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ঘ; [[PartyRoadsController]])
+    Route::get('/party-roads', [PartyRoadsController::class, 'index'])
+        ->middleware('can:notification.party_roads')->name('party_roads.index');
+    Route::put('/party-roads', [PartyRoadsController::class, 'save'])
+        ->middleware('can:notification.party_roads')->name('party_roads.save');
+    Route::post('/party-roads/check', [PartyRoadsController::class, 'check'])
+        ->middleware(['can:notification.party_roads', 'throttle:6,1'])->name('party_roads.check');
+    // ⓘ লেখার ছকের "Meta-র অনুমোদনে পাঠান" — লেখার চাবিতে
+    Route::post('/party-templates/{template}/meta', [PartyRoadsController::class, 'submitTemplate'])
+        ->whereNumber('template')->middleware(['can:notification.party_templates', 'throttle:6,1'])->name('party_templates.meta_submit');
+
+    // ⭐ নিজে থেকে পাঠানো — বাকির তাগাদা, টাকা পাওয়ার খবর, বাদ রাখা পার্টি (নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ঙ; [[PartyAutoController]])
+    Route::get('/party-auto', [PartyAutoController::class, 'index'])
+        ->middleware('can:notification.party_auto')->name('party_auto.index');
+    Route::put('/party-auto', [PartyAutoController::class, 'save'])
+        ->middleware('can:notification.party_auto')->name('party_auto.save');
+    Route::post('/party-auto/optouts', [PartyAutoController::class, 'optOut'])
+        ->middleware('can:notification.party_auto')->name('party_auto.optout.store');
+    Route::delete('/party-auto/optouts/{optout}', [PartyAutoController::class, 'optIn'])
+        ->whereNumber('optout')->middleware('can:notification.party_auto')->name('party_auto.optout.destroy');
 });

@@ -8,8 +8,10 @@ use App\Core\Support\Actor;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\PaperShareController;
 use App\Core\Support\Money;
+use App\Core\Support\PartyLedger;
 use App\Models\Company;
 use App\Models\DocumentShare;
+use App\Models\LedgerEntry;
 use App\Models\PartyMessage;
 use App\Models\PartyMessageTemplate;
 use Illuminate\Database\Eloquent\Model;
@@ -25,6 +27,9 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
  */
 final class PartyMessages
 {
+    /** @var array<string, ?string> পার্টি ধরে বাকি — এক অনুরোধে একবার */
+    private array $dues = [];
+
     public function __construct(
         private readonly PaperParties $papers,
         private readonly PartyRegistry $parties,
@@ -88,6 +93,86 @@ final class PartyMessages
     }
 
     /**
+     * ⭐ পার্টির যত মোবাইল নম্বর ব্যবস্থা জানে — পাঠানোর পপআপের "নম্বর" (ধাপ ৩, নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ক)।
+     *
+     * ⓘ কোর মডিউলের নাম জানে না: পার্টির নিজের সারির ঘরগুলো — `mobile`, `phone`, `whatsapp`, `owner_phone`, `contact_phone` —
+     *   যেটা আছে আর মোবাইল বলে চেনা যায়। পাশের নাম: মালিকের নাম (`owner_name`) বা যোগাযোগের মানুষ (`contact_person`)।
+     * ⓘ একই নম্বর দুইবার নয়; ক্রম: পার্টির খাতার মূল নম্বর আগে।
+     *
+     * @return list<array{phone: string, shown: string, label: string}>
+     */
+    public function phonesOf(Model $document): array
+    {
+        $key = $this->papers->keyOf($document);
+        $row = $key === null ? null : $this->parties->find($key[0], $key[1]);
+
+        if ($row === null) {
+            return [];
+        }
+
+        $owner = (string) ($row->getAttribute('owner_name') ?? '');
+        $contact = (string) ($row->getAttribute('contact_person') ?? '');
+        $fields = [
+            'mobile' => $owner, 'phone' => $owner, 'whatsapp' => $owner, 'owner_phone' => $owner, 'contact_phone' => $contact,
+        ];
+
+        $out = [];
+
+        foreach ($fields as $field => $who) {
+            $phone = self::phone((string) ($row->getAttribute($field) ?? ''));
+
+            if ($phone === null || isset($out[$phone])) {
+                continue;
+            }
+
+            $out[$phone] = ['phone' => $phone, 'shown' => self::shown($phone), 'label' => $who];
+        }
+
+        return array_values($out);
+    }
+
+    /** ⓘ পর্দায় নম্বর যেভাবে মানুষ লেখেন — দেশের মোবাইল 01…, বিদেশের + সহ */
+    public static function shown(string $phone): string
+    {
+        return str_starts_with($phone, '880') ? substr($phone, 2) : '+'.$phone;
+    }
+
+    /**
+     * ⭐ পার্টির এখনকার মোট বাকি — {due} (ধাপ ৩)।
+     *
+     * ⓘ পক্ষের খাতার একই ভিত্তি যা হিসাব বিবরণী আর গ্রাহকের পাতা পড়ে ([[Customer::outstanding()]], [[PartyLedger]]): পক্ষের সব
+     *   দাখিলা, সব শাখার — পার্টির কাছে তার পুরো বাকিটাই যায়, পাঠানো মানুষটার শাখারটা নয়। সম্পাদনার উল্টো-জোড়া মিলে শূন্য।
+     * ⓘ গ্রাহক (ও বাকিরা): ডেবিট − ক্রেডিট; সরবরাহকারী: ক্রেডিট − ডেবিট (আমাদের দেনা)। শূন্যের নিচে (অগ্রিম) হলে 0।
+     */
+    public function dueOf(?string $type, ?int $id): ?string
+    {
+        if ($type === null || $id === null || $id <= 0) {
+            return null;
+        }
+
+        $net = (string) (PartyLedger::withoutUndoneEdits(LedgerEntry::query()->forParty($type, $id))
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
+            ->value('net') ?? '0');
+
+        $due = $type === 'supplier' ? bcsub('0', $net, 4) : bcadd($net, '0', 4);
+
+        return bccomp($due, '0', 4) > 0 ? $due : '0';
+    }
+
+    /**
+     * ⭐ লেখা বাছার ধরন — কাগজের ধরন, কেবল একটা ব্যতিক্রম: টাকা পাওয়ার ভাউচার (RCV) "রসিদ"-এর লেখা পায়।
+     *
+     * ⓘ টাকা ঢোকার কাগজ এখন একটাই — RCV (মালিক, ২০ নভেম্বর ২০২৬), আর সেটা ভাউচার; ভাউচারের "পরিশোধের খবর" লেখা ("আপনাকে পরিশোধ
+     *   করেছে") রসিদে উল্টো কথা বলত। তাই টাকা-পাওয়ার ভাউচার রসিদের ধরন (`sales_collection`, পর্দায় "রসিদ (RCV)") নেয়।
+     */
+    public static function messageType(Model $document, string $documentType): string
+    {
+        return $documentType === 'accounts_voucher' && $document->getAttribute('type') === 'receipt'
+            ? 'sales_collection'
+            : $documentType;
+    }
+
+    /**
      * লেখায় বসানোর মান — চাওয়া ভাষায়।
      *
      * @return array<string, string>
@@ -102,10 +187,15 @@ final class PartyMessages
         app()->setLocale($locale);
 
         try {
-            $party = $this->partyOf($document)['name'];
+            $of = $this->partyOf($document);
+            $party = $of['name'];
         } finally {
             app()->setLocale($screen);
         }
+
+        // ⓘ দুই ভাষায় একই বাকি — একবারই গোনা
+        $dueKey = $of['type'].':'.$of['id'];
+        $due = $this->dues[$dueKey] ??= $this->dueOf($of['type'], $of['id']);
 
         $amount = $document->getAttribute('total') ?? $document->getAttribute('amount');
         $date = $document->getAttribute('trx_date');
@@ -114,11 +204,22 @@ final class PartyMessages
         return [
             'party' => $party,
             'paper_no' => (string) ($share->document_no ?? $document->getAttribute('document_no') ?? ''),
-            'amount' => $amount === null ? '' : Money::format((string) $amount),
+            'amount' => $amount === null ? '' : self::taka((string) $amount),
+            'due' => $due === null ? '' : self::taka($due),
             'date' => $date === null ? '' : Carbon::parse($date)->format('d-m-Y'),
             'company' => (string) ($company === null ? '' : ($locale === 'en' ? ($company->name_en ?: $company->name_bn) : ($company->name_bn ?: $company->name_en))),
             'link' => route('paper.shared', $share->token),
         ];
+    }
+
+    /**
+     * ⓘ টাকা বার্তার মতো — "86,400", পয়সা থাকলে "86,400.50" (নমুনা HUXqpfhxng8823eEFrvH54: ৳86,400)।
+     */
+    public static function taka(string $amount): string
+    {
+        $text = Money::format($amount);
+
+        return str_ends_with($text, '.00') ? substr($text, 0, -3) : $text;
     }
 
     /** @param  array<string, string>  $values */
@@ -140,9 +241,12 @@ final class PartyMessages
     /**
      * ঐ কাগজের জন্য চালু লেখাগুলো, দুই ভাষায় আসল মান বসিয়ে — বাক্সে দেখানোর জন্য।
      *
+     * ⭐ পথ ধরে (ধাপ ৩): WhatsApp-এর পপআপে WhatsApp-এর লেখা, SMS-এ SMS-এর।
+     * ⓘ কাগজের নিজের লেখা আগে, তারপর "পার্টির হিসাব"-এর (বাকির তাগাদা, হিসাব বিবরণী — পার্টি জানা থাকলেই), শেষে "যেকোনো কাগজ"।
+     *
      * @return list<array{id: int, name: string, bn: string, en: string}>
      */
-    public function choicesFor(Model $document, DocumentShare $share): array
+    public function choicesFor(Model $document, DocumentShare $share, string $channel = PartyMessageTemplate::WHATSAPP): array
     {
         PartyMessageTemplate::ensureStarters((int) $share->company_id);
 
@@ -150,7 +254,7 @@ final class PartyMessages
         $en = $this->values($document, $share, 'en');
 
         return PartyMessageTemplate::query()
-            ->usableFor(PartyMessageTemplate::WHATSAPP, (string) $share->document_type)
+            ->usableFor($channel, $this->typesFor($document, $share))
             ->get()
             ->map(fn (PartyMessageTemplate $t): array => [
                 'id' => (int) $t->id,
@@ -163,11 +267,30 @@ final class PartyMessages
     }
 
     /**
-     * "পাঠান"-এর বাক্সের জন্য — লিংকটা যে কাগজের, তার পার্টি আর লেখাগুলো।
+     * ⓘ ঐ কাগজে যে ধরনের লেখা চলে — কাগজের নিজের ধরন ([[messageType()]]), আর পার্টি জানা থাকলে "পার্টির হিসাব"।
+     * ⓘ পাঠানোর দরজাও ([[PaperShareController]]) ঠিক এটাই মাপে — বাক্সে যা দেখা যায়, কেবল তা-ই পাঠানো যায়।
+     *
+     * @return list<string>
+     */
+    public function typesFor(Model $document, DocumentShare $share): array
+    {
+        $types = [self::messageType($document, (string) $share->document_type)];
+
+        if ($this->papers->keyOf($document) !== null) {
+            $types[] = PartyMessage::PARTY_ACCOUNT;
+        }
+
+        return $types;
+    }
+
+    /**
+     * "পাঠান"-এর বাক্সের জন্য — লিংকটা যে কাগজের, তার পার্টি, নম্বরগুলো আর দুই পথের লেখা।
      *
      * ⓘ কাগজটা দেখার নাগালের বাইরে বা লিংক মরা হলে null — বাক্সে তখন পুরনো নম্বরহীন বোতামটাই থাকে।
+     * ⭐ ধাপ ৩: `wame` / `sms` — কোন পথ খোলা ([[PartyMessageDispatcher::wameOn()]] / [[PartyMessageDispatcher::smsOn()]]),
+     *   `phones` — পার্টির সব মোবাইল, `office_phone` — যে অফিসের ফোনের সিম থেকে SMS যাবে।
      *
-     * @return array{share: DocumentShare, party: array{type: ?string, id: ?int, name: string, phone: ?string}, choices: list<array{id: int, name: string, bn: string, en: string}>, sms: bool}|null
+     * @return array{share: DocumentShare, party: array{type: ?string, id: ?int, name: string, phone: ?string}, choices: list<array{id: int, name: string, bn: string, en: string}>, sms_choices: list<array{id: int, name: string, bn: string, en: string}>, phones: list<array{phone: string, shown: string, label: string}>, wame: bool, sms: bool, office_phone: ?string, locale: string}|null
      */
     public function box(int $shareId): ?array
     {
@@ -183,13 +306,38 @@ final class PartyMessages
             return null;
         }
 
+        $party = $this->partyOf($document);
+        $phones = $this->phonesOf($document);
+
+        // ⓘ কাগজের পার্টির খাতার নম্বরটা না পেলে (অন্য ঘরে লেখা) সেটাও তালিকায়
+        if ($party['phone'] !== null && ! in_array($party['phone'], array_column($phones, 'phone'), true)) {
+            array_unshift($phones, ['phone' => $party['phone'], 'shown' => self::shown($party['phone']), 'label' => '']);
+        }
+
+        $dispatcher = app(PartyMessageDispatcher::class);
+        $sms = $dispatcher->smsOn();
+
         return [
             'share' => $share,
-            'party' => $this->partyOf($document),
+            'party' => $party,
             'choices' => $this->choicesFor($document, $share),
-            // ⓘ SMS-এর বোতাম কেবল তখন, যখন কোম্পানির অফিসের ফোন বসানো আছে (নমুনা ধাপ ২)
-            'sms' => app(SmsOutboxService::class)->hasPhone(),
+            'sms_choices' => $sms ? $this->choicesFor($document, $share, PartyMessageTemplate::SMS) : [],
+            'phones' => $phones,
+            'wame' => $dispatcher->wameOn(),
+            // ⓘ SMS কেবল তখন, যখন পথটা চালু আর কোম্পানির অফিসের ফোন বসানো আছে (নমুনা ধাপ ২, ধাপ ৩ ট্যাব ঘ)
+            'sms' => $sms,
+            'office_phone' => $sms ? $this->officePhone() : null,
+            'locale' => $dispatcher->defaultLocale(),
         ];
+    }
+
+    /** ⓘ যে অফিসের ফোন এখন সারি নেয় — সবচেয়ে সম্প্রতি দেখা চালু ফোনের নাম */
+    private function officePhone(): ?string
+    {
+        $name = \App\Models\SmsGatewayPhone::query()->where('is_active', true)
+            ->orderByDesc('last_seen_at')->orderBy('id')->value('name');
+
+        return $name === null ? null : (string) $name;
     }
 
     /** ⭐ খাতায় লেখা — লেখাটা সার্ভারেই বানানো, পাতা থেকে পাঠানো লেখা নয় */

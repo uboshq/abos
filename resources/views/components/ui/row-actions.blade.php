@@ -185,6 +185,11 @@
                     $row = 'flex w-full items-center gap-2 rounded-(--radius-field) px-2.5 py-1.5 text-start text-xs transition-colors '
                         . 'hover:bg-(--color-surface-hover) ' . $tone;
                     $off = $item['off'] ?? null;
+                    $iconTone = match ($item['icon_tone'] ?? null) {
+                        'chat' => 'text-(--color-badge-success-ink)',
+                        'brand' => 'text-(--color-brand-600)',
+                        default => '',
+                    };
                 @endphp
 
                 @if ($off !== null)
@@ -224,7 +229,8 @@
                             <input type="hidden" name="{{ $field }}" value="{{ $value }}">
                         @endforeach
                         <button type="submit" role="menuitem" class="{{ $row }}">
-                            @isset($item['icon'])<x-ui.icon :name="$item['icon']" :size="15" />@endisset
+                            {{-- ⓘ `icon_tone` — চিহ্নের নিজের রং (পাঠানোর সারি: WhatsApp সবুজ, SMS নীল; ধাপ ৩ নমুনা ট্যাব ক) --}}
+                            @isset($item['icon'])<x-ui.icon :name="$item['icon']" :size="15" :class="$iconTone" />@endisset
                             <span class="min-w-0">{{ $item['label'] }}</span>
                             @isset($item['hint'])<span class="ms-auto ps-3 text-[11px] text-(--color-ink-muted)">{{ $item['hint'] }}</span>@endisset
                             @isset($item['key'])<kbd class="ms-auto rounded border border-(--color-border) px-1 font-sans text-[10px] text-(--color-ink-muted)">{{ $item['key'] }}</kbd>@endisset

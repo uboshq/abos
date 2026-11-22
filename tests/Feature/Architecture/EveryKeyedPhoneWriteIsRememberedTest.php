@@ -42,6 +42,10 @@ final class EveryKeyedPhoneWriteIsRememberedTest extends TestCase
         'delegation.store',
         'delegation.destroy',
         'desk.print_settle',
+        // ⭐ পার্টিকে WhatsApp ও SMS (ধাপ ৩) — একই চাপ দুইবার এলে পার্টি দুইটা বার্তা পায় না
+        'party_messages.whatsapp',
+        'party_messages.sms',
+        'party_messages.resend',
     ];
 
     public function test_every_keyed_phone_write_goes_through_the_memory(): void
