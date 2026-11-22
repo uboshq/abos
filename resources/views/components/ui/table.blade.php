@@ -126,9 +126,15 @@
                              লেবেলে কাগজের নম্বর, যাতে স্ক্রিন-রিডার বলে কোনটা খুলবে। --}}
                         @if ($rowMenu ?? null)
                             {{-- ⓘ সারিটা মেনুকে জানানো — কাগজ হলে "বার্তায় পাঠান" ([[MessengerChrome::ROW]], [[x-ui.row-actions]]) --}}
-                            @php(request()->attributes->set(\App\Modules\Messaging\Support\MessengerChrome::ROW, $row))
+                            {{-- ⛔ block form only: an inline at-php(...) here made Blade's block rule swallow the generic menu's
+                                 "$menu = []" below up to its endphp (Undefined variable $menu, 1.3.9 run) --}}
+                            @php
+                                request()->attributes->set(\App\Modules\Messaging\Support\MessengerChrome::ROW, $row);
+                            @endphp
                             <td data-label="{{ __('core.table.action_menu') }}" class="text-end" data-row-menu>{{ ($rowMenu)($row) }}</td>
-                            @php(request()->attributes->remove(\App\Modules\Messaging\Support\MessengerChrome::ROW))
+                            @php
+                                request()->attributes->remove(\App\Modules\Messaging\Support\MessengerChrome::ROW);
+                            @endphp
                         @elseif ($viewUrl ?? null)
                             {{--
                                 ⭐ সাধারণ "অ্যাকশন ▾" — যে তালিকা কেবল দেখার ঠিকানা দেয় (আগে একটা 👁), তারও এখন কাগজের তালিকার একই মেনু

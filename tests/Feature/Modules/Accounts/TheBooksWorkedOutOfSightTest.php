@@ -80,7 +80,9 @@ final class TheBooksWorkedOutOfSightTest extends TestCase
         $this->assertMatchesRegularExpression('/data-check="locked" data-state="pending"/', $html, 'মাস খোলা, অথচ "বন্ধ" বলছে।');
         // ⓘ আটটা — "আটকে থাকা উল্টো" যোগ হলো (পুনঃঅডিট, ৯ অক্টোবর ২০২৬; [[AStuckReversalFailedSilentlyEveryHourTest]])
         // ⓘ নয়টা — "সই চাওয়ার পরে বদলানো খসড়া" নিজের সারিতে (fe, ২৪ অক্টোবর ২০২৬; [[EveryPageCountsAVoucherWaitTheSameWayTest]])
-        $this->assertSame(9, preg_match_all('/data-check="/', $html), 'চেকলিস্টে নয়টা সারি নেই।');
+        // ⓘ কেবল মাস-শেষের সারি (data-state থাকে) — সন্ধ্যায় খোলস নিজেই দিন-বন্ধের মনে-করানো পপআপ আঁকে, যার সারিও data-check
+        //   (shell/day-check → partials/day-checklist, state ছাড়া); রাত ৯টার Mac রানে তাই ১১ গোনা হয়েছিল (১.৩.৯, ২১ নভেম্বর ২০২৬)
+        $this->assertSame(9, preg_match_all('/data-check="[^"]*" data-state="/', $html), 'চেকলিস্টে নয়টা সারি নেই।');
     }
 
     public function test_two_customers_on_one_mobile_show_as_one_group(): void

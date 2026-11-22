@@ -790,8 +790,12 @@ final class ASaleBelowCostNoLongerSlipsThroughSilentlyTest extends TestCase
     /** ⓘ বন্ধ-সুইচের পাতা অনুমতির আগেই ৪০৪ দেয় — তাই সব খোলা। */
     private function switchEveryModuleOn(): void
     {
+        // ⓘ a module with no menu row (the messenger, 21 Nov 2026) has no switch — nothing to turn on
+        $declared = app(SettingsService::class)->definitions();
         foreach (app(ModuleRegistry::class)->all() as $module) {
-            $this->setting(app(MenuSwitches::class)->forModule($module->code), true);
+            if (isset($declared[app(MenuSwitches::class)->forModule($module->code)])) {
+                $this->setting(app(MenuSwitches::class)->forModule($module->code), true);
+            }
         }
     }
 

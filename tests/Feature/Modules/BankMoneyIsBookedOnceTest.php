@@ -244,19 +244,18 @@ class BankMoneyIsBookedOnceTest extends TestCase
         $this->assertFalse(Schema::hasIndex('vouchers', 'vouchers_bank_reference_unique'),
             '⛔ পুরনো অনন্য সূচি রয়ে গেছে — জমার ভাগ ডেটাবেসেই ভাঙবে');
 
-        DB::table('vouchers')->insert([
-            'company_id' => $this->company->id,
-            'type' => Voucher::PAYMENT,
+        // ⓘ দ্বিতীয় সারিটা প্রথমটারই নকল (একই খাত, একই নম্বর) — হাতে লেখা ঘরের তালিকায় financial_year_id-এর মতো বাধ্যতামূলক ঘর
+        //   বাদ পড়ত, আর তখন ডেটাবেস ফেরাত অন্য কারণে (১.৩.৯ Mac রান: 1364 financial_year_id), সূচির কারণে নয়
+        $copy = (array) DB::table('vouchers')->where('money_account_id', $this->bank)->where('instrument_no', 'RACE1')->first();
+        $this->assertNotSame([], $copy, '⛔ প্রথম জমাটাই পোস্ট হয়নি');
+        unset($copy['id']);
+        DB::table('vouchers')->insert(array_merge($copy, [
             'document_no' => 'PAY-RACE',
-            'trx_date' => '2026-08-10',
-            'amount' => '100.0000',
             'status' => DocumentStatus::CONFIRMED,
-            'money_account_id' => $this->bank,
-            'instrument_no' => 'RACE1',
             'public_id' => (string) Str::uuid(),
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ]));
 
         $this->assertSame(2, DB::table('vouchers')->where('money_account_id', $this->bank)->where('instrument_no', 'RACE1')->count(),
             '⛔ ডেটাবেস জমার ভাগের দ্বিতীয় সারি ফেরাল');

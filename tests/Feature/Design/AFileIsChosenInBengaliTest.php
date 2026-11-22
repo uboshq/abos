@@ -34,6 +34,8 @@ final class AFileIsChosenInBengaliTest extends TestCase
         'Modules/Documents/Resources/views/scan/create.blade.php',
         'Modules/Hr/Resources/views/employee/form.blade.php',
         'Modules/Inventory/Resources/views/product/form.blade.php',
+        // ⓘ বার্তা (২১ নভেম্বর ২০২৬): তিনটা লুকানো ঘর (ফাইল, ছবি, ক্যামেরা) — দেখার বোতাম চ্যাটের নিজের 📎 মেনু, বাংলায়; "Choose File" কখনো দেখা যায় না
+        'Modules/Messaging/Resources/views/index.blade.php',
         'Modules/Sales/Resources/views/claim/request.blade.php',
         'Modules/Sales/Resources/views/portal/claim.blade.php',
         'Modules/SystemAdmin/Resources/views/looks/index.blade.php',

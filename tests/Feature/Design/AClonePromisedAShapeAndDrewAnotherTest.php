@@ -464,8 +464,12 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
          * ⓘ সব মডিউলের সুইচ খোলা — রেস্টুরেন্ট ২২ সেপ্টেম্বর ২০২৬ থেকে জন্ম থেকেই বন্ধ, আর বন্ধ মডিউল পটিতে
          * আসে না। দাবিটা রূপের ঘোষণা মাপে, আজকের সুইচ নয় ([[TheMenuStandsInTheOrderTheOwnerAskedForTest]]-এর একই যুক্তি)।
          */
+        // ⓘ a module with no menu row (the messenger, 21 Nov 2026) has no switch — nothing to turn on
+        $declared = app(SettingsService::class)->definitions();
         foreach (app(ModuleRegistry::class)->all() as $module) {
-            app(SettingsService::class)->set($module->code.'.enabled', true);
+            if (isset($declared[$module->code.'.enabled'])) {
+                app(SettingsService::class)->set($module->code.'.enabled', true);
+            }
         }
 
         foreach (Ui::keys() as $look) {

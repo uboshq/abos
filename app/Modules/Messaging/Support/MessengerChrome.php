@@ -217,6 +217,14 @@ final class MessengerChrome
             }
             $related = $paper->getRelation($relation);
             if ($related instanceof Model) {
+                // ⛔ Customer/Supplier: name(?locale) is a method, not a column — getAttribute('name') threw (see PaperCards)
+                if (method_exists($related, 'name')) {
+                    $v = $related->name();
+                    if (is_string($v) && $v !== '') {
+                        return $v;
+                    }
+                    continue;
+                }
                 foreach (['name', 'name_'.app()->getLocale(), 'name_en', 'name_bn'] as $field) {
                     $v = $related->getAttribute($field);
                     if (is_string($v) && $v !== '') {

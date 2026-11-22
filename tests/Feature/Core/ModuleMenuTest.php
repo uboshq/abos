@@ -281,8 +281,12 @@ class ModuleMenuTest extends TestCase
         CompanyContext::forCompany($company->id, function (): void {
             $switches = app(SettingsService::class);
 
+            // ⓘ a module with no menu row (the messenger, 21 Nov 2026) has no switch — nothing to turn on
+            $declared = $switches->definitions();
             foreach (app(ModuleRegistry::class)->all() as $one) {
-                $switches->set($one->code.'.enabled', true);
+                if (isset($declared[$one->code.'.enabled'])) {
+                    $switches->set($one->code.'.enabled', true);
+                }
             }
 
             $switches->flush();

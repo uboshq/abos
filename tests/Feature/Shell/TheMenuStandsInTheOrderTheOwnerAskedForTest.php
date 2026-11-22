@@ -195,8 +195,12 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         CompanyContext::forCompany((int) $this->owner()->current_company_id, function (): void {
             $switches = app(SettingsService::class);
 
+            // ⓘ a module with no menu row (the messenger, 21 Nov 2026) has no switch — nothing to turn on
+            $declared = $switches->definitions();
             foreach (app(ModuleRegistry::class)->all() as $one) {
-                $switches->set($one->code.'.enabled', true);
+                if (isset($declared[$one->code.'.enabled'])) {
+                    $switches->set($one->code.'.enabled', true);
+                }
             }
 
             $switches->flush();
@@ -227,9 +231,13 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
      */
     public function test_the_human_order_is_not_the_boot_order(): void
     {
+        /*
+         * ⓘ মেনুর সারি নেই এমন মডিউল (বার্তা, ২১ নভেম্বর ২০২৬ — ঢোকার পথ উপরের বারের চ্যাট চিহ্ন) রেলে টাইল পায় না, হারায়ওনি:
+         * ঘোষণাতেই `'menu' => []`। তাই দুই তালিকার তুলনা থেকে বাইরে, অতিথিদের মতোই আলাদা করে।
+         */
         $boot = array_map(
             static fn (ModuleDefinition $d): string => $d->code,
-            array_values(app(ModuleRegistry::class)->all()),
+            array_values(array_filter(app(ModuleRegistry::class)->all(), static fn (ModuleDefinition $d): bool => $d->menu !== [])),
         );
 
         $human = array_column(self::AS_HE_ASKED, 1);

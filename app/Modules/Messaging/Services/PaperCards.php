@@ -220,6 +220,17 @@ final class PaperCards
                 continue;
             }
             if ($related instanceof Model) {
+                /*
+                 * ⛔ Customer and Supplier keep their name in name_en/name_bn and answer name(?locale) — a METHOD, so
+                 * getAttribute('name') asked Eloquent for a relation and threw (500 on every invoice card; 1.3.9 run).
+                 */
+                if (method_exists($related, 'name')) {
+                    $v = $related->name();
+                    if (is_string($v) && $v !== '') {
+                        return $v;
+                    }
+                    continue;
+                }
                 foreach (['name', 'name_en', 'name_bn'] as $field) {
                     $v = $related->getAttribute($field);
                     if (is_string($v) && $v !== '') {
