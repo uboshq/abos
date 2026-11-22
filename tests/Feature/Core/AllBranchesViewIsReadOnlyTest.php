@@ -207,12 +207,10 @@ final class AllBranchesViewIsReadOnlyTest extends TestCase
         $this->assertStringNotContainsString('data-all-branches-banner', $list);
         $this->assertStringNotContainsString('data-writing-branch', $list, '⛔ তালিকায় "লিখছেন" লাইন — কেবল ফর্মে।');
 
+        // ⛔ ফর্মেও "X শাখায় লিখছেন" ফিতা নেই — মালিক, ২৩ নভেম্বর ২০২৬ ("ei fita keno diyecho?"); শাখা ওপরের বারে
         $form = (string) $this->get($this->voucherForm())->assertOk()->getContent();
-        $this->assertSame(1, preg_match('/<div[^>]*data-writing-branch[^>]*>(.*?)<\/div>/s', $form, $line), '⛔ ফর্মের মাথায় "X শাখায় লিখছেন" নেই।');
-        $this->assertTrue(
-            str_contains($line[1], e($this->opened->name('bn'))) || str_contains($line[1], e($this->opened->name('en'))),
-            '⛔ লাইনে বাছা শাখার নাম নেই: '.$line[1],
-        );
+        $this->assertStringNotContainsString('data-writing-branch', $form, '⛔ ফর্মের মাথায় "শাখায় লিখছেন" ফিতা ফিরে এসেছে।');
+        $this->assertStringNotContainsString('শাখায় লিখছেন', $form);
     }
 
     public function test_the_allow_list_names_only_routes_that_exist(): void

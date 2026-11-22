@@ -6,6 +6,7 @@
 - A new left menu in the three "ABOS" looks: a bar heads each group, its rows indented; one group open at a time.
 - New "Messages": chat with colleagues, sending pictures, files and ERP papers; sent, delivered and read ticks, who is typing and who is online. "Send in a message" on every paper's own page.
 - One-to-one audio and video calls: they switch on once the server's call service (LiveKit) is set up; until then no call buttons show.
+- The "You are writing in … branch" strip on forms is removed; the branch shows in the top bar.
 
 ## 1.3.8 — 21-11-2026
 
