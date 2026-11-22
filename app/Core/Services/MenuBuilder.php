@@ -87,6 +87,12 @@ final class MenuBuilder
                 continue;
             }
 
+            // ⛔ কেবল আশ্রয়দাতার ভিতরে বসা মডিউল ([[ModuleDefinition::validateNav()]] `merged_only`) — SAP আর Dynamic-এ মেনুতে নেই,
+            //   ওই দুই রূপ ১০০% আগের মতো (মালিক, ২৩ নভেম্বর ২০২৬: বার্তা ও কল "যোগাযোগ"-এর ভিতরে)
+            if (! $merged && ($module->nav['merged_only'] ?? false) === true) {
+                continue;
+            }
+
             $groups = [];
             // ⓘ রেলের শুরুর ক্রমের জন্য — মডিউলের কতগুলো পাতা এই মানুষ খুলতে পারেন ([[arranged()]])
             $offered = 0;

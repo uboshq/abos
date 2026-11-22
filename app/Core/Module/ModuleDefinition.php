@@ -959,6 +959,21 @@ final class ModuleDefinition
         }
 
         /*
+         * ⭐ `merged_only` — মডিউলটা মেনুতে কেবল আশ্রয়দাতার ভিতরে বসে (এক করা রূপে); যে রূপে মডিউল আলাদা থাকে (SAP, Dynamic —
+         *   [[Ui::keepsModulesApart()]]) সেখানে মেনুতে আসেই না, যাতে ওই দুই রূপ আগের মতো ১০০% থাকে (মালিক, ২৩ নভেম্বর ২০২৬: বার্তা ও কল
+         *   "যোগাযোগ"-এর ভিতরে)। ⛔ `under` ছাড়া অর্থহীন, তাই দুইটা একসাথে লাগে। ⓘ কেবল মেনু — দরজা, চাবি, ঠিকানা আগের মতো।
+         */
+        if (isset($nav['merged_only'])) {
+            if ($nav['merged_only'] !== true || ! isset($validated['under'])) {
+                throw new InvalidArgumentException(
+                    "{$path}: nav 'merged_only' must be true and needs nav 'under' — it means \"show this module's rows only inside "
+                    .'its host, in the merged looks\".'
+                );
+            }
+            $validated['merged_only'] = true;
+        }
+
+        /*
          * ⭐ এক করা মডিউল — মালিক, ২০ নভেম্বর ২০২৬ (হিসাব ও অর্থ · বিক্রয় · ক্রয়; SAP S/4, D365, Oracle, NetSuite-এর মতো এক মডিউলে কয়েক ভাগ)।
          *   `merged_label` — অতিথিরা ভিতরে বসলে আশ্রয়দাতার নাম যা হয় (অনুবাদের চাবি; "হিসাব" → "হিসাব ও অর্থ")
          *   `tab`          — এক করা মডিউলের ড্যাশবোর্ডের ট্যাবে এই মডিউলের নাম (অনুবাদের চাবি; না দিলে মডিউলের নিজের নাম)

@@ -1910,6 +1910,7 @@ return [
         'promo' => 'Offers & incentives',
         'suppliers' => 'Suppliers',
         // ⭐ the three parts of Notifications (owner, 23 Nov 2026)
+        'chat' => 'Messages & calls',
         'my_notices' => 'My notices',
         'party_msg' => 'Messages to customers',
         'setup_watch' => 'Setup & monitoring',

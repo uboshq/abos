@@ -19,8 +19,9 @@ use App\Modules\Messaging\Models\MessageFile;
  * service. ⛔ Normally nobody reads another person's messages; the owner/admin only through the audit door, with a
  * written reason, recorded in the audit trail (`messaging.audit`).
  *
- * ⓘ No menu row: the way in is the top-bar chat icon (web sample) and the app's own tab. The page is still a module
- * page, behind the module's own key.
+ * ⓘ Ways in: the top-bar chat icon (web sample), the app's own tab, and — since 23 Nov 2026 — ONE menu row "বার্তা ও কল",
+ * first in "যোগাযোগ" (owner: যোগাযোগ = নোটিফিকেশন + বার্তা ও কল). The row opens the same page with the same key
+ * (`messaging.use`) the chat icon asks.
  */
 return [
     'code' => 'messaging',
@@ -32,11 +33,20 @@ return [
 
     'version' => '0.1.0',
 
-    'nav' => ['section' => 'system', 'order' => 90],
+    /*
+     * ⭐ এক করা মডিউল (মালিক, ২৩ নভেম্বর ২০২৬: "যোগাযোগ = নোটিফিকেশন + বার্তা ও কল") — বিজ্ঞপ্তির ভিতরে বসে, প্রথম সারি হয়ে।
+     * ⛔ `merged_only` — SAP আর Dynamic-এ মেনুতে আসেই না, ওই দুই রূপ আগের মতো ১০০% (চ্যাট চিহ্নও ওখানে আঁকা হয় না, [[MessengerChrome]])।
+     */
+    'nav' => ['section' => 'system', 'order' => 90, 'under' => 'notification', 'merged_only' => true],
 
     'depends_on' => [],
 
-    'menu' => [],
+    'menu' => [
+        'transactions' => [
+            // ⓘ উপরের বারের চ্যাট চিহ্নের একই পাতা, একই চাবি; সুইচ বন্ধ হলে সারি নেই (`messaging.enabled`, [[MenuSwitches]])
+            ['label' => 'messaging::menu.chat', 'icon' => 'chat', 'route' => 'messaging.index', 'permission' => 'messaging.use'],
+        ],
+    ],
 
     'permissions' => [
         /* ⭐ send and read one's own messages, make 1:1 calls — every door asks it */

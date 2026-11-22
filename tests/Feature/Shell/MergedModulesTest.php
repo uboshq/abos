@@ -34,8 +34,8 @@ use Tests\TestCase;
  * ⭐ ২৩ নভেম্বর ২০২৬ (মালিক: "কোনো মেনু যাতে না হারায়, কোনো মেনু যাতে এক না হয়") — চতুর্থ এক করা মডিউল:
  *   সিস্টেম ও প্রশাসন = সিস্টেম প্রশাসন + নিয়ন্ত্রণ ও নিরীক্ষা + ব্যাকআপ (D365 System administration, SAP Basis)। উপরের সব দাবি
  *   এটারও; আর ৮. অতিথিদের সারি নিজের নিজের ভাগে, আশ্রয়দাতার ভাগগুলোর পরে — নিরীক্ষা আগে, ব্যাকআপ পরে।
- *   ৯. বিজ্ঞপ্তির তিন ভাগ মালিকের ক্রমে (আমার নোটিশ → গ্রাহককে বার্তা → সেটআপ ও নজরদারি); বার্তা (messenger) মডিউলের কোনো
- *   মেনু-সারি নেই, তাই কিছু মেশানো হয়নি — বানানো সারিও নেই।
+ *   ৯. যোগাযোগ = বিজ্ঞপ্তি + বার্তা ও কল (মালিক, ২৩ নভেম্বর ২০২৬): বার্তার একটাই সারি, সবার আগে নিজের দলে, তারপর বিজ্ঞপ্তির
+ *   তিন ভাগ (আমার নোটিশ → গ্রাহককে বার্তা → সেটআপ ও নজরদারি); SAP/Dynamic-এ সারিটা নেই, নামও আগের "বিজ্ঞপ্তি"।
  */
 final class MergedModulesTest extends TestCase
 {
@@ -330,28 +330,54 @@ final class MergedModulesTest extends TestCase
     }
 
     /**
-     * ⭐ বিজ্ঞপ্তি — তিন ভাগ, মালিকের ক্রমে (২৩ নভেম্বর ২০২৬); বার্তা (messenger) মডিউলের কোনো মেনু-সারি নেই, তাই কিছু মেশে না,
-     *   আর কোনো সারি বানানো হয়নি।
+     * ⭐ যোগাযোগ = বিজ্ঞপ্তি + বার্তা ও কল (মালিক, ২৩ নভেম্বর ২০২৬; Odoo Discuss) — বার্তার একটাই সারি, মেসেঞ্জারের পুরনো পাতা আর
+     *   উপরের বারের চ্যাট চিহ্নের একই চাবি; সবার আগে নিজের দলে, তারপর বিজ্ঞপ্তির তিন ভাগ। SAP আর Dynamic-এ সারিটা নেই।
      */
-    public function test_notifications_stand_in_three_parts_and_the_messenger_has_no_row_to_merge(): void
+    public function test_communication_is_notifications_with_messages_and_calls_first(): void
     {
         $this->owner->forceFill(['ui' => 'rose'])->save();
-        $messaging = app(ModuleRegistry::class)->get('messaging');
-
-        $this->assertSame([], $messaging?->menu ?? [], '⛔ বার্তার মেনু-সারি এসেছে — এখন সেটা যোগাযোগে মেশানোর কথা');
-        $this->assertNull($messaging?->nav['under'] ?? null);
-        $this->assertSame(['start', 'my_notices', 'party_msg', 'setup_watch'], MenuLook::data()['order']['notification']);
+        $order = ['chat', 'start', 'my_notices', 'party_msg', 'setup_watch'];
+        $this->assertSame($order, MenuLook::data()['order']['notification']);
 
         $entry = $this->entry($this->menu(), 'notification');
+        $this->assertSame('যোগাযোগ', $entry['label'], '⛔ বার্তা ভিতরে বসেছে, তবু নাম "যোগাযোগ" নয়');
+        $this->assertContains('messaging', $entry['codes']);
+        $this->assertNotContains('messaging', array_column($this->menu(), 'code'), '⛔ বার্তা এখনো আলাদা মডিউল');
+
+        $chat = collect($entry['groups'])->flatten(1)->where('module', 'messaging')->values();
+        $this->assertCount(1, $chat, '⛔ বার্তার সারি একটাই হওয়ার কথা');
+        $this->assertSame(route('messaging.index'), $chat[0]['url'], '⛔ সারিটা মেসেঞ্জারের পাতা খোলে না');
+        $declared = collect(app(ModuleRegistry::class)->get('messaging')->menu)->flatten(1)->first();
+        $this->assertSame('messaging.use', $declared['permission'], '⛔ উপরের বারের চ্যাট চিহ্নের চাবি নয়');
+
         $rows = MenuLook::arrange('notification', collect($entry['groups'])->flatten(1)->values()->all());
+        $this->assertSame('messaging::menu.chat', $rows[0]['key'], '⛔ বার্তা ও কল যোগাযোগের প্রথম সারি নয়');
         $kinds = [];
         foreach (MenuLook::forRows('notification', $rows) as $look) {
-            $this->assertNotNull($look['kind'], '⛔ বিজ্ঞপ্তির একটা সারি কোনো ভাগে নেই');
+            $this->assertNotNull($look['kind'], '⛔ যোগাযোগের একটা সারি কোনো ভাগে নেই');
             if ($look['starts']) {
                 $kinds[] = $look['kind'];
             }
         }
-        $this->assertSame(['start', 'my_notices', 'party_msg', 'setup_watch'], $kinds, '⛔ তিন ভাগ মালিকের ক্রমে নয়, বা একটা ভাগ দুইবার');
+        $this->assertSame($order, $kinds, '⛔ ভাগগুলো মালিকের ক্রমে নয়, বা একটা ভাগ দুইবার');
+
+        // ⓘ মেসেঞ্জারের সুইচ বন্ধ — সারি নেই, নাম আগের "বিজ্ঞপ্তি"
+        $settings = app(SettingsService::class);
+        $settings->set('messaging.enabled', false);
+        $settings->flush();
+        $off = $this->entry($this->menu(), 'notification');
+        $this->assertSame([], collect($off['groups'])->flatten(1)->where('module', 'messaging')->all(), '⛔ বন্ধ মেসেঞ্জারের সারি এখনো দেখা যায়');
+        $this->assertNotSame('যোগাযোগ', $off['label']);
+        $settings->set('messaging.enabled', true);
+        $settings->flush();
+
+        // ⛔ SAP আর Dynamic — সারি নেই, নাম আগের
+        foreach (['tiles', 'dynamic'] as $look) {
+            $this->owner->forceFill(['ui' => $look])->save();
+            $menu = $this->menu();
+            $this->assertNotContains('messaging', array_merge(...array_map(fn (array $m) => $m['codes'], $menu)), "⛔ {$look}: বার্তার সারি এসেছে");
+            $this->assertNotSame('যোগাযোগ', $this->entry($menu, 'notification')['label'], "⛔ {$look}: বিজ্ঞপ্তির নাম বদলেছে");
+        }
     }
 
     /**

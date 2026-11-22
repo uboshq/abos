@@ -192,7 +192,7 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
         CompanyContext::forCompany((int) $this->owner()->current_company_id, function (): void {
             $switches = app(SettingsService::class);
 
-            // ⓘ a module with no menu row (the messenger, 21 Nov 2026) has no switch — nothing to turn on
+            // ⓘ only declared switches — every module with a menu row has one (the messenger too, since its row "বার্তা ও কল", 23 Nov 2026)
             $declared = $switches->definitions();
             foreach (app(ModuleRegistry::class)->all() as $one) {
                 if (isset($declared[$one->code.'.enabled'])) {
@@ -229,13 +229,17 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
     public function test_the_human_order_is_not_the_boot_order(): void
     {
         /*
-         * ⓘ মেনুর সারি নেই এমন মডিউল (বার্তা, ২১ নভেম্বর ২০২৬ — ঢোকার পথ উপরের বারের চ্যাট চিহ্ন) রেলে টাইল পায় না, হারায়ওনি:
-         * ঘোষণাতেই `'menu' => []`। তাই দুই তালিকার তুলনা থেকে বাইরে, অতিথিদের মতোই আলাদা করে।
+         * ⓘ ২১ নভেম্বর থেকে বার্তার (messenger) মেনু-সারি ছিল না, তাই সে এই তুলনার বাইরে ছিল। ⭐ ২৩ নভেম্বর ২০২৬ থেকে তার একটা সারি
+         *   ("বার্তা ও কল") আর সে বিজ্ঞপ্তির অতিথি (মালিক: "যোগাযোগ = নোটিফিকেশন + বার্তা ও কল") — তাই আবার সব মডিউল গোনা হয়,
+         *   কাউকে বাদ দিয়ে নয়; বার্তা নিচের অতিথিদের দলে।
          */
         $boot = array_map(
             static fn (ModuleDefinition $d): string => $d->code,
-            array_values(array_filter(app(ModuleRegistry::class)->all(), static fn (ModuleDefinition $d): bool => $d->menu !== [])),
+            array_values(app(ModuleRegistry::class)->all()),
         );
+        foreach (app(ModuleRegistry::class)->all() as $d) {
+            $this->assertNotSame([], $d->menu, "⛔ {$d->code}: মেনু-সারি নেই — রেলেও নেই, কোনো আশ্রয়দাতার ভিতরেও নেই");
+        }
 
         $human = array_column(self::AS_HE_ASKED, 1);
 
@@ -340,6 +344,7 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
             );
 
             /* সারিগুলো সত্যিই ঢুকেছে — কী-তে অতিথির কোড বসে। */
+            // ⓘ বার্তা ও কল — বিজ্ঞপ্তির ভিতরে, নাম তখন "যোগাযোগ" (মালিক, ২৩ নভেম্বর ২০২৬); বাকি অতিথিদের মতোই এই লুপে দেখা হয়
             $carried = collect($tile['groups'])->keys()
                 ->filter(fn (string $key): bool => str_starts_with($key, $module->code.':'));
 
@@ -348,6 +353,33 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
                 "{$host}-এর টাইলে {$module->code}-এর একটা সারিও নেই — মডিউলটা রেল থেকেও গেছে, "
                 .'ভেতরেও বসেনি।',
             );
+        }
+    }
+
+    /**
+     * ⭐ `merged_only` অতিথি (বার্তা ও কল, মালিক ২৩ নভেম্বর ২০২৬) — মডিউল আলাদা রাখার রূপে (SAP, Dynamic) মেনুতে আসেই না, যাতে ওই দুই
+     *   রূপ আগের মতো ১০০% থাকে; বাকি অতিথিরা ওখানে আগের মতো নিজের টাইলে।
+     */
+    public function test_a_merged_only_guest_stays_out_of_the_looks_that_keep_modules_apart(): void
+    {
+        $owner = $this->owner();
+        $apart = CompanyContext::forCompany(
+            (int) ($owner->current_company_id ?? \App\Models\Company::query()->where('code', 'TDEPOT')->value('id')),
+            fn () => app(MenuBuilder::class)->forUser($owner, merged: false),
+        );
+        $codes = array_merge(...array_map(fn (array $m) => $m['codes'] ?? [$m['code']], $apart));
+
+        $mergedOnly = array_filter(app(ModuleRegistry::class)->all(), static fn (ModuleDefinition $d): bool => ($d->nav['merged_only'] ?? false) === true);
+        $this->assertNotEmpty($mergedOnly, 'প্রস্তুতিটাই ভুল — কোনো মডিউল merged_only নয়');
+
+        foreach ($mergedOnly as $module) {
+            $this->assertNotContains($module->code, $codes, "⛔ {$module->code} SAP/Dynamic-এর মেনুতে এসেছে — ওই দুই রূপ আর আগের মতো নয়");
+        }
+
+        foreach (app(ModuleRegistry::class)->all() as $module) {
+            if (isset($module->nav['under']) && ! isset($mergedOnly[$module->code]) && ($module->nav['merged_only'] ?? false) !== true) {
+                $this->assertContains($module->code, array_column($apart, 'code'), "⛔ {$module->code}: SAP/Dynamic-এ নিজের টাইল নেই");
+            }
         }
     }
 
