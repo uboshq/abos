@@ -240,7 +240,7 @@ class HomeDashboard extends StatelessWidget {
     final def = NavCatalog.screenDef(path);
     return def == null
         ? const RowIcon(Icons.history)
-        : RowIcon(def.icon, module: def.module);
+        : RowIcon(def.icon, module: def.module, mark: def.mark);
   }
 
   void _go(BuildContext context, String path, String label) {
@@ -311,7 +311,7 @@ class _FavouriteTile extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // ⓘ নকশার RowIcon — ৪০dp গোল, হালকা পটে মডিউলের গাঢ় সুর, অন্তত ৩:১ (নকশা ৩, পাতা ২)
-              RowIcon(row.icon, module: row.module),
+              RowIcon(row.icon, module: row.module, mark: row.mark),
               const SizedBox(height: AppSpacing.xs),
               Text(row.label,
                   maxLines: 2,

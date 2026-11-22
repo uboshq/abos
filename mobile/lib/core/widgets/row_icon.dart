@@ -5,14 +5,21 @@ import '../theme/app_look.dart';
 import '../theme/expressive.dart';
 import '../theme/look_widgets.dart';
 
+/// ⭐ সারির আইকনের জায়গায় নিজের আঁকা চিহ্ন — [size] মাপে (যেমন Copilot-এর চলন্ত "Ai", [CopilotMark.row])।
+/// ⓘ তালিকায় চিহ্ন স্থির থাকে, সারি ফোকাস পেলে তবেই চলে — চিহ্ন নিজে তা দেখে।
+typedef RowMark = Widget Function(double size);
+
 /// ⭐ তালিকার সারির বাঁয়ের আইকন — ৪০dp গোল, হালকা পটে সেই রঙেরই গাঢ় সুর, অন্তত ৩:১ (WCAG 2.1 1.4.11; মোবাইলের নকশা ৩,
 /// পাতা ২ আর ৩)। [module] দিলে মডিউলের রং, [tone] দিলে সেই রং (যেমন আদায় সবুজ, খরচ ধূসর); কিছু না দিলে অ্যাপের মূল রং।
 ///
 /// <p>শুধু চোখের জন্য — স্ক্রিন-রিডার সারির লেখাই পড়ে, আইকন নয়।
 class RowIcon extends StatelessWidget {
-  const RowIcon(this.icon, {super.key, this.module, this.tone});
+  const RowIcon(this.icon, {super.key, this.module, this.tone, this.mark});
 
   final IconData icon;
+
+  /// দিলে [icon]-এর বদলে এই চিহ্ন, একই গোল পটে (মালিক, ২১ নভেম্বর ২০২৬: মেনু আর খোঁজায় Copilot-এর "Ai")
+  final RowMark? mark;
   final String? module;
   final Color? tone;
 
@@ -62,7 +69,8 @@ class RowIcon extends StatelessWidget {
         width: 40,
         height: 40,
         decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-        child: Icon(icon, size: 22, color: ink),
+        alignment: Alignment.center,
+        child: mark?.call(26) ?? Icon(icon, size: 22, color: ink),
       ),
     );
   }
