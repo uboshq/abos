@@ -425,13 +425,14 @@ final class PartyAutoSendTest extends TestCase
     /** @param  array<string, mixed>  $over */
     private function dueOn(array $over = []): void
     {
-        app(PartyAutoSend::class)->save($this->rules([PartyAutoSend::DUE_ON => true] + $over), null);
+        // ⓘ $over আগে — PHP-র `+`-এ বাঁ দিকের চাবি জেতে; উল্টো ক্রমে "সুইচ বন্ধ" কখনো পৌঁছাত না
+        app(PartyAutoSend::class)->save($this->rules($over + [PartyAutoSend::DUE_ON => true]), null);
     }
 
     /** @param  array<string, mixed>  $over */
     private function paidOn(array $over = []): void
     {
-        app(PartyAutoSend::class)->save($this->rules([PartyAutoSend::PAID_ON => true, PartyAutoSend::QUIET => true] + $over), null);
+        app(PartyAutoSend::class)->save($this->rules($over + [PartyAutoSend::PAID_ON => true, PartyAutoSend::QUIET => true]), null);
     }
 
     /**

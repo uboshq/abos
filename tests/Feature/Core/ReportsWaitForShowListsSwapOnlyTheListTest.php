@@ -51,6 +51,7 @@ final class ReportsWaitForShowListsSwapOnlyTheListTest extends TestCase
      *
      * @param  array<string, mixed>  $params
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('reports')] // ⓘ PHPUnit 12 reads only the attribute, not the docblock
     public function test_a_report_page_runs_only_on_show_or_enter(string $route, array $params): void
     {
         $html = $this->get(route($route, $params))->assertOk()->getContent();

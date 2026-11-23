@@ -7,7 +7,6 @@ namespace Tests\Feature\Modules\Notification;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Services\PartyMessages;
 use App\Core\Support\CompanyContext;
-use App\Core\Support\Money;
 use App\Models\Company;
 use App\Models\DocumentShare;
 use App\Models\FinancialYear;
@@ -75,8 +74,9 @@ final class PartyTemplatesPageTest extends TestCase
 
         $chosen = collect($box['sms_choices'])->firstWhere('id', $template->id);
         $this->assertNotNull($chosen, '⛔ পার্টির হিসাবের SMS লেখা কাগজের পপআপে নেই।');
-        $this->assertSame('প্রিয় সাথী ট্রেডার্স, বাকি এখন ৳'.Money::format('58200'), $chosen['bn'], '⛔ {due} পার্টির মোট বাকি বসায়নি।');
-        $this->assertSame('Dear Satthi Traders, due Tk '.Money::format('58200'), $chosen['en']);
+        // ⓘ বার্তায় টাকা [[PartyMessages::taka()]] — শেষের ".00" বাদ (SMS ছোট থাকে)
+        $this->assertSame('প্রিয় সাথী ট্রেডার্স, বাকি এখন ৳'.PartyMessages::taka('58200'), $chosen['bn'], '⛔ {due} পার্টির মোট বাকি বসায়নি।');
+        $this->assertSame('Dear Satthi Traders, due Tk '.PartyMessages::taka('58200'), $chosen['en']);
         $this->assertSame('58200.0000', app(PartyMessages::class)->dueOf('customer', (int) $customer->id));
 
         // ⓘ অগ্রিম (জমা বেশি) — বাকি শূন্য, ঋণাত্মক নয়
