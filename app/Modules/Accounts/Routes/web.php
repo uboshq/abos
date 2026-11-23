@@ -485,6 +485,11 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
          */
         Route::post('/{reconciliation}/statement', [BankReconciliationController::class, 'statement'])
             ->whereNumber('reconciliation')->name('statement');
+        // ⭐ এক ব্যাংক-সারি, কয়েকটা কাগজ — হাতে মেলানো আর মিল খোলা (মালিক, ২১ নভেম্বর ২০২৬)
+        Route::post('/{reconciliation}/line/{line}/match', [BankReconciliationController::class, 'matchBooks'])
+            ->whereNumber('reconciliation')->whereNumber('line')->name('match_books');
+        Route::post('/{reconciliation}/line/{line}/unmatch', [BankReconciliationController::class, 'unmatchBooks'])
+            ->whereNumber('reconciliation')->whereNumber('line')->name('unmatch_books');
         Route::post('/{reconciliation}/confirm', [BankReconciliationController::class, 'confirm'])
             ->whereNumber('reconciliation')->name('confirm');
         Route::post('/{reconciliation}/reopen', [BankReconciliationController::class, 'reopen'])

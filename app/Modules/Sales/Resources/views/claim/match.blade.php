@@ -26,12 +26,12 @@
             'render' => fn ($c) => view('sales::claim.partials.customer', ['claim' => $c])],
         ['key' => 'claimed_on', 'label' => __('sales::portal.claimed_on'), 'width' => '8rem', 'render' => fn ($c) => $date($c->claimed_on)],
         ['key' => 'bank', 'label' => __('sales::deposit.bank_line'),
-            'render' => fn ($c) => view('sales::claim.partials.bank-line', ['line' => $c->statementLine])],
+            'render' => fn ($c) => view('sales::claim.partials.bank-line', ['line' => $c->statementLine, 'shared' => $sharedCounts[$c->statement_line_id] ?? 0])],
         ['key' => 'amount', 'total' => 'money', 'label' => __('sales::portal.claimed'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($c) => $money($c->amount)],
         ['key' => 'stage', 'label' => __('sales::portal.status'), 'width' => '9rem',
             'render' => fn ($c) => view('sales::claim.partials.stage', ['claim' => $c])],
         ['key' => 'act', 'label' => $action,
-            'render' => fn ($c) => view('sales::claim.partials.confirm', ['claim' => $c])],
+            'render' => fn ($c) => view('sales::claim.partials.confirm', ['claim' => $c, 'sharedCounts' => $sharedCounts])],
     ];
 
     $waitingColumns = [
@@ -51,11 +51,26 @@
         ['key' => 'reference', 'label' => __('sales::portal.reference'), 'render' => fn ($l) => $l->reference ?? '—'],
         ['key' => 'description', 'label' => __('sales::deposit.description'), 'render' => fn ($l) => $l->description ?? '—'],
         ['key' => 'credit', 'total' => 'money', 'label' => __('sales::deposit.came_in'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($l) => $money($l->credit)],
+        // ⭐ এক ব্যাংক-সারি, কয়েকটা খবর — টিক আর চলতি মোট (মালিক, ২১ নভেম্বর ২০২৬)
+        ['key' => 'act', 'label' => $action, 'width' => '22rem',
+            'render' => fn ($l) => view('sales::claim.partials.match-many', ['line' => $l, 'waiting' => $waiting])],
+    ];
+
+    // ⭐ দলের প্রস্তাব — এক ব্যাংক-সারি, একই রেফারেন্সের কয়েকটা খবর, মোট হুবহু
+    $groupColumns = [
+        ['key' => 'bank', 'label' => __('sales::deposit.bank_line'),
+            'render' => fn ($g) => view('sales::claim.partials.bank-line', ['line' => $g['line']])],
+        ['key' => 'reports', 'label' => __('sales::deposit.reports'),
+            'render' => fn ($g) => $g['claims']->map(fn ($c) => $c->customer?->nameWithPoint().' · '.$money($c->amount))->implode(' | ')],
+        ['key' => 'total', 'total' => 'money', 'label' => __('sales::portal.claimed'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($g) => $money($g['total'])],
+        ['key' => 'act', 'label' => $action, 'width' => '8rem',
+            'render' => fn ($g) => view('sales::claim.partials.match-group', ['group' => $g])],
     ];
 
     // ⓘ প্রতিটা ভাগের নিজের যোগ — খোলা কাজের অঙ্ক, খাতার মোট নয় (খাতার মোট কেবল পাকা জমায়: জমার খাতা)
     $sum = fn (iterable $rows, \Closure $of) => collect($rows)->reduce(fn (string $s, $r) => bcadd($s, (string) $of($r), 4), '0');
     $suggestedGrand = ['amount' => $sum($suggested, fn ($p) => $p['claim']->amount)];
+    $groupGrand = ['total' => $sum($groups, fn ($g) => $g['total'])];
     $matchedGrand = ['amount' => $sum($matched, fn ($c) => $c->amount)];
     $waitingGrand = ['amount' => $sum($waiting, fn ($c) => $c->amount)];
     $linesGrand = ['credit' => $sum($lines, fn ($l) => $l->credit)];
@@ -116,6 +131,12 @@
     {{-- ২. নিজে থেকে মেলানোর প্রস্তাব --}}
     <section class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)" data-suggestions>
         <h2 class="border-b border-(--color-border) px-3 py-2 font-semibold">{{ __('sales::deposit.suggested_title') }}</h2>
+        @if ($groups !== [])
+            <div data-group-suggestions>
+                <h3 class="border-b border-(--color-border) px-3 py-1.5 text-sm font-semibold">{{ __('sales::deposit.group_title') }}</h3>
+                <x-ui.table :rows="$groups" :grand="$groupGrand" :columns="$groupColumns" :compact="\App\Core\Support\Ui::compact()" :empty="'—'" />
+            </div>
+        @endif
         <x-ui.table :rows="$suggested" :grand="$suggestedGrand" :columns="$suggestColumns" :compact="\App\Core\Support\Ui::compact()"
                     :empty="__('sales::deposit.suggested_empty')" />
     </section>

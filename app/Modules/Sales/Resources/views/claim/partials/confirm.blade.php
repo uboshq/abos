@@ -4,7 +4,9 @@
 --}}
 @php
     $line = $claim->statementLine;
-    $gap = $line === null ? '0' : bcsub((string) $claim->amount, (string) $line->credit, 2);
+    // ⭐ ভাগের সারি (এক সারি, কয়েকটা খবর; মালিক, ২১ নভেম্বর ২০২৬) — খবরের ভাগ তার নিজের অঙ্ক, চার্জ নেই
+    $shared = $line !== null && (($sharedCounts ?? [])[$line->id] ?? \App\Modules\Sales\Services\DepositMatchService::reportsOnLine((int) $line->id)) > 1;
+    $gap = $line === null || $shared ? '0' : bcsub((string) $claim->amount, (string) $line->credit, 2);
 @endphp
 <div class="flex flex-wrap items-end gap-2">
     @if ($claim->stage() === 'awaiting')
@@ -13,9 +15,13 @@
         @can('sales.claim.decide')
             <form method="POST" action="{{ route('sales.claim.accept', $claim) }}" class="flex flex-wrap items-end gap-2" data-confirm-deposit>
                 @csrf
+                @if ($shared)
+                    <input type="hidden" name="bank_charge" value="0">
+                @else
                 <input type="number" step="0.01" min="0" name="bank_charge" value="{{ bccomp($gap, '0', 2) > 0 ? $gap : '0' }}"
                        title="{{ __('sales::field.bank_charge') }}" aria-label="{{ __('sales::field.bank_charge') }}"
                        class="num h-(--spacing-field-compact) w-24 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-end">
+                @endif
                 <x-ui.button type="submit" tone="primary">{{ __('sales::deposit.approve') }}</x-ui.button>
             </form>
         @endcan

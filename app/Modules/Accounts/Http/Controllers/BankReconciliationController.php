@@ -44,7 +44,7 @@ class BankReconciliationController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('can:accounts.reconciliation.view', only: ['index', 'show']),
-            new Middleware('can:accounts.reconciliation.manage', only: ['create', 'store', 'mark', 'confirm', 'statement']),
+            new Middleware('can:accounts.reconciliation.manage', only: ['create', 'store', 'mark', 'confirm', 'statement', 'matchBooks', 'unmatchBooks']),
             new Middleware('can:accounts.reconciliation.reopen', only: ['reopen']),
         ];
     }
@@ -124,11 +124,70 @@ class BankReconciliationController extends Controller implements HasMiddleware
              * ওঠেনি। ⚠️ অথচ মাস শেষে তফাত থেকে যাওয়ার আসল কারণ প্রায়ই
              * এই দিকটাই: চার্জ, সুদ, ফেরত আসা চেক।
              */
-            'fromBank' => $this->statements->unmatchedFor(
+            'fromBank' => $fromBank = $this->statements->unmatchedFor(
                 $reconciliation->bankAccount,
                 $reconciliation->statement_date->toDateString(),
             ),
+
+            /*
+             * ⭐ এক ব্যাংক-সারি, কয়েকটা কাগজ — হাতে মেলানোর প্রার্থী (মালিক, ২১ নভেম্বর ২০২৬; [[BankStatementService::matchBooks()]])।
+             * ⓘ খোলা মিলকরণেই; প্রতিটা না-মেলা সারির ±৭ দিনের পাকা কাগজ, একই দিক, সারির অঙ্কের বেশি নয়।
+             */
+            'candidates' => $reconciliation->isDraft()
+                ? $fromBank->take(100)->mapWithKeys(fn ($line) => [$line->id => $this->statements->candidatesFor($line)])->all()
+                : [],
+
+            // ⓘ এই মাসে খাতায় মেলা ব্যাংক-সারি, তাদের কাগজসহ — মিল খোলার জায়গা
+            'matchedLines' => \App\Modules\Accounts\Models\BankStatementLine::query()
+                ->where('bank_account_id', $reconciliation->bank_account_id)
+                ->whereNotNull('matched_line_id')
+                ->whereBetween('trx_date', [
+                    $reconciliation->statement_date->copy()->subDays(31)->toDateString(),
+                    $reconciliation->statement_date->toDateString(),
+                ])
+                ->with(['matches.voucherLine.voucher', 'matchedLine.voucher'])
+                ->orderBy('trx_date')->orderBy('id')->limit(300)->get(),
         ]);
+    }
+
+    /**
+     * ⭐ হাতে মেলানো — এক ব্যাংক-সারি, টিক দেওয়া কাগজগুলো (মালিক, ২১ নভেম্বর ২০২৬)। ⛔ মোট = সারির অঙ্ক, হুবহু (সেবায়)।
+     */
+    public function matchBooks(Request $request, BankReconciliation $reconciliation, int $line): RedirectResponse
+    {
+        abort_unless($reconciliation->isDraft(), 404);
+
+        $data = $request->validate([
+            'lines' => ['required', 'array', 'min:1', 'max:50'],
+            'lines.*' => ['integer', 'distinct'],
+        ]);
+
+        $row = $this->statementLineOf($reconciliation, $line);
+        $this->statements->matchBooks($row, array_map('intval', $data['lines']));
+
+        return back()->with('status', __('accounts::recon.books_matched', ['count' => count($data['lines'])]));
+    }
+
+    /** ⭐ মিল খোলা — সারির সব কাগজ একসাথে ছাড়া পায় */
+    public function unmatchBooks(BankReconciliation $reconciliation, int $line): RedirectResponse
+    {
+        abort_unless($reconciliation->isDraft(), 404);
+
+        $this->statements->unmatchBooks($this->statementLineOf($reconciliation, $line));
+
+        return back()->with('status', __('accounts::recon.books_unmatched'));
+    }
+
+    /** ⛔ এই মিলকরণের ব্যাংক খাতের সারি ছাড়া নয় — ৪০৪ */
+    private function statementLineOf(BankReconciliation $reconciliation, int $line): \App\Modules\Accounts\Models\BankStatementLine
+    {
+        $row = \App\Modules\Accounts\Models\BankStatementLine::query()
+            ->where('bank_account_id', $reconciliation->bank_account_id)
+            ->whereKey($line)
+            ->first();
+        abort_if($row === null, 404);
+
+        return $row;
     }
 
     public function store(Request $request): RedirectResponse

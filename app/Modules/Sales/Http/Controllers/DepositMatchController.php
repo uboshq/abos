@@ -41,14 +41,26 @@ class DepositMatchController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:sales.claim.match', only: ['index', 'load', 'line', 'match', 'unmatch']),
+            new Middleware('can:sales.claim.match', only: ['index', 'load', 'line', 'match', 'matchLine', 'unmatch']),
             new Middleware('can:sales.claim.view', only: ['receipt']),
         ];
     }
 
     public function index(Request $request): View
     {
-        $suggested = $this->matches->suggestions();
+        /*
+         * ⭐ দলের প্রস্তাব — এক ব্যাংক-সারি, কয়েকটা খবর (মালিক, ২১ নভেম্বর ২০২৬)। ⓘ কেবল দেখা শাখার (বা শাখাহীন) সারি; দলে থাকা
+         * খবর একার প্রস্তাবে আর নয় — একই খবর দুই জায়গায় দেখালে কোনটা চাপবেন বোঝা যেত না।
+         */
+        $groups = $this->matches->groupSuggestions();
+        if ($groups !== []) {
+            $visible = $this->linesInView()->whereKey(array_map(fn (array $g) => (int) $g['line']->id, $groups))->pluck('id')
+                ->map(fn ($id) => (int) $id)->all();
+            $groups = array_values(array_filter($groups, fn (array $g) => in_array((int) $g['line']->id, $visible, true)));
+        }
+        $inGroups = collect($groups)->flatMap(fn (array $g) => $g['claims']->pluck('id'))->map(fn ($id) => (int) $id)->all();
+
+        $suggested = array_values(array_filter($this->matches->suggestions(), fn (array $p) => ! in_array((int) $p['claim']->id, $inGroups, true)));
         $suggestedIds = array_map(fn (array $p) => (int) $p['claim']->id, $suggested);
 
         $matched = DepositClaim::query()->inViewedBranch()->open()->whereNotNull('statement_line_id')
@@ -64,6 +76,12 @@ class DepositMatchController extends Controller implements HasMiddleware
         return view('sales::claim.match', [
             'menu' => $this->menu->forUser($request->user()),
             'suggested' => $suggested,
+            'groups' => $groups,
+            // ⓘ ভাগের সারি — এক সারিতে কয়টা খবর (খোলা বা খাতায়); দুই বা বেশি হলে "ভাগের সারি" চিহ্ন আর চার্জের ঘর শূন্য
+            'sharedCounts' => DepositClaim::query()->withoutGlobalScopes()->whereNull('deleted_at')
+                ->whereIn('statement_line_id', $matched->pluck('statement_line_id')->filter()->unique()->values()->all())
+                ->groupBy('statement_line_id')->selectRaw('statement_line_id, COUNT(*) as n')->pluck('n', 'statement_line_id')
+                ->map(fn ($n) => (int) $n)->all(),
             'suggestedIds' => $suggestedIds,
             'matched' => $matched,
             'waiting' => $waiting,
@@ -121,6 +139,29 @@ class DepositMatchController extends Controller implements HasMiddleware
         $this->matches->match($claim, $line);
 
         return back()->with('status', __('sales::deposit.matched', ['no' => $claim->public_id]));
+    }
+
+    /**
+     * ⭐ এক ব্যাংক-সারি, কয়েকটা খবর — টিক দেওয়া খবরগুলো একসাথে (মালিক, ২১ নভেম্বর ২০২৬; [[DepositMatchService::matchMany()]])।
+     * ⛔ মোট = সারির অঙ্ক, হুবহু (সেবায়); দেখা শাখার বাইরের খবর বা সারি — ৪০৪।
+     */
+    public function matchLine(Request $request, int $line): RedirectResponse
+    {
+        $data = $request->validate([
+            'claims' => ['required', 'array', 'min:1', 'max:50'],
+            'claims.*' => ['integer', 'distinct'],
+        ]);
+
+        $row = $this->linesInView(free: false)->whereKey($line)->first();
+        abort_if($row === null, 404);
+
+        $ids = array_values(array_unique(array_map('intval', $data['claims'])));
+        $claims = DepositClaim::query()->inViewedBranch()->whereKey($ids)->get();
+        abort_if($claims->count() !== count($ids), 404);
+
+        $matched = $this->matches->matchMany($row, $claims);
+
+        return back()->with('status', __('sales::deposit.matched_many', ['count' => count($matched)]));
     }
 
     public function unmatch(Request $request, DepositClaim $claim): RedirectResponse
