@@ -224,6 +224,7 @@ return [
         'deposits' => ':count deposit reports not yet matched in the bank — :amount',
         'books' => 'Books do not balance — debit and credit differ by :amount',
         'supplier_paid' => ':count supplier payments today — :amount (check them)',
+        'bin_missing' => 'The company BIN is empty — :count VAT papers today (Mushak-6.7/6.8/6.3) print without it',
         'go' => 'Fix',
         'see' => 'See',
     ],

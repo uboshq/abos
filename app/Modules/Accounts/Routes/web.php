@@ -448,9 +448,15 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
      * "create" নামের একটা নোট খোঁজা হত।
      */
     Route::prefix('notes')->name('note.')->group(function () {
-        Route::get('/', [NoteController::class, 'index'])->name('index');
-        Route::get('/create', [NoteController::class, 'create'])->name('create');
+        /*
+         * ⭐ পুরনো দুই ঠিকানা দিক ধরে নতুন তিন পাতায় যায় — নকশা v5 (২৩ নভেম্বর ২০২৬): ক্রেডিট → ক্রেডিট নোট, ডেবিট + গ্রাহক →
+         * গ্রাহকের ডেবিট নোট, বাকি ডেবিট → সরবরাহকারীর ডেবিট নোট। ⓘ বুকমার্ক আর পুরনো লিংক ভাঙে না।
+         */
+        Route::get('/', [NoteController::class, 'legacyIndex'])->name('index');
+        Route::get('/create', [NoteController::class, 'legacyCreate'])->name('create');
         Route::post('/', [NoteController::class, 'store'])->name('store');
+        // ⭐ "⇣ মূল বিল থেকে আনুন" — বিলের সারি, JSON (নকশা v5)
+        Route::get('/bill', [NoteController::class, 'bill'])->name('bill');
         Route::get('/{note}', [NoteController::class, 'show'])
             ->whereNumber('note')->name('show');
         Route::post('/{note}/confirm', [NoteController::class, 'confirm'])
@@ -460,6 +466,31 @@ Route::middleware('auth')->prefix('accounts')->group(function () {
         // ⭐ ছাপা — মালিক, ৩ অক্টোবর ২০২৬: নোটের কোনো ছাপা ছিল না ([[NotePrintController]])
         Route::get('/{note}/print', NotePrintController::class)
             ->whereNumber('note')->name('print');
+    });
+
+    /*
+     * ⭐ নোটের তিন পাতা — নিজের তালিকা আর ফর্ম (মালিকের নকশা v5, ২৩ নভেম্বর ২০২৬)। ⓘ একটা নোট খোলা, পাকা, বাতিল আর ছাপা আগের
+     * `/notes/{note}` ঠিকানাতেই — খতিয়ানের ড্রিল আর ছাপার খাতা ([[PaperTrail]]) ঐ নামগুলো চেনে।
+     */
+    foreach (['cn' => 'credit-notes', 'cdn' => 'customer-debit-notes', 'dn' => 'debit-notes'] as $noteType => $notePath) {
+        Route::get('/'.$notePath, \App\Modules\Accounts\Http\Controllers\NoteListController::class)
+            ->defaults('type', $noteType)->name('note.'.$noteType.'.index');
+        Route::get('/'.$notePath.'/create', [NoteController::class, 'create'])
+            ->defaults('type', $noteType)->name('note.'.$noteType.'.create');
+    }
+
+    /*
+     * ⭐ স্টক ছাড়া বিক্রয় ভাউচার (SV) আর ক্রয় ভাউচার (PUV) — নকশা v5। ⓘ কোম্পানির সুইচ বন্ধ থাকলে মেনু-সারি নেই, তালিকার ঠিকানা
+     * বন্ধ ([[RefuseSwitchedOffScreens]]); নতুন কাগজ সেবাও থামায় ([[TradeVoucherService::create()]])।
+     */
+    Route::prefix('trade-vouchers/{kind}')->whereIn('kind', ['sale', 'purchase'])->name('trade_voucher.')->group(function () {
+        Route::get('/', \App\Modules\Accounts\Http\Controllers\TradeVoucherListController::class)->name('index');
+        Route::get('/create', [\App\Modules\Accounts\Http\Controllers\TradeVoucherController::class, 'create'])->name('create');
+        Route::post('/', [\App\Modules\Accounts\Http\Controllers\TradeVoucherController::class, 'store'])->name('store');
+        Route::get('/{voucher}', [\App\Modules\Accounts\Http\Controllers\TradeVoucherController::class, 'show'])->whereNumber('voucher')->name('show');
+        Route::post('/{voucher}/confirm', [\App\Modules\Accounts\Http\Controllers\TradeVoucherController::class, 'confirm'])->whereNumber('voucher')->name('confirm');
+        Route::post('/{voucher}/cancel', [\App\Modules\Accounts\Http\Controllers\TradeVoucherController::class, 'cancel'])->whereNumber('voucher')->name('cancel');
+        Route::get('/{voucher}/print', \App\Modules\Accounts\Http\Controllers\TradeVoucherPrintController::class)->whereNumber('voucher')->name('print');
     });
 
     Route::prefix('reconciliations')->name('reconciliation.')->group(function () {

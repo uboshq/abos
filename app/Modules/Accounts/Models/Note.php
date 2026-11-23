@@ -47,6 +47,33 @@ class Note extends Model implements Drillable
     /** @var list<string> */
     public const DIRECTIONS = [self::CREDIT, self::DEBIT];
 
+    /*
+     * ⭐ তিন ভাগ — মালিকের নকশা v5, ২৩ নভেম্বর ২০২৬: প্রতিটার নিজের মেনু-সারি, তালিকা, ফর্ম আর ছাপা; চাবি একই
+     * (`accounts.note.view/manage`)। ⓘ নম্বর আগের মতো: CN ক্রেডিট নোটের, DN দুই ডেবিট নোটেরই — নতুন করে নম্বর নয়।
+     */
+    /** ক্রেডিট নোট — গ্রাহকের বাকি কমে (মূসক-৬.৭) */
+    public const TYPE_CN = 'cn';
+
+    /** গ্রাহকের ডেবিট নোট — গ্রাহকের বাকি বাড়ে (মূসক-৬.৮) */
+    public const TYPE_CDN = 'cdn';
+
+    /** সরবরাহকারীর ডেবিট নোট — আমাদের দেনা কমে */
+    public const TYPE_DN = 'dn';
+
+    /** @var array<string, string> ভাগ => দিক */
+    public const TYPES = [self::TYPE_CN => self::CREDIT, self::TYPE_CDN => self::DEBIT, self::TYPE_DN => self::DEBIT];
+
+    /**
+     * ভাগ => যে পক্ষগুলো চলে (প্রথমটা আগে থেকে বাছা)। ⓘ "অন্য পক্ষ" = ব্যক্তি; সরবরাহকারীকে ক্রেডিট নোট পুরনো নিয়মেই চলে।
+     *
+     * @var array<string, list<string>>
+     */
+    public const TYPE_KINDS = [
+        self::TYPE_CN => [self::KIND_CUSTOMER, self::KIND_SUPPLIER, self::KIND_PERSON],
+        self::TYPE_CDN => [self::KIND_CUSTOMER, self::KIND_PERSON],
+        self::TYPE_DN => [self::KIND_SUPPLIER, self::KIND_PERSON],
+    ];
+
     /**
      * কেন নোটটা কাটা হলো।
      *
@@ -90,7 +117,8 @@ class Note extends Model implements Drillable
     protected $table = 'acc_notes';
 
     protected $fillable = [
-        'company_id', 'branch_id', 'document_no', 'trx_date', 'direction',
+        'company_id', 'branch_id', 'document_no', 'trx_date', 'direction', 'note_type',
+        'supplier_note_no', 'supplier_note_date', 'returned_total',
         'party_type', 'party_id', 'party_kind', 'control_account_id', 'other_account_id',
         'against_type', 'against_id', 'against_no',
         'amount', 'tax_amount', 'total', 'reason', 'narration',
@@ -103,6 +131,8 @@ class Note extends Model implements Drillable
     {
         return [
             'trx_date' => 'date',
+            'supplier_note_date' => 'date',
+            'returned_total' => 'decimal:4',
             'confirmed_at' => 'datetime',
 
             /* ⚠️ টাকার ঘরে float ঢুকলে ভুলটা নীরব — তাই `decimal:4` */
@@ -133,6 +163,32 @@ class Note extends Model implements Drillable
     public function otherAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'other_account_id');
+    }
+
+    /** ⭐ নোটের সারি — পণ্য / সেবা / খাত (নকশা v5); পুরনো নোটে সারি নেই, একটাই অঙ্ক */
+    public function lines(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(NoteLine::class)->orderBy('line_no');
+    }
+
+    /** ⓘ ভাগ — ঘর খালি থাকলে (মাইগ্রেশনের আগের সারি) দিক আর পক্ষ থেকে */
+    public function type(): string
+    {
+        if (filled($this->note_type)) {
+            return (string) $this->note_type;
+        }
+
+        if ($this->direction === self::CREDIT) {
+            return self::TYPE_CN;
+        }
+
+        return $this->party_type === 'customer' ? self::TYPE_CDN : self::TYPE_DN;
+    }
+
+    /** নোটের নিজের মোট আর ফেরতের কাগজের ভাগ মিলে — পক্ষের বাকি যতটা বদলায় */
+    public function grandTotal(): string
+    {
+        return bcadd((string) $this->total, (string) ($this->returned_total ?? '0'), 4);
     }
 
     public function isDraft(): bool

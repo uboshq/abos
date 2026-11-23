@@ -179,7 +179,11 @@ final class SalesReturnService
         });
     }
 
-    public function confirm(SalesReturn $return): SalesReturn
+    /**
+     * @param  bool  $approvedUpstream  ⭐ ক্রেডিট নোটের "মাল ফেরত" সারি থেকে — নোটের সই (মালিকের ছাড়ের সই) এই ফেরতেরও সই;
+     *                                 একই সিদ্ধান্ত দুবার চাওয়া হয় না (নকশা v5, ২৩ নভেম্বর ২০২৬; [[SalesInvoice::noteReturnGoods()]])
+     */
+    public function confirm(SalesReturn $return, bool $approvedUpstream = false): SalesReturn
     {
         if ($return->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
@@ -203,7 +207,7 @@ final class SalesReturnService
          * ⚠️ ছক না বসানো পর্যন্ত কিছুই বদলায় না: `assertClear()` চুপচাপ
          * ফিরে যায় আর ফেরত আগের মতোই নিশ্চিত হয়।
          */
-        $this->approvals->assertClear(
+        $approvedUpstream || $this->approvals->assertClear(
             document: $return,
             module: 'sales',
             action: 'return',
@@ -724,7 +728,7 @@ final class SalesReturnService
      *
      * @return array{0: string, 1: string}
      */
-    private function shareOfTheBill(SalesInvoiceLine $invoiceLine, string $qty): array
+    public function shareOfTheBill(SalesInvoiceLine $invoiceLine, string $qty): array
     {
         $lineQty = (string) $invoiceLine->qty;
 

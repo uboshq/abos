@@ -128,6 +128,24 @@ final class DayChecklist
                 'url' => $url('accounts.integrity'), 'tone' => 'danger'];
         }
 
+        /*
+         * ── ⭐ কোম্পানির BIN নেই, অথচ আজ ভ্যাটের কাগজ (ক্রেডিট নোট মূসক-৬.৭, গ্রাহকের ডেবিট নোট মূসক-৬.৮, বিক্রয় ভাউচার মূসক-৬.৩) ──
+         * মালিকের নকশা v5 (২৩ নভেম্বর ২০২৬): সতর্কতা কেবল, থামায় না। ⓘ লাইভে ADI-র BIN খালি।
+         */
+        if (blank(\App\Models\Company::query()->whereKey(CompanyContext::id())->value('bin'))) {
+            $vatPapers = DB::table('acc_notes')->where('company_id', CompanyContext::id())->whereNull('deleted_at')
+                ->whereIn('note_type', ['cn', 'cdn'])->where('trx_date', $d)->count()
+                + (DB::getSchemaBuilder()->hasTable('acc_trade_vouchers')
+                    ? DB::table('acc_trade_vouchers')->where('company_id', CompanyContext::id())->whereNull('deleted_at')
+                        ->where('kind', 'sale')->where('trx_date', $d)->count()
+                    : 0);
+
+            if ($vatPapers > 0) {
+                $items[] = ['key' => 'bin_missing', 'count' => $vatPapers, 'amount' => null,
+                    'url' => $url('system_admin.company.edit', ['company' => CompanyContext::id()]), 'tone' => 'warning'];
+            }
+        }
+
         // ── সরবরাহকারীকে আজ যা দেওয়া হলো (নিশ্চিত করার জন্য তথ্য) ──
         // ⓘ খাতা থেকে: সরবরাহকারীর পাওনায় ডেবিট, টাকা দেওয়ার কাগজে — যে পথেই কাগজ বসুক, খাতায় যা বসেছে তাই
         $paid = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')

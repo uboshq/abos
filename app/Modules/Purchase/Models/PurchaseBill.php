@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 /**
  * ক্রয় বিল — কী দিতে হবে।
@@ -32,7 +33,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * নিজে থেকেই মেলে: প্রদেয়ের সংখ্যাটা কোথাও জমা থাকে না, খতিয়ান থেকে গোনা
  * হয়। জমা রাখলে বিল বাতিল হলে দুই জায়গায় বদলাতে হত, আর একটা বাদ পড়ত।
  */
-class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Core\Contracts\ShowsItselfForSigning
+class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Core\Contracts\ShowsItselfForSigning, \App\Core\Contracts\NoteTarget, \App\Core\Contracts\NoteTargetLines, \App\Core\Contracts\ReturnsGoodsForNotes
 {
     use BelongsToCompany;
     use HasDocumentStatus;
@@ -422,8 +423,9 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
             ->posted();
 
         // ⭐ পাকা ফেরতও — [[returnedAmount()]]-এর হুবহু শর্ত (পুরো ERP অডিট, ক্রয় ⚠️৬, ৬ অক্টোবর ২০২৬)
+        // ⭐ আর এই বিলের পাকা সরবরাহকারীর ডেবিট নোট — [[returnedAmount()]]-এর হুবহু ([[notedSql()]]; নকশা v5, ২৩ নভেম্বর ২০২৬)
         $returned = PurchaseReturn::acrossBranches()
-            ->selectRaw('COALESCE(SUM(total), 0)')
+            ->selectRaw('COALESCE(SUM(total), 0) + '.self::notedSql())
             ->whereColumn('pur_returns.purchase_bill_id', 'pur_bills.id')
             ->whereIn('status', DocumentStatus::POSTED);
 
@@ -476,8 +478,17 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
         $preloaded = $this->getAttribute('returned_total');
 
         // ⛔ শাখার দেয়াল ছাড়া — ক্রয় ⚠️৯ ([[paidAmount()]])
-        return bcadd((string) ($preloaded ?? PurchaseReturn::acrossBranches()->where('purchase_bill_id', $this->id)
-            ->whereIn('status', DocumentStatus::POSTED)->sum('total')), '0', 4);
+        if ($preloaded !== null) {
+            return bcadd((string) $preloaded, '0', 4);
+        }
+
+        // ⭐ পাকা ফেরত + এই বিলের পাকা সরবরাহকারীর ডেবিট নোট (নকশা v5, ২৩ নভেম্বর ২০২৬; [[notedSql()]]-এর একই শর্ত)
+        $returns = (string) PurchaseReturn::acrossBranches()->where('purchase_bill_id', $this->id)
+            ->whereIn('status', DocumentStatus::POSTED)->sum('total');
+        $noted = (string) DB::table('acc_notes')->where('against_type', static::drillSourceType())->where('against_id', $this->id)
+            ->where('direction', 'debit')->whereNull('deleted_at')->whereIn('status', DocumentStatus::POSTED)->sum('total');
+
+        return bcadd(bcadd($returns ?: '0', $noted ?: '0', 4), '0', 4);
     }
 
     /**
@@ -587,5 +598,162 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
             'party_required' => true,
             'open' => $this->status === DocumentStatus::CONFIRMED && bccomp($this->dueAmount(), '0', 4) > 0,
         ];
+    }
+    /*
+     * ⭐ সরবরাহকারীর ডেবিট নোটের বিল — মালিকের নকশা v5, ২৩ নভেম্বর ২০২৬ ([[\App\Core\Contracts\NoteTarget]], [[\App\Core\Contracts\NoteTargetLines]],
+     * [[\App\Core\Contracts\ReturnsGoodsForNotes]])। ⓘ কেবল এই সরবরাহকারীর, পাকা বিল; বাতিল বা খসড়া নয়।
+     */
+    public static function noteTargetFor(string $number, string $partyType, int $partyId): ?self
+    {
+        if ($partyType !== 'supplier' || trim($number) === '') {
+            return null;
+        }
+
+        return self::acrossBranches()
+            ->where('document_no', trim($number))
+            ->where('supplier_id', $partyId)
+            ->whereIn('status', DocumentStatus::POSTED)
+            ->first();
+    }
+
+    public function noteTargetType(): string
+    {
+        return static::drillSourceType();
+    }
+
+    public function noteTargetNumber(): string
+    {
+        return (string) $this->document_no;
+    }
+
+    /** ⓘ ডেবিট নোট আমাদের দেনা কমায় — "জায়গা" বিলের মোট − ফেরত − আগের পাকা ডেবিট নোট (ক্রেডিট নোটের সীমা কেবল বিক্রয়ে মাপা হয়) */
+    public function noteCreditRoom(?int $exceptNoteId = null): string
+    {
+        $room = bcsub((string) $this->total, $this->returnedAmount(), 4);
+
+        return bccomp($room, '0', 4) > 0 ? $room : '0.0000';
+    }
+
+    /** ⓘ বিলের ভ্যাট ÷ ভ্যাটের আগের অঙ্ক */
+    public function noteTaxRate(): string
+    {
+        $base = bcsub((string) $this->total, (string) ($this->tax ?? '0'), 4);
+
+        return bccomp($base, '0', 4) > 0 && bccomp((string) ($this->tax ?? '0'), '0', 4) > 0 ? bcdiv((string) $this->tax, $base, 6) : '0';
+    }
+
+    /**
+     * ⭐ বিলের সারি — দর এককপ্রতি নিট (ছাড় বাদে, ভ্যাট বাদে; ফেরত যে দরে মাপে [[PurchaseReturnService::netRate()]]), আর মালের যত
+     * এখনো মজুদে। ⓘ "মজুদে" = এই বিলের (বা তার মাল-গ্রহণের) দামের স্তরে যা এখনো পড়ে আছে, সারির পরিমাণের অনুপাতে — ডেবিট নোটের
+     * দামের ছাড়ের সেই ভাগ মজুদের দাম কমায় (Cr ১১২০), বিক্রি হয়ে যাওয়া ভাগ ক্রয়মূল্যের পার্থক্যে (Cr ৫১৫০)।
+     */
+    public function noteTargetLines(): array
+    {
+        $net = app(\App\Modules\Purchase\Services\PurchaseReturnService::class);
+        $bn = app()->getLocale() === 'bn';
+        $lines = $this->lines()->with('product.unit')->get();
+
+        $receiptIds = DB::table('pur_receipt_lines')
+            ->whereIn('id', $lines->pluck('purchase_receipt_line_id')->filter()->unique()->values())
+            ->pluck('purchase_receipt_id')->unique()->values()->all();
+
+        $layers = DB::table('inv_cost_layers')
+            ->where('company_id', $this->company_id)
+            ->whereIn('product_id', $lines->pluck('product_id')->unique()->values())
+            ->where(fn ($q) => $q->where(fn ($b) => $b->where('source_type', self::STOCK_SOURCE)->where('source_id', $this->id))
+                ->when($receiptIds !== [], fn ($w) => $w->orWhere(fn ($r) => $r->where('source_type', PurchaseReceipt::STOCK_SOURCE)->whereIn('source_id', $receiptIds))))
+            ->groupBy('product_id')
+            ->selectRaw('product_id, COALESCE(SUM(qty_in), 0) as qty_in, COALESCE(SUM(qty_remaining), 0) as qty_left')
+            ->get()->keyBy('product_id');
+
+        return $lines
+            ->filter(fn (PurchaseBillLine $l) => bccomp((string) $l->qty, '0', 4) > 0 && $l->product !== null)
+            ->map(function (PurchaseBillLine $l) use ($net, $bn, $layers) {
+                $qty = (string) $l->qty;
+                $rate = $net->netRate($l);
+                $base = bcmul($rate, $qty, 4);
+                $unit = $l->product->unit;
+                $layer = $layers->get($l->product_id);
+                $inStock = $layer === null || bccomp((string) $layer->qty_in, '0', 4) <= 0
+                    ? $qty
+                    : bcdiv(bcmul($qty, (string) $layer->qty_left, 8), (string) $layer->qty_in, 4);
+
+                return [
+                    'line_id' => (int) $l->id,
+                    'product_id' => (int) $l->product_id,
+                    'name' => $l->product->name(),
+                    'unit' => (string) ($unit === null ? '' : ($bn && filled($unit->name_bn) ? $unit->name_bn : $unit->name_en)),
+                    'qty' => bcadd($qty, '0', 4),
+                    'rate' => $rate,
+                    'vat_rate' => bccomp($base, '0', 4) > 0 ? bcadd(bcdiv(bcmul((string) ($l->tax ?? '0'), '100', 8), $base, 6), '0.005', 2) : '0.00',
+                    'in_stock' => $inStock,
+                ];
+            })->values()->all();
+    }
+
+    public function noteTargetIssuedAt(): ?\DateTimeInterface
+    {
+        return $this->created_at;
+    }
+
+    /**
+     * ⭐ ডেবিট নোটের "মাল ফেরত গেছে" সারি — ক্রয় ফেরত (PR), এই বিলে বাঁধা, এখনই পাকা। ⓘ ফেরতই মাল বের করে আর খাতায় তোলে
+     * (Dr ২১১১ / Cr ১১২০ · Cr ২১২০) — নোট ঐ সারি আবার তোলে না। নোটের সই এই ফেরতেরও সই।
+     */
+    public function noteReturnGoods(array $lines, string $date, string $narration, string $noteNo): array
+    {
+        $service = app(\App\Modules\Purchase\Services\PurchaseReturnService::class);
+        $note = trim($noteNo.' — '.$narration, ' —');
+
+        $return = $service->create([
+            'supplier_id' => $this->supplier_id,
+            'warehouse_id' => $this->warehouse_id,
+            'purchase_bill_id' => $this->id,
+            'trx_date' => $date,
+            'narration' => $note,
+        ], array_map(fn (array $l) => [
+            'product_id' => (int) $l['product_id'],
+            'qty' => (string) $l['qty'],
+            'purchase_bill_line_id' => (int) $l['line_id'],
+        ], $lines));
+
+        $return = $service->confirm($return, approvedUpstream: true);
+
+        return [
+            'type' => PurchaseReturn::drillSourceType(),
+            'id' => (int) $return->id,
+            'no' => (string) $return->document_no,
+            'lines' => $return->lines->map(fn ($rl) => [
+                'line_id' => (int) $rl->purchase_bill_line_id,
+                'amount' => (string) $rl->amount,
+                'tax' => (string) $rl->tax,
+            ])->values()->all(),
+        ];
+    }
+
+    /** নোট বাতিল — তার ক্রয় ফেরতও বাতিল; আগেই বাতিল হলে কিছু নয় */
+    public static function noteCancelReturn(string $type, int $id, string $reason): void
+    {
+        if ($type !== PurchaseReturn::drillSourceType()) {
+            return;
+        }
+
+        $return = PurchaseReturn::query()->withoutGlobalScopes()->whereKey($id)->first();
+
+        if ($return === null || $return->status === DocumentStatus::CANCELLED) {
+            return;
+        }
+
+        app(\App\Modules\Purchase\Services\PurchaseReturnService::class)->cancel($return, $reason);
+    }
+
+    /**
+     * ⭐ বিলের বিপরীতে পাকা সরবরাহকারীর ডেবিট নোট — দেনা কমায়, তাই বিলের বাকিও (বিক্রয়ের [[SalesInvoice::notedAmount()]]-এর আয়না)।
+     * ⓘ নোটের `total` কেবল নোটের নিজের সারি — ক্রয় ফেরতে যাওয়া সারি ফেরতেই গোনা, দুবার নয়।
+     */
+    public static function notedSql(): string
+    {
+        return "(SELECT COALESCE(SUM(n.total), 0) FROM acc_notes n WHERE n.against_type = 'purchase_bill' AND n.against_id = pur_bills.id"
+            ." AND n.direction = 'debit' AND n.deleted_at IS NULL AND n.status IN ('".implode("','", DocumentStatus::POSTED)."'))";
     }
 }

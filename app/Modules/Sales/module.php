@@ -99,6 +99,9 @@ return [
     'bindings' => [
         CreditHolds::class => CreditExposure::class,
 
+        // ⭐ স্টক ছাড়া বিক্রয় ভাউচারের (SV) বাকির দেয়াল — বিলের একই দেয়াল (নকশা v5, ২৩ নভেম্বর ২০২৬)
+        \App\Core\Contracts\CreditWall::class => \App\Modules\Sales\Services\SalesCreditWall::class,
+
         // ⭐ মজুদের ড্যাশবোর্ডের "মজুদ শেষ" — খোলা আদেশে আটকে থাকা চাহিদা আর হারানো বিক্রি ([[StockDemand]])
         \App\Core\Contracts\StockDemand::class => \App\Modules\Sales\Services\SalesStockDemand::class,
 

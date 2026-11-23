@@ -105,4 +105,5 @@ return [
 
     // ⭐ Fixed assets phase 4
     'paper_asset_labels' => 'Paper for asset labels',
+    'stock_free_vouchers' => 'Stock-free sales vouchers and purchase vouchers',
 ];
