@@ -929,7 +929,8 @@ class VoucherController extends Controller implements HasMiddleware
             // ⭐ একই জমার প্রশ্নের বাকি তিন কথা — পক্ষ, মূল্য-তারিখ, মাধ্যম ([[VoucherService::sameDeposit()]]; মালিক, ২১ নভেম্বর ২০২৬)
             'party_type' => ['nullable', 'string', 'max:32'],
             'party_id' => ['nullable', 'integer'],
-            'trx_date' => ['nullable', 'date'],
+            // ⓘ ভবিষ্যতের তারিখে রসিদ পোস্টই হয় না, তাই প্রশ্নেও নয় — না মিললে পর্দা চুপ থাকে ([[NoDocumentIsDatedInTheFutureTest]])
+            'trx_date' => ['nullable', 'date', 'before_or_equal:today'],
             'value_date' => ['nullable', 'date'],
             'transfer_mode_id' => ['nullable', 'integer'],
         ]);

@@ -80,9 +80,15 @@ final class TheBooksWorkedOutOfSightTest extends TestCase
         $this->assertMatchesRegularExpression('/data-check="locked" data-state="pending"/', $html, 'মাস খোলা, অথচ "বন্ধ" বলছে।');
         // ⓘ আটটা — "আটকে থাকা উল্টো" যোগ হলো (পুনঃঅডিট, ৯ অক্টোবর ২০২৬; [[AStuckReversalFailedSilentlyEveryHourTest]])
         // ⓘ নয়টা — "সই চাওয়ার পরে বদলানো খসড়া" নিজের সারিতে (fe, ২৪ অক্টোবর ২০২৬; [[EveryPageCountsAVoucherWaitTheSameWayTest]])
+        // ⓘ এগারোটা — মাস বন্ধে "দিন বন্ধ" আর "বন্ধের পরে বদল" দুই সারি যোগ হলো (মালিক, ১৭ নভেম্বর ২০২৬; [[MonthEndChecklist::dayCloses()]])
         // ⓘ কেবল মাস-শেষের সারি (data-state থাকে) — সন্ধ্যায় খোলস নিজেই দিন-বন্ধের মনে-করানো পপআপ আঁকে, যার সারিও data-check
-        //   (shell/day-check → partials/day-checklist, state ছাড়া); রাত ৯টার Mac রানে তাই ১১ গোনা হয়েছিল (১.৩.৯, ২১ নভেম্বর ২০২৬)
-        $this->assertSame(9, preg_match_all('/data-check="[^"]*" data-state="/', $html), 'চেকলিস্টে নয়টা সারি নেই।');
+        //   (shell/day-check → partials/day-checklist, state ছাড়া)
+        preg_match_all('/data-check="([^"]*)" data-state="/', $html, $rows);
+        $this->assertSame(
+            ['drafts', 'awaiting', 'stale', 'bank_reconciled', 'cash_counted', 'depreciated', 'balanced', 'days_closed', 'days_changed', 'reversals_stuck', 'locked'],
+            $rows[1],
+            'মাস-শেষের চেকলিস্টের সারিগুলো বদলেছে।',
+        );
     }
 
     public function test_two_customers_on_one_mobile_show_as_one_group(): void
