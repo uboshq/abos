@@ -454,7 +454,13 @@ async function join (payload, { outgoing }) {
     if (call.id !== payload.call_id) return
     call.lk = lk
 
-    const room = new lk.Room({ adaptiveStream: true, dynacast: true })
+    /*
+     * ⛔ `singlePeerConnection: false` — the call server on the Mac mini is LiveKit 1.8.4, which knows only `/rtc`; the
+     * 2.22 client starts on `/rtc/v1` and falls back only after asking `/rtc/validate`. On demo (24 Nov 2026) that path
+     * failed, the caller's page ended the call as missed in two seconds, and the other side never rang. The two-connection
+     * mode goes straight to `/rtc` — the path every 1.x server has. Switch it back on once the server is 1.9 or newer.
+     */
+    const room = new lk.Room({ adaptiveStream: true, dynacast: true, singlePeerConnection: false })
     call.room = room
     const { RoomEvent, Track } = lk
     const audioBox = screen().querySelector('[data-msgr-audio]')

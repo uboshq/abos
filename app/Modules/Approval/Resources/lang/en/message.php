@@ -174,4 +174,7 @@ return [
     'delegation_stopped_at' => 'Stopped :date',
     'delegation_changed' => 'Hand-over changed — the earlier one stays in the audit trail.',
     'delegation_changing' => 'Changing the hand-over to :name',
+    // ⭐ the inbox board — a re-asked paper (it changed after the first ask)
+    'changed_short' => 'Changed',
+    'changed_since_asked_short' => 'Changed after the ask',
 ];
