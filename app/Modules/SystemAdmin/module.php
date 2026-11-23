@@ -733,6 +733,46 @@ return [
             'group' => 'general',
         ],
         /*
+         * ⭐ বাকি সব ছবির KB — ধরন ধরে (মালিক, ১৬–১৭ নভেম্বর ২০২৬: স্ক্যানার, "deposit report flexible")।
+         * ⓘ ডিফল্ট ঠিক ইঞ্জিনের পুরনো ধ্রুবক ([[ImageEngine::KB_DEFAULTS]]), তাই কেউ না বদলানো পর্যন্ত কিছু বদলায় না। সীমা
+         *   ২০ KB – ১০ MB (লোগো ৫০০ KB পর্যন্ত); শূন্য, ঋণাত্মক বা লেখা মানে ডিফল্ট ([[ImageEngine::kbFor()]])।
+         */
+        [
+            'key' => 'system.image_kb.paper',
+            'label' => 'system_admin::settings.image_kb_paper',
+            'type' => 'integer',
+            'default' => \App\Core\Engines\Image\ImageEngine::KB_DEFAULTS['paper'],
+            'group' => 'general',
+        ],
+        [
+            'key' => 'system.image_kb.photo',
+            'label' => 'system_admin::settings.image_kb_photo',
+            'type' => 'integer',
+            'default' => \App\Core\Engines\Image\ImageEngine::KB_DEFAULTS['photo'],
+            'group' => 'general',
+        ],
+        [
+            'key' => 'system.image_kb.face',
+            'label' => 'system_admin::settings.image_kb_face',
+            'type' => 'integer',
+            'default' => \App\Core\Engines\Image\ImageEngine::KB_DEFAULTS['face'],
+            'group' => 'general',
+        ],
+        [
+            'key' => 'system.image_kb.cover',
+            'label' => 'system_admin::settings.image_kb_cover',
+            'type' => 'integer',
+            'default' => \App\Core\Engines\Image\ImageEngine::KB_DEFAULTS['cover'],
+            'group' => 'general',
+        ],
+        [
+            'key' => 'system.image_kb.mark',
+            'label' => 'system_admin::settings.image_kb_mark',
+            'type' => 'integer',
+            'default' => \App\Core\Engines\Image\ImageEngine::KB_DEFAULTS['mark'],
+            'group' => 'general',
+        ],
+        /*
          * নিজের জরুরি নোটিশ নিজে অনুমোদন নয় — স্পেক, ধারা ১৭।
          *
          * ⚠️ এক-মানুষের অফিসে এটা বন্ধ রাখতেই হবে — ⓘ সেখানে
