@@ -30,7 +30,7 @@ export function inboxBoard (root = document, win = window) {
         const frame = board.closest('main')?.getBoundingClientRect()
         const bottom = frame && frame.bottom > top ? Math.min(win.innerHeight, frame.bottom + (win.scrollY || 0)) : win.innerHeight
 
-        board.style.setProperty('--board-h', Math.max(560, bottom - top - 20) + 'px')
+        board.style.setProperty('--board-h', Math.max(560, bottom - top - 40) + 'px')
     }
 
     fit()
