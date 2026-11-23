@@ -73,6 +73,29 @@ class SalesReportController extends Controller implements HasMiddleware
         'area-sales-point' => 'sales.area_sales_point',
         'area-sales-customer' => 'sales.area_sales_customer',
         'branch-sales' => \App\Modules\Sales\Reports\AreaSalesReports::BRANCH,
+        // ⭐ লক্ষ্য বনাম বিক্রয় — স্তর আর বিক্রয়কর্মী ধরে ([[CustomerInsightReports]])
+        'target-sales' => 'sales.target_sales_area',
+        'target-sales-territory' => 'sales.target_sales_territory',
+        'target-sales-point' => 'sales.target_sales_point',
+        'target-sales-customer' => 'sales.target_sales_customer',
+        'target-sales-salesperson' => \App\Modules\Sales\Reports\CustomerInsightReports::TARGET_PERSON,
+        // ⭐ বিক্রির ধারা — মাস আর তিন মাস ধরে ([[SalesTrendReports]])
+        'sales-trend' => \App\Modules\Sales\Reports\SalesTrendReports::MONTHLY,
+        'sales-trend-quarterly' => \App\Modules\Sales\Reports\SalesTrendReports::QUARTERLY,
+        // ⭐ ABC — পণ্য আর গ্রাহক ([[ProductInsightReports]], [[CustomerInsightReports]])
+        'product-abc' => \App\Modules\Sales\Reports\ProductInsightReports::ABC,
+        'customer-abc' => \App\Modules\Sales\Reports\CustomerInsightReports::ABC,
+        // ⭐ নতুন, ঘুমন্ত আর হারানো গ্রাহক
+        'customers-new' => \App\Modules\Sales\Reports\CustomerInsightReports::NEW,
+        'customers-idle-30' => 'sales.customers_idle_30',
+        'customers-idle-60' => 'sales.customers_idle_60',
+        'customers-idle-90' => 'sales.customers_idle_90',
+        // ⭐ আদায়ের দক্ষতা আর DSO — স্তর আর শাখা ধরে
+        'collection-efficiency' => 'sales.collection_efficiency_area',
+        'collection-efficiency-territory' => 'sales.collection_efficiency_territory',
+        'collection-efficiency-point' => 'sales.collection_efficiency_point',
+        'collection-efficiency-customer' => 'sales.collection_efficiency_customer',
+        'collection-efficiency-branch' => \App\Modules\Sales\Reports\CustomerInsightReports::EFFICIENCY_BRANCH,
     ];
 
     /**
@@ -99,6 +122,30 @@ class SalesReportController extends Controller implements HasMiddleware
             'area-sales-territory' => 'sales::area_sales.tab_territory',
             'area-sales-point' => 'sales::area_sales.tab_point',
             'area-sales-customer' => 'sales::area_sales.tab_customer',
+        ],
+        [
+            'target-sales' => 'sales::area_sales.tab_area',
+            'target-sales-territory' => 'sales::area_sales.tab_territory',
+            'target-sales-point' => 'sales::area_sales.tab_point',
+            'target-sales-customer' => 'sales::area_sales.tab_customer',
+            'target-sales-salesperson' => 'sales::customer_insight.tab_person',
+        ],
+        [
+            'sales-trend' => 'sales::sales_trend.tab_monthly',
+            'sales-trend-quarterly' => 'sales::sales_trend.tab_quarterly',
+        ],
+        [
+            'customers-new' => 'sales::customer_insight.tab_new',
+            'customers-idle-30' => 'sales::customer_insight.tab_idle_30',
+            'customers-idle-60' => 'sales::customer_insight.tab_idle_60',
+            'customers-idle-90' => 'sales::customer_insight.tab_idle_90',
+        ],
+        [
+            'collection-efficiency' => 'sales::area_sales.tab_area',
+            'collection-efficiency-territory' => 'sales::area_sales.tab_territory',
+            'collection-efficiency-point' => 'sales::area_sales.tab_point',
+            'collection-efficiency-customer' => 'sales::area_sales.tab_customer',
+            'collection-efficiency-branch' => 'sales::customer_insight.tab_branch',
         ],
     ];
 

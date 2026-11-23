@@ -409,6 +409,19 @@ return [
                 'route_params' => ['slug' => 'area-sales'], 'permission' => 'sales.report'],
             ['label' => 'sales::area_sales.menu_branch', 'icon' => 'reports', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'branch-sales'], 'permission' => 'sales.report'],
+            /* ⭐ আন্তর্জাতিক মানের বিশ্লেষণ — রূপগুলো পাতার ট্যাবে ([[CustomerInsightReports]], [[ProductInsightReports]], [[SalesTrendReports]]) */
+            ['label' => 'sales::customer_insight.menu_target', 'icon' => 'scale', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'target-sales'], 'permission' => 'sales.report'],
+            ['label' => 'sales::sales_trend.menu', 'icon' => 'calendar', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'sales-trend'], 'permission' => 'sales.report'],
+            ['label' => 'sales::product_insight.menu_abc', 'icon' => 'inventory', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'product-abc'], 'permission' => 'sales.report'],
+            ['label' => 'sales::customer_insight.menu_abc', 'icon' => 'customer', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'customer-abc'], 'permission' => 'sales.report'],
+            ['label' => 'sales::customer_insight.menu_customers', 'icon' => 'people', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'customers-new'], 'permission' => 'sales.report'],
+            ['label' => 'sales::customer_insight.menu_efficiency', 'icon' => 'wallet', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'collection-efficiency'], 'permission' => 'sales.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
@@ -899,6 +912,10 @@ return [
         \App\Modules\Sales\Reports\MoneyInReports::class,
         // ⭐ এলাকা ধরে বিক্রয় (এরিয়া › টেরিটরি › পয়েন্ট › গ্রাহক) আর শাখা ধরে বিক্রয় (মালিক, ২৩ নভেম্বর ২০২৬)
         \App\Modules\Sales\Reports\AreaSalesReports::class,
+        // ⭐ আন্তর্জাতিক মানের বিশ্লেষণ — লক্ষ্য বনাম বিক্রয়, গ্রাহকের ABC, নতুন/ঘুমন্ত/হারানো, আদায়ের দক্ষতা ও DSO; পণ্যের ABC; বিক্রির ধারা
+        \App\Modules\Sales\Reports\CustomerInsightReports::class,
+        \App\Modules\Sales\Reports\ProductInsightReports::class,
+        \App\Modules\Sales\Reports\SalesTrendReports::class,
     ],
 
     /*

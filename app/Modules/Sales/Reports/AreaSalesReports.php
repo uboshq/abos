@@ -13,6 +13,7 @@ use App\Modules\MasterData\Models\Location;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Services\CustomerTargetService;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -69,7 +70,7 @@ final class AreaSalesReports
     /**
      * ⭐ প্রতি গ্রাহকের এক সারি — এই রিপোর্টগুলো আর পরের বিশ্লেষণগুলো (লক্ষ্য, আদায়ের দক্ষতা, বাকির বয়স) একই সারি পড়ে।
      * ঘর: `customer_id, customer, branch_id, area_id, area, area_branch_id, territory_id, territory, point_id, point, sales, bills,
-     * returns, collected, due, prev_net, ly_net`।
+     * returns, collected, due, opening` (শুরুর তারিখের আগের জের), `target` (ডিলারের লক্ষ্য), `prev_net, ly_net`।
      *
      * @param  array<string, mixed>  $f
      */
@@ -90,10 +91,17 @@ final class AreaSalesReports
             ->whereIn('sr.status', DocumentStatus::POSTED)->whereBetween('sr.trx_date', [$a, $b])
             ->groupBy('sr.customer_id')
             ->selectRaw('sr.customer_id as customer_id, SUM('.SalesMetrics::returnNetSql('sr').') as v');
-        $due = DB::table('ledger_entries as d')
-            ->where('d.company_id', $company)->where('d.party_type', 'customer')->where('d.trx_date', '<=', $to)
+        $balance = fn (string $operator, string $day): Builder => DB::table('ledger_entries as d')
+            ->where('d.company_id', $company)->where('d.party_type', 'customer')->where('d.trx_date', $operator, $day)
             ->groupBy('d.party_id')
             ->selectRaw('d.party_id as customer_id, GREATEST(SUM(d.debit) - SUM(d.credit), 0) as v');
+        $due = $balance('<=', $to);
+        // ⓘ ডিলারের মাসিক লক্ষ্য — বাছা সময় যে মাসগুলো ছোঁয় তাদের যোগ ([[PartyTargetReport::base()]]-এর একই নিয়ম)
+        $targets = DB::table('sal_customer_targets as st')
+            ->where('st.company_id', $company)
+            ->whereBetween('st.month', [Carbon::parse($from)->startOfMonth()->toDateString(), Carbon::parse($to)->startOfMonth()->toDateString()])
+            ->groupBy('st.customer_id')
+            ->selectRaw('st.customer_id as customer_id, SUM(st.amount) as v');
 
         $inner = DB::table('customers as cu')
             ->where('cu.company_id', $company)
@@ -102,6 +110,8 @@ final class AreaSalesReports
             ->leftJoinSub($back($from, $to), 'b', 'b.customer_id', '=', 'cu.id')
             ->leftJoinSub(CustomerTargetService::achievedQuery($company, $from, $to), 'c', 'c.customer_id', '=', 'cu.id')
             ->leftJoinSub($due, 'd', 'd.customer_id', '=', 'cu.id')
+            ->leftJoinSub($balance('<', $from), 'o', 'o.customer_id', '=', 'cu.id')
+            ->leftJoinSub($targets, 't', 't.customer_id', '=', 'cu.id')
             ->leftJoinSub($sold($before['from'], $before['to']), 'ps', 'ps.customer_id', '=', 'cu.id')
             ->leftJoinSub($back($before['from'], $before['to']), 'pb', 'pb.customer_id', '=', 'cu.id')
             ->leftJoinSub($sold($lastYear['from'], $lastYear['to']), 'ys', 'ys.customer_id', '=', 'cu.id')
@@ -115,14 +125,15 @@ final class AreaSalesReports
             ->when(! empty($f['salesman_id']), fn (Builder $q) => $q->whereRaw(
                 ResponsibleSql::person($company, 'cu.id', DB::getPdo()->quote($to)).' = ?', [(int) $f['salesman_id']]))
             ->whereRaw('(COALESCE(s.v, 0) <> 0 OR COALESCE(b.v, 0) <> 0 OR COALESCE(c.achieved, 0) <> 0 OR COALESCE(d.v, 0) <> 0'
-                .' OR COALESCE(ps.v, 0) <> 0 OR COALESCE(ys.v, 0) <> 0)')
+                .' OR COALESCE(ps.v, 0) <> 0 OR COALESCE(ys.v, 0) <> 0 OR COALESCE(o.v, 0) <> 0 OR COALESCE(t.v, 0) <> 0)')
             ->selectRaw('cu.id as customer_id, '.SalesPlace::named('cu').' as customer, cu.branch_id as branch_id, '
                 .SalesPlace::first(Location::AREA, 'id').' as area_id, '.SalesPlace::first(Location::AREA, 'name').' as area, '
                 .SalesPlace::first(Location::AREA, 'branch_id').' as area_branch_id, '
                 .SalesPlace::first(Location::TERRITORY, 'id').' as territory_id, '.SalesPlace::first(Location::TERRITORY, 'name').' as territory, '
                 .SalesPlace::first(Location::POINT, 'id').' as point_id, '.SalesPlace::first(Location::POINT, 'name').' as point, '
                 .'COALESCE(s.v, 0) as sales, COALESCE(s.n, 0) as bills, COALESCE(b.v, 0) as returns, COALESCE(c.achieved, 0) as collected, '
-                .'COALESCE(d.v, 0) as due, COALESCE(ps.v, 0) - COALESCE(pb.v, 0) as prev_net, COALESCE(ys.v, 0) - COALESCE(yb.v, 0) as ly_net');
+                .'COALESCE(d.v, 0) as due, COALESCE(o.v, 0) as opening, COALESCE(t.v, 0) as target, '
+                .'COALESCE(ps.v, 0) - COALESCE(pb.v, 0) as prev_net, COALESCE(ys.v, 0) - COALESCE(yb.v, 0) as ly_net');
 
         return DB::query()->fromSub($inner, 'r');
     }
@@ -130,9 +141,14 @@ final class AreaSalesReports
     /** যোগের ঘরগুলো — সব স্তর আর শাখার রিপোর্টে একই */
     private static function sums(): string
     {
+        $net = 'SUM(r.sales) - SUM(r.returns)';
+        // ⓘ তুলনার সময়ে বিক্রি না থাকলে হার নেই — ঘর খালি, ০% নয়
+        $change = fn (string $was): string => "CASE WHEN SUM(r.{$was}) > 0 THEN ROUND(({$net} - SUM(r.{$was})) * 100 / SUM(r.{$was}), 2) END";
+
         return 'COUNT(*) as customers, SUM(r.bills) as bills, SUM(r.sales) as sales, SUM(r.returns) as returns, '
-            .'SUM(r.sales) - SUM(r.returns) as net_sales, SUM(r.collected) as collected, SUM(r.due) as due, '
-            .'SUM(r.prev_net) as prev_net, SUM(r.ly_net) as ly_net';
+            ."{$net} as net_sales, SUM(r.collected) as collected, SUM(r.due) as due, "
+            .'SUM(r.prev_net) as prev_net, '.$change('prev_net').' as prev_net_change, '
+            .'SUM(r.ly_net) as ly_net, '.$change('ly_net').' as ly_net_change';
     }
 
     /**
@@ -150,6 +166,12 @@ final class AreaSalesReports
 
         foreach (self::MONEY as $key) {
             $columns[] = ['key' => $key, 'label' => 'sales::area_sales.'.$key, 'type' => ReportColumn::MONEY, 'drill' => $drill];
+
+            // ⭐ তুলনার অঙ্কের পাশেই বাড়া-কমার হার — নিট বিক্রি সেই সময়ের চেয়ে কত % (নমুনার দুই % ঘর); মোটে মোট ÷ মোট
+            if (in_array($key, ['prev_net', 'ly_net'], true)) {
+                $columns[] = ['key' => $key.'_change', 'label' => 'sales::area_sales.'.$key.'_change', 'type' => ReportColumn::PERCENT,
+                    'ratio' => ['net_sales', $key, 'change'], 'width' => '7rem'];
+            }
         }
 
         return $columns;

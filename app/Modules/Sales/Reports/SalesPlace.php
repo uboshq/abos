@@ -82,6 +82,46 @@ final class SalesPlace
         });
     }
 
+    /**
+     * ⭐ গ্রাহক-সারির কোয়েরিকে এক স্তর ধরে দলে ভাগ করা — `groupBy` বসায়, আর বাছার জন্য SQL ফেরায়:
+     *   `id`      সারির জায়গার (বা গ্রাহকের) id — নিচে নামার ছাঁকনি; টেরিটরি বসানো না থাকলে তার এরিয়া
+     *   `order`   সাজানোর ঘর
+     *   `place`   নাম — এরিয়া "শাখা › এরিয়া" (ADI-র চার শাখার চার এরিয়ার একই নাম; মালিক, ২৩ নভেম্বর ২০২৬), খালি হলে "… বসানো নেই"
+     *   `parent`  উপরের ধাপের নাম (এরিয়ার স্তরে `NULL`)
+     *
+     * ⓘ সারির উপনাম `$t`-তে থাকতে হয়: `area_id, area, area_branch_id, territory_id, territory, point_id, point, customer_id, customer`।
+     *
+     * @return array{id: string, order: string, place: string, parent: string}
+     */
+    public static function grouped(Builder $query, string $t, string $level): array
+    {
+        $query->leftJoin('branches as ab', 'ab.id', '=', "{$t}.area_branch_id")
+            ->groupBy("{$t}.area_id", "{$t}.area", 'ab.name_bn', 'ab.name_en');
+        $area = "CASE WHEN {$t}.area_id IS NULL THEN NULL ELSE CONCAT_WS(' › ', ".self::named('ab').", {$t}.area) END";
+
+        [$id, $name, $parent, $none] = match ($level) {
+            Location::AREA => ["{$t}.area_id", $area, 'NULL', 'no_place'],
+            Location::TERRITORY => ["{$t}.territory_id", "{$t}.territory", $area, 'no_territory'],
+            Location::POINT => ["{$t}.point_id", "{$t}.point", "CONCAT_WS(' · ', {$t}.territory, {$area})", 'no_place'],
+            default => ["{$t}.customer_id", "{$t}.customer", "{$t}.point", 'no_place'],
+        };
+
+        match ($level) {
+            Location::AREA => null,
+            Location::TERRITORY => $query->groupBy("{$t}.territory_id", "{$t}.territory"),
+            Location::POINT => $query->groupBy("{$t}.point_id", "{$t}.point", "{$t}.territory"),
+            default => $query->groupBy("{$t}.customer_id", "{$t}.customer", "{$t}.point"),
+        };
+
+        return [
+            // ⓘ টেরিটরি বসানো নেই এমন সারিতে চাপলে তার এরিয়ার পয়েন্টগুলো — নিচে নামার জায়গা এরিয়াই
+            'id' => $level === Location::TERRITORY ? "COALESCE({$t}.territory_id, {$t}.area_id)" : $id,
+            'order' => $id,
+            'place' => "COALESCE({$name}, ".DB::getPdo()->quote((string) __('sales::area_sales.'.$none)).')',
+            'parent' => $parent,
+        ];
+    }
+
     /** স্তরের পরেরটা — এরিয়া → টেরিটরি → পয়েন্ট → গ্রাহক; গ্রাহকের পরে কিছু নেই */
     public static function below(string $level): ?string
     {

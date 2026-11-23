@@ -34,7 +34,9 @@ return [
     'collected' => 'Collected',
     'due' => 'Due',
     'prev_net' => 'Net, previous same period',
+    'prev_net_change' => 'Against previous period',
     'ly_net' => 'Net, same period last year',
+    'ly_net_change' => 'Against last year',
 
     'no_branch' => 'No branch set',
     'no_place' => 'No place set',
