@@ -23,5 +23,9 @@ return [
     'section_comms' => 'Communication',
     'section_audit' => 'Audit',
     'section_data' => 'Data',
+    // ⭐ the merged module (owner, 23 Nov 2026) — its name, and the guests' parts (their own names)
+    'merged_title' => 'System & Administration',
+    'section_governance' => 'Governance',
+    'section_backup' => 'Backup & Recovery',
     'login_security' => 'Login security',
 ];

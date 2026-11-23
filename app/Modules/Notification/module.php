@@ -26,7 +26,8 @@ return [
     'name' => ['en' => 'Notifications', 'bn' => 'বিজ্ঞপ্তি'],
     'version' => '1.0.0',
     // ⓘ মেনুতে System-এর নিচে, ক্রম ১৩ — মালিকের কেন্দ্র ১১, ডকুমেন্টস ১২, নোটিফিকেশন ১৩, স্থায়ী সম্পদ ১৪ (fe, ১১ অক্টোবর ২০২৬)
-    'nav' => ['section' => 'system', 'order' => 13],
+    // ⭐ এক করা মডিউল (মালিক, ২৩ নভেম্বর ২০২৬: "যোগাযোগ = নোটিফিকেশন + বার্তা ও কল"; Odoo Discuss) — বার্তা ভিতরে বসলে নাম "যোগাযোগ"
+    'nav' => ['section' => 'system', 'order' => 13, 'merged_label' => 'notification::menu.merged_title'],
     'depends_on' => [],
 
     // ⭐ ধাপ ৪ — ড্যাশবোর্ড ([[NotificationDashboard]]); চাবি মেনুর ড্যাশবোর্ড সারি থেকে

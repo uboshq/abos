@@ -87,6 +87,12 @@ final class MenuBuilder
                 continue;
             }
 
+            // ⛔ কেবল আশ্রয়দাতার ভিতরে বসা মডিউল ([[ModuleDefinition::validateNav()]] `merged_only`) — SAP আর Dynamic-এ মেনুতে নেই,
+            //   ওই দুই রূপ ১০০% আগের মতো (মালিক, ২৩ নভেম্বর ২০২৬: বার্তা ও কল "যোগাযোগ"-এর ভিতরে)
+            if (! $merged && ($module->nav['merged_only'] ?? false) === true) {
+                continue;
+            }
+
             $groups = [];
             // ⓘ রেলের শুরুর ক্রমের জন্য — মডিউলের কতগুলো পাতা এই মানুষ খুলতে পারেন ([[arranged()]])
             $offered = 0;
@@ -344,6 +350,8 @@ final class MenuBuilder
      *   ⓘ অতিথিরা নিজেদের `module.php`-তে `nav.under` বলে; আশ্রয়দাতা `nav.merged_label` দিলে টাইলের নাম বদলায়, আর ড্যাশবোর্ড ট্যাবে
      *   সদস্যরা ([[membersOf()]], [[shell.merged-tabs]])। মেনুর দল ও ক্রম `resources/menu-look.php`-এ ([[MenuLook::arrange()]])।
      *   ⛔ রুট, চাবি, ঠিকানা, ডাটা — কিছুই বদলায়নি; অতিথি বন্ধ হলে তার সারি আসে না, আশ্রয়দাতা বন্ধ হলে অতিথি নিজের টাইলে।
+     * ⭐ ২৩ নভেম্বর ২০২৬ — চতুর্থটা: সিস্টেম ও প্রশাসন = সিস্টেম প্রশাসন + নিয়ন্ত্রণ ও নিরীক্ষা + ব্যাকআপ (D365 System administration,
+     *   SAP Basis)। আশ্রয়দাতার মেনু ভাগে ভাগে (`panel_sections`), তাই অতিথিরা নিজের নিজের ভাগে, শেষে।
      *
      * ⓘ (৪ সেপ্টেম্বরের লেখা, ইতিহাস) তখন কোনো মডিউল `nav.under` ঘোষণা করত না:
      *
@@ -389,7 +397,18 @@ final class MenuBuilder
 
         $absorbed = [];
 
-        foreach ($menu as $i => $entry) {
+        /*
+         * ⓘ অতিথিরা মেনুর ক্রমে (দল, তারপর নম্বর) বসে — বুটের ক্রমে নয়: সিস্টেম ও প্রশাসনে নিয়ন্ত্রণ ও নিরীক্ষা আগে, ব্যাকআপ পরে
+         *   (মালিক, ২৩ নভেম্বর ২০২৬), অথচ বুটে ব্যাকআপ আগে (হিসাব তার উপর দাঁড়ায়)। আগের তিনটা এক করা মডিউলে দুই ক্রম একই।
+         */
+        $sections = array_flip(ModuleDefinition::NAV_SECTIONS);
+        $visit = array_keys($menu);
+        usort($visit, fn (int $a, int $b): int => [$sections[$menu[$a]['section']] ?? PHP_INT_MAX, $menu[$a]['order'], $menu[$a]['code']]
+            <=> [$sections[$menu[$b]['section']] ?? PHP_INT_MAX, $menu[$b]['order'], $menu[$b]['code']]);
+
+        foreach ($visit as $i) {
+            $entry = $menu[$i];
+
             if ($entry['under'] === null || ! isset($at[$entry['under']])) {
                 continue;
             }
@@ -430,12 +449,24 @@ final class MenuBuilder
                     $rows = array_map(fn (array $row): array => ['label' => $entry['dashboard_label']] + $row, $rows);
                 }
 
+                /*
+                 * ⭐ আশ্রয়দাতার বাঁয়ের মেনু ভাগে ভাগে (`panel_sections`, সিস্টেম প্রশাসন) — অতিথির সারিগুলো তার নিজের ভাগে, নাম অতিথির
+                 *   কোড ধরে (`<host>::menu.section_<guest>`), আশ্রয়দাতার ভাগগুলোর পরে (মালিক, ২৩ নভেম্বর ২০২৬: সিস্টেম ও প্রশাসন)।
+                 *   ⓘ নইলে ভাগ-না-বলা সারি শেষ ভাগের ("নিরীক্ষা") নিচে মাথা ছাড়া বসত। ভাগ নেই এমন আশ্রয়দাতায় কিছুই বদলায় না।
+                 */
+                if (($menu[$host]['panel_sections'] ?? []) !== []) {
+                    $rows = array_map(fn (array $row): array => ['section' => $entry['code']] + $row, $rows);
+                }
+
                 $menu[$host]['groups'][$entry['code'].':'.$group] = $rows;
                 // ⓘ ড্রপডাউনের দলের নাম (Dynamic, উপরের মেনু) — "অর্থ · লেনদেন"; আশ্রয়দাতার নিজের দলগুলো আগের মতোই
                 $menu[$host]['group_titles'][$entry['code'].':'.$group] = $entry['label'].' · '.__('core.menu.'.$group);
             }
 
             $menu[$host]['codes'][] = $entry['code'];
+            if (($menu[$host]['panel_sections'] ?? []) !== []) {
+                $menu[$host]['panel_sections'][] = $entry['code'];
+            }
             $menu[$host]['guest_labels'][$entry['code']] = $entry['label'];
             $menu[$host]['guests'][] = $entry;
             $absorbed[$i] = true;

@@ -40,7 +40,10 @@ return [
      * সিস্টেমের হোম · প্রতিষ্ঠান · মানুষ ও প্রবেশাধিকার · মডিউল ও সেটিংস · যোগাযোগ · তথ্য। ⓘ নিরীক্ষার পর্দা Governance-এর নিজের মেনুতে
      * (এক পর্দা, এক মালিক — নিচের মন্তব্য)। ঠিকানা একটাও বদলায়নি।
      */
-    'nav' => ['section' => 'system', 'order' => 10, 'panel_sections' => ['home', 'org', 'people', 'modules', 'comms', 'data', 'audit']],
+    // ⭐ এক করা মডিউল (মালিক, ২৩ নভেম্বর ২০২৬; D365 "System administration", SAP Basis): সিস্টেম প্রশাসন + নিয়ন্ত্রণ ও নিরীক্ষা + ব্যাকআপ —
+    //   অতিথিরা বসলে নাম "সিস্টেম ও প্রশাসন"; তাদের সারি নিজের নিজের ভাগে, এই মডিউলের ভাগগুলোর পরে ([[MenuBuilder::settleGuestsIntoTheirHosts()]])
+    'nav' => ['section' => 'system', 'order' => 10, 'panel_sections' => ['home', 'org', 'people', 'modules', 'comms', 'data', 'audit'],
+        'merged_label' => 'system_admin::menu.merged_title'],
 
     /*
      * ── master_data কেন, ৪ সেপ্টেম্বর ২০২৬ ────────────────────────────
