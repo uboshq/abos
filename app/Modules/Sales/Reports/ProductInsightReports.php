@@ -25,10 +25,69 @@ final class ProductInsightReports
 
     public const PRICE = 'sales.price_realisation';
 
+    public const TARGET = 'sales.target_sales_product';
+
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::abc());
         $engine->register(self::priceRealisation());
+        $engine->register(self::target());
+    }
+
+    /**
+     * ⭐ ৪. লক্ষ্য বনাম বিক্রয় — পণ্য ধরে: পণ্যের মাসিক লক্ষ্যের (`sal_product_targets`, [[ProductTargetService]]) পরিমাণ আর টাকা, তার
+     * পাশে বিক্রির পরিমাণ আর নিট বিক্রি, দুই অর্জনের হার (মালিক, ২৩ নভেম্বর ২০২৬ — "হ্যাঁ, পণ্য ধরে লক্ষ্য চাই")।
+     *
+     * ⓘ লক্ষ্য — বাছা সময় যে মাসগুলো ছোঁয় তাদের যোগ (ডিলারের লক্ষ্যের রিপোর্টের একই নিয়ম)। সারিতে আসে যে পণ্যের লক্ষ্য আছে বা বিক্রি
+     * আছে; লক্ষ্য নেই এমন পণ্যের হারের ঘর খালি।
+     * ⓘ লক্ষ্য গোটা কোম্পানির — শাখা বাছলে বিক্রি সেই শাখার, লক্ষ্য তবু পুরো কোম্পানির (শাখা ধরে পণ্যের লক্ষ্য বসানো হয় না)।
+     * ⓘ পরিমাণের ঘর মোটে যোগ হয় না — ভিন্ন পণ্যের একক ভিন্ন; টাকার হার মোটে মোট ÷ মোট।
+     */
+    private static function target(): ReportDefinition
+    {
+        $money = fn (string $key, string $label): array => ['key' => $key, 'label' => $label, 'type' => ReportColumn::MONEY, 'drill' => self::door()];
+
+        return new ReportDefinition(
+            key: self::TARGET,
+            permission: 'sales.report',
+            title: 'sales::product_target.report_title',
+            filters: ['date_range', 'branch'],
+            groupBy: 'product_id',
+            rankBy: 'net_sales',
+            query: function (array $f): Builder {
+                $sold = DB::query()->fromSub(self::rows($f), 'n')
+                    ->selectRaw('n.product_id as product_id, n.product as product, n.qty as qty, n.net_sales as net_sales, 0 as target_qty, 0 as target');
+                $targets = DB::table('sal_product_targets as pt')
+                    ->join('inv_products as p', 'p.id', '=', 'pt.product_id')
+                    ->where('pt.company_id', $f['company_id'])
+                    ->whereBetween('pt.month', [
+                        \Illuminate\Support\Carbon::parse((string) $f['from'])->startOfMonth()->toDateString(),
+                        \Illuminate\Support\Carbon::parse((string) $f['to'])->startOfMonth()->toDateString(),
+                    ])
+                    ->selectRaw('pt.product_id as product_id, '.self::productName().' as product, 0 as qty, 0 as net_sales, pt.qty as target_qty, pt.amount as target');
+
+                return DB::query()->fromSub($sold->unionAll($targets), 'x')
+                    ->groupBy('x.product_id', 'x.product')
+                    ->selectRaw('x.product_id as product_id, '.DB::getPdo()->quote(Product::drillSourceType()).' as source_type, x.product as product, '
+                        .'SUM(x.target_qty) as target_qty, SUM(x.qty) as qty, '
+                        .'CASE WHEN SUM(x.target_qty) > 0 THEN ROUND(SUM(x.qty) * 100 / SUM(x.target_qty), 2) END as qty_achieved, '
+                        .'SUM(x.target) as target, SUM(x.net_sales) as net_sales, '
+                        .'CASE WHEN SUM(x.target) > 0 THEN ROUND(SUM(x.net_sales) * 100 / SUM(x.target), 2) END as achieved, '
+                        .'SUM(x.net_sales) - SUM(x.target) as gap')
+                    ->orderByRaw('SUM(x.net_sales) DESC')->orderBy('x.product_id');
+            },
+            columns: [
+                ['key' => 'product', 'label' => 'sales::field.product', 'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type', 'source_id' => 'product_id'],
+                ['key' => 'target_qty', 'label' => 'sales::product_target.target_qty', 'type' => ReportColumn::QUANTITY, 'total' => false],
+                ['key' => 'qty', 'label' => 'sales::product_target.sold_qty', 'type' => ReportColumn::QUANTITY, 'total' => false],
+                ['key' => 'qty_achieved', 'label' => 'sales::product_target.qty_achieved', 'type' => ReportColumn::PERCENT, 'width' => '7rem'],
+                $money('target', 'sales::product_target.target_amount'),
+                $money('net_sales', 'sales::area_sales.net_sales'),
+                ['key' => 'achieved', 'label' => 'sales::product_target.amount_achieved', 'type' => ReportColumn::PERCENT, 'ratio' => ['net_sales', 'target'], 'width' => '7rem'],
+                $money('gap', 'sales::customer_insight.gap'),
+            ],
+        );
     }
 
     /**

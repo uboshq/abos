@@ -465,6 +465,9 @@ return [
             // ⭐ ডিলারের মাসিক আদায়ের লক্ষ্য — বিলের "টার্গেট রিমাইন্ডার" (মালিক, ৩ অক্টোবর ২০২৬)
             ['label' => 'sales::customer_target.title', 'icon' => 'scale', 'route' => 'sales.customer_target.index',
                 'permission' => 'sales.customer_target.view'],
+            // ⭐ পণ্যের মাসিক বিক্রির লক্ষ্য — পণ্য ধরে লক্ষ্য বনাম বিক্রয়ের জন্য (মালিক, ২৩ নভেম্বর ২০২৬); চাবি লক্ষ্যমাত্রার
+            ['label' => 'sales::product_target.title', 'icon' => 'scale', 'route' => 'sales.product_target.index',
+                'permission' => 'sales.target.view'],
 
             /* রুটের খাতা — লক্ষ্যমাত্রার পাশে: দুইটাই মাস ধরে দেখা হয় (NEXUS §২৭) */
             ['label' => 'sales::route.title', 'icon' => 'globe', 'route' => 'sales.route.index',
@@ -886,6 +889,8 @@ return [
     // ডিলারের মাসিক লক্ষ্য একসাথে অনেকের (৩ অক্টোবর ২০২৬; [[CustomerTargetImporter]])
     'imports' => [
         'customer_target' => \App\Modules\Sales\Imports\CustomerTargetImporter::class,
+        // পণ্যের মাসিক লক্ষ্য একসাথে অনেকের (২৩ নভেম্বর ২০২৬; [[ProductTargetImporter]])
+        'product_target' => \App\Modules\Sales\Imports\ProductTargetImporter::class,
     ],
 
     /*

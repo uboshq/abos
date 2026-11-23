@@ -79,6 +79,8 @@ class SalesReportController extends Controller implements HasMiddleware
         'target-sales-point' => 'sales.target_sales_point',
         'target-sales-customer' => 'sales.target_sales_customer',
         'target-sales-salesperson' => \App\Modules\Sales\Reports\CustomerInsightReports::TARGET_PERSON,
+        // ⭐ পণ্য ধরে — পণ্যের মাসিক লক্ষ্য বনাম বিক্রি ([[ProductInsightReports::TARGET]]; মালিক, ২৩ নভেম্বর ২০২৬)
+        'target-sales-product' => \App\Modules\Sales\Reports\ProductInsightReports::TARGET,
         // ⭐ বিক্রির ধারা — মাস আর তিন মাস ধরে ([[SalesTrendReports]])
         'sales-trend' => \App\Modules\Sales\Reports\SalesTrendReports::MONTHLY,
         'sales-trend-quarterly' => \App\Modules\Sales\Reports\SalesTrendReports::QUARTERLY,
@@ -150,6 +152,7 @@ class SalesReportController extends Controller implements HasMiddleware
             'target-sales-point' => 'sales::area_sales.tab_point',
             'target-sales-customer' => 'sales::area_sales.tab_customer',
             'target-sales-salesperson' => 'sales::customer_insight.tab_person',
+            'target-sales-product' => 'sales::product_target.tab_product',
         ],
         [
             'sales-trend' => 'sales::sales_trend.tab_monthly',
@@ -255,7 +258,10 @@ class SalesReportController extends Controller implements HasMiddleware
             'branches' => $definition->hasFilter('branch')
                 ? Branch::query()->active()->orderBy('name_en')->get()
                 : collect(),
-            'accounts' => collect(),
+            // ⓘ টাকা আসার রিপোর্টে খাত বাছা যায় — কেবল টাকার খাত (নগদ, ব্যাংক, মোবাইল ব্যাংকিং), হিসাবের একই তালিকা থেকে
+            'accounts' => $definition->hasFilter('account')
+                ? \App\Modules\Accounts\Reports\Filters\MoneyAccountFilter::accounts()->get()
+                : collect(),
             /*
              * পক্ষের ধরনের ছাঁকনি — কেবল যে রিপোর্ট চেয়েছে তার জন্য।
              *

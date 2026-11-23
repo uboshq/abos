@@ -400,6 +400,12 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/', [\App\Modules\Sales\Http\Controllers\CustomerTargetController::class, 'store'])->name('store');
     });
 
+    // ⭐ পণ্যের মাসিক বিক্রির লক্ষ্য — পণ্য ধরে লক্ষ্য বনাম বিক্রয়ের জন্য (মালিক, ২৩ নভেম্বর ২০২৬)
+    Route::prefix('product-targets')->name('product_target.')->group(function () {
+        Route::get('/', [\App\Modules\Sales\Http\Controllers\ProductTargetController::class, 'index'])->name('index');
+        Route::post('/', [\App\Modules\Sales\Http\Controllers\ProductTargetController::class, 'store'])->name('store');
+    });
+
     // রুটের খাতা — তালিকা, একটা রুট, সাপ্তাহিক ছক আর মাসের লক্ষ্য (NEXUS §২৭)
     Route::prefix('routes')->name('route.')->group(function () {
         Route::get('/', [RouteAccountController::class, 'index'])->name('index');
