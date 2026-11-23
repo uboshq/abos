@@ -36,7 +36,8 @@ dependencies:
 
   # What makes the queue drain by itself. Without this, a rep who walked back
   # into coverage would still have to open the app and press something.
-  connectivity_plus: ^6.0.5
+  # ⓘ ^7 — livekit_client 2.6+ (কল) এটাই চায়; অ্যাপের ব্যবহার (onConnectivityChanged → List) একই (২১ নভেম্বর ২০২৬)
+  connectivity_plus: ^7.0.0
 
   # Tokens, the device id and the Hive encryption key live in the platform
   # keystore (Android EncryptedSharedPreferences / iOS Keychain) -- never in
@@ -139,7 +140,8 @@ dependencies:
   flutter_local_notifications: ^22.3.3
   # ⭐ বার্তা ও কল, প্রথম ধাপ (মালিক "ok", ২১ নভেম্বর ২০২৬; নমুনা 3nuwRUdn v5)। একজনের সাথে ভয়েস/ভিডিও কল চলে
   # অফিসের নিজের LiveKit সার্ভারে (Mac mini) — কথা কোনো বাইরের সেবায় যায় না। Apache-2.0।
-  livekit_client: ^2.5.4
+  # ⓘ ^2.14 — 2.5.4 এই Dart (3.13)-এ কম্পাইল হয় না (local.dart-এ publishOptions-এর null-promotion ভুল)
+  livekit_client: ^2.14.0
   # ভয়েস বার্তা রেকর্ড (চেপে ধরে বলুন) — ফোনের নিজের এনকোডার, AAC/m4a। BSD-3।
   record: ^7.2.0
   # ভয়েস বার্তা শোনা। Apache-2.0 / MIT।

@@ -5,8 +5,12 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show WidgetsFlutterBinding;
 import 'package:hive/hive.dart';
 
+import '../messenger/messenger_alerts.dart';
+import '../messenger/messenger_api.dart';
+import '../messenger/messenger_push.dart';
 import '../permissions/permission_rationale.dart';
 import 'local_alerts.dart';
 import '../storage/hive_encryption.dart';
@@ -158,7 +162,22 @@ class PushService {
   /// নীরব সিঙ্ক-ডাক বাদ ([listenForSync] ওটা ধরে)। ⓘ [init]-এ একবারই।
   void _listenInForeground() {
     try {
-      FirebaseMessaging.onMessage.listen((m) => unawaited(showInForeground(m, LocalAlerts.instance)));
+      FirebaseMessaging.onMessage.listen((m) {
+        // ⭐ বার্তা ও কল — নিজের পথে ([handleMessengerPush]); বাকি সব আগের মতো
+        final e = MessengerPush.fromData(m.data);
+        if (e != null) {
+          unawaited(handleMessengerPush(e,
+              foreground: true,
+              hasNotification: m.notification != null,
+              title: m.notification?.title,
+              body: m.notification?.body,
+              api: messengerApiForPush()));
+          // ⓘ বাকি লেখাসহ বার্তা (যেমন সার্ভারের "মিসড কল — নাম") — অন্য সব নোটিশের মতোই দেখানো
+          if (!messengerShowsItself(e)) unawaited(showInForeground(m, LocalAlerts.instance));
+          return;
+        }
+        unawaited(showInForeground(m, LocalAlerts.instance));
+      });
     } catch (_) {}
   }
 
@@ -240,6 +259,19 @@ class _NotificationAskedFlag {
 /// আর একটা চিহ্ন রাখে — অ্যাপ সামনে এলেই টানে ([NudgeMark])। ⓘ ব্যবহারকারী কিছু দেখেন না; বার্তায় তথ্য নেই।
 @pragma('vm:entry-point')
 Future<void> onBackgroundNudge(RemoteMessage message) async {
+  // ⭐ বার্তা ও কল — পেছনে বা বন্ধ অবস্থায়: কলে রিং (পূর্ণ-পর্দা), call_end-এ থামা, লেখাহীন চ্যাটে নিজের বার্তা
+  final messenger = MessengerPush.fromData(message.data);
+  if (messenger != null) {
+    WidgetsFlutterBinding.ensureInitialized();
+    await MessengerAlerts.instance.initInBackground();
+    await handleMessengerPush(messenger,
+        foreground: false,
+        hasNotification: message.notification != null,
+        title: message.notification?.title,
+        body: message.notification?.body,
+        api: messengerApiForPush());
+    return;
+  }
   if (!isSyncNudge(message.data)) return;
   try {
     await Firebase.initializeApp();
@@ -257,6 +289,8 @@ String? destinationOf(Map<String, dynamic>? data) {
   if (data == null) return null;
   return switch (data['open']) {
     'tracking' => '/home/tracking',
+    // ⭐ বার্তা ও কল — রাউটারের পথ নয়, `messenger:` ([MessengerPaths]); main.dart কলের ভাগে দেয়
+    'messenger' => MessengerPaths.fromData(data),
     // ⭐ সাধারণ নোটিফিকেশন (MobilePushChannel) — সেটাই খোলা; আগে চাপলে কিছুই হত না
     'notification' => switch (data['id']) {
         final String id when id.isNotEmpty => '/home/notifications?open=${Uri.encodeQueryComponent(id)}',
@@ -264,4 +298,95 @@ String? destinationOf(Map<String, dynamic>? data) {
       },
     _ => null,
   };
+}
+
+/// push থেকে সার্ভারে ("পৌঁছেছে") — পরীক্ষা বদলায়
+@visibleForTesting
+MessengerApi Function() messengerApiForPush = () => const ServerMessengerApi();
+
+/// নোটিফিকেশনের যা লাগে — পরীক্ষায় নকল
+abstract interface class MessengerAlertSink {
+  Future<void> showCall(MessengerEvent e, {String caller});
+
+  Future<void> cancelCall(String? callId);
+
+  Future<void> showChat(MessengerEvent e, {String? title, String? body});
+}
+
+class _RealSink implements MessengerAlertSink {
+  const _RealSink();
+
+  @override
+  Future<void> showCall(MessengerEvent e, {String caller = ''}) => MessengerAlerts.instance.showCall(e, caller: caller);
+
+  @override
+  Future<void> cancelCall(String? callId) => MessengerAlerts.instance.cancelCall(callId);
+
+  @override
+  Future<void> showChat(MessengerEvent e, {String? title, String? body}) => MessengerAlerts.instance.showChat(e, title: title, body: body);
+}
+
+/// ⭐ বার্তা ও কলের push — সামনে ([foreground]) বা পেছনে/বন্ধ অবস্থায়, একই সিদ্ধান্ত (সার্ভারের `data`: open=messenger,
+/// type chat|call|call_end, thread_id, message_id, call_id, video, from, call_end-এ status)।
+///
+/// <ul>
+///   <li>chat → "পৌঁছেছে" সার্ভারে (চুপচাপ); সামনে: নিজের নোটিফিকেশন (সেই কথোপকথন খোলা থাকলে নয়); পেছনে: সার্ভারের লেখা
+///       না থাকলে তবেই (থাকলে Android নিজেই দেখায়)। চাপলে সেই কথোপকথন।</li>
+///   <li>call → ফোন রিং করে: পূর্ণ-পর্দা কলের নোটিফিকেশন, রিংটোন, ধরুন/কেটে দিন; সামনে আসা কলের পাতাও খোলে ([open];
+///       অ্যাপ-তালা থাকলে খোলার পরে)।</li>
+///   <li>call_end (answered · declined · missed · ended) → এই ফোনের রিং থামে; খোলা কলের পাতা নিজে শোনে
+///       ([MessengerPush.events]) — যে ফোনে কল চলছে সে answered-এ কিছু করে না।</li>
+/// </ul>
+/// ⛔ কখনো ছোড়ে না।
+Future<void> handleMessengerPush(
+  MessengerEvent e, {
+  required bool foreground,
+  bool hasNotification = false,
+  String? title,
+  String? body,
+  MessengerApi? api,
+  MessengerAlertSink alerts = const _RealSink(),
+  void Function(String path)? open,
+}) async {
+  try {
+    if (foreground) MessengerPush.instance.emit(e);
+    switch (e.type) {
+      case 'chat':
+        final thread = e.threadId, message = e.messageId;
+        if (api != null && thread != null && thread.isNotEmpty && message != null && message.isNotEmpty) {
+          // ⓘ ছুড়ে দেওয়া — না গেলেও push থামে না
+          unawaited(api.delivered({thread: message}).timeout(const Duration(seconds: 10)).catchError((Object _) {}));
+        }
+        if (foreground) {
+          if (MessengerPush.instance.visibleThread.value != thread) await alerts.showChat(e, title: title, body: body);
+        } else if (!hasNotification) {
+          await alerts.showChat(e, title: title, body: body);
+        }
+      // ⓘ সার্ভারের "মিসড কল — নাম" (type call, status missed, লেখাসহ) — রিং নয়; বাজা থামে, বার্তাটা সাধারণ নোটিশের পথে
+      case 'call' when isMissedCall(e):
+        await alerts.cancelCall(e.callId);
+      case 'call':
+        final named = (title ?? '').trim();
+        await alerts.showCall(e, caller: named.isNotEmpty ? named : callerNameOf(e));
+        if (foreground) (open ?? LocalAlerts.instance.open)(MessengerPaths.call(e));
+      case 'call_end':
+        await alerts.cancelCall(e.callId);
+    }
+  } catch (err) {
+    debugPrint('ABOS messenger: push not handled ($err)');
+  }
+}
+
+/// চ্যাট আর আসা কলের নোটিফিকেশন [handleMessengerPush] নিজে দেখায়; বাকি ধরন (call_end, মিসড কল …) সাধারণ নোটিশের পথে
+bool messengerShowsItself(MessengerEvent e) => e.type == 'chat' || (e.type == 'call' && !isMissedCall(e));
+
+/// সার্ভারের মিসড-কলের বার্তা (CallService::pushMissed): type `call` কিন্তু status `missed`
+bool isMissedCall(MessengerEvent e) => e.type == 'call' && e.status == 'missed';
+
+/// কলের নোটিফিকেশনের নাম — সার্ভার নাম দিলে সেটা; `from` কেবল সংখ্যা (user id) হলে খালি (তখন "ABOS ভয়েস কল আসছে…")
+String callerNameOf(MessengerEvent e) {
+  final named = e.data['from_name'] ?? e.data['name'] ?? '';
+  if (named.trim().isNotEmpty) return named.trim();
+  final from = e.from ?? '';
+  return RegExp(r'^\d+$').hasMatch(from) ? '' : from;
 }

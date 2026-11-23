@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../locale/app_locale.dart';
+import '../messenger/messenger_alerts.dart' show MessengerPaths;
 import 'push_service.dart' show destinationOf, isSyncNudge;
 
 /// ⭐ বার্তা সবসময় দেখা যায় — অ্যাপ বন্ধ, পেছনে, অথবা খোলা/তালাবদ্ধ (মালিক, ২০ নভেম্বর ২০২৬): অনুমোদন, জমা, বার্তা, কল।
@@ -101,7 +102,8 @@ class LocalAlerts implements AlertShower {
     try {
       await _plugin.initialize(
         settings: const InitializationSettings(android: AndroidInitializationSettings(alertsSmallIcon)),
-        onDidReceiveNotificationResponse: (r) => handleTap(r.payload),
+        // ⓘ কলের "ধরুন"/"কেটে দিন" বোতাম — পথে জোড়া ([MessengerPaths.withAction])
+        onDidReceiveNotificationResponse: (r) => handleTap(MessengerPaths.withAction(r.payload, r.actionId)),
       );
       final words = AppLocale.l10n;
       await _plugin
@@ -114,7 +116,9 @@ class LocalAlerts implements AlertShower {
           ));
       _ready = true;
       final launch = await _plugin.getNotificationAppLaunchDetails();
-      if (launch?.didNotificationLaunchApp == true) handleTap(launch?.notificationResponse?.payload);
+      if (launch?.didNotificationLaunchApp == true) {
+        handleTap(MessengerPaths.withAction(launch?.notificationResponse?.payload, launch?.notificationResponse?.actionId));
+      }
     } catch (e) {
       debugPrint('ABOS push: local alerts did not start ($e)');
     }
@@ -150,6 +154,9 @@ class LocalAlerts implements AlertShower {
     _heldPath = null;
     if (held != null) open(held);
   }
+
+  /// ⭐ নিজে থেকে একটা পথ খোলা (সামনে আসা কলের পাতা) — চাপের একই পথে, অ্যাপ-তালা মেনে
+  void open(String path) => handleTap(path);
 
   /// একটা চাপ — payload-এর পথ খোলা (না থাকলে কিছু নয়; অ্যাপ নিজেই সামনে আসে)
   @visibleForTesting

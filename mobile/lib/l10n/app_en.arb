@@ -3757,5 +3757,54 @@
         "type": "String"
       }
     }
-  }
+  },
+  "msgCallRinging": "Ringing…",
+  "msgCallConnecting": "Connecting…",
+  "msgCallIncomingVoice": "Incoming ABOS voice call…",
+  "msgCallIncomingVideo": "Incoming ABOS video call…",
+  "msgCallMessage": "Message",
+  "msgCallRemindLater": "Remind me",
+  "msgCallDecline": "Decline",
+  "msgCallAnswer": "Answer",
+  "msgCallSpeaker": "Speaker",
+  "msgCallMute": "Mute",
+  "msgCallUnmute": "Unmute",
+  "msgCallVideo": "Video",
+  "msgCallEnd": "End call",
+  "msgCallCameraOff": "Camera off",
+  "msgCallCameraOn": "Camera on",
+  "msgCallFlipCamera": "Switch camera",
+  "msgCallBack": "Back",
+  "msgCallYou": "You",
+  "msgCallLeaveTitle": "End the call?",
+  "msgCallLeaveNo": "Keep talking",
+  "msgCallNoAnswer": "No answer",
+  "msgCallDeclined": "Declined",
+  "msgCallEnded": "Call ended",
+  "msgCallFailed": "The call could not connect — check the connection and try again",
+  "msgCallsOff": "Calls are not turned on yet — they will work once the office switches them on",
+  "msgCallNotAllowed": "Your role may not make this call",
+  "msgCallDoorsMissing": "Calls are not available yet — they arrive with the server update",
+  "msgCallPermTitle": "Permission needed",
+  "msgCallMicRefused": "A call needs the microphone. Turn it on in the phone's Settings → Apps → ABOS → Permissions, then call again.",
+  "msgCallCameraRefused": "No camera permission — the call goes on with voice only",
+  "msgCallReminderTitle": "Call {name} back",
+  "@msgCallReminderTitle": {
+    "description": "Reminder notification 10 minutes after Remind me",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "msgCallReminderBody": "You asked to be reminded — tap to open the chat",
+  "msgCallReminderSet": "You will be reminded in 10 minutes",
+  "msgCallChannelName": "Incoming calls",
+  "msgCallChannelDescription": "ABOS voice and video calls from colleagues",
+  "msgCallOngoing": "Call in progress — tap to return",
+  "msgChatNotifTitle": "New message",
+  "msgChatNotifBody": "Tap to read",
+  "msgCallOver": "The call is already over",
+  "msgCallGroupSoon": "Coming soon — group calls arrive in phase 2",
+  "msgCallGroupVideoSoon": "Coming soon — group video meetings arrive in phase 2"
 }

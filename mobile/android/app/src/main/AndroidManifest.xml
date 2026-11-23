@@ -84,6 +84,20 @@
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <!--
+      ⭐ বার্তা ও কল, প্রথম ধাপ (মালিক "ok", ২১ নভেম্বর ২০২৬; নমুনা 3nuwRUdn v5 "ঘ")। একজনের সাথে ভয়েস/ভিডিও কল অফিসের
+      নিজের LiveKit সার্ভারে। মাইক আর ক্যামেরা চাওয়া হয় কেবল কল দেওয়া বা ধরার মুহূর্তে, বাংলা ব্যাখ্যা দিয়ে।
+      FOREGROUND_SERVICE_MICROPHONE আর FOREGROUND_SERVICE_CAMERA: চলতি কলের সামনের-সেবা (call/CallService.kt) — পর্দা
+      বন্ধ হলেও কথা চলে। USE_FULL_SCREEN_INTENT: আসা কল তালাবদ্ধ ফোনেও পুরো পর্দায় রিং করে। MODIFY_AUDIO_SETTINGS:
+      স্পিকার আর কানের স্পিকারের মধ্যে বদল। VIBRATE: অ্যাপ খোলা থাকলে আসা কলের কাঁপুনি।
+      test/android_permissions_test.dart holds this list.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!--
       Storage and media reading, put in by open_filex (20 Oct 2026, release audit).
 
       This app opens only files it wrote itself, inside its own cache folder:
@@ -500,6 +514,12 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Sends the company's own transactional SMS from the ERP queue on this office phone's SIM, all day" />
         </service>
+        <!-- ⭐ চলতি কলের সেবা (মাইক, ভিডিওতে ক্যামেরাও) আর "পরে মনে করান"-এর বার্তা -->
+        <service
+            android:name=".call.CallService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|camera" />
+        <receiver android:name=".call.CallReminderReceiver" android:exported="false" />
         <receiver android:name=".sms.SmsResultReceiver" android:exported="false" />
         <receiver android:name=".sms.SmsBootReceiver" android:exported="true">
             <intent-filter>

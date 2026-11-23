@@ -42,16 +42,37 @@ class MainActivity : FlutterFragmentActivity() {
         if (requestCode == com.abos.abos_mobile.voice.VoiceChannel.MIC_PERMISSION_REQUEST) {
             voice?.onPermission(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
         }
+        if (requestCode == com.abos.abos_mobile.call.CallChannel.PERMISSION_REQUEST) {
+            call?.onPermissionResult()
+        }
+    }
+
+    /** ⭐ ভয়েস/ভিডিও কল — অনুমতি, চলতি কলের সেবা, পর্দা জ্বালা, রিং (call/CallChannel.kt) */
+    private var call: com.abos.abos_mobile.call.CallChannel? = null
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        // ⭐ আসা কলের পূর্ণ-পর্দা বার্তা এই পাতা খুলল — তালার পর্দার উপরে দেখাও
+        com.abos.abos_mobile.call.CallChannel.wakeForCall(this, intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        com.abos.abos_mobile.call.CallChannel.wakeForCall(this, intent)
     }
 
     override fun onDestroy() {
         voice?.dispose()
         voice = null
+        call?.dispose()
+        call = null
         super.onDestroy()
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        call = com.abos.abos_mobile.call.CallChannel(this, flutterEngine.dartExecutor.binaryMessenger)
 
         // ⭐ অফিসের SMS ফোন (মালিকের "ok", নমুনা U1X687u5MkwVfEL7ci7MGv ধাপ ২) — চালু/বন্ধ, অবস্থা, আর SMS পাঠানোর অনুমতি।
         // ⓘ কাজটা সামনের-সেবায় (sms/SmsGatewayService) — অ্যাপ বন্ধ থাকলেও চলে; Dart শুধু সাজায় আর দেখায়

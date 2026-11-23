@@ -16717,5 +16717,174 @@
         "type": "String"
       }
     }
+  },
+  "msgCallRinging": "রিং হচ্ছে…",
+  "@msgCallRinging": {
+    "description": "Outgoing call screen: status line while the other phone rings"
+  },
+  "msgCallConnecting": "যুক্ত হচ্ছে…",
+  "@msgCallConnecting": {
+    "description": "Call screen: status line while joining the call"
+  },
+  "msgCallIncomingVoice": "ABOS ভয়েস কল আসছে…",
+  "@msgCallIncomingVoice": {
+    "description": "Incoming call screen and ringing notification: a voice call is coming in"
+  },
+  "msgCallIncomingVideo": "ABOS ভিডিও কল আসছে…",
+  "@msgCallIncomingVideo": {
+    "description": "Incoming call screen and ringing notification: a video call is coming in"
+  },
+  "msgCallMessage": "বার্তা দিন",
+  "@msgCallMessage": {
+    "description": "Incoming call: small round button that opens the chat with the caller instead of answering"
+  },
+  "msgCallRemindLater": "পরে মনে করান",
+  "@msgCallRemindLater": {
+    "description": "Incoming call: small round button that declines and reminds in 10 minutes"
+  },
+  "msgCallDecline": "কেটে দিন",
+  "@msgCallDecline": {
+    "description": "Incoming call: red button (and notification action) that declines; also the red end button on the outgoing voice call"
+  },
+  "msgCallAnswer": "ধরুন",
+  "@msgCallAnswer": {
+    "description": "Incoming call: green button (and notification action) that answers"
+  },
+  "msgCallSpeaker": "স্পিকার",
+  "@msgCallSpeaker": {
+    "description": "Voice call bar: loudspeaker on/off button"
+  },
+  "msgCallMute": "মিউট",
+  "@msgCallMute": {
+    "description": "Call bar: microphone mute button"
+  },
+  "msgCallUnmute": "আবার শোনান",
+  "@msgCallUnmute": {
+    "description": "Call bar: the mute button while muted"
+  },
+  "msgCallVideo": "ভিডিও",
+  "@msgCallVideo": {
+    "description": "Voice call bar: button that turns the call into a video call"
+  },
+  "msgCallEnd": "কল শেষ",
+  "@msgCallEnd": {
+    "description": "Video call bar: red end button; also the end-call confirmation's yes"
+  },
+  "msgCallCameraOff": "ক্যামেরা বন্ধ",
+  "@msgCallCameraOff": {
+    "description": "Video call bar: turn my camera off"
+  },
+  "msgCallCameraOn": "ক্যামেরা চালু",
+  "@msgCallCameraOn": {
+    "description": "Video call bar: the camera button while my camera is off"
+  },
+  "msgCallFlipCamera": "ক্যামেরা ঘোরান",
+  "@msgCallFlipCamera": {
+    "description": "Video call bar: switch between front and back camera"
+  },
+  "msgCallBack": "ফিরে যান",
+  "@msgCallBack": {
+    "description": "Video call: the back arrow at top-left (asks before ending the call)"
+  },
+  "msgCallYou": "আপনি",
+  "@msgCallYou": {
+    "description": "Video call: label on my own small self-view"
+  },
+  "msgCallLeaveTitle": "কল শেষ করবেন?",
+  "@msgCallLeaveTitle": {
+    "description": "Dialog when going back during a call"
+  },
+  "msgCallLeaveNo": "না, চলুক",
+  "@msgCallLeaveNo": {
+    "description": "Dialog when going back during a call: stay in the call"
+  },
+  "msgCallNoAnswer": "উত্তর দেননি",
+  "@msgCallNoAnswer": {
+    "description": "Call screen: the other person did not answer in time"
+  },
+  "msgCallDeclined": "কেটে দিয়েছেন",
+  "@msgCallDeclined": {
+    "description": "Call screen: the other person declined the call"
+  },
+  "msgCallEnded": "কল শেষ",
+  "@msgCallEnded": {
+    "description": "Call screen: the call has ended"
+  },
+  "msgCallFailed": "কল যুক্ত হলো না — নেট দেখে আবার চেষ্টা করুন",
+  "@msgCallFailed": {
+    "description": "Call screen: joining the call failed"
+  },
+  "msgCallsOff": "কল এখনো চালু হয়নি — অফিস চালু করলে কল দেওয়া যাবে",
+  "@msgCallsOff": {
+    "description": "The server has no call server set up yet (503 calls_off)"
+  },
+  "msgCallNotAllowed": "আপনার রোলে এই কল দেওয়ার অনুমতি নেই",
+  "@msgCallNotAllowed": {
+    "description": "403 without a message from the server"
+  },
+  "msgCallDoorsMissing": "কল এখনো চালু হয়নি — সার্ভার আপডেট হলে আসবে",
+  "@msgCallDoorsMissing": {
+    "description": "The server is too old for calls (404)"
+  },
+  "msgCallPermTitle": "অনুমতি লাগবে",
+  "@msgCallPermTitle": {
+    "description": "Dialog title when the microphone or camera was refused for a call"
+  },
+  "msgCallMicRefused": "মাইকের অনুমতি ছাড়া কল হয় না। ফোনের সেটিংস → অ্যাপ → ABOS → অনুমতি থেকে মাইক চালু করে আবার কল দিন।",
+  "@msgCallMicRefused": {
+    "description": "Dialog body when the microphone permission was refused"
+  },
+  "msgCallCameraRefused": "ক্যামেরার অনুমতি নেই — ভিডিও ছাড়া, কেবল কথায় কল চলছে",
+  "@msgCallCameraRefused": {
+    "description": "Snack/line when the camera was refused on a video call"
+  },
+  "msgCallReminderTitle": "{name}-কে কল করার কথা",
+  "@msgCallReminderTitle": {
+    "description": "Reminder notification 10 minutes after Remind me",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "msgCallReminderBody": "আপনি পরে মনে করাতে বলেছিলেন — চাপলে চ্যাট খোলে",
+  "@msgCallReminderBody": {
+    "description": "Reminder notification body"
+  },
+  "msgCallReminderSet": "10 মিনিট পরে মনে করানো হবে",
+  "@msgCallReminderSet": {
+    "description": "Snack after choosing Remind me"
+  },
+  "msgCallChannelName": "আসা কল",
+  "@msgCallChannelName": {
+    "description": "Android notification channel name for ringing calls"
+  },
+  "msgCallChannelDescription": "সহকর্মীদের ABOS ভয়েস ও ভিডিও কল",
+  "@msgCallChannelDescription": {
+    "description": "Android notification channel description for ringing calls"
+  },
+  "msgCallOngoing": "কল চলছে — ফিরতে চাপুন",
+  "@msgCallOngoing": {
+    "description": "The ongoing-call notification text"
+  },
+  "msgChatNotifTitle": "নতুন বার্তা",
+  "@msgChatNotifTitle": {
+    "description": "Chat notification title when the server sent no text"
+  },
+  "msgChatNotifBody": "বার্তা দেখতে চাপুন",
+  "@msgChatNotifBody": {
+    "description": "Chat notification body when the server sent no text"
+  },
+  "msgCallOver": "কল শেষ হয়ে গেছে — আর ধরা যাবে না",
+  "@msgCallOver": {
+    "description": "Answering a call that stopped ringing meanwhile (409 call_over)"
+  },
+  "msgCallGroupSoon": "শীঘ্রই আসছে — গ্রুপ কল দ্বিতীয় ধাপে",
+  "@msgCallGroupSoon": {
+    "description": "Short message when the call button of a group chat is pressed (group calls come in phase 2)"
+  },
+  "msgCallGroupVideoSoon": "শীঘ্রই আসছে — গ্রুপ ভিডিও সভা দ্বিতীয় ধাপে",
+  "@msgCallGroupVideoSoon": {
+    "description": "Short message when the video button of a group chat is pressed (video meetings come in phase 2)"
   }
 }

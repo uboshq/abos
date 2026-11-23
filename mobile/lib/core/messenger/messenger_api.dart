@@ -18,7 +18,10 @@ import '../api_client/once_key.dart';
 ///   <li>`GET  /messenger/people?q=` → যাঁদের বার্তা দেওয়া যায় (রোল দিয়ে ঠিক), প্রতিজনের `can_open_paper` (কাগজ পাঠানোর সময়)</li>
 ///   <li>`POST /messenger/direct` (`person`) → একজনের সাথের কথোপকথন (না থাকলে বানায়)</li>
 ///   <li>`POST /messenger/papers` (`paper_type`, `paper_id`, `to[]`, `note`) → কাগজ কয়েকজন/গ্রুপে একসাথে</li>
-///   <li>`POST /messenger/calls` (`person`, `video`) → {call, livekit url, token}; `POST /messenger/calls/{id}/answer|decline|end`</li>
+///   <li>`POST /messenger/calls` (`person`, `video`) → {call, livekit url, token}; `POST /messenger/calls/{id}/answer|decline|end`;
+///       সার্ভারে LiveKit বসানো না থাকলে ৫০৩ `{error: calls_off}` → [CallsOff]; বাজা শেষ হওয়া কলে answer → ৪০৯
+///       `{error: call_over}` → [CallOver]; শেষ হওয়া কলে decline/end → ২০৪ (সফল)</li>
+///   <li>`POST /messenger/delivered` (`marks: {threadId: lastMsgId}`) → চ্যাটের push ফোনে পৌঁছাল ("পৌঁছেছে" দাগ)</li>
 /// </ul>
 /// <p>⛔ পুরনো সার্ভারে দরজা নেই (৪০৪/৪০৫) → [MessengerDoorsMissing]; পাতা তখন "এখনো চালু হয়নি" দেখায়, ভাঙে না।
 abstract interface class MessengerApi {
@@ -56,6 +59,9 @@ abstract interface class MessengerApi {
   Future<void> declineCall(String callId);
 
   Future<void> endCall(String callId);
+
+  /// ⭐ চ্যাটের push ফোনে পৌঁছাল — প্রতিটা কথোপকথনের শেষ বার্তা পর্যন্ত "পৌঁছেছে" (push_service ডাকে, ব্যর্থ হলে চুপ)
+  Future<void> delivered(Map<String, String> marks);
 }
 
 enum ThreadFilter { all, unread, groups, papers }
@@ -63,6 +69,16 @@ enum ThreadFilter { all, unread, groups, papers }
 /// দরজা নেই — সার্ভার এখনো পুরনো
 class MessengerDoorsMissing implements Exception {
   const MessengerDoorsMissing();
+}
+
+/// ⭐ কল এখনো চালু হয়নি — সার্ভারে LiveKit বসানো নেই (৫০৩ `calls_off`); পাতা শান্ত বাংলায় বলে
+class CallsOff implements Exception {
+  const CallsOff();
+}
+
+/// ⭐ কল আর বাজছে না — ধরার আগেই শেষ (অন্য ফোনে ধরা, কাটা বা সময় পার); `answer`-এ ৪০৯ `call_over`
+class CallOver implements Exception {
+  const CallOver();
 }
 
 /// রোলে বার্তা/কলের অনুমতি নেই (৪০৩)
@@ -423,6 +439,14 @@ class ServerMessengerApi implements MessengerApi {
   static Object _error(DioException e) {
     final status = e.response?.statusCode;
     if (status == 404 || status == 405) return const MessengerDoorsMissing();
+    if (status == 409) {
+      final data = e.response?.data;
+      if (data is Map && data['error'] == 'call_over') return const CallOver();
+    }
+    if (status == 503) {
+      final data = e.response?.data;
+      if (data is Map && data['error'] == 'calls_off') return const CallsOff();
+    }
     if (status == 403) {
       final data = e.response?.data;
       return MessengerNotAllowed(data is Map && data['message'] is String ? data['message'] as String : null);
@@ -561,6 +585,12 @@ class ServerMessengerApi implements MessengerApi {
   @override
   Future<void> endCall(String callId) => _run(() async {
         await OnceKey.of('call-end:$callId').send(() => _dio.post<void>('/messenger/calls/$callId/end'));
+      });
+
+  @override
+  Future<void> delivered(Map<String, String> marks) => _run(() async {
+        if (marks.isEmpty) return;
+        await _dio.post<void>('/messenger/delivered', data: {'marks': marks});
       });
 }
 

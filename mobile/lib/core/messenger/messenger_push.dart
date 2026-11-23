@@ -16,6 +16,17 @@ class MessengerEvent {
 
   String? get threadId => data['thread_id'];
   String? get callId => data['call_id'];
+
+  String? get messageId => data['message_id'];
+
+  /// যিনি পাঠালেন বা কল দিলেন — তাঁর user id (লেখায়)
+  String? get from => data['from'];
+
+  /// কলে ভিডিও কিনা — সার্ভার `true`/`1` পাঠায়
+  bool get video => const {'1', 'true'}.contains(data['video']?.toLowerCase());
+
+  /// `call_end`-এ: missed · ended · declined
+  String? get status => data['status'];
 }
 
 class MessengerPush {
@@ -28,6 +39,9 @@ class MessengerPush {
   Stream<MessengerEvent> get events => _events.stream;
 
   void emit(MessengerEvent e) => _events.add(e);
+
+  /// ⭐ এখন পর্দায় খোলা কথোপকথন — চ্যাটের পাতা বসায়/মোছে; সেই কথোপকথনের নতুন বার্তায় সামনে নোটিফিকেশন দেখানো হয় না
+  final ValueNotifier<String?> visibleThread = ValueNotifier<String?>(null);
 
   /// FCM-এর `data` আমাদের কিনা — হলে খবর, না হলে null
   static MessengerEvent? fromData(Map<String, dynamic> data) {

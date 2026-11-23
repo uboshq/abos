@@ -21,7 +21,9 @@ import 'core/launcher_widgets/hub/widget_hub.dart';
 import 'core/launcher_widgets/hub/widget_hub_task.dart';
 import 'core/launcher_widgets/launcher_widget_refresh.dart';
 import 'core/launcher_widgets/widget_sync_observer.dart';
+import 'core/messenger/messenger_alerts.dart' show MessengerPaths;
 import 'core/push/push_service.dart';
+import 'features/messenger/call/calls.dart' show openMessengerPath;
 import 'core/router/app_router.dart';
 import 'core/router/deep_links.dart';
 import 'core/startup/startup.dart';
@@ -213,9 +215,20 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     _lock.openWhenUnlocked(path, (p) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        _lock.openWhenUnlocked(p, ref.read(goRouterProvider).go);
+        _lock.openWhenUnlocked(p, _go);
       });
     });
+  }
+
+  /// রাউটারের পথ, অথবা বার্তা/কলের `messenger:` পথ ([openMessengerPath]; সাইন-ইন থাকলে তবেই)
+  void _go(String path) {
+    final router = ref.read(goRouterProvider);
+    if (MessengerPaths.isOurs(path)) {
+      final context = router.routerDelegate.navigatorKey.currentContext;
+      if (context != null && ref.read(authStateProvider).status == AuthStatus.signedIn) openMessengerPath(context, path);
+      return;
+    }
+    router.go(path);
   }
 
   /// A tap on a home-screen widget opens the page behind it: the approvals

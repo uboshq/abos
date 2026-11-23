@@ -4,11 +4,17 @@ import 'package:abos_mobile/core/messenger/messenger_api.dart';
 ///
 /// <p>সময় স্থির: "আজ" = ২১ নভেম্বর ২০২৬। প্রতিটা ডাক [calls]-এ লেখা থাকে, যাতে পরীক্ষা দেখতে পারে কী গেল।
 class FakeMessengerApi implements MessengerApi {
-  FakeMessengerApi({this.doorsMissing = false, List<ChatThread>? threads, Map<String, List<ChatMessage>>? messages})
+  FakeMessengerApi({this.doorsMissing = false, this.callsOff = false, this.callOver = false, List<ChatThread>? threads, Map<String, List<ChatMessage>>? messages})
       : _threads = threads ?? sampleThreads(),
         _messages = messages ?? sampleMessages();
 
   final bool doorsMissing;
+
+  /// সার্ভারে LiveKit বসানো নেই — [startCall] [CallsOff] ছোড়ে (৫০৩ calls_off)
+  final bool callsOff;
+
+  /// কল আর বাজছে না — [answerCall] [CallOver] ছোড়ে (৪০৯ call_over)
+  final bool callOver;
   final List<ChatThread> _threads;
   final Map<String, List<ChatMessage>> _messages;
   final List<String> calls = [];
@@ -187,12 +193,14 @@ class FakeMessengerApi implements MessengerApi {
   @override
   Future<CallJoin> startCall(String personId, {required bool video}) async {
     _note('startCall:$personId:$video');
+    if (callsOff) throw const CallsOff();
     return CallJoin(callId: 'c1', url: 'wss://example.invalid', token: 'tok', video: video, peer: rakib);
   }
 
   @override
   Future<CallJoin> answerCall(String callId) async {
     _note('answerCall:$callId');
+    if (callOver) throw const CallOver();
     return CallJoin(callId: callId, url: 'wss://example.invalid', token: 'tok', video: false, peer: rakib);
   }
 
@@ -201,4 +209,8 @@ class FakeMessengerApi implements MessengerApi {
 
   @override
   Future<void> endCall(String callId) async => _note('endCall:$callId');
+
+  @override
+  Future<void> delivered(Map<String, String> marks) async =>
+      _note('delivered:${marks.entries.map((e) => '${e.key}=${e.value}').join(',')}');
 }
