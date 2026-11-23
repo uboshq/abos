@@ -104,7 +104,8 @@ final class AssignSalesResponsible extends Command
                 return;
             }
 
-            $audit->recordAction($company, 'sales_responsible_assigned', sprintf(
+            // ⓘ audit_trails.action ২৪ অক্ষরের ঘর — 'sales_responsible_assigned' (২৬) MySQL-এ 1406 দিত (Mac রান, ২৩ নভেম্বর ২০২৬)
+            $audit->recordAction($company, 'sales_resp_assigned', sprintf(
                 'console: sales:assign-responsible%s — %d invoices, %d returns; area bindings moved to %s: %s',
                 $recompute ? ' --recompute' : '',
                 $invoices,

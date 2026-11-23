@@ -71,7 +71,7 @@ final class OldBillsHadNobodyResponsibleForThemTest extends TestCase
         $this->assertSame($sr->id, (int) $a->fresh()->sales_person_id, '⛔ --apply দায়িত্বের মানুষ বসায়নি।');
         $this->assertSame($sr->id, (int) $b->fresh()->sales_person_id);
         $this->assertTrue(
-            DB::table('audit_trails')->where('action', 'sales_responsible_assigned')->where('auditable_id', $this->company->id)->exists(),
+            DB::table('audit_trails')->where('action', 'sales_resp_assigned')->where('auditable_id', $this->company->id)->exists(),
             '⛔ --apply নিরীক্ষার খাতায় দাগ রাখেনি।',
         );
 
