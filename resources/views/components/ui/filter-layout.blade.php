@@ -160,6 +160,9 @@
                                                         <option value="{{ $value }}" @selected((string) $field['value'] === (string) $value)>{{ $label }}</option>
                                                     @endforeach
                                                 </select>
+                                            @elseif ($field['type'] === 'month')
+                                                {{-- ⓘ মাস — বাংলায় মাসের তালিকা, মান Y-m ([[ui/month]]; [[Facets::month()]]) --}}
+                                                <x-ui.month :name="$field['key']" :value="$field['value'] !== '' ? $field['value'] : null" :form="$form" class="list-filter-input" />
                                             @elseif ($field['type'] === 'text')
                                                 <input form="{{ $form }}" type="text" name="{{ $field['key'] }}" value="{{ $field['value'] }}"
                                                        placeholder="{{ $field['placeholder'] ?? '' }}" class="list-filter-input">

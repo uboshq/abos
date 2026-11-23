@@ -146,10 +146,13 @@ final class Facets
             self::none(), fn (array $v) => $label.': '.$v[$key]))->look('violet', '✎');
     }
 
-    /** সংখ্যার ঘর — পুরোনো `<input type="number" name="year">` */
-    public static function number(string $key, string $label, ?int $min = null, ?int $max = null, string $placeholder = ''): FieldsFacet
+    /**
+     * সংখ্যার ঘর — পুরোনো `<input type="number" name="year">`।
+     * ⓘ `$shown` — ঠিকানায় না থাকলে পাতা যে মান ধরে চলেছে (যেমন চলতি বছর); ঘরে দেখায়, চিপ হয় না।
+     */
+    public static function number(string $key, string $label, ?int $min = null, ?int $max = null, string $placeholder = '', ?string $shown = null): FieldsFacet
     {
-        $field = ['key' => $key, 'label' => $label, 'type' => 'number', 'placeholder' => $placeholder];
+        $field = ['key' => $key, 'label' => $label, 'type' => 'number', 'placeholder' => $placeholder, 'default' => $shown];
 
         if ($min !== null) {
             $field['min'] = $min;
@@ -169,6 +172,16 @@ final class Facets
     {
         return (new FieldsFacet($key, $label, [['key' => $key, 'label' => $label, 'type' => 'date', 'default' => $shown]],
             self::none(), fn (array $v) => $label.': '.\App\Core\Support\DateFormat::format($v[$key])))->look('sky', '📅');
+    }
+
+    /**
+     * একটা মাস — পুরোনো `x-ui.month` / `type="month"` ঘর (মান Y-m)।
+     * ⓘ `$shown` — পাতা যে মাস ধরে চলেছে (সাধারণত চলতি মাস); ঘরে সেটাই দেখায়, চিপ হয় না।
+     */
+    public static function month(string $key, string $label, ?string $shown = null): FieldsFacet
+    {
+        return (new FieldsFacet($key, $label, [['key' => $key, 'label' => $label, 'type' => 'month', 'default' => $shown]],
+            self::none(), fn (array $v) => $label.': '.$v[$key]))->look('sky', '🗓');
     }
 
     /**
