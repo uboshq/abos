@@ -9,7 +9,7 @@ import { inboxBoard } from './inbox-board.js'
  */
 const PAGE = `
     <div data-inbox-board>
-        <span data-board-picked data-label="বাছাই __N__ টা">x</span><span data-board-picked-sum>x</span>
+        <span data-board-picked-sum>x</span>
         <table>
             <tbody data-board-group="sales.discount">
                 <tr><th><input type="checkbox" id="group" data-board-group-pick="sales.discount"></th></tr>
@@ -42,7 +42,6 @@ describe('inbox board', () => {
 
         expect(document.getElementById('a').checked).toBe(true)
         expect(document.getElementById('b').checked).toBe(true)
-        expect(document.querySelector('[data-board-picked]').textContent).toBe('বাছাই 2 টা')
         expect(document.querySelector('[data-board-picked-sum]').textContent).toBe('৳1,01,500.50')
     })
 
@@ -53,7 +52,7 @@ describe('inbox board', () => {
         a.dispatchEvent(new Event('change', { bubbles: true }))
 
         expect(document.getElementById('group').indeterminate).toBe(true)
-        expect(document.querySelector('[data-board-picked]').textContent).toBe('বাছাই 1 টা')
+        expect(document.querySelector('[data-board-picked-sum]').textContent).toBe('৳1,500.50')
     })
 
     it('opens the paper on a row click but leaves links alone', () => {

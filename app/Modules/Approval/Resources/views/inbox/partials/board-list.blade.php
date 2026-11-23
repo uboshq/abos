@@ -38,9 +38,8 @@
     @if ($bulkable !== [])
         {{-- ⓘ the pick bar — how many and how much is picked, and the one "together" button (the existing bulk review) --}}
         <div class="inbox-board-pickbar" data-board-pickbar>
-            <span class="text-sm font-semibold" data-board-picked
-                  data-label="{{ __('approval::field.board_picked', ['count' => '__N__']) }}">{{ __('approval::field.board_picked', ['count' => 0]) }}</span>
-            <span class="num text-sm" data-board-picked-sum>৳0.00</span>
+            {{-- ⓘ the count is on the button itself ([[approval-keys.js]]); here only how much — never the count twice --}}
+            <span class="num text-sm font-semibold" data-board-picked-sum>৳0.00</span>
             <x-ui.button type="submit" tone="primary" form="bulk-form" data-bulk-button class="ms-auto"
                          data-label="{{ __('approval::action.bulk_picked', ['count' => '__N__']) }}">
                 {{ __('approval::action.bulk_picked', ['count' => 0]) }}

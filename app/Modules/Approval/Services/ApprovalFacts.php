@@ -190,8 +190,8 @@ final class ApprovalFacts
             $name = $names[$type.':'.$id] ?? null;
             $point = $places[$type.':'.$id] ?? null;
 
-            // ⓘ the joined label carries " · point" — the board shows the point in its own column
-            if ($name !== null && $point !== null && str_contains($name, ' · ')) {
+            // ⓘ the joined label carries " · point · branch" — the board shows the point in its own column, the branch in the paper
+            if ($name !== null && str_contains($name, ' · ')) {
                 $name = strstr($name, ' · ', true);
             }
 

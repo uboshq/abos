@@ -5,7 +5,7 @@
  *   1. fit the board to the screen, so each side scrolls on its own (`--board-h`);
  *   2. a kind's tick picks every pickable row of that kind (⛔ money papers have no box — owner's decision 5 — and
  *      the server checks again in [[BulkApproval]]);
- *   3. the pick bar says how many and how much is picked;
+ *   3. the pick bar says how much is picked (how many is on the button — never twice);
  *   4. a click on a row (not on a link or a box) opens that paper on the right.
  * ⓘ The bulk button's label is [[approval-keys.js]]'s job (same `data-inbox-pick` boxes) — not done twice here.
  */
@@ -33,16 +33,11 @@ export function inboxBoard (root = document, win = window) {
     fit()
     win.addEventListener('resize', fit)
 
-    const picked = root.querySelector('[data-board-picked]')
     const pickedSum = root.querySelector('[data-board-picked-sum]')
 
     const tally = () => {
         const boxes = [...root.querySelectorAll('[data-inbox-pick]:checked')]
         const cents = boxes.reduce((sum, box) => sum + Math.round(Number(box.dataset.amount || 0) * 100), 0)
-
-        if (picked) {
-            picked.textContent = (picked.dataset.label || '__N__').replace('__N__', String(boxes.length))
-        }
 
         if (pickedSum) {
             pickedSum.textContent = '৳' + money(cents / 100)
