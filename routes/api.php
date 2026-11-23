@@ -180,7 +180,8 @@ Route::prefix('v1')
          * পর্দা, বার আর API তিনটার একমাত্র উত্তরদাতা।
          */
         Route::get('/notices', [NoticeApiController::class, 'index'])->name('notices.index');
-        Route::get('/notices/bar', [NoticeApiController::class, 'bar'])->name('notices.bar');
+        // ⭐ unchanged → 304, scoped weak ETag ([[AnswersUnchanged]], speed work 23 Nov 2026)
+        Route::get('/notices/bar', [NoticeApiController::class, 'bar'])->middleware(\App\Http\Middleware\AnswersUnchanged::class)->name('notices.bar');
         Route::post('/notices/{notice}/read', [NoticeApiController::class, 'read'])->name('notices.read');
         Route::post('/notices/{notice}/acknowledge', [NoticeApiController::class, 'acknowledge'])
             ->name('notices.acknowledge');
@@ -189,7 +190,7 @@ Route::prefix('v1')
          * ⭐ ঘণ্টার খবর — ফোনের মাথার ঘণ্টা (মালিক, ৬ অক্টোবর ২০২৬)। ⓘ নিজের খবর, তাই চাবি নেই, নোটিশের মতোই;
          * অন্যের খবর ৪০৪ ([[NotificationApiController]])।
          */
-        Route::get('/notifications', [NotificationApiController::class, 'index'])->name('notifications.index');
+        Route::get('/notifications', [NotificationApiController::class, 'index'])->middleware(\App\Http\Middleware\AnswersUnchanged::class)->name('notifications.index');
         Route::post('/notifications/read-all', [NotificationApiController::class, 'readAll'])->name('notifications.read-all');
         Route::post('/notifications/{notification}/read', [NotificationApiController::class, 'read'])->name('notifications.read');
         Route::get('/notifications/unread-count', [NotificationApiController::class, 'unreadCount'])->name('notifications.unread-count');
@@ -319,7 +320,7 @@ Route::prefix('v1')
          * ([[ApprovalApiController]]), আর বেতন ফোনে আসেই না।
          */
         Route::get('/approvals/pending', [ApprovalApiController::class, 'pending'])
-            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval'])
+            ->middleware(['can:approval.decide', RefuseModulesOffOnThePhone::class.':approval', \App\Http\Middleware\AnswersUnchanged::class])
             ->name('approvals.pending');
         // ⭐ আমার পাঠানো অনুরোধ — ওয়েবের "আমার অনুরোধ"-এর একই চাবি (`approval.view`), ১৭ অক্টোবর ২০২৬
         Route::get('/approvals/mine', [ApprovalApiController::class, 'mine'])

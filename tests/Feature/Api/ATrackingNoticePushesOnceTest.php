@@ -138,7 +138,9 @@ final class ATrackingNoticePushesOnceTest extends TestCase
     {
         return Http::recorded()
             ->filter(fn (array $pair) => str_contains($pair[0]->url(), 'fcm.googleapis.com')
-                && (($pair[0]->data()['message']['token'] ?? null) === $token))
+                && (($pair[0]->data()['message']['token'] ?? null) === $token)
+                // ⓘ the silent "you have news" nudge ([[NoticeNudge]], 23 Nov 2026) is not a notice push — it carries no notice
+                && ($pair[0]->data()['message']['data'] ?? null) !== \App\Core\Services\NoticeNudge::DATA)
             ->map(fn (array $pair) => (array) ($pair[0]->data()['message']['data'] ?? []))
             ->values()->all();
     }

@@ -158,6 +158,7 @@
                  'w-72 px-1.5' => (bool) $label,
              ])>
 
+            {{-- ⭐ icons through [[IconMemo]]: the same <x-ui.icon> markup, drawn once per page (speed work, 23 Nov 2026) --}}
             @foreach ($items as $item)
                 @if ($item['line'] ?? false)
                     <div class="mx-1 my-1 h-px bg-(--color-border)" role="separator"></div>
@@ -191,7 +192,7 @@
                     {{-- ⓘ ধূসর: কাজটা আছে, এখন নয় — কারণটা নামের নিচে (নমুনা: "লুকানো থাকে না — ধূসর থাকে, নিচে কারণ লেখা") --}}
                     <div role="menuitem" aria-disabled="true" data-row-action-off
                          class="flex w-full cursor-not-allowed items-center gap-2 px-2.5 py-1.5 text-xs text-(--color-ink-muted)">
-                        @isset($item['icon'])<x-ui.icon :name="$item['icon']" :size="15" />@endisset
+                        @isset($item['icon']){{ \App\View\IconMemo::render((string) $item['icon'], 15) }}@endisset
                         <span class="flex min-w-0 flex-col">
                             <span>{{ $item['label'] }}</span>
                             <span class="text-[11px] leading-snug" data-row-action-why>{{ $off }}</span>
@@ -200,7 +201,7 @@
                 @elseif (isset($item['share']))
                     {{-- ⭐ বার্তায় পাঠান — কাকে পাঠাবেন, তার পপআপ খোলে ([[messenger-share.js]]) --}}
                     <button type="button" role="menuitem" class="{{ $row }}" data-msgr-share="{{ json_encode($item['share'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}">
-                        <x-ui.icon :name="$item['icon']" :size="15" />
+                        {{ \App\View\IconMemo::render((string) $item['icon'], 15) }}
                         <span class="min-w-0">{{ $item['label'] }}</span>
                     </button>
                 @elseif (($item['method'] ?? null) === null)
@@ -208,7 +209,7 @@
                        @if ($item['blank'] ?? false) target="_blank" rel="noopener" @endif
                        @if (($item['peek'] ?? true) === false) data-no-peek @endif
                        @if ($item['opens'] ?? false) data-row-view @endif>
-                        @isset($item['icon'])<x-ui.icon :name="$item['icon']" :size="15" />@endisset
+                        @isset($item['icon']){{ \App\View\IconMemo::render((string) $item['icon'], 15) }}@endisset
                         <span class="min-w-0">{{ $item['label'] }}</span>
                         @isset($item['hint'])<span class="ms-auto ps-3 text-[11px] text-(--color-ink-muted)">{{ $item['hint'] }}</span>@endisset
                         @isset($item['key'])<kbd class="ms-auto rounded border border-(--color-border) px-1 font-sans text-[10px] text-(--color-ink-muted)">{{ $item['key'] }}</kbd>@endisset
@@ -224,7 +225,7 @@
                             <input type="hidden" name="{{ $field }}" value="{{ $value }}">
                         @endforeach
                         <button type="submit" role="menuitem" class="{{ $row }}">
-                            @isset($item['icon'])<x-ui.icon :name="$item['icon']" :size="15" />@endisset
+                            @isset($item['icon']){{ \App\View\IconMemo::render((string) $item['icon'], 15) }}@endisset
                             <span class="min-w-0">{{ $item['label'] }}</span>
                             @isset($item['hint'])<span class="ms-auto ps-3 text-[11px] text-(--color-ink-muted)">{{ $item['hint'] }}</span>@endisset
                             @isset($item['key'])<kbd class="ms-auto rounded border border-(--color-border) px-1 font-sans text-[10px] text-(--color-ink-muted)">{{ $item['key'] }}</kbd>@endisset

@@ -27,7 +27,8 @@ Route::prefix('v1/accounts')
     ->group(function (): void {
         // ⭐ নিট সম্পদ বিবরণী — কেবল মালিক, অন্যদের ৪০৪ ([[NetWorthApiController]]; fe, ২৫ অক্টোবর ২০২৬)
         Route::get('/net-worth', [NetWorthApiController::class, 'show'])->name('net_worth');
-        Route::get('/net-worth/summary', [NetWorthApiController::class, 'summary'])->name('net_worth.summary');
+        // ⭐ unchanged → 304, scoped weak ETag ([[AnswersUnchanged]], speed work 23 Nov 2026)
+        Route::get('/net-worth/summary', [NetWorthApiController::class, 'summary'])->middleware(\App\Http\Middleware\AnswersUnchanged::class)->name('net_worth.summary');
         Route::get('/vouchers/setup', [VoucherApiController::class, 'setup'])->name('voucher.setup');
         Route::get('/vouchers', [VoucherApiController::class, 'index'])->name('voucher.index');
         // ⭐ পোস্টের আগে খাতার ছবি — কিছুই লেখে না; ওয়েবের simulate-এর একই হিসাব (চুক্তি §৫, a4-এর চাওয়া, ২৫ অক্টোবর ২০২৬)

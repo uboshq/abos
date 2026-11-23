@@ -288,6 +288,9 @@ class AppServiceProvider extends ServiceProvider
 
         // ⭐ dashboard figures for five minutes per company, branch and user ([[DashboardFigureCache]], speed work 23 Nov 2026)
         $this->app->scoped(\App\Core\Services\DashboardFigureCache::class);
+
+        // ⭐ a row menu's icons drawn once per page ([[IconMemo]], speed work 23 Nov 2026)
+        $this->app->scoped(\App\View\IconMemo::class);
     }
 
     /**
@@ -307,7 +310,8 @@ class AppServiceProvider extends ServiceProvider
          * speed work 23 Nov 2026) — [[AccountLookups]] and the leaf balances in [[LedgerBalances]] are then asked again.
          */
         foreach ([\App\Modules\Accounts\Models\Account::class, \App\Modules\Accounts\Models\CashTill::class, \App\Models\LedgerEntry::class,
-            \App\Modules\Inventory\Models\Warehouse::class, \App\Models\Branch::class, \App\Models\BranchModule::class] as $model) {
+            \App\Modules\Inventory\Models\Warehouse::class, \App\Models\Branch::class, \App\Models\BranchModule::class,
+            \App\Modules\Inventory\Models\Product::class, \App\Modules\Restaurant\Models\Recipe::class] as $model) {
             foreach (['saved', 'deleted'] as $event) {
                 $model::{$event}(static fn () => app(\App\Core\Services\ReadWindow::class)->invalidate());
             }
@@ -326,6 +330,10 @@ class AppServiceProvider extends ServiceProvider
         }
         \Illuminate\Support\Facades\Event::listen(\Illuminate\Database\Events\TransactionRolledBack::class,
             static fn () => \App\Core\Services\DashboardFigureCache::rolledBack());
+
+        // ⭐ a bell item for a user → a silent "notice" push to the user's phones, at most one per 10 s ([[NoticeNudge]]; speed work 23 Nov 2026)
+        \App\Models\Notification::created(static fn (\App\Models\Notification $row) => app(\App\Core\Services\NoticeNudge::class)
+            ->touch($row->user_id === null ? null : (int) $row->user_id, (string) $row->type));
 
         /*
          * ⭐ `database` সেশনের `user_id` কেবল কর্মীর — পোর্টালের গ্রাহকের id নয় ([[StaffSessionHandler]],
