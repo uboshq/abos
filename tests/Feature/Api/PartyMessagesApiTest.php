@@ -164,7 +164,9 @@ final class PartyMessagesApiTest extends TestCase
             ->postJson('/api/v1/party-messages/whatsapp', $this->paper() + ['template_id' => $chosen['id'], 'locale' => 'bn', 'phone' => '02-9123456'])
             ->assertUnprocessable()->assertJsonValidationErrors('phone');
 
-        // ⓘ নতুন দরজা — Idempotency-Key ছাড়া লেখা ফেরে
+        // ⓘ নতুন দরজা — Idempotency-Key ছাড়া লেখা ফেরে। ⚠️ withHeader() পরীক্ষার পরের সব অনুরোধে থেকে যায় — আগে মুছে নেওয়া,
+        //   নাহলে আগের চাবি নিয়েই যেত আর ২০১ ফিরত
+        $this->flushHeaders();
         $this->phone($this->owner)
             ->postJson('/api/v1/party-messages/whatsapp', $this->paper() + ['template_id' => $chosen['id'], 'locale' => 'bn', 'phone' => '01712345678'])
             ->assertStatus(428);

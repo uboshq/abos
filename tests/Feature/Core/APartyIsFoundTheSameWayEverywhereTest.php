@@ -71,7 +71,8 @@ final class APartyIsFoundTheSameWayEverywhereTest extends TestCase
 
         $this->shop = Customer::query()->orderBy('id')->firstOrFail();
         $this->shop->forceFill([
-            'name_en' => 'Quokka Traders', 'phone' => '01711-557319',
+            // ⓘ দুই ভাষার নামই — পিকার আর খোঁজার লেবেল অ্যাপের ভাষায় (bn) নাম দেখায়; কেবল name_en বদলালে "Quokka" লেবেলে আসত না
+            'name_en' => 'Quokka Traders', 'name_bn' => 'Quokka Traders', 'phone' => '01711-557319',
             'address_en' => 'House 4, Zebulon Lane', 'location_id' => $point->id, 'is_active' => true,
         ])->save();
 

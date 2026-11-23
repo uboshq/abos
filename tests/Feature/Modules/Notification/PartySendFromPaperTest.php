@@ -101,7 +101,8 @@ final class PartySendFromPaperTest extends TestCase
 
         $this->share(PartyMessageTemplate::SMS)->assertSessionHas('shared_channel', PartyMessageTemplate::SMS);
         $this->share(PartyMessageTemplate::WHATSAPP)->assertSessionHas('shared_channel', PartyMessageTemplate::WHATSAPP);
-        $this->share(null)->assertSessionHas('shared_link')->assertSessionHas('shared_channel', null);
+        // ⓘ পথ না দিলে চ্যানেল খালি — Laravel-এর session()->has() null মানকে "নেই" ধরে, তাই assertSessionMissing
+        $this->share(null)->assertSessionHas('shared_link')->assertSessionMissing('shared_channel');
 
         $this->post(route('paper.share'), $this->shareFields() + ['channel' => 'email'])->assertSessionHasErrors('channel');
     }
