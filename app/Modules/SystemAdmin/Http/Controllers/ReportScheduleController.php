@@ -42,7 +42,8 @@ final class ReportScheduleController extends Controller implements HasMiddleware
     {
         return view('system_admin::reports.index', [
             'menu' => $this->menu->forUser(request()->user()),
-            'schedules' => ReportSchedule::query()->latest()->get(),
+            // ⓘ সূচি জমে প্রতিষ্ঠান যত রিপোর্ট নির্ধারণ করে — পাতা ভাগ (EveryListScreenPaginatesTest-এর STILL_BEING_DONE থেকে সরানো, ২৩ নভেম্বর ২০২৬)
+            'schedules' => ReportSchedule::query()->latest()->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'runs' => ReportRun::query()->latest('ran_at')->limit(20)->get(),
             'reportTitles' => $this->reportTitles(),
         ]);

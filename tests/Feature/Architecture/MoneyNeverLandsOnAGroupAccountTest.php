@@ -90,6 +90,8 @@ final class MoneyNeverLandsOnAGroupAccountTest extends TestCase
         'AccountsFacts.php' => 'একই কারণে — পরিবারের যোগফল',
         'BalanceSheetService.php' => 'স্থিতিপত্র দল ধরেই সাজানো',
         'FixedAssetController.php' => 'সম্পদের বাবা-খাত বাছা হয়, আর ওটা দল',
+        // ⓘ ২৩ নভেম্বর ২০২৬ (1.3.10-এর লাল) — গতির কাজে Account::descendants/leaf-যোগফলের হাঁটা এখানে সরেছে, HeadTotals-এর জাত
+        'AccountLookups.php' => 'ছকের গাছে নিচে হাঁটার পুল (parent_id ধরে দল) — দল ছাড়া গাছের শাখাই মেলে না; কোনো খাত বাছে না, টাকা বসায় না',
     ];
 
     public function test_every_account_picker_leaves_groups_out(): void

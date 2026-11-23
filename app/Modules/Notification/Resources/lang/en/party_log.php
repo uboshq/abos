@@ -93,5 +93,5 @@ return [
     // the app's doors
     'party_phone' => 'Party number',
     'rule' => 'Automatic',
-    'rules' => ['due_reminder' => 'Due reminder', 'payment_received' => 'Payment received'],
+    // ⓘ the rule names live in 'rules' above — one key once (ADuplicateKeySwallowedTheWordsTest)
 ];

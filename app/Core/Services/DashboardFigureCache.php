@@ -8,7 +8,6 @@ use App\Core\Dashboard\HomeFilter;
 use App\Core\Dashboard\HomePeriod;
 use App\Core\Support\CompanyContext;
 use App\Models\User;
-use App\Modules\Accounts\Models\CashTill;
 use Closure;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -109,7 +108,8 @@ final class DashboardFigureCache
             return null;
         }
 
-        $branches = CashTill::visibleBranchIds();
+        // ⓘ the person's viewing wall, asked of the core itself (the core names no module; BoundariesTest)
+        $branches = app(DataScope::class)->viewBranchIds($user);
         $query = request()->query();
         ksort($query);
 

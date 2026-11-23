@@ -35,7 +35,8 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
     private const EXCLUDED = [
         'assistant.draft.dunning.send' => 'Copilot dunning SMS the person ticked — queues text messages on the office phone and logs them per party; no paper, no money (claimed: CopilotSeesOnlyWhatItsPersonMaySeeTest)',
         'assistant.quick' => 'Copilot quick ask from the top bar — a question in, an answer out as JSON; writes only the audit row, no paper, no money (claimed: CopilotSeesOnlyWhatItsPersonMaySeeTest)',
-        'assistant.dismiss' => 'Copilot "this is fine" on a watch finding — a per-person quiet note with a reason, no paper, no money (claimed: CopilotSeesOnlyWhatItsPersonMaySeeTest)',
+        'assistant.chat.ask' => 'Copilot full-screen page ask — the same question-in, answer-out as assistant.quick, kept as the person\'s own talk (AssistantConversation, company + person wall); no paper, no money, no branch',
+        'assistant.dismiss' =>'Copilot "this is fine" on a watch finding — a per-person quiet note with a reason, no paper, no money (claimed: CopilotSeesOnlyWhatItsPersonMaySeeTest)',
         'accounts.voucher.simulate' => 'preview of a receipt/payment voucher\'s ledger lines; writes nothing and makes no person from a typed name (claimed: TheReceiptAndPaymentFollowTheFinalDesignTest, voucher/ledger/people counts unchanged)',
         'purchase.payment.simulate' => 'preview of the ledger lines; writes nothing (claimed: ThePaySupplierScreenFollowsTheDesignTest, row counts and audit unchanged)',
         'executive.dayclose.close' => 'closes the viewed day: one DayClose row (counted cash, gap and reason) for the viewed branch; no paper, no money moves (claimed: TheDayIsCountedAndClosedTest)',
@@ -110,6 +111,7 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'messaging.x.calls.start' => 'rings a colleague for a 1:1 call (a call-log row and a LiveKit token); no paper, no money, no branch',
         'notification.center.archive' => 'personal notifications',
         'notification.channels.vapid' => 'push channel keys',
+        'notification.party_roads.check' => 'tests the company\'s WhatsApp Cloud connection with Meta (WhatsAppCloud::check) and notes the answer on the company\'s road settings (last_checked_at/ok/error); no paper, no money, no branch',
         'notification.quiet.save' => 'personal quiet hours',
         'notifications.banner.close' => 'personal notifications',
         'notifications.bulk' => 'personal notifications',

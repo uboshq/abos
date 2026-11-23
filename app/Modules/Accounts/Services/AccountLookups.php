@@ -9,6 +9,7 @@ use App\Core\Support\CompanyContext;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\CashTill;
 use Closure;
+use Illuminate\Container\Attributes\Scoped;
 use Illuminate\Support\Collection;
 
 /**
@@ -28,6 +29,7 @@ use Illuminate\Support\Collection;
  *     fresh number and everything is asked again.
  *   • [[find()]] hands out a copy, so a caller that changes the model it got never changes another caller's.
  */
+#[Scoped] // ⓘ once per request (speed work 23 Nov 2026) — was a scoped() line in AppServiceProvider
 final class AccountLookups
 {
     /** @var array<string, Account|null> */

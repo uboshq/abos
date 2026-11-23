@@ -32,6 +32,9 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
         // ⭐ অফিসের SMS ফোন (মালিকের "ঠিক আছে", নমুনা U1X687u5MkwVfEL7ci7MGv) — মানুষ নেই, ফোনের নিজের গোপন চাবি (smsgw_, sha256-এ রাখা)
         'app/Core/Services/SmsOutboxService.php' => 'অফিসের SMS ফোন — মানুষ নেই, কেবল ফোনের নিজের কোম্পানিতে ঢোকে (চাবি sha256-এ মিলিয়ে পাওয়া ফোনের company_id); '
             .'নেয় কেবল সেই ফোনের বার্তা, জানায় কেবল নিজের নেওয়া সারির ফল (AnSmsHadNoWayOutOfTheOfficeTest)',
+        // ⭐ পার্টিকে বার্তা — Meta-র ফেরত-খবর (মালিকের "ok", ২৩ নভেম্বর ২০২৬; 1.3.10-এর লাল)
+        'app/Core/Services/PartyMessageDispatcher.php' => 'Meta-র webhook (onCloudStatus) — মানুষ নেই; ঠিকানার কোম্পানির app secret-এ সই মিললে (WhatsAppWebhookController) কেবল '
+            .'সেই কোম্পানিতে ঢোকে, আর কেবল সেই কোম্পানির নিজের পাঠানো বার্তার (provider_ref) অবস্থা বদলায়; কারও চাবিতে কিছু খোলে না',
         'app/Modules/Accounts/Http/Controllers/InterCompanyController.php' => null,
         'app/Modules/Accounts/Services/InterCompanyService.php' => null,
         // ⓘ দলগত রিপোর্ট — প্রতিটা কোম্পানিতে শাখার নাগাল পড়তে ঢোকে; কোম্পানির তালিকাই আগে সেখানের চাবি দেখে (পুনঃঅডিট, ৯ অক্টোবর ২০২৬)

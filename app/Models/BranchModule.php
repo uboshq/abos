@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\EmptiesTheReadWindow;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,7 @@ use Illuminate\Database\Eloquent\Model;
 final class BranchModule extends Model
 {
     use BelongsToCompany;
+    use EmptiesTheReadWindow;
 
     /*
      * ⭐ অডিট — ২২ সেপ্টেম্বর ২০২৬, [[EveryChangeableRowRemembersWhoChangedIt]]

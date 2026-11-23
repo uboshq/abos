@@ -266,6 +266,7 @@
                 </div>
             </div>
             <x-ui.pager :rows="$optouts" />
+            <x-ui.list-totals :rows="$optouts" />
         @endif
     </div>
 </x-layouts.app>

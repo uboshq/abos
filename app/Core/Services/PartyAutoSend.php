@@ -692,7 +692,8 @@ final class PartyAutoSend
      */
     public function paidPreview(bool $withLink): array
     {
-        $entry = LedgerEntry::query()->where('source_type', self::RECEIPT_SOURCE)
+        // ⓘ the sample is a real receipt the person may see — inside the viewed branch, like every screen that shows the ledger
+        $entry = \App\Core\Support\ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')->where('source_type', self::RECEIPT_SOURCE)
             ->whereNotNull('party_type')->whereNotNull('party_id')->latest('id')->first();
 
         $receipt = $entry === null ? null : app(DrillResolver::class)->resolve(self::RECEIPT_SOURCE, (int) $entry->source_id);

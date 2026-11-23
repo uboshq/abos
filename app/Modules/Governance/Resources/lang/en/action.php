@@ -140,4 +140,6 @@ return [
     'sms_phone_token' => 'New SMS phone key',
     // ⓘ Supplier credit limit raised — an approved request applied (20 Nov 2026; SupplierLimitRequests)
     'credit_limit_raised' => 'Supplier credit limit raised',
+    // ⓘ Sales responsibility set on a dealer/area (23 Nov 2026; AssignSalesResponsible)
+    'sales_resp_assigned' => 'Sales responsibility assigned',
 ];

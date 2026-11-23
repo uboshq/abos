@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -24,6 +25,7 @@ class AssistantConversation extends Model
 {
     use BelongsToCompany;
     use HasPublicId;
+    use IsAudited;
 
     /** ⓘ a talk keeps at most this many lines (questions + answers) — the oldest drop off */
     public const MAX_MESSAGES = 200;
@@ -32,6 +34,18 @@ class AssistantConversation extends Model
     public const HISTORY = 40;
 
     protected $fillable = ['company_id', 'user_id', 'title', 'messages', 'last_at'];
+
+    /**
+     * ⓘ the trail keeps that a talk began, was renamed or deleted — not every line of it: each question rewrites
+     *   `messages` (up to 200 lines) and `last_at`, and copying that into audit_trails on every ask would bury the
+     *   real changes (the same reason as the number series' next_number; [[IsAudited::auditIgnores()]]).
+     *
+     * @return list<string>
+     */
+    public function auditIgnores(): array
+    {
+        return ['messages', 'last_at'];
+    }
 
     protected function casts(): array
     {

@@ -283,8 +283,8 @@ class AppServiceProvider extends ServiceProvider
          */
         $this->app->scoped(LedgerBalances::class);
 
-        // ⭐ the chart's code lookups and tree, once per request ([[AccountLookups]], speed work 23 Nov 2026)
-        $this->app->scoped(\App\Modules\Accounts\Services\AccountLookups::class);
+        // ⓘ the chart's code lookups ([[AccountLookups]]) are once per request through their own #[Scoped] mark —
+        //   the core names no module (BoundariesTest)
 
         // ⭐ dashboard figures for five minutes per company, branch and user ([[DashboardFigureCache]], speed work 23 Nov 2026)
         $this->app->scoped(\App\Core\Services\DashboardFigureCache::class);
@@ -306,28 +306,9 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Queue\Queue::createPayloadUsing(fn () => ['abos_company' => \App\Core\Support\CompanyContext::id()]);
 
         /*
-         * ⭐ A chart, till or ledger write inside a read-only page empties the page's memories ([[ReadWindow::invalidate()]];
-         * speed work 23 Nov 2026) — [[AccountLookups]] and the leaf balances in [[LedgerBalances]] are then asked again.
+         * ⓘ A chart, till or ledger write empties the read-only page's memories, and posting busts the dashboard figures —
+         *   each model carries that itself ([[EmptiesTheReadWindow]], [[BustsDashboardFigures]]); the core names no module.
          */
-        foreach ([\App\Modules\Accounts\Models\Account::class, \App\Modules\Accounts\Models\CashTill::class, \App\Models\LedgerEntry::class,
-            \App\Modules\Inventory\Models\Warehouse::class, \App\Models\Branch::class, \App\Models\BranchModule::class,
-            \App\Modules\Inventory\Models\Product::class, \App\Modules\Restaurant\Models\Recipe::class] as $model) {
-            foreach (['saved', 'deleted'] as $event) {
-                $model::{$event}(static fn () => app(\App\Core\Services\ReadWindow::class)->invalidate());
-            }
-        }
-
-        /*
-         * ⭐ Posting busts the remembered dashboard figures of its company ([[DashboardFigureCache]]; speed work 23 Nov 2026) —
-         * a ledger row (every posting, [[PostingEngine]]), a stock movement (the only door, [[StockService]]) or an approval
-         * that moved. ⓘ After the transaction commits; a rolled-back write moves nothing.
-         */
-        foreach ([\App\Models\LedgerEntry::class, \App\Modules\Inventory\Models\StockMovement::class, \App\Models\Approval::class] as $model) {
-            foreach (['saved', 'deleted'] as $event) {
-                $model::{$event}(static fn ($row) => \App\Core\Services\DashboardFigureCache::bust(
-                    isset($row->company_id) ? (int) $row->company_id : \App\Core\Support\CompanyContext::id()));
-            }
-        }
         \Illuminate\Support\Facades\Event::listen(\Illuminate\Database\Events\TransactionRolledBack::class,
             static fn () => \App\Core\Services\DashboardFigureCache::rolledBack());
 

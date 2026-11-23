@@ -221,7 +221,8 @@ class PartyAutoController extends Controller
 
         return [
             'optouts' => $rows,
-            'optoutBy' => User::query()->whereIn('id', $items->pluck('created_by')->filter()->unique()->all() ?: [0])->pluck('name', 'id')->all(),
+            // ⓘ only this company's people (EveryUserListAsksWhichCompanyTest) — a marker from elsewhere shows as nobody
+            'optoutBy' => User::query()->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))->whereIn('id',$items->pluck('created_by')->filter()->unique()->all() ?: [0])->pluck('name', 'id')->all(),
             'optoutNames' => $parties->labelsOf($items->map(fn (PartyMessageOptout $o) => [(string) $o->party_type, (int) $o->party_id])->all()),
             'pickerGroups' => $parties->forPicker(),
         ];

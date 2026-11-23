@@ -237,7 +237,7 @@
                                             @if ($cost['cloud_cost'] === null)
                                                 <span class="text-(--color-ink-muted)" data-cost-unset>{{ __('notification::party_roads.cost.rate_unset') }}</span>
                                             @else
-                                                <span data-cost-cloud>{{ number_format($cost['cloud_cost'], 2) }}</span>
+                                                <span data-cost-cloud>{{ \App\Core\Support\Money::format($cost['cloud_cost']) }}</span>
                                             @endif
                                         @elseif ($row['road'] === 'wame')
                                             <span class="text-(--color-ink-muted)">{{ __('notification::party_roads.cost.free') }}</span>

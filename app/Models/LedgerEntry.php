@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\BustsDashboardFigures;
+use App\Core\Concerns\EmptiesTheReadWindow;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Engines\Drill\DrillResolver;
 use App\Core\Security\LedgerChain;
@@ -23,6 +25,8 @@ use Illuminate\Database\Eloquent\Model;
 class LedgerEntry extends Model
 {
     use BelongsToCompany;
+    use BustsDashboardFigures;
+    use EmptiesTheReadWindow;
     use HasFactory;
     use HasPublicId;
 

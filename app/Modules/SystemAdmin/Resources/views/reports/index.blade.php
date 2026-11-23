@@ -83,6 +83,8 @@
             </table>
         @endif
     </section>
+    <x-ui.pager :rows="$schedules" />
+    <x-ui.list-totals :rows="$schedules" />
 
     {{-- সাম্প্রতিক ফাইল --}}
     @if ($runs->isNotEmpty())

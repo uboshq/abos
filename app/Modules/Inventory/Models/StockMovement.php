@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Inventory\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\BustsDashboardFigures;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Concerns\ScopedToUserWarehouse;
@@ -31,6 +32,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StockMovement extends Model
 {
     use BelongsToCompany;
+    use BustsDashboardFigures;
     use HasFactory;
     use HasPublicId;
     use ScopedToUserBranch;

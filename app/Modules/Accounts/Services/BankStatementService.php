@@ -336,7 +336,7 @@ final class BankStatementService
                 throw ValidationException::withMessages(['line' => __('accounts::recon.line_in_a_confirmed_recon')]);
             }
 
-            $row->matches()->delete();
+            $row->matches()->get()->each->delete(); // ⓘ one by one, so the audit trail hears each unmatch ([[IsAudited]])
             $row->forceFill(['matched_line_id' => null, 'matched_at' => null, 'matched_by' => null])->save();
 
             return $line->setRawAttributes($row->refresh()->getAttributes(), true);

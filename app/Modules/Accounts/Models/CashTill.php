@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\EmptiesTheReadWindow;
 use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class CashTill extends Model implements Drillable, IsAMasterRecord
 {
     use BelongsToCompany;
+    use EmptiesTheReadWindow;
     use HasActiveState;
     use HasDocumentStatus;
     use HasFactory;

@@ -202,8 +202,11 @@ final class TheFullCopilotPageKeepsEachPersonsTalksTest extends TestCase
 
         $this->assertNull(CopilotAnswer::chart(['what', 'value'], [['what' => 'a', 'value' => '1'], ['what' => 'b', 'value' => '2']]));
         $this->assertNull(CopilotAnswer::chart(['customer', 'overdue'], [['customer' => 'A', 'overdue' => '1']]), 'one row is no chart');
-        $this->assertSame(348200.0, CopilotAnswer::number('৳3,48,200'));
-        $this->assertSame(62.0, CopilotAnswer::number('৬২ দিন'));
+        // ⓘ a bcmath string, never a float (MoneyIsNeverAFloatTest, 1.3.10 reds)
+        $this->assertSame('348200', CopilotAnswer::number('৳3,48,200'));
+        $this->assertSame('62', CopilotAnswer::number('৬২ দিন'));
+        $this->assertSame('0.5', CopilotAnswer::number('.5 kg'));
+        $this->assertSame('-1200', CopilotAnswer::number('-1,200'));
         $this->assertNull(CopilotAnswer::number('—'));
     }
 

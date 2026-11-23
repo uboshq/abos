@@ -181,7 +181,7 @@ class PartyRoadsController extends Controller
     /**
      * This month's party messages per road; the Cloud cost only when the owner has set Meta's rate.
      *
-     * @return array{from: \Illuminate\Support\Carbon, rows: list<array{road: string, count: int, failed: int}>, rate: ?float, cloud_sent: int, cloud_cost: ?float}
+     * @return array{from: \Illuminate\Support\Carbon, rows: list<array{road: string, count: int, failed: int}>, rate: ?string, cloud_sent: int, cloud_cost: ?string}
      */
     private function cost(): array
     {
@@ -197,7 +197,9 @@ class PartyRoadsController extends Controller
         }
 
         $rateText = str_replace(',', '', trim((string) $this->settings->get(self::RATE, '')));
-        $rate = is_numeric($rateText) && (float) $rateText > 0 ? (float) $rateText : null;
+        // ⓘ Meta's rate is taka — bcmath strings, never a float (MoneyIsNeverAFloatTest)
+        //   ⚠️ plain digits only — bcmath refuses "1e3" or " 2" with an error, is_numeric() would let them in
+        $rate = preg_match('/^\d+(\.\d+)?$/', $rateText) === 1 && bccomp($rateText, '0', 4) > 0 ? $rateText : null;
         $cloudSent = PartyMessage::query()->where('created_at', '>=', $from)->where('route', PartyMessage::CLOUD)
             ->whereIn('status', [PartyMessage::SENT, PartyMessage::DELIVERED, PartyMessage::READ])->count();
 
@@ -206,7 +208,7 @@ class PartyRoadsController extends Controller
             'rows' => $rows,
             'rate' => $rate,
             'cloud_sent' => $cloudSent,
-            'cloud_cost' => $rate === null ? null : round($cloudSent * $rate, 2),
+            'cloud_cost' => $rate === null ? null : \App\Core\Support\Money::round(bcmul((string) $cloudSent, $rate, 4)),
         ];
     }
 }

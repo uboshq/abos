@@ -160,4 +160,6 @@ return [
     'sms_phone_token' => 'SMS ফোনের নতুন চাবি',
     // ⓘ সরবরাহকারীর বাকির সীমা বাড়ল — অনুমোদিত অনুরোধ বসানো হলো (২০ নভেম্বর ২০২৬; SupplierLimitRequests)
     'credit_limit_raised' => 'সরবরাহকারীর বাকির সীমা বাড়ানো',
+    // ⓘ ডিলার/এলাকায় বিক্রির দায়িত্ব বসানো (২৩ নভেম্বর ২০২৬; AssignSalesResponsible)
+    'sales_resp_assigned' => 'বিক্রির দায়িত্ব বসানো',
 ];

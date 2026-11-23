@@ -341,12 +341,9 @@ class EveryRouteIsGuardedTest extends TestCase
         'api.reports.export' => '§৯-এর দরজাই (ReportApiController::show, ReportDefinition::allows) — চাবি নেই তো ৪০৩; ঢাকা কলাম ফাইলেও নেই',
         'api.papers.index' => 'ধরন সতেরো রকম, প্রতিটার চাবি ওয়েবের তালিকার নিজের (PhonePaper::permission) — কন্ট্রোলারে; চাবি নেই তো ৪০৩ (ThePhoneShowsEveryPaperOnItsOwnScreenTest)',
         'api.papers.show' => 'তালিকার একই পাহারা, একই পথে (PhonePaperApiController::open); কাগজ মডেলের নিজের দেয়ালে, বাইরের হলে ৪০৪',
-        // ⭐ পার্টিকে WhatsApp ও SMS — ফোনের দরজা (ধাপ ৩, মালিকের "ok" ২৩ নভেম্বর ২০২৬; PartyMessageApiController)
-        'api.party_messages.compose' => 'ওয়েবের "পাঠান" বাক্সের পাহারা (PartyMessageGuard::paper): কাগজের ছাপার রুটের নিজের can: — চাবি নেই তো ৪০৩, খালি তালিকাতেও ৪০৩; ছাপার দরজার চোখে নাগালের বাইরে ৪০৪; কাগজের মডিউল ফোনে বন্ধ ৪০৩',
-        'api.party_messages.index' => 'compose-এর একই পাহারা (PartyMessageApiController::paper) — যিনি কাগজটা পাঠাতে পারেন তিনিই দেখেন কী গেছে; সারি শাখার দেয়ালের ভিতরে',
-        'api.party_messages.whatsapp' => 'compose-এর একই পাহারা, তারপর লেখা আর নম্বর (PartyMessageGuard::choice, ৪২২); wa.me পথ বন্ধ তো ৪০৩',
-        'api.party_messages.sms' => 'compose-এর একই পাহারা, তারপর লেখা আর নম্বর (PartyMessageGuard::choice, ৪২২); কেবল বাংলাদেশের মোবাইল, পথ বন্ধ বা অফিসের ফোন নেই তো ৪২২',
-        'api.party_messages.resend' => 'কাগজের সারিতে কাগজের ছাপার চাবি আর নাগাল (PartyMessageResender::paperOf → PartyMessageGuard::paper); পার্টির হিসাবের সারিতে notification.party_messages; সারি শাখার দেয়ালের ভিতরে, বাইরের হলে ৪০৪',
+        // ⓘ api.party_messages.* (compose/index/whatsapp/sms/resend) এখানে আর নেই — প্রতিটা পদ্ধতি নিজেই authorize করে
+        //   (PartyMessageApiController::authorizedPaper → PartyMessageGuard::paper → Gate::authorize; resend-এ $this->authorize),
+        //   ১.৩.১০-এর লাল সারাই, ২৩ নভেম্বর ২০২৬ — ছাড় ৫টা কম
     ];
 
     /**

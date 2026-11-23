@@ -230,30 +230,47 @@ final class CopilotAnswer
             $bars[] = ['label' => (string) ($row[$columns[0]] ?? ''), 'value' => (string) ($row[$valueCol] ?? ''), 'n' => $number];
         }
 
-        $max = max(array_map(fn (array $b): float => abs($b['n']), $bars));
+        // ⓘ the bar lengths in bcmath — the values are often taka, and taka never passes through a float (MoneyIsNeverAFloatTest)
+        $max = '0';
+        foreach ($bars as $b) {
+            if (bccomp(self::magnitude($b['n']), $max, 4) > 0) {
+                $max = self::magnitude($b['n']);
+            }
+        }
 
-        if ($max <= 0.0) {
+        if (bccomp($max, '0', 4) <= 0) {
             return null;
         }
 
         return [
             'title' => self::heading($valueCol),
             'bars' => array_map(fn (array $b): array => [
-                'label' => $b['label'], 'value' => $b['value'], 'pct' => max(2, (int) round(abs($b['n']) / $max * 100)),
+                'label' => $b['label'], 'value' => $b['value'],
+                // ⓘ rounded half up: +0.5 then cut to a whole
+                'pct' => max(2, (int) bcadd(bcdiv(bcmul(self::magnitude($b['n']), '100', 4), $max, 4), '0.5', 0)),
             ], $bars),
         ];
     }
 
-    /** "৳3,48,200" → 348200.0; "62 দিন" → 62.0; Bengali digits read too; no digit → null */
-    public static function number(string $text): ?float
+    /** "৳3,48,200" → "348200"; "62 দিন" → "62"; Bengali digits read too; no digit → null — a bcmath string, never a float */
+    public static function number(string $text): ?string
     {
         $text = strtr($text, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
 
-        if (! preg_match('/-?[\d,]*\.?\d+/', $text, $m)) {
+        if (! preg_match('/(-?)([\d,]*\.?\d+)/', $text, $m)) {
             return null;
         }
 
-        return (float) str_replace(',', '', $m[0]);
+        $digits = str_replace(',', '', $m[2]);
+
+        // ⓘ ".5" → "0.5" — bcmath wants a whole part
+        return $m[1].(str_starts_with($digits, '.') ? '0'.$digits : $digits);
+    }
+
+    /** the size of a bcmath number, its sign dropped */
+    private static function magnitude(string $n): string
+    {
+        return ltrim($n, '-');
     }
 
     /**

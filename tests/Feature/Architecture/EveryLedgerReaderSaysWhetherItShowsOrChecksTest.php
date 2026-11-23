@@ -94,6 +94,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Supplier/Http/Controllers/SupplierBalanceConfirmationController.php' => 'সরবরাহকারীর জের নিশ্চিতকরণের চিঠি — সরবরাহকারীর পাতার একই দেনার খাতা, দেখার শাখা ধরে',
         // ⭐ বছর-শেষের রেওয়ামিল (মালিক, ১৭ নভেম্বর ২০২৬ "ok")
         'app/Modules/Accounts/Services/YearEndTrialBalance.php' => 'বছর-শেষের রেওয়ামিল — আগে, সমন্বয়, পরে আর আগের বছর; হেডারে বাছা শাখা ধরে (ViewedBranch::one(), স্থিতিপত্রের একই নিয়ম) আর রিপোর্টের শাখার দেয়ালে (ReportEngine::branchWall)',
+        // ⓘ নিজে থেকে পাঠানো (মালিকের "ok", ২৩ নভেম্বর ২০২৬) — 1.3.10-এর লাল
+        'app/Core/Services/PartyAutoSend.php' => 'টাকা পাওয়ার বিজ্ঞপ্তির "যা যাবে" নমুনা — শেষ পাকা রসিদ, দেখার শাখা ধরে (ViewedBranch::narrow), যাতে অন্য শাখার পার্টি ও অঙ্ক নমুনায় না আসে',
     ];
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
@@ -147,6 +149,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         // ⭐ সরবরাহকারীর বাকির দেয়াল (মালিক, ১৮ নভেম্বর ২০২৬)
         'app/Modules/Supplier/Services/SupplierCreditWall.php' => '⛔ সরবরাহকারীর বাকির সীমা — দেনা আর বিল-না-আসা মাল, গোটা কোম্পানি ধরে; সীমা সরবরাহকারীর, শাখার নয় (গ্রাহকের CreditExposure-এর একই নিয়ম); তালিকার ঘরও দেয়াল যা দেখে তা-ই',
         'app/Modules/Purchase/Services/PurchaseBillService.php' => 'বিলের দামে মালের দামের সংশোধনী — একটা বিলের নিজের খোলা দাখিলা উল্টে মিলিয়ে আবার বসায়, গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার সারি বাদ পড়ত (ক্রয় ⚠️৩, ১০ অক্টোবর ২০২৬)',
+        // ⓘ পার্টিকে বার্তা (মালিকের "ok", ২৩ নভেম্বর ২০২৬) — 1.3.10-এর লাল
+        'app/Core/Services/PartyMessages.php' => 'লেখার {due} — পার্টির এখনকার মোট বাকি, পক্ষের সব দাখিলা সব শাখার (PartyLedger::withoutUndoneEdits, হিসাব বিবরণীর একই ভিত্তি); বার্তাটা পার্টির কাছে যায়, তাই তার পুরো বাকিটাই — পাঠানো মানুষটার শাখারটা নয়',
     ];
 
     public function test_every_ledger_reader_is_declared_and_no_declaration_is_stale(): void

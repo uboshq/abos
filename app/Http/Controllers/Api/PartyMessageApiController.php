@@ -15,7 +15,6 @@ use App\Models\DocumentShare;
 use App\Models\PartyMessage;
 use App\Models\PartyMessageTemplate;
 use App\Models\SmsGatewayPhone;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -57,7 +56,7 @@ final class PartyMessageApiController extends Controller
     public function compose(Request $request): JsonResponse
     {
         $channel = $request->validate(['channel' => ['required', Rule::in(PartyMessageTemplate::CHANNELS)]])['channel'];
-        [$document, $share] = $this->paper($request);
+        [$document, $share] = $this->authorizedPaper($request);
 
         $party = $this->messages->partyOf($document);
         $phones = array_map(fn (array $p) => ['number' => $p['phone'], 'shown' => $p['shown'], 'label' => $p['label']],
@@ -92,7 +91,7 @@ final class PartyMessageApiController extends Controller
     {
         abort_unless($this->dispatcher->wameOn(), 403);
 
-        [$document, $share] = $this->paper($request);
+        [$document, $share] = $this->authorizedPaper($request);
         [$template, $phone, $locale] = $this->guard->choice($request->all(), $document, $share, PartyMessageTemplate::WHATSAPP);
 
         $message = $this->messages->record($document, $share, $template, $locale, $phone);
@@ -111,7 +110,7 @@ final class PartyMessageApiController extends Controller
      */
     public function sms(Request $request): JsonResponse
     {
-        [$document, $share] = $this->paper($request);
+        [$document, $share] = $this->authorizedPaper($request);
         [$template, $phone, $locale] = $this->guard->choice($request->all(), $document, $share, PartyMessageTemplate::SMS);
 
         if (! PartyMessageDispatcher::isBangladeshMobile($phone)) {
@@ -134,7 +133,7 @@ final class PartyMessageApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        [$document, , $documentType] = $this->paper($request, withShare: false);
+        [$document, , $documentType] = $this->authorizedPaper($request, withShare: false);
 
         $rows = PartyMessage::query()
             ->where('document_type', $documentType)
@@ -158,16 +157,13 @@ final class PartyMessageApiController extends Controller
      */
     public function resend(Request $request, string $publicId, PartyMessageResender $resender): JsonResponse
     {
-        /** @var User $user */
-        $user = $request->user();
-
         // ⓘ শাখার দেয়াল মডেলের নিজের ([[ScopedToUserBranch]]) — বাইরের সারি ৪০৪
         $row = PartyMessage::query()->wherePublicId($publicId)->first() ?? abort(404);
 
         if (PartyMessageResender::isPaper($row)) {
             $this->moduleOfPaperIsOn((string) $row->document_type);
         } else {
-            abort_unless($user->can('notification.party_messages'), 403);
+            $this->authorize('notification.party_messages');
         }
 
         $sent = $resender->again($row);
@@ -183,7 +179,7 @@ final class PartyMessageApiController extends Controller
      *
      * @return array{0: Model, 1: ?DocumentShare, 2: string} [কাগজ, লিংক, ছাপার তালিকার ধরন]
      */
-    private function paper(Request $request, bool $withShare = true): array
+    private function authorizedPaper(Request $request, bool $withShare = true): array
     {
         $data = $request->validate([
             'type' => ['required', 'string', 'max:60'],

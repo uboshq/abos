@@ -144,7 +144,7 @@ final class AssignSalesResponsible extends Command
             ->get(['b.id', 'b.starts_on', 'u.name as user', 'l.code as place']);
 
         if ($rows->isNotEmpty()) {
-            DB::table('area_bindings')->whereIn('id', $rows->pluck('id'))->update(['starts_on' => $placesFrom]);
+            DB::table('area_bindings')->where('company_id', $companyId)->whereIn('id', $rows->pluck('id'))->update(['starts_on' => $placesFrom]);
         }
 
         return $rows->map(fn ($r) => [
@@ -260,10 +260,10 @@ final class AssignSalesResponsible extends Command
             return [
                 $id === 0 ? 'নেই' : (string) ($names[$id] ?? '#'.$id),
                 (int) ($s->n ?? 0),
-                number_format((float) $sAmt, 2),
+                \App\Core\Support\Money::format($sAmt),
                 (int) ($b->n ?? 0),
-                number_format((float) $bAmt, 2),
-                number_format((float) bcsub($sAmt, $bAmt, 4), 2),
+                \App\Core\Support\Money::format($bAmt),
+                \App\Core\Support\Money::format(bcsub($sAmt, $bAmt, 4)),
             ];
         })->all();
 

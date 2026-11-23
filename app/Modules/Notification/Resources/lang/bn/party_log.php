@@ -41,7 +41,7 @@ return [
     // কাগজের ঘরে নিয়মের নাম (লেখা না থাকলে)
     'rules' => [
         'due_reminder' => 'বাকির তাগাদা',
-        'payment_received' => 'টাকা পাওয়ার খবর',
+        'payment_received' => 'টাকা পাওয়ার বিজ্ঞপ্তি',
     ],
 
     // কে/কীভাবে
@@ -94,5 +94,5 @@ return [
     'party_phone' => 'পার্টির নম্বর',
     // ⓘ নিজে থেকে পাঠানোর নিয়ম — ছাঁকনির ঘর
     'rule' => 'নিজে থেকে',
-    'rules' => ['due_reminder' => 'বাকির তাগাদা', 'payment_received' => 'টাকা পাওয়ার খবর'],
+    // ⓘ নিয়মের নামগুলো উপরের 'rules'-এ — একই চাবি দুইবার নয় (ADuplicateKeySwallowedTheWordsTest)
 ];

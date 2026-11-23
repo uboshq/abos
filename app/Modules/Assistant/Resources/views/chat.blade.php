@@ -12,8 +12,12 @@
 --}}
 @php
     $aiMark = \App\Core\Support\AiMark::shows();
-    $msgr = class_exists(\App\Modules\Messaging\Support\MessengerChrome::class) && \App\Modules\Messaging\Support\MessengerChrome::on()
-        && \Illuminate\Support\Facades\Route::has('messaging.x.papers.find');
+    // ⓘ the messenger's paper door: its route + key + an ABOS look — the same three tests as the messenger's own chrome,
+    //   asked through the core only (Copilot does not depend on the messenger module; BoundariesTest)
+    $msgrUser = auth()->user();
+    $msgr = $msgrUser !== null && \Illuminate\Support\Facades\Route::has('messaging.x.papers.find')
+        && $msgrUser->can('messaging.use')
+        && in_array(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen($msgrUser->ui)), \App\Core\Support\Ui::FOLD_MENU_LOOKS, true);
     $state = [
         'name' => $name,
         'askUrl' => route('assistant.chat.ask'),
@@ -29,6 +33,7 @@
             'mic' => __('assistant::chat.mic'), 'mic_on' => __('assistant::chat.mic_on'), 'mic_off' => __('assistant::chat.mic_off'),
             'failed' => __('assistant::chat.failed'), 'stopped' => __('assistant::chat.stopped'), 'no_key' => __('assistant::quick.no_key'),
             'today' => __('assistant::chat.group.today'),
+            'reply' => __('assistant::chat.reply'), 'placeholder' => __('assistant::chat.placeholder'),
         ],
     ];
 @endphp
@@ -36,7 +41,7 @@
     <x-slot:title>{{ $name }}</x-slot:title>
 
     <div class="cpp" x-data="copilotPage" data-copilot-page :data-busy="busy ? '1' : '0'">
-        <script type="application/json" data-cpp-state>@json($state)</script>
+        <script type="application/json" @nonce data-cpp-state>@json($state)</script>
 
         {{-- ── title row: Copilot + নতুন কথা + ইতিহাস, one row, no description line ── --}}
         <div class="cpp-head">
@@ -48,7 +53,7 @@
                 @endif
                 <span>{{ $name }}</span>
             </h1>
-            <a href="{{ route('assistant.chat') }}" class="cpp-wb cpp-wb-pri" data-cpp-new><x-ui.icon name="plus" :size="17" />{{ __('assistant::chat.new') }}</a>
+            <a href="{{ route('assistant.chat') }}" class="cpp-wb cpp-wb-pri" @click.prevent="newTalk()" data-cpp-new><x-ui.icon name="plus" :size="17" />{{ __('assistant::chat.new') }}</a>
             <button type="button" class="cpp-wb" @click="toggleHistory()" :aria-pressed="histOpen ? 'true' : 'false'" data-cpp-history-toggle><x-ui.icon name="clock" :size="17" />{{ __('assistant::chat.history') }}</button>
         </div>
 
@@ -179,7 +184,7 @@
                         </template>
 
                         {{-- ⓘ while the answer comes: the mark goes busy, "থামান" with the three dots --}}
-                        <div class="cpp-ua cpp-wait" x-show="busy" x-cloak data-cpp-busy>
+                        <div class="cpp-ua" x-show="busy" x-cloak data-cpp-busy>
                             <span class="cpp-avm">
                                 @if ($aiMark)
                                     <x-ui.ai-mark :size="30" busy />
@@ -198,16 +203,16 @@
                 <div class="cpp-foot" :class="started() ? '' : 'cpp-foot-hero'">
                     <form class="cpp-ask" @submit.prevent="submit()" data-cpp-ask>
                         @if ($msgr)
-                            <button type="button" class="cpp-cb" @click="toggleAttach()" :aria-expanded="attachOpen ? 'true' : 'false'" title="{{ __('assistant::chat.attach') }}" aria-label="{{ __('assistant::chat.attach') }}" data-cpp-attach>
+                            <button type="button" class="cpp-cb" x-show="attachOn()" @click="toggleAttach()" :aria-expanded="attachOpen ? 'true' : 'false'" title="{{ __('assistant::chat.attach') }}" aria-label="{{ __('assistant::chat.attach') }}" data-cpp-attach>
                                 <x-ui.icon name="attachment" :size="23" />
                             </button>
                         @endif
                         <label for="cpp-q" class="sr-only">{{ __('assistant::chat.placeholder') }}</label>
                         <input id="cpp-q" x-ref="box" x-model="q" autocomplete="off" enterkeyhint="send" maxlength="500"
-                               :placeholder="started() ? '{{ e(str_replace("'", '', __('assistant::chat.reply'))) }}' : '{{ e(str_replace("'", '', __('assistant::chat.placeholder'))) }}'"
+                               placeholder="{{ __('assistant::chat.placeholder') }}" :placeholder="started() ? word('reply') : word('placeholder')"
                                @disabled(! $askOn)>
                         <span class="cpp-wave" x-show="listening" x-cloak aria-hidden="true"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></span>
-                        <button type="button" class="cpp-cb" :class="listening ? 'cpp-mic-on' : ''" @click="toggleMic()" :disabled="! canListen()" :title="micTitle()" :aria-label="micTitle()" :aria-pressed="listening ? 'true' : 'false'" data-cpp-mic>
+                        <button type="button" class="cpp-cb" :class="listening ? 'cpp-mic-on' : ''" @click="toggleMic()" :disabled="! canListen()" title="{{ __('assistant::chat.mic') }}" aria-label="{{ __('assistant::chat.mic') }}" :title="micTitle()" :aria-label="micTitle()" :aria-pressed="listening ? 'true' : 'false'" data-cpp-mic>
                             <x-ui.icon name="mic" :size="23" />
                         </button>
                         <button type="submit" class="cpp-cb cpp-send" :class="sendDim() ? 'cpp-dim' : ''" aria-label="{{ __('assistant::chat.send') }}" title="{{ __('assistant::chat.send') }}">

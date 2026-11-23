@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
+use App\Core\Concerns\IsAudited;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BankStatementMatch extends Model
 {
     use BelongsToCompany;
+    use HasPublicId;
+    use IsAudited;
 
     protected $table = 'acc_bank_statement_matches';
 

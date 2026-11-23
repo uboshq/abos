@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Restaurant\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\EmptiesTheReadWindow;
 use App\Core\Concerns\HasActiveState;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
@@ -26,6 +27,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Recipe extends Model
 {
     use BelongsToCompany;
+    use EmptiesTheReadWindow;
     use HasActiveState;
     use HasFactory;
     use HasPublicId;
