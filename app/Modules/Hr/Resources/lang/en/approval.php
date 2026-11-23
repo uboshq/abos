@@ -20,4 +20,6 @@ return [
     'wppf_provision' => 'Workers\' profit participation fund provision',
     // ⭐ a cancelled run's bank-file line the bank did not pay — the wage goes back on the to-pay list; always a second signature (fe decision 2, 21 Oct 2026)
     'bank_unpaid' => 'Bank did not pay this line — wage arrears back on the to-pay list',
+    // ⭐ final settlement of a leaver — always the owner's approval (owner, 21 Oct 2026)
+    'final_settlement' => 'Final settlement of a leaver',
 ];

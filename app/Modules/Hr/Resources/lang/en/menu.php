@@ -26,4 +26,6 @@ return [
     // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
     'report_gratuity' => 'Gratuity obligation',
     'wppf' => 'Workers\' profit participation fund (WPPF)',
+    // ⭐ final settlement of a leaver — one paper, the owner approves (owner, 21 Oct 2026)
+    'final_settlements' => 'Final settlements',
 ];

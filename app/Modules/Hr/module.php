@@ -14,6 +14,7 @@ use App\Modules\Hr\Listeners\ReleaseHeldWagesWhenTheVoucherFalls;
 use App\Modules\Hr\Listeners\FinishThePaymentChangeOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheBankUnpaidLineOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
+use App\Modules\Hr\Listeners\FinishTheFinalSettlementOnTheLastSignature;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
 use App\Modules\Hr\Models\PayrollRun;
@@ -106,6 +107,8 @@ return [
                 'route_params' => ['slug' => 'provident-fund'], 'permission' => 'hr.salary.view'],
             // ⭐ গ্র্যাচুইটির দায় — বেতনের চাবিতে (fe, ২১ অক্টোবর ২০২৬, দফা ৮)
             ['label' => 'hr::menu.report_gratuity', 'icon' => 'wallet', 'route' => 'hr.gratuity.report', 'permission' => 'hr.salary.view'],
+            // ⭐ চূড়ান্ত পাওনা — চাকরি ছাড়া কর্মীর এক কাগজ, মালিকের অনুমোদনে (মালিক, ২১ অক্টোবর ২০২৬; [[FinalSettlements]])
+            ['label' => 'hr::menu.final_settlements', 'icon' => 'wallet', 'route' => 'hr.final_settlement.index', 'permission' => 'hr.salary.view'],
             /*
              * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — শ্রম আইন ২০০৬, অধ্যায় ১৫ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])।
              * ⛔ সারিটা কোম্পানির সুইচে (`hr.wppf.enabled`, ডিফল্টে বন্ধ) — বন্ধে সারিও নেই, দরজাও ৪০৪ ([[WppfController]])।
@@ -202,6 +205,13 @@ return [
          */
         'hr.wppf.view',
         'hr.wppf.manage',
+
+        /*
+         * ⭐ চূড়ান্ত পাওনা (মালিক, ২১ অক্টোবর ২০২৬; [[FinalSettlements]]) — কাগজ বানানো `manage` (সাথে বেতনের চাবি), অনুমোদন `approve`।
+         * ⛔ `approve` কোনো রোলে ডিফল্টে নেই — তাই অনুমোদন দেন কেবল মালিক, যতক্ষণ না তিনি নিজে কাউকে দেন।
+         */
+        'hr.final_settlement.manage',
+        'hr.final_settlement.approve',
     ],
 
     /*
@@ -294,6 +304,8 @@ return [
          * ২১ অক্টোবর ২০২৬; [[HeldWages::askBankUnpaid()]]); ছক না থাকলেও দ্বিতীয় সই (নিচের `second_hand`)।
          */
         'bank_unpaid' => 'hr::approval.bank_unpaid',
+        // ⭐ চূড়ান্ত পাওনা — সবসময় মালিকের অনুমোদন (নিচের `second_hand`; মালিক, ২১ অক্টোবর ২০২৬)
+        'final_settlement' => 'hr::approval.final_settlement',
     ],
 
     /*
@@ -351,6 +363,19 @@ return [
             'signer_key' => 'hr.salary.view',
             'second_hand' => ['hr.payroll.manage'],
             'no_bulk' => true,
+        ],
+        /*
+         * ⛔ চূড়ান্ত পাওনা — "এক কাগজ, মালিকের অনুমোদনে" (মালিক, ২১ অক্টোবর ২০২৬; [[FinalSettlements]])।
+         *  · `second_hand` — চাবিটা কোনো রোলে নেই, তাই ছক না থাকলে বা সব ছক বন্ধ থাকলেও (UB) অনুমোদন দেন কেবল মালিক; যিনি বানালেন তিনি নন।
+         *  · `amount_key` — নিট `approvals.amount`-এ খোলা বসে না (বেতনের রানের একই নিয়ম)।
+         *  · `no_bulk` — টাকা বেরোনোর কাগজ, প্রতিটা নিজের পাতায় দেখে।
+         */
+        'final_settlement' => [
+            'signer_key' => 'hr.salary.view',
+            'second_hand' => ['hr.final_settlement.approve'],
+            'amount_key' => 'hr.salary.view',
+            'no_bulk' => true,
+            'summary' => \App\Modules\Hr\Services\FinalSettlementSummary::class,
         ],
     ],
 
@@ -763,11 +788,14 @@ return [
             ReleaseHeldWagesWhenTheVoucherFalls::class,
             // ⭐ "ব্যাংক এই লাইন দেয়নি"-র শেষ সই — মজুরি আবার দেওয়ার তালিকায়, একবারই (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬)
             FinishTheBankUnpaidLineOnTheLastSignature::class,
+            // ⭐ চূড়ান্ত পাওনার শেষ সিদ্ধান্ত — অনুমোদনে খাতায়, "না"-তে বন্ধ (মালিক, ২১ অক্টোবর ২০২৬)
+            FinishTheFinalSettlementOnTheLastSignature::class,
         ],
         // ⭐ বকেয়া মজুরির খসড়া ভাউচার বাতিল — একই কথা ([[HeldWages::releaseFor()]])
         \App\Modules\Accounts\Events\VoucherCancelled::class => [ReleaseHeldWagesWhenTheVoucherFalls::class],
         // ⭐ অনুমোদনের কেন্দ্রের "ফিরিয়ে নিন" — বেতনের ঠিকানার অপেক্ষার বদলটাও বন্ধ (fe, ২১ অক্টোবর ২০২৬)
-        ApprovalWithdrawn::class => [CloseThePaymentChangeOnWithdrawal::class, FinishTheBankUnpaidLineOnTheLastSignature::class],
+        ApprovalWithdrawn::class => [CloseThePaymentChangeOnWithdrawal::class, FinishTheBankUnpaidLineOnTheLastSignature::class,
+            FinishTheFinalSettlementOnTheLastSignature::class],
     ],
 
     'sensitive_fields' => [

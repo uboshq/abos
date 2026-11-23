@@ -175,9 +175,13 @@ final class Gratuity
             $made = [];
 
             foreach ($byBranch as $group) {
-                $booked = (string) GratuityProvision::query()
+                /*
+                 * ⓘ এ পর্যন্ত বসা = সঞ্চিতির যোগ − চূড়ান্ত পাওনায় মেটানো গ্র্যাচুইটি ([[FinalSettlements]] Dr 2134)।
+                 * ⛔ বাদ না দিলে চলে যাওয়া কর্মীর দায় পরের মাসে আবার "ছাড়া" হত — Dr 2134 / Cr 5227, অথচ 2134 আগেই নেমেছে।
+                 */
+                $booked = bcsub((string) GratuityProvision::query()
                     ->when($group['branch'] === null, fn ($q) => $q->whereNull('branch_id'), fn ($q) => $q->where('branch_id', $group['branch']))
-                    ->sum('amount');
+                    ->sum('amount'), FinalSettlements::gratuitySettled($group['branch']), 4);
                 $amount = bcsub($group['obligation'], bcadd($booked, '0', 4), 4);
 
                 if (bccomp($amount, '0', 2) === 0) {

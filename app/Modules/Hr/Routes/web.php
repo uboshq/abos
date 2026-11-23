@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Modules\Hr\Http\Controllers\AttendanceController;
 use App\Modules\Hr\Http\Controllers\EmployeeController;
 use App\Modules\Hr\Http\Controllers\ExpenseClaimController;
+use App\Modules\Hr\Http\Controllers\FinalSettlementController;
 use App\Modules\Hr\Http\Controllers\HolidayController;
 use App\Modules\Hr\Http\Controllers\GratuityController;
 use App\Modules\Hr\Http\Controllers\HeldWageController;
@@ -200,5 +201,15 @@ Route::middleware('auth')->prefix('hr')->group(function () {
     Route::prefix('gratuity')->name('gratuity.')->group(function () {
         Route::get('/', [GratuityController::class, 'report'])->name('report');
         Route::post('/', [GratuityController::class, 'store'])->name('store');
+    });
+
+    // ⭐ চূড়ান্ত পাওনা — এক কাগজ, মালিকের অনুমোদনে (মালিক, ২১ অক্টোবর ২০২৬; [[FinalSettlementController]])
+    Route::prefix('final-settlements')->name('final_settlement.')->group(function () {
+        Route::get('/', [FinalSettlementController::class, 'index'])->name('index');
+        Route::get('/create', [FinalSettlementController::class, 'create'])->name('create');
+        Route::post('/', [FinalSettlementController::class, 'store'])->name('store');
+        Route::get('/{settlement}', [FinalSettlementController::class, 'show'])->name('show');
+        Route::post('/{settlement}/approve', [FinalSettlementController::class, 'approve'])->name('approve');
+        Route::post('/{settlement}/reject', [FinalSettlementController::class, 'reject'])->name('reject');
     });
 });
