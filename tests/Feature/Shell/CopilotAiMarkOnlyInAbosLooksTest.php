@@ -72,6 +72,28 @@ final class CopilotAiMarkOnlyInAbosLooksTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ মালিক, ২৩ নভেম্বর ২০২৬: রেলে কোপাইলটের টাইলে কোনো পট নেই, "Ai" চিহ্ন টাইলের পুরো মাপে (৩২px) — অন্য মডিউলের
+     * রঙিন বাক্স যত বড়, তত বড়। SAP আর Dynamic-এ কিছুই বদলায় না।
+     */
+    public function test_the_rail_copilot_tile_is_bare_and_the_mark_fills_the_tile_in_the_abos_looks(): void
+    {
+        foreach (['rose', 'navy', 'blue'] as $look) {
+            $html = $this->pageAs($look);
+
+            if (! str_contains($html, 'data-rail-copilot')) {
+                continue; // ⓘ এই চেহারায় রেল নেই বা কোপাইলট রেলে নেই
+            }
+
+            $this->assertMatchesRegularExpression('/data-rail-tile-bare\s+style="background: transparent;/', $html, "{$look}: the Copilot tile still has a background");
+            $this->assertMatchesRegularExpression('/<svg[^>]*width="32"[^>]*data-ai-mark[^>]*data-rail-copilot/s', $html, "{$look}: the rail Ai mark is not the tile's full size");
+        }
+
+        foreach (['tiles', 'dynamic'] as $look) {
+            $this->assertStringNotContainsString('data-rail-tile-bare', $this->pageAs($look), "{$look}: the bare tile leaked into a look that must stay original");
+        }
+    }
+
     public function test_the_component_has_no_background_its_own_gradient_a_golden_dot_and_a_thinking_state(): void
     {
         $one = Blade::render('<x-ui.ai-mark :size="40" />');

@@ -521,10 +521,13 @@
                                  থাকলে পরের পাঠক ভাবত ছায়াটা আসে। --}}
                             {{-- ⓘ `data-rail-tile` — টাইলের জমিন এই ঘরেই হিসাব হয় (`tokens.css`); `:root`-এ হলে
                                  `--color-module-current` সেখানে নেই বলে সব টাইল ব্র্যান্ডের এক নীলে পড়ত (৩০ অক্টোবর ২০২৬, ছবিতে ধরা) --}}
-                            <span data-rail-tile class="grid size-8 place-items-center transition-shadow"
-                                  style="background: {{ $isActive
+                            {{-- ⭐ কোপাইলটের টাইলে কোনো পট নেই — জীবন্ত "Ai" চিহ্ন নিজেই টাইলের পুরো মাপে (মালিক, ২৩ নভেম্বর ২০২৬:
+                                 "ব্যাকগ্রাউন্ড ছাড়া আইকনটা শুধু বড় করে দাও, বক্সটা যতটুক বড় অতটুক"; ABOS-এর চেহারাগুলোয়, [[AiMark::shows()]]) --}}
+                            @php $aiTile = (\App\Core\Navigation\MenuLook::LIVING_TILES[$module['code']] ?? null) === 'copilot-mark' && \App\Core\Support\AiMark::shows(); @endphp
+                            <span data-rail-tile class="grid size-8 place-items-center transition-shadow" @if ($aiTile) data-rail-tile-bare @endif
+                                  style="background: {{ $aiTile ? 'transparent' : ($isActive
                                              ? 'var(--rail-tile-on-bg, var(--rail-tile-bg))'
-                                             : 'var(--rail-tile-bg)' }};
+                                             : 'var(--rail-tile-bg)') }};
                                          border-radius: var(--rail-tile-radius);
                                          color: var(--rail-tile-ink);
                                          @if ($isActive) box-shadow: inset var(--rail-tile-on-edge-w) 0 0 var(--rail-tile-on-edge); @endif
@@ -552,8 +555,8 @@
                                      নয়, ফাঁকটাই চিহ্নের জায়গা খাচ্ছিল। --}}
                                 {{-- ⭐ কোপাইলট — উপরের বারের একই জীবন্ত মগজ, স্থির ছবি নয় (মালিক, ১৩ নভেম্বর ২০২৬) --}}
                                 {{-- ⭐ ABOS looks: the living "Ai" mark (owner, 21 Nov 2026); other looks keep the brain --}}
-                                @if ((\App\Core\Navigation\MenuLook::LIVING_TILES[$module['code']] ?? null) === 'copilot-mark' && \App\Core\Support\AiMark::shows())
-                                    <x-ui.ai-mark :size="22" data-rail-copilot />
+                                @if ($aiTile)
+                                    <x-ui.ai-mark :size="32" data-rail-copilot />
                                 @elseif ((\App\Core\Navigation\MenuLook::LIVING_TILES[$module['code']] ?? null) === 'copilot-mark')
                                     <x-shell.copilot-mark size="bare" class="cq-rail" data-rail-copilot />
                                 @else
@@ -780,11 +783,14 @@
                          পাতা অকারণে লম্বা হত (রসিদে ১,৭০০px), স্টিকি সাইডবার পাতার সাথে সরে যেত আর মেনু নিচের বারের তলায় যেত (fe, ২২ অক্টোবর ২০২৬) --}}
                     @php
                         /* ⭐ দল ভাঁজ করা — কেবল তিন ABOS রূপে ([[Ui::foldsMenuGroups()]]; মালিক, ২০ নভেম্বর ২০২৬); বাকি রূপে আগের মাথা */
-                        $foldGroups = ($activeModule['panel_sections'] ?? []) === []
-                            && \App\Core\Support\Ui::foldsMenuGroups(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)));
+                        $foldLookOn = \App\Core\Support\Ui::foldsMenuGroups(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)));
+                        $foldGroups = ($activeModule['panel_sections'] ?? []) === [] && $foldLookOn;
+                        /* ⭐ ভাগে সাজানো মডিউলও (সিস্টেম ও প্রশাসন) ভাঁজ হয় — প্রতিটা ভাগ এক দল (মালিক, ২৩ নভেম্বর ২০২৬: "মেনু এবং সাবমেনু
+                           গুলা ফোল্ড হয়ে থাকার কথা, হচ্ছে না") */
+                        $foldSections = ($activeModule['panel_sections'] ?? []) !== [] && $foldLookOn;
                     @endphp
                     <nav class="min-h-0 flex-1 space-y-px overflow-y-auto overflow-x-hidden px-2 pb-4"
-                         @if ($foldGroups) data-menu-fold-nav="{{ $activeModule['code'] }}" @endif
+                         @if ($foldGroups || $foldSections) data-menu-fold-nav="{{ $activeModule['code'] }}" @endif
                          aria-label="{{ __('core.a11y.main_navigation') }}">
 
                         @php
@@ -817,6 +823,15 @@
                             $foldSeen = [];
                             $foldNow = null;
                             foreach ($panelRows as $foldAt => $foldRow) {
+                                if ($foldSections) {
+                                    $foldNow = 'sec-'.($foldRow['section'] ?? 'other');
+                                    $foldKeyOf[$foldAt] = $foldNow;
+                                    if ($foldRow['active'] ?? false) {
+                                        $foldHere[$foldNow] = true;
+                                    }
+
+                                    continue;
+                                }
                                 $foldLook = $menuLooks[$foldAt] ?? null;
                                 if (($foldLook['kind'] ?? null) === null) {
                                     $foldNow = null;
@@ -870,7 +885,20 @@
                                    x-show="filter === ''">{{ $look['name'] }}</p>
                                 @endif
                             @endif
-                            @if ($panelSections !== [] && ($item['section'] ?? null) !== null
+                            @if ($foldSections && $foldKey !== null && $foldOpenGroup === null)
+                                {{-- ⭐ ভাগের মাথা ভাঁজের বোতাম — অন্য মডিউলের দলের মাথার মতোই --}}
+                                <div class="menu-fold-grp" data-menu-fold-grp="{{ $foldKey }}">
+                                <button type="button" class="menu-kind-head menu-fold-head" data-menu-kind="section"
+                                        data-menu-fold="{{ $foldKey }}" data-panel-section="{{ $item['section'] ?? 'other' }}"
+                                        @if (isset($foldHere[$foldKey])) data-menu-fold-here @endif
+                                        aria-expanded="{{ isset($foldHere[$foldKey]) ? 'true' : 'false' }}"
+                                        x-show="filter === ''">
+                                    <span class="menu-fold-name">{{ ($item['section'] ?? null) !== null ? __($activeModule['code'].'::menu.section_'.$item['section']) : '…' }}</span>
+                                    <svg class="menu-fold-chev" data-menu-fold-chev width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </button>
+                                <div class="menu-fold-items" data-menu-fold-items="{{ $foldKey }}">
+                                @php($foldOpenGroup = $foldKey)
+                            @elseif (! $foldSections && $panelSections !== [] && ($item['section'] ?? null) !== null
                                 && ($item['section'] ?? null) !== ($panelRows[$loop->index - 1]['section'] ?? null))
                                 <p data-panel-section="{{ $item['section'] }}"
                                    class="px-2.5 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wide text-(--color-ink-muted)">

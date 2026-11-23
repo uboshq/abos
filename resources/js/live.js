@@ -99,6 +99,10 @@ export function placeFresh (doc, fresh, morph) {
 
             if (!to) return
 
+            // ⛔ নিজের তথ্য নিজে আনে এমন পাতা (বার্তা) — সার্ভারের খালি খোলস বসালে খোলা কথোপকথন মুছে যেত, পর্দা "নাই হয়ে
+            // যায়" (মালিক, ২৩ নভেম্বর ২০২৬)। এমন অংশ `data-live-off` বলে, তাই হাত দেওয়া হয় না।
+            if (el.matches('[data-live-off]') || el.querySelector('[data-live-off]')) return
+
             morph(el, to, {
                 updating (from, toEl, childrenOnly, skip) {
                     if (isTouched(from, doc) || isOpenDialog(from) || isWorkingForm(from)) skip()

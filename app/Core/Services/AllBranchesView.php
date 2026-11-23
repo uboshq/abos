@@ -122,6 +122,16 @@ final class AllBranchesView
         'paper.revoke',
         'paper.whatsapp',
         'paper.sms',
+
+        // ── বার্তা ও কল — সহকর্মীর সাথে কথা, কোনো শাখার কাগজ বা হিসাব নয় (মালিক, ২৩ নভেম্বর ২০২৬: "ওয়েবে বার্তা লেখা যায় না" —
+        //    "সব শাখা"-তে পাঠানো 409 পাচ্ছিল, তাই কথোপকথন খুলত না আর লেখার ঘর দেখাত না)। ওয়েবের দুই রাস্তা আর ফোনের API একসাথে।
+        'messaging.audit.open',
+        'messaging.x.send', 'messaging.x.direct', 'messaging.x.groups', 'messaging.x.members.add', 'messaging.x.forward', 'messaging.x.papers',
+        'messaging.x.read', 'messaging.x.typing', 'messaging.x.mute', 'messaging.x.message.delete',
+        'messaging.x.calls.start', 'messaging.x.calls.answer', 'messaging.x.calls.decline', 'messaging.x.calls.end',
+        'api.messaging.send', 'api.messaging.direct', 'api.messaging.groups', 'api.messaging.members.add', 'api.messaging.forward', 'api.messaging.papers',
+        'api.messaging.read', 'api.messaging.delivered', 'api.messaging.typing', 'api.messaging.mute', 'api.messaging.message.delete',
+        'api.messaging.calls.start', 'api.messaging.calls.answer', 'api.messaging.calls.decline', 'api.messaging.calls.end',
     ];
 
     public function __construct(private readonly DataScope $scope) {}
@@ -196,7 +206,21 @@ final class AllBranchesView
             return true;
         }
 
-        return in_array((string) $request->route()?->getName(), self::ALLOWED, true);
+        return self::opens((string) $request->route()?->getName());
+    }
+
+    /**
+     * ⭐ নামটা "সব শাখা"-তে খোলা কি না — হাতে দেখা [[ALLOWED]], আর গোটা কোম্পানির প্রশাসন: ব্যবহারকারী, ভূমিকা, সেটিংস,
+     * শাখা-কোম্পানি, নোটিশ, রূপ — কোনো শাখার কাগজ বা হিসাব নয় (মালিক, ২৩ নভেম্বর ২০২৬, "ok")।
+     * ⛔ পুরনো খাতা থেকে আনা (`system_admin.import.*`) বাদ — সেটা শাখার কাগজ লেখে।
+     */
+    public static function opens(string $name): bool
+    {
+        if (in_array($name, self::ALLOWED, true)) {
+            return true;
+        }
+
+        return str_starts_with($name, 'system_admin.') && ! str_starts_with($name, 'system_admin.import');
     }
 
     /**
@@ -211,7 +235,15 @@ final class AllBranchesView
         $routes = app('router')->getRoutes();
         $patterns = [];
 
-        foreach (self::ALLOWED as $name) {
+        $names = self::ALLOWED;
+        foreach ($routes as $any) {
+            $anyName = (string) $any->getName();
+            if ($anyName !== '' && ! in_array($anyName, self::ALLOWED, true) && self::opens($anyName)) {
+                $names[] = $anyName;
+            }
+        }
+
+        foreach ($names as $name) {
             $route = $routes->getByName($name);
 
             if (! $route instanceof Route) {
