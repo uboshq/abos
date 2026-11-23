@@ -55,6 +55,12 @@
     if ($bulk && ! request()->filled('export')) {
         array_unshift($columns, \App\Core\Bulk\BulkRun::pickColumn('purchase-order-bulk', fn ($d) => (string) $d->document_no));
     }
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        \App\Core\ListFilter\Facets::flag('cancelled', __('purchase::action.show_cancelled')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -68,9 +74,10 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('purchase::menu.orders')" :count="__('purchase::message.order_note')"
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$facetPanel" :title="__('purchase::menu.orders')" :count="__('purchase::message.order_note')"
                 :columns="$columns" :search-placeholder="__('purchase::message.order_search')"
                           :sort="$sortOptions">
         <x-slot:actions>
@@ -80,12 +87,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <x-ui.date-range :dates="$dates" />
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('purchase::action.show_cancelled') }}
-                </label>
             </x-ui.toolbar>
 
             {{-- ধাপের স্ট্রিপ — কয়টা কোথায় আটকে, আর কত টাকার।
@@ -110,4 +111,5 @@
         <x-ui.pager :rows="$orders" />
         <x-ui.list-totals :rows="$orders" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

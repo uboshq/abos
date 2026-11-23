@@ -22,6 +22,16 @@
         ['key' => 'changes', 'label' => __('governance::field.changes'),
          'render' => fn ($t) => view('governance::audit.partials.summary', ['trail' => $t])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('user', __('governance::field.who'),
+            collect($users)->mapWithKeys(fn ($u) => [(string) $u->id => $u->name])->all(), __('governance::label.all_users')),
+        \App\Core\ListFilter\Facets::pick('action', __('governance::field.action'),
+            collect($actions)->mapWithKeys(fn ($a) => [$a => \App\Models\AuditTrail::actionInWords($a)])->all(), __('governance::label.all_actions')),
+        \App\Core\ListFilter\Facets::pick('module', __('governance::field.module'), collect($modules)->all(), __('governance::label.all_modules')),
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -32,6 +42,7 @@
         {{ __('governance::message.read_only') }}
     </p>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         {{--
             ছাঁকনিগুলো শেয়ার্ড টুলবারের ভেতরে, নিজের ফর্মে নয়।
@@ -44,52 +55,10 @@
             চারটা প্রশ্ন — কে, কী কাজ, কোন মডিউল, কোন সময়ে — ফিল্টার
             প্যানেলে; খোঁজার ঘরটা টুলবারের নিজের।
         --}}
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('governance::menu.audit_trail')" :count="trans_choice('core.count.records', $trails->total(), ['count' => $trails->total()])"
                 :sort="$sortOptions"
-                :columns="$columns" :search-placeholder="__('governance::label.search_hint')">
-                <select name="user" aria-label="{{ __('governance::field.who') }}"
-                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2 text-sm">
-                    <option value="">{{ __('governance::label.all_users') }}</option>
-                    @foreach ($users as $user)
-                        <option value="{{ $user->id }}" @selected(($filters['user'] ?? null) == $user->id)>
-                            {{ $user->name }}
-                        </option>
-                    @endforeach
-                </select>
-
-                <select name="action" aria-label="{{ __('governance::field.action') }}"
-                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2 text-sm">
-                    <option value="">{{ __('governance::label.all_actions') }}</option>
-                    @foreach ($actions as $action)
-                        <option value="{{ $action }}" @selected(($filters['action'] ?? null) === $action)>
-                            {{ \App\Models\AuditTrail::actionInWords($action) }}
-                        </option>
-                    @endforeach
-                </select>
-
-                <select name="module" aria-label="{{ __('governance::field.module') }}"
-                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2 text-sm">
-                    <option value="">{{ __('governance::label.all_modules') }}</option>
-                    @foreach ($modules as $code => $label)
-                        <option value="{{ $code }}" @selected(($filters['module'] ?? null) === $code)>
-                            {{ $label }}
-                        </option>
-                    @endforeach
-                </select>
-
-                <x-ui.date name="from"
-                            value="{{ $filters['from'] ?? '' }}"
-                            aria-label="{{ __('governance::field.from') }}"
-                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-
-                <x-ui.date name="to"
-                            value="{{ $filters['to'] ?? '' }}"
-                            aria-label="{{ __('governance::field.to') }}"
-                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                :columns="$columns" :search-placeholder="__('governance::label.search_hint')" :facets="$facetPanel">
                             </x-ui.toolbar>
         </form>
 
@@ -102,4 +71,5 @@
         <x-ui.pager :rows="$trails" />
         <x-ui.list-totals :rows="$trails" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

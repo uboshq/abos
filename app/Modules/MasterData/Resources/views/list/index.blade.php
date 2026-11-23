@@ -7,6 +7,12 @@
     ডিফল্ট সারিটা আলাদা করে চিহ্নিত: নতুন লেনদেনে ওটাই আপনা থেকে বসে,
     আর কোনটা বসবে তা না জানলে ভুল ধরা যায় না।
 --}}
+@php
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('inactive', __('master_data::action.show_inactive')),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __($spec['title']) }}</x-slot:title>
 
@@ -54,13 +60,14 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             {{-- ⚠️ গোনাটা `total()`, `count()` নয় — `count()` এই পাতার
                  সারি গোনে, তাই তিনশো একক থাকলেও টুলবারে লেখা উঠত
                  "৫০টি"। ছাঁকনি দেওয়ার পর "কয়টা রইল" প্রশ্নের উত্তর
                  ঠিক এই সংখ্যাটাই, আর সেটা পাতার নয়, তালিকার। --}}
-            <x-ui.toolbar :title="__($spec['title'])" :count="trans_choice('master_data::message.count', $records->total(), ['count' => $records->total()])" :sort="$sortOptions">
+            <x-ui.toolbar :title="__($spec['title'])" :count="trans_choice('master_data::message.count', $records->total(), ['count' => $records->total()])" :sort="$sortOptions" :facets="$facetPanel">
         <x-slot:actions>
             @can('master_data.manage')
                     <x-ui.button tone="primary" icon="plus"
@@ -69,10 +76,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked(request()->boolean('inactive')) class="size-4">
-                    {{ __('master_data::action.show_inactive') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -106,4 +109,5 @@
         <x-ui.pager :rows="$records" />
         <x-ui.list-totals :rows="$records" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

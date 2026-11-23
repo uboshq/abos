@@ -2,21 +2,22 @@
     ⭐ ওপরে পাঠানো — অপেক্ষমাণ অনুমোদন: শেষ সময়, স্তর, দায়িত্বে কে, কাকে পাঠানো হলো (মালিকের স্পেক §৪, §১৪; ধাপ ৪)।
     ⓘ মনে করানো আর ওপরে পাঠানো করে অনুমোদন ইঞ্জিন নিজে (`abos:approvals-due`); এখানে কেবল দেখা। প্রতিটা সারি অনুরোধে খোলে।
 --}}
+@php
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('state', __('notification::escalation.state'),
+            collect(['waiting', 'late', 'escalated'])->mapWithKeys(fn ($s) => [$s => __('notification::escalation.filter.'.$s)])->all(), __('core.notify.any')),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::escalation.title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::escalation.title')" :search="false" :export="false" :share="false">
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::escalation.state') }}
-                <select name="state" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach (['waiting', 'late', 'escalated'] as $state)
-                        <option value="{{ $state }}" @selected(($filters['state'] ?? '') === $state)>{{ __('notification::escalation.filter.'.$state) }}</option>
-                    @endforeach
-                </select>
-            </label>
+        <form id="list-form" method="GET" class="contents">
+        <x-ui.toolbar :title="__('notification::escalation.title')" :search="false" :export="false" :share="false" :facets="$facetPanel">
         </x-ui.toolbar>
+        </form>
 
         <p class="text-sm text-(--color-ink-muted)">{{ __('notification::escalation.note') }}</p>
 
@@ -77,4 +78,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

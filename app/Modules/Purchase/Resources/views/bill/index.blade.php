@@ -118,6 +118,12 @@
     if ($bulk && ! request()->filled('export')) {
         array_unshift($columns, \App\Core\Bulk\BulkRun::pickColumn('purchase-bill-bulk', fn ($d) => (string) $d->document_no));
     }
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        \App\Core\ListFilter\Facets::flag('cancelled', __('purchase::action.show_cancelled')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu" :process-band="$processBand ?? []">
@@ -131,21 +137,16 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('purchase::menu.bills')" :count="__('purchase::message.bill_note')"
                 :columns="$columns" :search-placeholder="__('purchase::message.bill_search')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
         {{-- ⭐ "নতুন বিল" নেই — মালিকের নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: বিল জন্মায়
              মাল গ্রহণে আর সরাসরি ক্রয়ে, আপনা থেকে। এই পাতা কেবল তালিকা; বিল
              খুলে সম্পাদনা করা যায়। ⓘ আদেশের পাতার "এই আদেশের বিল করুন" থাকল —
              যে ডিপো মাল গ্রহণের পর্দা বন্ধ রাখে, তার একমাত্র পথ ওটাই। --}}
-                <x-ui.date-range :dates="$dates" />
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('purchase::action.show_cancelled') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -170,4 +171,5 @@
         {{-- ⭐ মোট · পরিশোধিত · বাকি — টেবিলের সর্বমোটের একই সংখ্যা, গোটা ছাঁকনির (মালিক, ৫ অক্টোবর ২০২৬) --}}
         <x-ui.list-totals :rows="$totals['rows']" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

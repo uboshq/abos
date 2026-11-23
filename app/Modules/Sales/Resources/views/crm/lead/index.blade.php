@@ -21,6 +21,14 @@
         ['key' => 'status', 'label' => __('sales::crm.status'), 'width' => '8rem',
          'render' => fn ($l) => view('sales::crm.lead.partials.status', ['lead' => $l])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('status', __('sales::crm.status'),
+            collect(\App\Modules\Sales\Models\Lead::STATUSES)
+                ->mapWithKeys(fn ($state) => [$state => __('sales::crm.lead_status.' . $state)])->all(),
+            __('sales::crm.all_statuses')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -40,31 +48,19 @@
 
     <x-ui.errors />
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::crm.leads')"
                           :columns="$columns"
                           :search-placeholder="__('sales::crm.lead_search')"
-                          :export="false" :share="false" :print="false">
+                          :export="false" :share="false" :print="false" :facets="$facetPanel">
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('sales.lead.create')">
                         {{ __('sales::crm.new_lead') }}
                     </x-ui.button>
                 </x-slot:actions>
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <select name="status"
-                            class="h-(--spacing-field) rounded-(--radius-field) border
-                                   border-(--color-border) bg-(--color-surface-card) px-3">
-                        <option value="">{{ __('sales::crm.all_statuses') }}</option>
-                        @foreach (\App\Modules\Sales\Models\Lead::STATUSES as $state)
-                            <option value="{{ $state }}" @selected($status === $state)>
-                                {{ __('sales::crm.lead_status.' . $state) }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -74,4 +70,5 @@
         <x-ui.pager :rows="$leads" />
         <x-ui.list-totals :rows="$leads" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

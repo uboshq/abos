@@ -477,10 +477,12 @@ final class ReportApiController extends Controller
 
             [$top, $bottom] = $column->ratio;
             $den = $sums[$bottom] ?? '0';
+            // ⭐ বাড়া-কমার হার — (লব − হর) ÷ হর; ওয়েবের সর্বমোটের একই নিয়ম ([[ReportColumn::$ratio]])
+            $num = ($column->ratio[2] ?? null) === 'change' ? bcsub($sums[$top] ?? '0', $den, 6) : ($sums[$top] ?? '0');
 
             // ⓘ হর শূন্য — অনুপাত নেই; ঘরটা খালি, ০% নয় (সর্বমোটের একই নিয়ম)
             $sums[$column->key] = bccomp($den, '0', 4) > 0
-                ? bcdiv(bcmul($sums[$top] ?? '0', '100', 6), $den, $column->decimals())
+                ? bcdiv(bcmul($num, '100', 6), $den, $column->decimals())
                 : null;
         }
 

@@ -561,6 +561,14 @@ return [
 
     'report' => [
         'filter_not_allowed' => ':filter — that choice is not on the list, or is outside what you may see. Pick from the list.',
+        // Names of a report's own choice fields — in the right-hand panel ([[ReportChoices]])
+        'choice' => [
+            'kind' => 'Money channel',
+            'reason' => 'Why it is not counted',
+            'direction' => 'Direction',
+            'status' => 'Status',
+            'state' => 'State',
+        ],
         'filters' => [
             'any' => 'All',
             'clear' => 'Clear filters',
@@ -582,6 +590,11 @@ return [
         'section_total' => 'Subtotal',
         'more_in_branch' => 'This branch has :count more rows — choose the branch to see them all, page by page.',
         'grand_total' => 'Grand total',
+        // The first and last columns of a report turned on its side ([[ReportExport::transposed()]])
+        'figure' => 'Figure',
+        'all' => 'All',
+        // The rest after the largest few in a share chart ([[ReportChart]])
+        'others' => 'Others',
         'contribution' => 'Share %',
         'change' => 'Change %',
         'compare_previous' => 'Same length before',
@@ -2007,6 +2020,7 @@ return [
         'pick_none' => 'Clear this',
         'more' => '+ :n more',
         'clear_chips' => 'Clear all filters',
+        'any' => 'All',
         'date' => 'Date',
         'custom' => 'Pick dates…',
         'preset' => [

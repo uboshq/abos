@@ -342,6 +342,22 @@
         'hold' => $sum(fn ($p) => $p->hold_total),
         'available' => $sum(fn ($p) => $available($p)),
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    // ⛔ দামের ঘর কেবল চাবি থাকলে — আগের মতোই ($maySeeCost)
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::one('stock', __('inventory::field.stock_filter'), [
+            'holding' => __('inventory::message.stock_holding'),
+            'zero' => __('inventory::message.stock_zero'),
+            'all' => __('inventory::message.stock_all'),
+        ], (string) $stock),
+        $maySeeCost ? \App\Core\ListFilter\Facets::one('cost', __('inventory::field.purchase_price'), [
+            'show' => __('inventory::message.cost_show'),
+            'hide' => __('inventory::message.cost_hide'),
+        ], $showCost ? 'show' : 'hide') : null,
+        \App\Core\ListFilter\Facets::pick('warehouse_id', __('inventory::field.warehouse'),
+            $warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])->all()),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -355,11 +371,12 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.stock')" :count="__('inventory::message.stock_math')"
                 :columns="$columns" :search-placeholder="__('inventory::message.search_placeholder')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
         <x-slot:actions>
             @can('inventory.stock.adjust')
                     <x-ui.button tone="secondary" :href="route('inventory.stock.adjust')">
@@ -367,46 +384,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                {{-- ⭐ শূন্য মজুদের পণ্য তালিকায় আসে না — মালিকের নির্দেশ,
-                     ২৮ সেপ্টেম্বর ২০২৬। ⓘ ছাঁকনিটা গুদামের ঘরের হুবহু একই
-                     চেহারায়, কারণ দুইটা একই কাজ করে আর একই টুলবারে বসে। --}}
-                <label class="flex items-center gap-2 text-sm">
-                    <span class="sr-only">{{ __('inventory::field.stock_filter') }}</span>
-                    <select name="stock"
-                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                   bg-(--color-surface-app) px-2 text-sm">
-                        <option value="holding" @selected($stock === 'holding')>{{ __('inventory::message.stock_holding') }}</option>
-                        <option value="zero" @selected($stock === 'zero')>{{ __('inventory::message.stock_zero') }}</option>
-                        <option value="all" @selected($stock === 'all')>{{ __('inventory::message.stock_all') }}</option>
-                    </select>
-                </label>
-
-                {{-- ⓘ ঘরটা দেখা যায় কেবল চাবি থাকলে। ⛔ চাবি ছাড়া ছাঁকনিটা
-                     দেখানো মানে জানিয়ে দেওয়া যে একটা লুকানো কলাম আছে, আর
-                     সেটা নিজেই একটা তথ্য। --}}
-                @if ($maySeeCost)
-                    <label class="flex items-center gap-2 text-sm">
-                        <span class="sr-only">{{ __('inventory::field.purchase_price') }}</span>
-                        <select name="cost"
-                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 text-sm">
-                            <option value="show" @selected($showCost)>{{ __('inventory::message.cost_show') }}</option>
-                            <option value="hide" @selected(! $showCost)>{{ __('inventory::message.cost_hide') }}</option>
-                        </select>
-                    </label>
-                @endif
-
-                <label class="flex items-center gap-2 text-sm">
-                    <span class="sr-only">{{ __('inventory::field.warehouse') }}</span>
-                    <select name="warehouse_id"
-                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                   bg-(--color-surface-app) px-2 text-sm">
-                        <option value="">{{ __('inventory::field.warehouse') }}</option>
-                        @foreach ($warehouses as $w)
-                            <option value="{{ $w->id }}" @selected($warehouse?->id === $w->id)>{{ $w->name() }}</option>
-                        @endforeach
-                    </select>
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -461,4 +438,5 @@
         @endphp
         <x-ui.list-totals :rows="$products" :totals="$barTotals" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

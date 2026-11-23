@@ -22,6 +22,11 @@
         ['key' => 'salesperson', 'label' => __('sales::crm.salesperson'), 'width' => '10rem',
          'render' => fn ($o) => $o->salesperson?->name ?: '-'],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('stage', __('sales::crm.stage'), collect($stages)->all(), __('sales::crm.all_stages')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -47,29 +52,19 @@
 
     <x-ui.errors />
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::crm.opportunities')"
                           :columns="$columns"
                           :search-placeholder="__('sales::crm.opportunity_search')"
-                          :export="false" :share="false" :print="false">
+                          :export="false" :share="false" :print="false" :facets="$facetPanel">
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('sales.opportunity.create')">
                         {{ __('sales::crm.new_opportunity') }}
                     </x-ui.button>
                 </x-slot:actions>
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <select name="stage"
-                            class="h-(--spacing-field) rounded-(--radius-field) border
-                                   border-(--color-border) bg-(--color-surface-card) px-3">
-                        <option value="">{{ __('sales::crm.all_stages') }}</option>
-                        @foreach ($stages as $id => $name)
-                            <option value="{{ $id }}" @selected((string) $stage === (string) $id)>{{ $name }}</option>
-                        @endforeach
-                    </select>
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -79,4 +74,5 @@
         <x-ui.pager :rows="$opportunities" />
         <x-ui.list-totals :rows="$opportunities" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

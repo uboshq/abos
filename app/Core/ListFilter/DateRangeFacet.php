@@ -48,6 +48,21 @@ final class DateRangeFacet extends Facet
     }
 
     /**
+     * ⓘ পাতার নিজের বাড়তি চটজলদি পরিসর — যেমন রিপোর্টের "শুরু থেকে" (`from=all`); চাবি => মান, যা ঠিকানায় বসে।
+     *
+     * @var list<array{key: string, label: string, set: array<string, string>, on: bool}>
+     */
+    public array $extra = [];
+
+    /** @param  array<string, string>  $set */
+    public function withPreset(string $key, string $label, array $set, bool $on): static
+    {
+        $this->extra[] = ['key' => $key, 'label' => $label, 'set' => $set, 'on' => $on];
+
+        return $this;
+    }
+
+    /**
      * চটজলদি নামের পরিসর — Y-m-d, আজ সহ।
      *
      * ⛔ "গত মাস" `subMonthNoOverflow` — ৩১ তারিখে `subMonth()` আগের মাসে না গিয়ে এই মাসেই থেকে যায়

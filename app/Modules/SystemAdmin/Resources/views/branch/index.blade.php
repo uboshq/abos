@@ -23,6 +23,13 @@
         ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($b) => view('system_admin::branch.partials.actions', ['branch' => $b])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('company', __('system_admin::menu.companies'),
+            $companies->mapWithKeys(fn ($c) => [$c->id => $c->name()])->all(),
+            __('system_admin::message.all_companies')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -48,24 +55,18 @@
         {{ __('system_admin::message.branch_note') }}
     </p>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('system_admin::menu.branches')"
                           :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])"
                           :search-placeholder="__('system_admin::message.branch_search')"
-                          :columns="$columns">
+                          :columns="$columns" :facets="$facetPanel">
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('system_admin.branch.create')">
                         {{ __('core.action.create') }}
                     </x-ui.button>
                 </x-slot:actions>
-
-                <x-slot:filters>
-                    <x-ui.select name="company" :label="__('system_admin::menu.companies')"
-                                 :options="$companies->mapWithKeys(fn ($c) => [$c->id => $c->name()])"
-                                 :placeholder="__('system_admin::message.all_companies')"
-                                 :selected="request('company')" />
-                </x-slot:filters>
             </x-ui.toolbar>
         </form>
 
@@ -78,4 +79,5 @@
 
     <x-ui.pager :rows="$rows" />
     <x-ui.list-totals :rows="$rows" />
+    </x-ui.filter-layout>
 </x-layouts.app>

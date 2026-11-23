@@ -73,6 +73,11 @@
         $columns[] = ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '8rem',
             'render' => fn ($v) => view('accounts::voucher.partials.status', ['voucher' => $v])];
     }
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই তারিখের ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -99,25 +104,16 @@
         @endforeach
     </nav>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
 
             {{-- ⓘ ট্যাব ছাঁকনির চিপ নয় — উপরের ট্যাবগুলোই দেখায় (১৯ সেপ্টেম্বর ২০২৬) --}}
             <x-ui.toolbar :title="__('accounts::voucher.tab.' . $tab)" :quiet="['tab']"
                 :count="trans_choice('accounts::message.voucher_count', $vouchers->total(), ['count' => $vouchers->total()])"
                 :sort="$sortOptions"
-                :columns="$columns">
-                <x-ui.date name="from"
-                           value="{{ request('from') }}"
-                           aria-label="{{ __('accounts::field.from_date') }}"
-                           :submit-on-change="true"
-                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-                <x-ui.date name="to"
-                           value="{{ request('to') }}"
-                           aria-label="{{ __('accounts::field.to_date') }}"
-                           :submit-on-change="true"
-                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+                :columns="$columns" :facets="$facetPanel">
             </x-ui.toolbar>
         </form>
 
@@ -143,5 +139,6 @@
         <x-ui.pager :rows="$vouchers" />
         <x-ui.list-totals :rows="$vouchers" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
     </x-money.page>
 </x-layouts.app>

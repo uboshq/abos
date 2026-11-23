@@ -14,6 +14,11 @@
         ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($w) => view('inventory::partials.warehouse-actions', ['warehouse' => $w])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('inactive', __('inventory::action.show_inactive')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -27,11 +32,12 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.warehouses')" :count="trans_choice('inventory::message.warehouse_count', $warehouses->total(), ['count' => $warehouses->total()])"
                 :columns="$columns" :search-placeholder="__('inventory::message.warehouse_search')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
         <x-slot:actions>
             @can('create', \App\Modules\Inventory\Models\Warehouse::class)
                     <x-ui.button tone="primary" icon="plus" :href="route('inventory.warehouse.create')">
@@ -39,10 +45,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
-                    {{ __('inventory::action.show_inactive') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -55,4 +57,5 @@
         <x-ui.pager :rows="$warehouses" />
         <x-ui.list-totals :rows="$warehouses" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

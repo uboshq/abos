@@ -222,9 +222,36 @@ final class ReportDefinition
          * @var array<string, class-string<\App\Core\Contracts\ReportFilterSource>>
          */
         public readonly array $sources = [],
+
+        /*
+         * ⭐ পাশ ফেরানো টেবিল — সারিগুলো কলাম হয়, অঙ্কের ঘরগুলো সারি (মালিকের অনুমোদিত নমুনা, ২৩ নভেম্বর ২০২৬: "শাখা ধরে বিক্রয়" —
+         *   শাখাগুলো পাশাপাশি, প্রতিটা হিসাব এক সারিতে, শেষে "সব"-এর ঘর)। পর্দা, Excel আর কাগজ তিনটাই একই দিকে ([[ReportExport]])।
+         * ⓘ কেবল অল্প সারির রিপোর্টে (শাখা) — প্রথম ঘরটা কলামের মাথা হয়; শাখার ভাগ আর পাতা-ভাগ এখানে থাকে না।
+         */
+        public readonly bool $transpose = false,
+
+        /*
+         * ⭐ টেবিলের উপরে গ্রাফ — `['type' => pair|line|bars|donut, 'label' => নামের ঘর, 'series' => [অঙ্কের ঘর…], 'title' => ?]`
+         *   (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportChart]])। ⓘ ঘরগুলো এই রিপোর্টেরই — না থাকলে বুটেই থামে।
+         *
+         * @var array{type: string, label: string, series: list<string>, title?: string}|null
+         */
+        public readonly ?array $chart = null,
     ) {
         if (! in_array($defaultPeriod, [self::PERIOD_MONTH, self::PERIOD_FISCAL_YEAR], true)) {
             throw new \InvalidArgumentException("Report '{$key}' declares an unknown default period '{$defaultPeriod}'.");
+        }
+
+        if ($chart !== null) {
+            $known = array_map(fn (array $c) => (string) ($c['key'] ?? ''), $columns);
+            foreach ([$chart['label'] ?? '', ...($chart['series'] ?? [])] as $wanted) {
+                if (! in_array($wanted, $known, true)) {
+                    throw new \InvalidArgumentException("Report '{$key}' charts '{$wanted}', which is not one of its columns.");
+                }
+            }
+            if (! in_array($chart['type'] ?? '', ['pair', 'line', 'bars', 'donut'], true)) {
+                throw new \InvalidArgumentException("Report '{$key}' declares an unknown chart type.");
+            }
         }
 
         foreach ($choices as $filter => $values) {

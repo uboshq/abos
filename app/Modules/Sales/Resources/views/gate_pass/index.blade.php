@@ -55,20 +55,21 @@
                 .'">'.e(__('sales::gate_pass.status.'.$p->status)).'</span>'),
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('cancelled', __('sales::gate_pass.show_cancelled')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::gate_pass.title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::gate_pass.title')" :count="__('sales::gate_pass.subtitle')"
-                          :columns="$columns" :search-placeholder="__('sales::gate_pass.search')">
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('sales::gate_pass.show_cancelled') }}
-                </label>
-            </x-ui.toolbar>
+                          :columns="$columns" :search-placeholder="__('sales::gate_pass.search')" :facets="$facetPanel" />
         </form>
 
         <x-ui.table :view-url="fn ($r) => route('sales.gate_pass.show', $r)" :empty="__('sales::gate_pass.empty')" :rows="$passes" :columns="$columns" />
@@ -76,4 +77,5 @@
         <x-ui.pager :rows="$passes" />
         <x-ui.list-totals :rows="$passes" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

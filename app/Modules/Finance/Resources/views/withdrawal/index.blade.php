@@ -93,6 +93,11 @@
 
     // ⓘ কলাম-মেনু আর ঘনত্ব যে ট্যাব খোলা, তার টেবিলেই খাটে
     $columns = $tab === 'standing' ? $standColumns : $wdColumns;
+
+    // ⭐ মাস ডান পাশের ছাঁকনির প্যানেলে, একই চাবি — কেবল "কে কোথায়" ট্যাবে, আগের মতোই (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        $tab === 'standing' ? \App\Core\ListFilter\Facets::month('month', __('finance::field.month'), (string) $month) : null,
+    ]);
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::menu.withdrawal') }}</x-slot:title>
@@ -111,9 +116,10 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             {{-- ⓘ ঘনত্ব, কলাম বা মাস বদলালে খোলা ট্যাবটা হারায় না --}}
             @if ($tab === 'standing')
                 <input type="hidden" name="tab" value="standing">
@@ -128,12 +134,9 @@
                 :search-placeholder="__('finance::message.withdrawal_search')"
                 :filter-labels="['month' => __('finance::field.month')]"
                 {{-- ⓘ ট্যাব ছাঁকনির চিপ নয়; `highlight` আসে খতিয়ান থেকে নামার লিংকে --}}
-                :quiet="['tab', 'highlight']">
-                @if ($tab === 'standing')
-                    {{-- ── কোন মাস ───────────────────────────────────────────────────
-                         সীমা মাসের হিসাব, তাই পর্দাটাও মাসের। --}}
-                    <x-ui.field name="month" type="month" :label="__('finance::field.month')" :value="$month" />
-                @endif
+                :quiet="['tab', 'highlight']"
+                {{-- ⓘ সীমা মাসের হিসাব, তাই "কে কোথায়" পর্দা মাসের — মাসটা প্যানেলে --}}
+                :facets="$tab === 'standing' ? $facetPanel : null">
 
                 <x-slot:actions>
                     @can('finance.withdrawal.create')
@@ -238,4 +241,5 @@
             <x-ui.list-totals :rows="$rows" :grand="$grand ?? []" :columns="$wdColumns" />
         @endif
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
