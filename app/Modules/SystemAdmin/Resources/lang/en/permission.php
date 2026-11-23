@@ -153,6 +153,8 @@ return [
         'layout' => 'Cheque layouts and books',
         'party_templates' => 'Party message templates',
         'party_messages' => 'Send messages to parties',
+        'party_roads' => 'Set up the party message roads',
+        'party_auto' => 'Set up automatic party messages',
         'sms_gateway' => 'Office SMS phone',
         'use' => 'Use',
         'view' => 'View',

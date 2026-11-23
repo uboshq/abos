@@ -35,6 +35,7 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
         // ⭐ পার্টিকে বার্তা — Meta-র ফেরত-খবর (মালিকের "ok", ২৩ নভেম্বর ২০২৬; 1.3.10-এর লাল)
         'app/Core/Services/PartyMessageDispatcher.php' => 'Meta-র webhook (onCloudStatus) — মানুষ নেই; ঠিকানার কোম্পানির app secret-এ সই মিললে (WhatsAppWebhookController) কেবল '
             .'সেই কোম্পানিতে ঢোকে, আর কেবল সেই কোম্পানির নিজের পাঠানো বার্তার (provider_ref) অবস্থা বদলায়; কারও চাবিতে কিছু খোলে না',
+        'app/Modules/Notification/Http/Controllers/WhatsAppWebhookController.php' => 'Meta-র webhook-এর দরজা — মানুষ নেই, লগইন নেই; ঠিকানার কোম্পানিতে ঢুকে কেবল সেই কোম্পানির verify token (GET) বা app secret-এর HMAC সই (POST) মেলায়, না মিললে ৪০৩ — কিছু পড়ে না, কিছু ফেরায় না',
         'app/Core/Services/WhatsAppCloud.php' => 'Meta-র webhook-এর দেহ (receive) — মানুষ নেই; সই আগেই ঠিকানার কোম্পানির app secret-এ মেলানো (WhatsAppWebhookController), '
             .'তারপর কেবল সেই কোম্পানিতে ঢুকে তার নিজের নম্বর/অ্যাকাউন্টের ঘটনা নেয় (phone_number_id, waba_id মিলিয়ে); বার্তার অবস্থা আর লেখার অনুমোদন ছাড়া কিছু বদলায় না',
         'app/Modules/Accounts/Http/Controllers/InterCompanyController.php' => null,

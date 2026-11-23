@@ -25,8 +25,10 @@ final class TheSystemMenuStandsInSectionsTest extends TestCase
     use RefreshDatabase;
 
     // ⓘ পরিকল্পনার ৭ ভাগ — সপ্তমটা "নিরীক্ষা" (বদলের ইতিহাস, নোটিশের রিপোর্ট), দফা ১ সম্পূর্ণ হলো ৭ নভেম্বর ২০২৬
-    // ⓘ the host's seven, then the guests of the menu merge in menu order — Governance, Backup (owner, 23 Nov 2026; 2a2239ea9)
-    private const ORDER = ['home', 'org', 'people', 'modules', 'comms', 'data', 'audit', 'governance', 'backup'];
+    private const ORDER = ['home', 'org', 'people', 'modules', 'comms', 'data', 'audit'];
+
+    // ⓘ on the panel: the host's seven, then the guests of the menu merge in menu order — Governance, Backup (owner, 23 Nov 2026; 2a2239ea9)
+    private const DRAWN = [...self::ORDER, 'governance', 'backup'];
 
     public function test_every_row_names_a_section_and_the_sections_are_the_plans(): void
     {
@@ -71,7 +73,7 @@ final class TheSystemMenuStandsInSectionsTest extends TestCase
             $under[trim($node->textContent)] = $current;
         }
 
-        $this->assertSame(self::ORDER, $headings, '⛔ ভাগের শিরোনাম পরিকল্পনার ক্রমে নয়, বা একই ভাগ দুইবার।');
+        $this->assertSame(self::DRAWN, $headings, '⛔ ভাগের শিরোনাম পরিকল্পনার ক্রমে নয়, বা একই ভাগ দুইবার।');
         foreach ([
             'system_admin::menu.companies' => 'org',
             'system_admin::menu.users' => 'people',
