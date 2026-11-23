@@ -163,7 +163,7 @@ void main() {
     await tester.pump();
 
     await tester.enterText(find.byType(TextField), 'rahim');
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.text('রহিম স্টোর'), findsOneWidget);
     expect(find.text('কোনো মিল পাওয়া যায়নি'), findsNothing);

@@ -13,6 +13,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
@@ -44,6 +45,7 @@ class _CreditDeskScreenState extends State<CreditDeskScreen> {
   bool _busy = false;
   String? _error;
   final _search = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (_) => _load(listOnly: true));
 
   @override
   void initState() {
@@ -54,6 +56,7 @@ class _CreditDeskScreenState extends State<CreditDeskScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -130,7 +133,8 @@ class _CreditDeskScreenState extends State<CreditDeskScreen> {
                   hintText: context.l10n.creditDeskSearchHint,
                   isDense: true,
                 ),
-                onSubmitted: (_) => _load(listOnly: true),
+                onChanged: _typed.onChanged,
+                onSubmitted: _typed.onSubmitted,
               ),
             ),
             if (page != null && page.rows.isEmpty)

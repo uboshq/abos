@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
 /// ⭐ হিসাবের ছক, ফোনের নিজের পর্দায় — মালিক, ১৭ অক্টোবর ২০২৬: *"mobile er ta mobile app style e zate bujazay"*।
@@ -23,6 +24,7 @@ class ChartOfAccountsScreen extends StatefulWidget {
 
 class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   final _search = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   List<ChartAccount>? _rows;
   String? _error;
   bool _busy = false;
@@ -36,6 +38,7 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -74,7 +77,8 @@ class _ChartOfAccountsScreenState extends State<ChartOfAccountsScreen> {
               controller: _search,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: context.l10n.accountsChartSearchHint),
-              onSubmitted: (_) => _load(),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
             const SizedBox(height: AppSpacing.sm),
             if (_rows != null && rows.isNotEmpty)

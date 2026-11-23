@@ -298,7 +298,7 @@ void main() {
         expect([bar.pageCount, bar.pageSum, bar.allCount, bar.allSum], [2, 173500, 2, 173500]);
 
         await tester.enterText(find.byType(TextField), 'রহিম');
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 600));
         bar = tester.widget<TotalsBar>(find.byType(TotalsBar));
         expect([bar.pageCount, bar.pageSum, bar.allCount, bar.allSum], [1, 48500, 2, 173500],
             reason: 'সর্বমোট পুরো তালিকার — খোঁজায় লুকানো দোকানের বকেয়াও তাতে');

@@ -7,6 +7,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/customer_line.dart';
+import '../../core/widgets/search_debouncer.dart';
 import 'books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/locale/app_locale.dart';
@@ -27,6 +28,7 @@ class PrincipalListScreen extends StatefulWidget {
 
 class _PrincipalListScreenState extends State<PrincipalListScreen> {
   final _search = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   final List<PrincipalRow> _rows = [];
   int? _next;
   PaperTotal? _total;
@@ -43,6 +45,7 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -88,7 +91,8 @@ class _PrincipalListScreenState extends State<PrincipalListScreen> {
                 decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
                     hintText: context.l10n.booksPrincipalSearchHint),
-                onSubmitted: (_) => _load(),
+                onChanged: _typed.onChanged,
+                onSubmitted: _typed.onSubmitted,
               ),
               // ⭐ গোটা ছাঁকনির মোট দেনা — সার্ভারের, সব পাতার, ওয়েবের সরবরাহকারীর তালিকার একই যোগ; ⛔ পুরনো সার্ভারে পট্টি নেই
               // (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)

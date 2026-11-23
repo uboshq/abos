@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/locale/l10n.dart';
 import '../../../core/messenger/messenger_api.dart';
+import '../../../core/widgets/search_debouncer.dart';
 import 'chat_list_look.dart';
 import 'people_picker.dart';
 
@@ -92,7 +93,7 @@ class _Pick {
 class _SendPaperSheetState extends ConsumerState<SendPaperSheet> {
   final TextEditingController _q = TextEditingController();
   final TextEditingController _note = TextEditingController();
-  Timer? _debounce;
+  late final _typed = SearchDebouncer(onSearch: (_) => _search());
 
   List<ChatThread>? _recent;
   Map<String, ChatPerson> _access = const {};
@@ -114,7 +115,7 @@ class _SendPaperSheetState extends ConsumerState<SendPaperSheet> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _typed.dispose();
     _q.dispose();
     _note.dispose();
     super.dispose();
@@ -285,10 +286,8 @@ class _SendPaperSheetState extends ConsumerState<SendPaperSheet> {
                 controller: _q,
                 hint: l.msgListSendWho,
                 icon: Symbols.search,
-                onChanged: (_) {
-                  _debounce?.cancel();
-                  _debounce = Timer(const Duration(milliseconds: 300), _search);
-                },
+                onChanged: _typed.onChanged,
+                onSubmitted: _typed.onSubmitted,
               ),
               Flexible(child: list),
               const SizedBox(height: 8),

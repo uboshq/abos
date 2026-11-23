@@ -6,6 +6,7 @@ import '../../core/promotion/offers_api.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/paged_list.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 
 /// ⭐ চলতি অফার — SR-এর হাতে, কেবল পড়া (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬)।
@@ -27,6 +28,13 @@ class OffersScreen extends StatefulWidget {
 class _OffersScreenState extends State<OffersScreen> {
   bool _enabled = true;
   String _q = '';
+  late final _typed = SearchDebouncer(onSearch: (q) => setState(() => _q = q));
+
+  @override
+  void dispose() {
+    _typed.dispose();
+    super.dispose();
+  }
 
   /// ফোনে দেখানো অফারের গোনা — সার্ভার গোটা চলতি তালিকা একবারে দেয় (২০০ পর্যন্ত), খোঁজ ফোনেই ছাঁকে
   int _shown = 0;
@@ -60,7 +68,8 @@ class _OffersScreenState extends State<OffersScreen> {
               key: const ValueKey('offer-search'),
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: l.promoOffersSearchHint),
-              onSubmitted: (v) => setState(() => _q = v.trim()),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
             const SizedBox(height: AppSpacing.sm),
             // ⭐ গোটা তালিকার গোনা — পাতা ভাঙে না, তাই ফোনের দেখানো সারিই সব (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)

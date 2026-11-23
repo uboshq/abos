@@ -9,6 +9,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
@@ -130,10 +131,12 @@ class DepotCheckScreen extends StatefulWidget {
 class _DepotCheckScreenState extends State<DepotCheckScreen> {
   final _search = TextEditingController();
   String _q = '';
+  late final _typed = SearchDebouncer(onSearch: (q) => setState(() => _q = q));
 
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -150,7 +153,8 @@ class _DepotCheckScreenState extends State<DepotCheckScreen> {
             controller: _search,
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: context.l10n.salesDeskDepotSearch),
-            onSubmitted: (v) => setState(() => _q = v.trim()),
+            onChanged: _typed.onChanged,
+            onSubmitted: _typed.onSubmitted,
           ),
           const SizedBox(height: AppSpacing.sm),
         ],

@@ -9,6 +9,7 @@ import '../../core/locale/app_locale.dart';
 import '../../core/locale/l10n.dart';
 import '../../core/menu/me_api.dart';
 import '../../core/records/money.dart';
+import '../../core/records/party_search.dart';
 import '../../core/status/app_status_chip.dart';
 import '../../core/status/paper_state.dart';
 import '../../core/sync_engine/sync_engine.dart';
@@ -837,7 +838,14 @@ class _VoucherPickSheetState<T> extends State<VoucherPickSheet<T>> {
   @override
   Widget build(BuildContext context) {
     final q = _q.trim().toLowerCase();
-    final rows = widget.options.where((o) => q.isEmpty || widget.label(o).toLowerCase().contains(q)).take(100).toList();
+    // ⭐ পক্ষ — সার্ভারের পক্ষ-খোঁজার নিয়মে ([partyMatches]: প্রতিটা শব্দ নাম/পয়েন্ট/শাখা বা পাশের লেখায়, মোবাইলের শেষ ৪ অঙ্কেও)
+    final rows = widget.options
+        .where((o) => q.isEmpty ||
+            (o is VoucherParty
+                ? partyMatches(q, fields: [widget.label(o), o.label, o.name, o.hint], phones: [o.hint])
+                : widget.label(o).toLowerCase().contains(q)))
+        .take(100)
+        .toList();
     return SafeArea(
       child: Padding(
         padding:

@@ -1513,7 +1513,7 @@ class _PickSheetState<T> extends State<_PickSheet<T>> {
     final shown = q.isEmpty
         ? widget.items
         : widget.items
-            .where((i) => widget.label(i).toLowerCase().contains(q))
+            .where((i) => i is CustomerRecord ? i.matches(q) : widget.label(i).toLowerCase().contains(q))
             .toList();
     return SafeArea(
       child: SizedBox(

@@ -14,6 +14,7 @@ import '../../core/status/paper_state.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
 import '../printing/row_actions.dart';
@@ -61,6 +62,7 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
   late DateTime _from;
   late DateTime _to;
   final _search = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   final List<SalesPaperRow> _rows = [];
   SalesPaperPage? _page;
   bool _busy = false;
@@ -78,6 +80,7 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -142,7 +145,8 @@ class _SalesPaperListScreenState extends State<SalesPaperListScreen> {
                   hintText: context.l10n.salesPapersSearch,
                   isDense: true,
                 ),
-                onSubmitted: (_) => _load(),
+                onChanged: _typed.onChanged,
+                onSubmitted: _typed.onSubmitted,
               ),
             ),
             if (_busy && page == null) const LinearProgressIndicator(),

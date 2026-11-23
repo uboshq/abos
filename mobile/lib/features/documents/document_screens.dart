@@ -12,6 +12,7 @@ import '../../core/navigation/recent_papers.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/paged_list.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 import '../printing/pdf_view_page.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
@@ -86,6 +87,7 @@ class DocumentListScreen extends StatefulWidget {
 class _DocumentListScreenState extends State<DocumentListScreen> {
   late String _view = DocumentListScreen.viewKeys.contains(widget.initialView) ? widget.initialView : 'center';
   String _q = '';
+  late final _typed = SearchDebouncer(onSearch: (q) => setState(() => _q = q));
   final _search = TextEditingController();
 
   /// ⭐ গোটা তালিকার গোনা — সার্ভারের, পাতার নয়
@@ -94,6 +96,7 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     _count.dispose();
     super.dispose();
   }
@@ -120,7 +123,8 @@ class _DocumentListScreenState extends State<DocumentListScreen> {
               controller: _search,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: w.documentsSearchHint),
-              onSubmitted: (v) => setState(() => _q = v.trim()),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
             const SizedBox(height: AppSpacing.sm),
             TabChips(

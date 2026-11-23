@@ -8,6 +8,7 @@ import '../../../core/locale/l10n.dart';
 import '../../../core/messenger/messenger_api.dart';
 import '../../../core/messenger/messenger_push.dart';
 import '../../../core/messenger/messenger_unread.dart';
+import '../../../core/widgets/search_debouncer.dart';
 import '../chat/chat_screen.dart';
 import 'chat_list_look.dart';
 import 'people_picker.dart';
@@ -38,7 +39,7 @@ enum _State { loading, ready, missing, notAllowed, failed }
 class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBindingObserver {
   ThreadFilter _filter = ThreadFilter.all;
   final TextEditingController _query = TextEditingController();
-  Timer? _debounce;
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   Timer? _poll;
   StreamSubscription<MessengerEvent>? _push;
 
@@ -74,7 +75,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
     WidgetsBinding.instance.removeObserver(this);
     _push?.cancel();
     _poll?.cancel();
-    _debounce?.cancel();
+    _typed.dispose();
     _query.dispose();
     super.dispose();
   }
@@ -114,10 +115,6 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
     _load();
   }
 
-  void _onQuery(String _) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), _load);
-  }
 
   Future<void> _open(ChatThread t) async {
     await openChat(context, t);
@@ -139,7 +136,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
     final now = (widget.now ?? DateTime.now)();
 
     final head = <Widget>[
-      _SearchPill(t: t, controller: _query, hint: l.msgListSearch, onChanged: _onQuery),
+      _SearchPill(t: t, controller: _query, hint: l.msgListSearch, onChanged: _typed.onChanged, onSubmitted: _typed.onSubmitted),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
         child: Wrap(spacing: 8, runSpacing: 6, children: [
@@ -212,12 +209,13 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
 
 /// নমুনার `.srch` — ৪৪ উঁচু গোল ঘর, বাঁয়ে খোঁজার চিহ্ন
 class _SearchPill extends StatelessWidget {
-  const _SearchPill({required this.t, required this.controller, required this.hint, required this.onChanged});
+  const _SearchPill({required this.t, required this.controller, required this.hint, required this.onChanged, required this.onSubmitted});
 
   final ChatListLook t;
   final TextEditingController controller;
   final String hint;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -235,6 +233,7 @@ class _SearchPill extends StatelessWidget {
                   key: const ValueKey('msg-search'),
                   controller: controller,
                   onChanged: onChanged,
+                  onSubmitted: onSubmitted,
                   textInputAction: TextInputAction.search,
                   style: TextStyle(fontSize: 14.5, color: t.ink),
                   cursorColor: t.glass ? ChatListLook.onColour : ChatListLook.green,

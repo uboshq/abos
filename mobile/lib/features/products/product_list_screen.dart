@@ -11,6 +11,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../../core/widgets/search_debouncer.dart';
 
 /// The product catalogue, with the price a person is allowed to see.
 ///
@@ -35,6 +36,13 @@ class ProductListScreen extends StatefulWidget {
 class _ProductListScreenState extends State<ProductListScreen> {
   bool _refreshing = false;
   String _query = '';
+  late final _typed = SearchDebouncer(onSearch: (q) => setState(() => _query = q));
+
+  @override
+  void dispose() {
+    _typed.dispose();
+    super.dispose();
+  }
   // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত (দেখুন ListControls)।
   String _sort = ProductListQuery.defaultSort;
   ListFilters _filters = const {};
@@ -71,7 +79,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 hintText: l.productsListSearchHint,
                 prefixIcon: const Icon(Icons.search),
               ),
-              onChanged: (value) => setState(() => _query = value),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
           ),
           ListControls(

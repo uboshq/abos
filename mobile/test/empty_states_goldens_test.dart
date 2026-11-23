@@ -99,6 +99,7 @@ final List<_Shot> _shots = [
     seed: true,
     then: (tester) async {
       await tester.enterText(find.byType(TextField).first, 'zzzz');
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
       FocusManager.instance.primaryFocus?.unfocus();
       await tester.pumpAndSettle();

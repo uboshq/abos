@@ -6,6 +6,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/locale/l10n.dart';
 import '../../../core/messenger/messenger_api.dart';
+import '../../../core/widgets/search_debouncer.dart';
 import '../chat/chat_screen.dart';
 import 'chat_list_look.dart';
 
@@ -102,13 +103,14 @@ class SheetHead extends StatelessWidget {
 
 /// গোল খোঁজার/লেখার ঘর (`.srch`, `.note`)
 class SheetField extends StatelessWidget {
-  const SheetField({super.key, required this.s, required this.controller, required this.hint, this.icon, this.onChanged, this.fieldKey});
+  const SheetField({super.key, required this.s, required this.controller, required this.hint, this.icon, this.onChanged, this.onSubmitted, this.fieldKey});
 
   final SheetLook s;
   final TextEditingController controller;
   final String hint;
   final IconData? icon;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
   final Key? fieldKey;
 
   @override
@@ -124,6 +126,7 @@ class SheetField extends StatelessWidget {
                 key: fieldKey,
                 controller: controller,
                 onChanged: onChanged,
+                onSubmitted: onSubmitted,
                 style: TextStyle(fontSize: 14, color: s.ink),
                 cursorColor: ChatListLook.green,
                 decoration: InputDecoration(
@@ -185,7 +188,7 @@ class _PeopleSheet extends ConsumerStatefulWidget {
 
 class _PeopleSheetState extends ConsumerState<_PeopleSheet> {
   final TextEditingController _q = TextEditingController();
-  Timer? _debounce;
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   List<ChatPerson>? _people;
   String? _error;
 
@@ -197,7 +200,7 @@ class _PeopleSheetState extends ConsumerState<_PeopleSheet> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _typed.dispose();
     _q.dispose();
     super.dispose();
   }
@@ -241,10 +244,8 @@ class _PeopleSheetState extends ConsumerState<_PeopleSheet> {
               controller: _q,
               hint: l.msgListFindPerson,
               icon: Symbols.search,
-              onChanged: (_) {
-                _debounce?.cancel();
-                _debounce = Timer(const Duration(milliseconds: 300), _load);
-              },
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
             const SizedBox(height: 6),
             Expanded(

@@ -141,6 +141,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('report-choice-account_id')));
       await tester.pumpAndSettle();
       await tester.enterText(find.byKey(const ValueKey('report-choice-search')), 'দূর');
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('report-choice-option-a-far')));
       await tester.pumpAndSettle();

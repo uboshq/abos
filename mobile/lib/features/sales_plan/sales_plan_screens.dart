@@ -11,6 +11,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/paged_list.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 import 'sales_plan_api.dart';
 
@@ -164,7 +165,7 @@ class MonthBar extends StatelessWidget {
       );
 }
 
-/// খোঁজার ঘর — জমা দিলে খোঁজে
+/// খোঁজার ঘর — তালিকার খোঁজার নিয়মে ([SearchDebouncer]: ৩ অক্ষর + ৬০০ ms, Enter সাথে সাথে, খালি করলে সাথে সাথে)
 class _Search extends StatefulWidget {
   const _Search({required this.hint, required this.onSearch, required this.fieldKey});
 
@@ -178,10 +179,12 @@ class _Search extends StatefulWidget {
 
 class _SearchState extends State<_Search> {
   final _controller = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (q) => widget.onSearch(q));
 
   @override
   void dispose() {
     _controller.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -193,7 +196,8 @@ class _SearchState extends State<_Search> {
           controller: _controller,
           textInputAction: TextInputAction.search,
           decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: widget.hint),
-          onSubmitted: (v) => widget.onSearch(v.trim()),
+          onChanged: _typed.onChanged,
+          onSubmitted: _typed.onSubmitted,
         ),
       );
 }

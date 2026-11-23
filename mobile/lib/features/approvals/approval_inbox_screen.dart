@@ -20,6 +20,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/day_part.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/number_with_party.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 import '../../core/locale/l10n.dart';
 
@@ -117,7 +118,12 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
   String _q = '';
   String _sort = 'late';
   final _search = TextEditingController();
-  Timer? _typing;
+  /// ⓘ তালিকার খোঁজার নিয়মে — ৩ অক্ষর + শেষ চাপের ৬০০ ms পরে, Enter সাথে সাথে, খালি করলে সাথে সাথে
+  late final _typing = SearchDebouncer(onSearch: (q) {
+    if (!mounted) return;
+    setState(() => _q = q);
+    _load();
+  });
 
   /// বাছাই করা কাগজ — একসাথে অনুমোদনের জন্য (কেবল সার্ভার যেগুলো `bulkable` বলে)
   final Set<String> _picked = {};
@@ -130,19 +136,9 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
 
   @override
   void dispose() {
-    _typing?.cancel();
+    _typing.dispose();
     _search.dispose();
     super.dispose();
-  }
-
-  /// ⓘ লেখা থামার একটু পরে খোঁজা — প্রতিটা অক্ষরে সার্ভারে যায় না
-  void _typed(String text) {
-    _typing?.cancel();
-    _typing = Timer(const Duration(milliseconds: 400), () {
-      if (!mounted || text.trim() == _q) return;
-      setState(() => _q = text.trim());
-      _load();
-    });
   }
 
   bool get _legacyOnly => widget.loadInbox == null && widget.loadPending != null;
@@ -311,7 +307,7 @@ class _ApprovalInboxScreenState extends State<ApprovalInboxScreen> {
       body: Column(
         children: [
           // ⭐ মাথার তিন সংখ্যা আর খোঁজা — নমুনা v4, ছবি ১ (আগে দুই মোট তালিকার একদম নিচে ছিল)
-          if (_inboxDoor == true && page != null) _SummaryBand(page: page, search: _search, onTyped: _typed),
+          if (_inboxDoor == true && page != null) _SummaryBand(page: page, search: _search, onTyped: _typing.onChanged, onSubmitted: _typing.onSubmitted),
           if (_busy) const LinearProgressIndicator(),
           if (_inboxDoor == true && page != null) ...[
             _Tabs(tabs: page.tabs, active: _tab, onTap: _switchTab),
@@ -500,11 +496,14 @@ String inboxGlyph(ApprovalRecord approval) {
 
 /// ⭐ মাথার তিন সংখ্যা আর খোঁজার ঘর — নমুনা v4, ছবি ১: অপেক্ষায় · দেরি (লাল) · মোট টাকা (লাখে); নিচে খোঁজা
 class _SummaryBand extends StatelessWidget {
-  const _SummaryBand({required this.page, required this.search, required this.onTyped});
+  const _SummaryBand({required this.page, required this.search, required this.onTyped, required this.onSubmitted});
 
   final InboxPage page;
   final TextEditingController search;
   final ValueChanged<String> onTyped;
+
+  /// Enter — সাথে সাথে খোঁজে, অক্ষর কম হলেও ([SearchDebouncer])
+  final ValueChanged<String> onSubmitted;
 
   String _amount(BuildContext context) {
     final value = Money.value(page.amount) ?? 0;
@@ -574,7 +573,7 @@ class _SummaryBand extends StatelessWidget {
           key: const ValueKey('approvals-search'),
           controller: search,
           onChanged: onTyped,
-          onSubmitted: onTyped,
+          onSubmitted: onSubmitted,
           textInputAction: TextInputAction.search,
           style: TextStyle(color: fieldInk, fontSize: 14),
           decoration: InputDecoration(

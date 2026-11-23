@@ -9,6 +9,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 import '../../core/widgets/unsaved_guard.dart';
 
@@ -25,6 +26,7 @@ class LeadListScreen extends StatefulWidget {
 
 class _LeadListScreenState extends State<LeadListScreen> {
   final _search = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   LeadSetup? _setup;
   String? _status;
   final List<Lead> _rows = [];
@@ -46,6 +48,7 @@ class _LeadListScreenState extends State<LeadListScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -104,7 +107,8 @@ class _LeadListScreenState extends State<LeadListScreen> {
               key: const Key('lead-search'),
               controller: _search,
               textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _load(),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
               decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: w.leadsSearchHint),
             ),
             const SizedBox(height: AppSpacing.sm),

@@ -307,7 +307,7 @@ void main() {
           reason: '⛔ মোট টাকা লাখে নেই (৳5,21,300 → ৳5.21 লাখ)');
 
       await tester.enterText(find.byKey(const ValueKey('approvals-search')), 'PB-2609');
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('approvals-sort-amount')));
       await tester.pumpAndSettle();

@@ -14,6 +14,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../../core/widgets/shown_rows.dart';
 import '../books/books_widgets.dart';
 import '../printing/document_actions_sheet.dart';
@@ -62,6 +63,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
   late DateTime _from;
   late DateTime _to;
   final _search = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   final List<PaperRow> _rows = [];
   PaperPage? _page;
   List<OrgRef> _branches = const [];
@@ -90,6 +92,7 @@ class _PaperListScreenState extends State<PaperListScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -210,7 +213,8 @@ class _PaperListScreenState extends State<PaperListScreen> {
                   controller: _search,
                   textInputAction: TextInputAction.search,
                   decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: w.papersSearchHint, isDense: true),
-                  onSubmitted: (_) => _load(),
+                  onChanged: _typed.onChanged,
+                  onSubmitted: _typed.onSubmitted,
                 ),
               ),
             if (_busy && page == null) const LinearProgressIndicator(),

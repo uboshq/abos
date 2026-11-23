@@ -13,6 +13,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/look_widgets.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../printing/document_actions_sheet.dart';
 import 'report_module_name.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
@@ -45,6 +46,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String? _error;
   bool _busy = false;
   String _query = '';
+  late final _typed = SearchDebouncer(onSearch: (q) => setState(() => _query = q));
+
+  @override
+  void dispose() {
+    _typed.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -97,7 +105,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 hintText: context.l10n.reportSearchHint,
                 prefixIcon: const Icon(Icons.search),
               ),
-              onChanged: (v) => setState(() => _query = v),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
           ),
           if (_busy) const LinearProgressIndicator(),
@@ -486,17 +495,34 @@ class _ChoiceSheetState extends State<_ChoiceSheet> {
   List<(String, String)>? _found;
   bool _busy = false;
 
+  /// ⭐ সার্ভারে খোঁজা তালিকার নিয়মে ([SearchDebouncer]: ৩ অক্ষর + ৬০০ ms, Enter সাথে সাথে); হাতের তালিকা টাইপের সাথেই ছাঁকে
+  late final _typed = SearchDebouncer(onSearch: _ask);
+
+  @override
+  void dispose() {
+    _typed.dispose();
+    super.dispose();
+  }
+
+  void _changed(String text) {
+    setState(() {
+      _query = text;
+      // ⓘ খালি করলে হাতের তালিকা সাথে সাথে; নইলে আগের সার্ভারের ফল থাকে যতক্ষণ না নতুন খোঁজা আসে
+      if (text.trim().isEmpty) _found = null;
+    });
+    _typed.onChanged(text);
+  }
+
   Future<void> _ask(String q) async {
-    setState(() => _query = q);
     final search = widget.search;
-    if (search == null || q.trim().length < 2) {
-      setState(() => _found = null);
+    if (search == null || q.isEmpty) {
+      if (mounted) setState(() => _found = null);
       return;
     }
     setState(() => _busy = true);
     try {
-      final found = await search(q.trim());
-      if (mounted && _query == q) setState(() => _found = found);
+      final found = await search(q);
+      if (mounted && _query.trim() == q) setState(() => _found = found);
     } catch (_) {
       // ⓘ খোঁজা ব্যর্থ — হাতের তালিকাই থাকে
     } finally {
@@ -520,7 +546,8 @@ class _ChoiceSheetState extends State<_ChoiceSheet> {
               child: TextField(
                 key: const ValueKey('report-choice-search'),
                 decoration: InputDecoration(labelText: context.l10n.reportChoiceSearch(widget.title), prefixIcon: const Icon(Icons.search)),
-                onChanged: _ask,
+                onChanged: _changed,
+                onSubmitted: _typed.onSubmitted,
               ),
             ),
             if (_busy) const LinearProgressIndicator(),

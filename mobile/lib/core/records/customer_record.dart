@@ -1,6 +1,7 @@
 import '../locale/app_locale.dart';
 import '../sync_engine/reference_cache.dart';
 import 'money.dart';
+import 'party_search.dart';
 
 /// ⭐ গ্রাহকের নামের পাশে পয়েন্ট — মালিক, ৭ অক্টোবর ২০২৬: *"app e sob jaygay customer er pase obosoi point dibe nahoy
 /// cina zayna buja zayna"*। সার্ভার প্রতিটা দরজায় পয়েন্ট পাঠায় (`Customer::pointName()`); পয়েন্ট না থাকলে বা পুরনো
@@ -96,26 +97,25 @@ class CustomerRecord {
 
   bool get isActive => payload['isActive'] != false;
 
-  /// What the list search box and the order screen's picker both match on.
-  ///
-  /// Both names, always — a rep who knows a shop as "Rahim Store" must find
-  /// it even when the Bengali name is the one on screen, and the phone number
-  /// is how a shop is identified over a call.
-  bool matches(String query) {
-    final needle = query.trim().toLowerCase();
-    if (needle.isEmpty) return true;
-    return [
-      _text('nameBn'),
-      _text('nameEn'),
-      code,
-      ownerName,
-      phone,
-      // A rep often knows a shop by its point ("the one in Kawran Bazar").
-      pointName,
-      // ⓘ আর শাখা ধরেও ("Super-এর দোকানগুলো")
-      branchName,
-    ].any((field) => field != null && field.toLowerCase().contains(needle));
-  }
+  /// What the list search box and the order screen's picker both match on — the server's own party rule
+  /// ([partyMatches], `PartySearch`; owner, 23 Nov 2026): both names, code, owner, both addresses, point and branch,
+  /// and the mobile — with or without spaces and dashes, so its last 4 digits are enough. Every word must match.
+  bool matches(String query) => partyMatches(
+        query,
+        fields: [
+          _text('nameBn'),
+          _text('nameEn'),
+          code,
+          ownerName,
+          _text('addressBn'),
+          _text('addressEn'),
+          // A rep often knows a shop by its point ("the one in Kawran Bazar").
+          pointName,
+          // ⓘ আর শাখা ধরেও ("Super-এর দোকানগুলো")
+          branchName,
+        ],
+        phones: [phone],
+      );
 
   String? _text(String key) {
     final value = payload[key];
