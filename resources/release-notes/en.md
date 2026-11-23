@@ -9,6 +9,7 @@
 - Search: it searches after three letters; find a party by name, mobile, address or point; searching or paging a list changes only the list, not the whole page.
 - Reports run only on "Show" or Enter, not again on every field change.
 - Pages open faster, lists and dashboards above all; a new notice reaches the phone at once.
+- A sale is now credited to the salesperson responsible for the party, not to whoever typed the bill; reports, boards and targets all count it the same way.
 
 ## 1.3.9 — 21-11-2026
 
