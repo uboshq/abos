@@ -1485,6 +1485,8 @@ export function filterPanel () {
         async refresh () {
             const form = this.form()
             if (! form || typeof fetch !== 'function') return
+            // ⓘ গোনা ছাড়া প্যানেল ([[Panel::plain()]]) — পাতা নিজে ছাঁকে, সংখ্যা নেই; টিকের সাথে সার্ভারে প্রশ্ন নয়
+            if (this.$root.hasAttribute('data-no-counts')) return
             const params = new URLSearchParams(new FormData(form))
             params.delete('page')
             params.set('_filter_counts', '1')

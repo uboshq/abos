@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\ListFilter\Facets;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -338,8 +339,15 @@ class ReportController extends Controller implements HasMiddleware
                     'name' => app()->getLocale() === 'bn' && filled($p->name_bn) ? $p->name_bn : $p->name_en,
                 ]),
 
-            // ⓘ রিপোর্টের নিজের ছাঁকনি — ভাগের পাতার `$extraFilters` দরজা দিয়ে (চেকের দিক আর অবস্থা)
-            'extraFilters' => $key === ChequeReports::KEY ? 'accounts::report.partials.cheque-filters' : null,
+            // ⓘ রিপোর্টের নিজের ছাঁকনি — চেকের দিক আর অবস্থা, ডান পাশের প্যানেলে ([[ReportPanel]]; আগে `cheque-filters` ঘর, একই চাবি)
+            'extraFacets' => $key === ChequeReports::KEY ? [
+                Facets::pick('direction', __('accounts::cheque.direction'),
+                    collect(['received', 'issued'])->mapWithKeys(fn (string $c) => [$c => __('accounts::cheque.state_'.$c)])->all(),
+                    __('accounts::cheque.direction_all'))->look('violet', '⇄'),
+                Facets::pick('status', __('accounts::cheque.status'),
+                    collect(['pdc', 'due', 'pending', 'deposited', 'cleared', 'bounced', 'cancelled'])->mapWithKeys(fn (string $c) => [$c => __('accounts::cheque.state_'.$c)])->all(),
+                    __('accounts::cheque.status_all'))->look('amber', '●'),
+            ] : [],
         ] + ($key === 'accounts.trial_balance' ? [
             // ⭐ রেওয়ামিল বিবরণী আকারে — দল, উপমোট, অবস্থার সারি; একই ইঞ্জিনের সারি থেকে (মালিক, ১৭ নভেম্বর ২০২৬)
             'statement' => app(TrialBalanceStatement::class)->build($request->only($definition->requestKeys())),

@@ -430,31 +430,8 @@
             সেটা নকলের জন্য বাদ যায় না।
         --}}
         @if ($facets !== null)
-            <span class="order-1" x-data="filterToggle">
-                {{-- ⓘ সাজের নিজের লেখা — chips সাজে "+ ছাঁকনি", বাকিগুলোয় "Filter" ([[TheChipSaidOneAndNobodyKnewWhichFilter]]) --}}
-                <button type="button" x-on:click="toggle" data-filter-toggle aria-controls="list-filter-panel" class="list-filter-open"
-                        @if ($filterMode === 'chips') data-look-chip @endif>
-                    <x-ui.icon name="filter" class="size-4" />
-                    {{-- ⭐ অনুমোদিত নমুনা (১৪ নভেম্বর ২০২৬): বোতামে কেবল "ছাঁকনি" আর পাশে সংখ্যা — "+" নেই; বাকি ন'টা সাজ আগের মতো --}}
-                    {{ $filterMode === 'chips' ? __('core.list_filter.title') : __('core.toolbar.filter') }}
-                    @if ($facets['count'] > 0)
-                        <span class="list-filter-badge" data-filter-toggle-count>{{ $facets['count'] }}</span>
-                    @endif
-                </button>
-            </span>
-            @if ($facets['chips'] !== [])
-                {{-- ⭐ নমুনার মতো বারের নিচে নিজের লাইনে (basis-full + order-last) — বারটা এক লাইনেই থাকে --}}
-                <span class="order-last flex basis-full flex-wrap items-center gap-1" data-chip-row data-list-part="chips">
-                    @foreach ($facets['chips'] as $chip)
-                        <a data-facet href="{{ $chip['url'] }}" class="list-filter-chip tone-{{ $chip['tone'] }}"
-                           title="{{ __('core.toolbar.remove_filter') }}">
-                            <span class="truncate">{{ $chip['text'] }}</span>
-                            <span class="x" aria-hidden="true">✕</span>
-                        </a>
-                    @endforeach
-                    <a href="{{ $facets['clear'] }}" class="list-filter-clearall" data-chips-clear>{{ __('core.list_filter.clear_chips') }}</a>
-                </span>
-            @endif
+            {{-- ⓘ ছাঁকনির বোতাম আর চিপ — টুলবার ছাড়া পাতার সরু বারেও একই ([[filter-bar]]) --}}
+            @include('components.ui.filter.toggle', ['facets' => $facets, 'filterMode' => $filterMode])
         @elseif ($screenFilters->isNotEmpty())
             <span class="order-2 flex flex-wrap items-center gap-1">
                 @foreach ($screenFilters as $key => $value)
@@ -593,37 +570,7 @@
              ⓘ চটজলদি নাম এক চাপে (আজ … গত ৯০ দিন, যেকোনো তারিখ) — প্রতিটা সাধারণ লিংক, বাকি ছাঁকনি অটুট ([[FilterSet::presets()]]);
              নিজে শুরু-শেষ বাছতে শেষ ঘরটা ছাঁকনির প্যানেল খোলে। বোতামে এখন যা বাছা তা-ই লেখা ("এই মাস", বা দুই তারিখ)। --}}
         @if (($facets['date'] ?? null) !== null)
-            @php $dateBar = $facets['date']; @endphp
-            <div x-data="{ open: false }" class="relative order-3" data-date-bar>
-                <button type="button" @click="open = ! open" @click.outside="open = false" @keydown.escape.window="open = false"
-                        :aria-expanded="open.toString()" aria-haspopup="true"
-                        aria-label="{{ $dateBar['label'] }}{{ $dateBar['text'] !== null ? ': '.$dateBar['text'] : '' }}"
-                        @class(['flex h-(--spacing-field-compact) items-center gap-1.5 whitespace-nowrap rounded-(--radius-field) border px-2.5 text-sm transition-colors hover:bg-(--color-surface-hover)',
-                                'border-(--color-border) text-(--color-ink-muted)' => $dateBar['text'] === null,
-                                'border-(--color-brand-500) font-medium text-(--color-ink)' => $dateBar['text'] !== null])>
-                    <span aria-hidden="true">📅</span>
-                    <span data-date-bar-text>{{ $dateBar['text'] ?? $dateBar['label'] }}</span>
-                    <span aria-hidden="true">▾</span>
-                </button>
-                <div x-show="open" x-cloak x-transition.opacity
-                     class="absolute start-0 z-30 mt-1 w-52 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) py-1 shadow-lg">
-                    @foreach ($dateBar['presets'] as $preset)
-                        <a href="{{ $preset['url'] }}" data-date-preset="{{ $preset['key'] }}" @if ($preset['on']) aria-current="true" @endif
-                           @class(['flex items-center justify-between gap-2 px-3 py-1.5 text-sm hover:bg-(--color-surface-hover)',
-                                   'border-t border-(--color-border)' => $preset['key'] === 'any',
-                                   'font-semibold text-(--color-brand-600)' => $preset['on']])>
-                            {{ $preset['label'] }}
-                            @if ($preset['on'])<span aria-hidden="true">✓</span>@endif
-                        </a>
-                    @endforeach
-                    <span x-data="filterToggle" class="block border-t border-(--color-border)">
-                        <button type="button" x-on:click="toggle" data-date-custom aria-label="{{ __('core.list_filter.custom') }}"
-                                class="block w-full px-3 py-1.5 text-start text-sm text-(--color-ink-muted) hover:bg-(--color-surface-hover)">
-                            {{ __('core.list_filter.custom') }}
-                        </button>
-                    </span>
-                </div>
-            </div>
+            @include('components.ui.filter.date-bar', ['dateBar' => $facets['date']])
         @endif
 
         {{-- Sort by — ডিফল্টটা ব্যবসায়িক অর্থবহ হতে হবে ("সবচেয়ে বেশি

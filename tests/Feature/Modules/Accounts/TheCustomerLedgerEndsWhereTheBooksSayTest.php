@@ -234,8 +234,9 @@ final class TheCustomerLedgerEndsWhereTheBooksSayTest extends TestCase
         $this->assertSame(__('accounts::party_ledger.kind_journal'), $dealer->rows[array_key_last($dealer->rows)]['narration'], '⛔ গ্রাহকের লেজারেও বিবরণ খালি।');
 
         $page = (string) $this->get(route('accounts.report.show', ['slug' => 'person-ledger', 'person_id' => $person->id]))->assertOk()->getContent();
-        $this->assertMatchesRegularExpression('/<select name="person_id" data-party-picker/', $page, '⛔ পক্ষ বাছার ঘর নেই।');
-        $this->assertMatchesRegularExpression('/<option value="'.$person->id.'"\s+selected/', $page, '⛔ বাছা পক্ষ বাছাই থাকেনি।');
+        // ⓘ পক্ষ বাছার ঘর এখন ডান পাশের ছাঁকনির প্যানেলে ([[ReportPanel]], ২৩ নভেম্বর ২০২৬) — ৩০ জনের কম হলে গোল টিক, বেশি হলে নামার তালিকা
+        $this->assertMatchesRegularExpression('/name="person_id"/', $page, '⛔ পক্ষ বাছার ঘর নেই।');
+        $this->assertMatchesRegularExpression('/(value="'.$person->id.'"\s+checked|<option value="'.$person->id.'"\s+selected)/', $page, '⛔ বাছা পক্ষ বাছাই থাকেনি।');
         $this->assertStringContainsString('(Dr) 100.00', $page);
     }
 

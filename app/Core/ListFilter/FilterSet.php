@@ -188,6 +188,22 @@ final class FilterSet
             ];
         }
 
+        // ⓘ পাতার বাড়তি পরিসর ("শুরু থেকে") চালু থাকলে সাধারণ নামগুলো চালু দেখায় না — একই সময়ে দুটো টিক নয়
+        $extraOn = array_filter($facet->extra, fn (array $e) => $e['on']) !== [];
+
+        if ($extraOn) {
+            $links = array_map(fn (array $link) => ['on' => false] + $link, $links);
+        }
+
+        foreach ($facet->extra as $extra) {
+            $links[] = [
+                'key' => $extra['key'],
+                'label' => $extra['label'],
+                'url' => $this->urlWith($request, $extra['set']),
+                'on' => $extra['on'],
+            ];
+        }
+
         $links[] = [
             'key' => 'any',
             'label' => __('core.list_filter.preset.any'),
@@ -214,8 +230,10 @@ final class FilterSet
 
             $value = $facet->read($request);
             $preset = DateRangeFacet::presetOf($value);
+            $extra = array_values(array_filter($facet->extra, fn (array $e) => $e['on']))[0] ?? null;
 
             $text = match (true) {
+                $extra !== null => $extra['label'],
                 $value === null => null,
                 $preset !== null => __('core.list_filter.preset.'.$preset),
                 default => ($value['from'] !== null ? DateFormat::format($value['from']) : '…')
@@ -273,6 +291,8 @@ final class FilterSet
                 $shown = $facet->applied($request) ?? [];
                 $section += [
                     'multi' => $facet->multi,
+                    // ⓘ একটাই টিকের ঘর ("বাতিলসহ") পুরোনো চাবিতেই যায় — `cancelled=1`, `cancelled[]=1` নয়; তালিকা `boolean()` পড়ে
+                    'name' => $facet->flat() ? $facet->key : $facet->key.($facet->multi ? '[]' : ''),
                     'default' => $facet->default,
                     'findable' => $facet->findable(),
                     'options' => array_map(fn (string $option) => [
@@ -286,14 +306,20 @@ final class FilterSet
             } elseif ($facet instanceof RangeFacet) {
                 $section += ['min' => $value['min'] ?? null, 'max' => $value['max'] ?? null];
             } elseif ($facet instanceof DateRangeFacet) {
+                // ⓘ বাড়তি পরিসর চালু ("শুরু থেকে", `from=all`) — "থেকে" ঘরে তারিখ নয়, সেই মানটাই থাকে; নাহলে "দেখান" চাপলে হারাত
+                $fixed = array_values(array_filter($facet->extra, fn (array $e) => $e['on']))[0] ?? null;
                 $section += [
+                    'fixed_from' => $fixed !== null && isset($fixed['set'][$facet->fromKey()])
+                        ? ['value' => $fixed['set'][$facet->fromKey()], 'label' => $fixed['label']] : null,
                     'from_key' => $facet->fromKey(), 'to_key' => $facet->toKey(),
                     'from' => $value['from'] ?? null, 'to' => $value['to'] ?? null,
                     'presets' => $this->presets($request, $facet),
                 ];
             } elseif ($facet instanceof FieldsFacet) {
+                // ⓘ ঠিকানায় না থাকলে পাতার মানা মান (`default`, যেমন স্থিতিপত্রের "আজ") — ঘরে দেখায়, চিপ হয় না
                 $section += ['fields' => array_map(fn (array $field) => $field + [
-                    'value' => is_scalar($request->query($field['key'])) ? (string) $request->query($field['key']) : '',
+                    'value' => is_scalar($request->query($field['key'])) && (string) $request->query($field['key']) !== ''
+                        ? (string) $request->query($field['key']) : (string) ($field['default'] ?? ''),
                 ], $facet->fields)];
             }
 

@@ -40,15 +40,45 @@ final class Panel
          *   ⓘ কার্ডের "কিছু বাছা নেই" প্রশ্নে তারিখও গোনে — ওটা পুরো তালিকা বনাম ছাঁকা তালিকা।
          */
         $all = $set->chips($request);
-        $chips = array_values(array_map(fn (array $c) => array_diff_key($c, ['bar' => true]), array_filter($all, fn (array $c) => ! $c['bar'])));
+
+        return self::shape($set, $request, $set->counts($base, $request)) + [
+            'cards' => array_map(fn (ListCard $card) => $card->view($base, $request, $set->keys(), $all === []), $set->cards),
+        ];
+    }
+
+    /**
+     * ⭐ গোনা ছাড়া প্যানেল — যে তালিকা বা রিপোর্ট নিজের কোয়েরি নিজে ছাঁকে, প্যানেল কেবল একই নামের ঘরগুলো আঁকে
+     *   (মালিক, ২৩ নভেম্বর ২০২৬: *"সব পাতায় একই ছাঁকনি"*; [[Facets]])।
+     *
+     * ⓘ ঘরের নাম পাতার পুরোনো চাবিই (`from`, `status`, `cancelled` …) — কন্ট্রোলার আগের মতো পড়ে, তাই কোনো ছাঁকনি হারায় না।
+     * ⓘ ঘরের পাশে সংখ্যা নেই, নিচের বোতাম "দেখুন" — প্যানেল টিকের সাথে সার্ভারে জিজ্ঞেস করে না (`counted: false`)।
+     *
+     * @return array{sections: list<array<string, mixed>>, count: int, chips: list<array{text: string, url: string, tone: string}>, clear: string, date: array<string, mixed>|null, cards: list<array<string, mixed>>, counted: bool}
+     */
+    public static function plain(FilterSet $set, Request $request): array
+    {
+        // ⓘ পুরোনো খোলা ট্যাব বা হাতে লেখা ঠিকানা — সংখ্যা নেই, পাতা নয়
+        if ($request->boolean('_filter_counts')) {
+            throw new HttpResponseException(response()->json(['total' => null, 'counts' => []]));
+        }
+
+        return self::shape($set, $request, []) + ['cards' => [], 'counted' => false];
+    }
+
+    /**
+     * @param  array<string, array<string, int>>  $counts
+     * @return array{sections: list<array<string, mixed>>, count: int, chips: list<array{text: string, url: string, tone: string}>, clear: string, date: array<string, mixed>|null}
+     */
+    private static function shape(FilterSet $set, Request $request, array $counts): array
+    {
+        $chips = array_values(array_map(fn (array $c) => array_diff_key($c, ['bar' => true]), array_filter($set->chips($request), fn (array $c) => ! $c['bar'])));
 
         return [
-            'sections' => $set->sections($request, $set->counts($base, $request)),
+            'sections' => $set->sections($request, $counts),
             'count' => count($chips),
             'chips' => $chips,
             'clear' => $set->clearUrl($request),
             'date' => $set->bar($request),
-            'cards' => array_map(fn (ListCard $card) => $card->view($base, $request, $set->keys(), $all === []), $set->cards),
         ];
     }
 }

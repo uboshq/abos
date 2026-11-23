@@ -25,7 +25,8 @@
 <div x-data="filterPanel"
      data-form="{{ $form }}"
      data-show="{{ __('core.list_filter.show_n', ['noun' => $noun]) }}"
-     data-show-plain="{{ __('core.list_filter.show') }}"
+     data-show-plain="{{ $report ? __('core.action.show') : __('core.list_filter.show') }}"
+     @if (! ($filters['counted'] ?? true)) data-no-counts @endif
      @filter-panel-toggle.window="openPanel"
      @keydown.escape.window="closePanel"
      @keydown.alt.f.window.prevent="openPanel"
@@ -97,7 +98,7 @@
                                            data-option="{{ $option['label'] }}" data-value="{{ $option['value'] }}">
                                         <input form="{{ $form }}"
                                                type="{{ $section['multi'] ? 'checkbox' : 'radio' }}"
-                                               name="{{ $section['key'] }}{{ $section['multi'] ? '[]' : '' }}"
+                                               name="{{ $section['name'] ?? $section['key'].($section['multi'] ? '[]' : '') }}"
                                                value="{{ $option['value'] }}" @checked($option['checked'])
                                                @if ($option['value'] === $section['default']) data-default @endif>
                                         @if ($option['tone'])<span class="list-filter-dot tone-{{ $option['tone'] }}" aria-hidden="true"></span>@endif
@@ -136,8 +137,15 @@
                                     @endforeach
                                 </div>
                                 <div class="grid gap-2">
-                                    <label class="grid gap-0.5 text-xs text-(--color-ink-muted)">{{ __('core.list_filter.from') }}
-                                        <x-ui.date dense :name="$section['from_key']" :value="$section['from']" :form="$form" :submit-on-change="$report ? false : null" /></label>
+                                    @if ($section['fixed_from'] ?? null)
+                                        {{-- ⓘ "শুরু থেকে" চালু — তারিখের ঘর নয়, মানটাই যায়; বদলাতে উপরের অন্য পরিসর --}}
+                                        <input form="{{ $form }}" type="hidden" name="{{ $section['from_key'] }}" value="{{ $section['fixed_from']['value'] }}">
+                                        <span class="grid gap-0.5 text-xs text-(--color-ink-muted)">{{ __('core.list_filter.from') }}
+                                            <strong class="text-sm text-(--color-ink)" data-date-fixed>{{ $section['fixed_from']['label'] }}</strong></span>
+                                    @else
+                                        <label class="grid gap-0.5 text-xs text-(--color-ink-muted)">{{ __('core.list_filter.from') }}
+                                            <x-ui.date dense :name="$section['from_key']" :value="$section['from']" :form="$form" :submit-on-change="$report ? false : null" /></label>
+                                    @endif
                                     <label class="grid gap-0.5 text-xs text-(--color-ink-muted)">{{ __('core.list_filter.to') }}
                                         <x-ui.date dense :name="$section['to_key']" :value="$section['to']" :form="$form" :submit-on-change="$report ? false : null" /></label>
                                 </div>
@@ -152,6 +160,19 @@
                                                         <option value="{{ $value }}" @selected((string) $field['value'] === (string) $value)>{{ $label }}</option>
                                                     @endforeach
                                                 </select>
+                                            @elseif ($field['type'] === 'text')
+                                                <input form="{{ $form }}" type="text" name="{{ $field['key'] }}" value="{{ $field['value'] }}"
+                                                       placeholder="{{ $field['placeholder'] ?? '' }}" class="list-filter-input">
+                                            @elseif ($field['type'] === 'find')
+                                                {{-- ⓘ লিখে-খোঁজা: নিচে নামের তালিকা; ঠিকানায় নম্বর থাকলে ঘরে নামটাই দেখায় ([[Facets::find()]]) --}}
+                                                <input form="{{ $form }}" type="search" name="{{ $field['key'] }}" autocomplete="off"
+                                                       value="{{ $field['options'][$field['value']] ?? $field['value'] }}" list="filter-find-{{ $field['key'] }}"
+                                                       placeholder="{{ $field['placeholder'] ?? '' }}" class="list-filter-input" data-report-filter="{{ $field['key'] }}">
+                                                <datalist id="filter-find-{{ $field['key'] }}">
+                                                    @foreach ($field['options'] as $label)
+                                                        <option value="{{ $label }}"></option>
+                                                    @endforeach
+                                                </datalist>
                                             @elseif ($field['type'] === 'date')
                                                 <x-ui.date dense :name="$field['key']" :value="$field['value']" :form="$form" :submit-on-change="$report ? false : null" />
                                             @else
@@ -172,7 +193,7 @@
 
         <div class="list-filter-foot">
             <button type="button" class="list-filter-button" x-on:click="closePanel">{{ __('core.list_filter.close') }}</button>
-            <button type="submit" form="{{ $form }}" class="list-filter-button is-primary" data-filter-apply x-text="showText">{{ __('core.list_filter.show') }}</button>
+            <button type="submit" form="{{ $form }}" class="list-filter-button is-primary" data-filter-apply x-text="showText">{{ $report ? __('core.action.show') : __('core.list_filter.show') }}</button>
         </div>
     </aside>
 </div>

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Sales\Http\Controllers;
 
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\ListFilter\Facets;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
@@ -80,11 +81,19 @@ class SalesReturnReasonReportController extends Controller implements HasMiddlew
             'branches' => Branch::query()->active()->orderBy('name_en')->get(),
             'accounts' => collect(),
             'partyTypes' => collect(),
-            'extraFilters' => 'sales::return.partials.reason-report-filters',
-            // ⓘ দোকান আর পণ্যের ঘর এই রিপোর্ট নিজে আঁকে — সাধারণ ছাঁকনি সেগুলো আবার আঁকে না
+            // ⓘ দোকান আর পণ্যের ঘর এই রিপোর্টের নিজের — ডান পাশের প্যানেলে ([[ReportPanel]]; আগে `reason-report-filters`, একই চাবি);
+            //   সাধারণ ছাঁকনি সেগুলো আবার আঁকে না
             'ownFilters' => ['customer_id', 'product_id'],
-            'customers' => Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get(),
-            'products' => Product::query()->soldInViewedBranch()->active()->orderBy('name_en')->get(),
+            'extraFacets' => [
+                Facets::pick('customer_id', __('sales::field.customer'),
+                    Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get()
+                        ->mapWithKeys(fn (Customer $c) => [(string) $c->id => $c->nameWithPoint()])->all(),
+                    __('sales::return_reason.any_customer'))->look('green', '👤'),
+                Facets::pick('product_id', __('sales::field.product'),
+                    Product::query()->soldInViewedBranch()->active()->orderBy('name_en')->get()
+                        ->mapWithKeys(fn (Product $p) => [(string) $p->id => $p->name()])->all(),
+                    __('sales::return_reason.any_product'))->look('teal', '▦'),
+            ],
         ]);
     }
 }
