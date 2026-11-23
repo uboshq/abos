@@ -15,6 +15,7 @@ class MenuItem {
     this.moduleLabel,
     this.group,
     this.webPath,
+    this.ownModule,
   });
 
   final String key;
@@ -40,6 +41,10 @@ class MenuItem {
   final String? moduleLabel;
   final String? group;
   final String? webPath;
+
+  /// ⭐ The web row's own module when it stands inside a merged one ([MenuRouteEntry.module]) — `governance` inside
+  /// `system_admin`; its search words follow it there. Null when it is the module it stands in.
+  final String? ownModule;
 
   bool get isWeb => webPath != null;
 }

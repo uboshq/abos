@@ -4,6 +4,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../locale/app_locale.dart';
 import '../locale/l10n.dart';
 import '../menu/menu_item.dart';
+import '../menu/menu_module.dart';
 import '../theme/app_colors.dart';
 import '../widgets/row_icon.dart';
 import '../../features/copilot/copilot_mark.dart';
@@ -24,14 +25,20 @@ import '../../features/copilot/copilot_mark.dart';
 
 /// One module tile — the web's own module codes and rail colours.
 class NavModuleDef {
-  const NavModuleDef(this.code, this.label, this.icon, [this.aliases = const []]);
+  const NavModuleDef(this.code, this.label, this.icon, [this.aliases = const [], this.mark]);
 
   final String code;
   final String label;
   final IconData icon;
   final List<String> aliases;
 
+  /// ⭐ Drawn instead of [icon], with no tinted disc behind it — Copilot's live "Ai" (owner, 23 Nov 2026, sample v2).
+  final RowMark? mark;
+
   Color get color => AppColors.moduleColor(code);
+
+  /// The same tile under another name — the server's merged name ([ServerModules.mergedLabels]).
+  NavModuleDef named(String name) => NavModuleDef(code, name, icon, aliases, mark);
 }
 
 /// Where one `/home/<path>` screen hangs, and the words that find it.
@@ -171,43 +178,82 @@ class NavCatalog {
 
   static String get plannedGroup => _l.navGroupComingSoon;
 
-  /// The order the tiles stand in — the owner's mockup (skin 1, picture 2).
+  /// The tiles this catalogue knows. ⭐ The order they stand in is [tileOrder] (owner, 23 Nov 2026, sample v2); a
+  /// guest ([hosts]) has a tile of its own only while its host is not there, exactly as the web merges.
   static List<NavModuleDef> get modules => _once('modules', () => [
     // ⓘ ওয়েবের মডিউলের একই নাম ("বিক্রয়", Sales lang/bn/route.php) আর মালিকের অনুমোদিত নমুনার — বারের "› বিক্রয় › …"
     // আর মডিউলের ঘর এক নামে (a5, ২০ অক্টোবর ২০২৬); "বিক্রি" খোঁজায় থাকে
-    NavModuleDef('sales', _l.navModuleSales, Icons.shopping_cart_outlined,
+    // ⭐ মালিকের অনুমোদিত আইকন (২৩ নভেম্বর ২০২৬, নমুনা v2); বিক্রয়ের ট্রলি ভরাট
+    NavModuleDef('sales', _l.navModuleSales, Icons.shopping_cart,
         ['বিক্রি', 'sales', 'sale', 'বিক্রয়']),  // l10n-ok: search aliases in both languages
-    NavModuleDef('purchase', _l.navModulePurchase, Icons.archive_outlined,
+    NavModuleDef('purchase', _l.navModulePurchase, Icons.shopping_bag_outlined,
         ['কেনা', 'purchase', 'ক্রয়']),  // l10n-ok: search aliases in both languages
     NavModuleDef('inventory', _l.navModuleInventory, Icons.view_in_ar_outlined,
         ['স্টক', 'inventory', 'stock', 'মজুদ']),  // l10n-ok: search aliases in both languages
-    NavModuleDef('accounts', _l.navModuleAccounts, Icons.description_outlined,
+    NavModuleDef('accounts', _l.navModuleAccounts, Icons.account_balance_wallet_outlined,
         ['accounts', 'হিসাব']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('approval', _l.navModuleApproval, Icons.approval_outlined,
+        ['approval', 'সই', 'approvals', 'অনুমোদন']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('hr', _l.navModuleHr, Icons.groups_outlined,
+        ['hr', 'staff', 'কর্মী']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('reports', _l.navModuleReports, Icons.bar_chart_rounded,
+        ['report', 'reports', 'রিপোর্ট']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('documents', _l.navModuleDocuments, Icons.folder_copy_outlined,
+        ['documents', 'ডকুমেন্ট', 'নথি']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('executive', _l.navModuleExecutive, Icons.space_dashboard_outlined,
+        ['executive', 'command', 'owner\'s centre', 'মালিকের কেন্দ্র']),  // l10n-ok: search aliases in both languages
+    NavModuleDef('notification', _l.navModuleNotification, Icons.mark_chat_unread_outlined,
+        ['notice', 'নোটিশ', 'বিজ্ঞপ্তি', 'notices', 'যোগাযোগ', 'communication']),  // l10n-ok: search aliases in both languages
+    // ⭐ কোপাইলট নিজের টাইলে, মালিকের জীবন্ত "Ai" চিহ্ন, পেছনে কোনো পট নেই (২৩ নভেম্বর ২০২৬) — আগে টাইল ছিল না, সারি হারাত
+    NavModuleDef('assistant', _l.lookTabCopilot, Icons.psychology_outlined,
+        ['copilot', 'কোপাইলট', 'assistant'], (size) => CopilotMark(size: size)),  // l10n-ok: search aliases in both languages
+    // ── অতিথি: আশ্রয়দাতা থাকলে তার টাইলের ভিতরে ([hosts]); না থাকলে নিজের টাইলে, এই নামে ──
     NavModuleDef('finance', _l.navModuleFinance, Icons.account_balance_outlined,
         ['finance', 'ব্যাংক', 'অর্থ']),  // l10n-ok: search aliases in both languages
     NavModuleDef('customer', _l.navModuleCustomer, Icons.person_outline,
         ['customer', 'দোকান', 'customers', 'গ্রাহক']),  // l10n-ok: search aliases in both languages
     NavModuleDef('supplier', _l.navModuleSupplier, Icons.local_shipping_outlined,
         ['supplier', 'প্রিন্সিপাল', 'suppliers', 'সরবরাহকারী']),  // l10n-ok: search aliases in both languages
-    NavModuleDef('approval', _l.navModuleApproval, Icons.check_rounded,
-        ['approval', 'সই', 'approvals', 'অনুমোদন']),  // l10n-ok: search aliases in both languages
-    NavModuleDef('hr', _l.navModuleHr, Icons.people_outline,
-        ['hr', 'staff', 'কর্মী']),  // l10n-ok: search aliases in both languages
-    NavModuleDef('reports', _l.navModuleReports, Icons.bar_chart_rounded,
-        ['report', 'reports', 'রিপোর্ট']),  // l10n-ok: search aliases in both languages
-    NavModuleDef('documents', _l.navModuleDocuments, Icons.folder_outlined,
-        ['documents', 'ডকুমেন্ট', 'নথি']),  // l10n-ok: search aliases in both languages
-    NavModuleDef('executive', _l.navModuleExecutive, Icons.speed_outlined,
-        ['executive', 'command', 'owner\'s centre', 'মালিকের কেন্দ্র']),  // l10n-ok: search aliases in both languages
     // ── ⭐ বাকি মডিউল, দ্বিতীয় ভাগ (মালিকের আদেশ, ১৩ অক্টোবর ২০২৬) ──
     NavModuleDef('promotion', _l.navModulePromotion, Icons.local_offer_outlined,
         ['promotion', 'offer', 'অফার', 'প্রমোশন']),  // l10n-ok: search aliases in both languages
     // ── ⭐ ফোনের নতুন মডিউল, ১৩ অক্টোবর ২০২৬ (মালিক: "app e baki module & menu") ──
     NavModuleDef('credit_control', _l.navModuleCreditControl, Icons.credit_score_outlined,
         ['credit', 'বাকি', 'সীমা', 'limit', 'credit control', 'বাকি নিয়ন্ত্রণ']),  // l10n-ok: search aliases in both languages
-    NavModuleDef('notification', _l.navModuleNotification, Icons.campaign_outlined,
-        ['notice', 'নোটিশ', 'বিজ্ঞপ্তি', 'notices']),  // l10n-ok: search aliases in both languages
       ]);
+
+  /// ⭐ The order the tiles stand in — the owner's approved sample v2 (23 Nov 2026). A guest on its own stands right
+  /// after its host's place; a module not named here stands after these, in the server's order.
+  static const List<String> tileOrder = [
+    'sales', 'purchase', 'inventory', 'accounts', 'approval', 'hr', 'reports', 'documents', 'executive',
+    'notification', 'assistant', 'system_admin', 'master_data',
+  ];
+
+  /// ⭐ The web's merges (owner, 20 Nov 2026: হিসাব + অর্থ + স্থায়ী সম্পদ, বিক্রয় + গ্রাহক + বাকি নিয়ন্ত্রণ + অফার,
+  /// ক্রয় + সরবরাহকারী; 23 Nov 2026: সিস্টেম ও প্রশাসন = সিস্টেম প্রশাসন + নিয়ন্ত্রণ ও নিরীক্ষা + ব্যাকআপ, যোগাযোগ =
+  /// বিজ্ঞপ্তি + বার্তা ও কল) — guest → host. The server's own word ([ServerModules.hosts]) is laid over these.
+  /// ⓘ Like the web, a guest moves in only while its host is there for this person.
+  static const Map<String, String> hosts = {
+    'customer': 'sales',
+    'credit_control': 'sales',
+    'promotion': 'sales',
+    'supplier': 'purchase',
+    'finance': 'accounts',
+    'fixed_assets': 'accounts',
+    'governance': 'system_admin',
+    'backup': 'system_admin',
+    'messaging': 'notification',
+  };
+
+  /// The search words of a module only the server knows — inside a merged tile its screens still answer to them.
+  static List<String> guestAliases(String code) => switch (code) {
+        'governance' => const ['নিয়ন্ত্রণ ও নিরীক্ষা', 'নিরীক্ষা', 'governance', 'audit'],  // l10n-ok: search aliases in both languages
+        'backup' => const ['ব্যাকআপ', 'ব্যাকআপ ও পুনরুদ্ধার', 'পুনরুদ্ধার', 'backup', 'restore'],  // l10n-ok: search aliases in both languages
+        'messaging' => const ['বার্তা', 'বার্তা ও কল', 'চ্যাট', 'messages', 'chat', 'calls'],  // l10n-ok: search aliases in both languages
+        'fixed_assets' || 'fixed_asset' || 'asset' => const ['স্থায়ী সম্পদ', 'সম্পদ', 'fixed assets', 'assets'],  // l10n-ok: search aliases in both languages
+        'system_admin' => const ['সিস্টেম প্রশাসন', 'সিস্টেম', 'system admin', 'admin'],  // l10n-ok: search aliases in both languages
+        _ => const [],
+      };
 
   /// The order the headings stand in, inside any module.
   static List<String> get groupOrder => _once('groupOrder', () => [
@@ -655,7 +701,8 @@ class NavCatalog {
       code,
       label.trim().isEmpty ? code : label.trim(),
       switch (code) {
-        'system_admin' => Icons.settings_outlined,
+        // ⭐ মালিকের অনুমোদিত আইকন (২৩ নভেম্বর ২০২৬, নমুনা v2) — সিস্টেম ও প্রশাসন এক টাইলে, ঢালে মানুষ
+        'system_admin' => Icons.admin_panel_settings_outlined,
         'master_data' => Icons.dataset_outlined,
         'governance' => Icons.policy_outlined,
         'backup' => Icons.backup_outlined,
@@ -665,7 +712,7 @@ class NavCatalog {
         'asset' || 'fixed_asset' || 'fixed_assets' => Icons.domain_outlined,
         _ => Icons.apps_outlined,
       },
-      [code.replaceAll('_', ' ')]);
+      [code.replaceAll('_', ' '), ...guestAliases(code)]);
 
   /// The module a server route name belongs to — its first segment, with the
   /// web's few plural/alias spellings folded in.
@@ -692,8 +739,11 @@ class NavTree {
   /// may open whatever the menu says — the dashboards list (the server filters
   /// it itself, and the old home always offered it), the sync status and the
   /// bell, none of which sit behind a permission or a module switch.
+  ///
+  /// <p>⭐ [server] — `/me`'s merged modules and their names ([ServerModules]); empty offline or from an older server.
   factory NavTree.from(List<MenuItem> items,
-      {List<String> always = const ['dashboards', 'sync-status', 'notifications']}) {
+      {List<String> always = const ['dashboards', 'sync-status', 'notifications'],
+      ServerModules server = const ServerModules()}) {
     final rowsByModule = <String, Map<String, List<NavRow>>>{};
     final childrenByParent = <String, List<NavRow>>{};
     final extra = <NavRow>[];
@@ -804,6 +854,8 @@ class NavTree {
             aliases: [
               if (item.moduleLabel != null) item.moduleLabel!,
               NavCatalog.webGroupTitle(item.group),
+              // ⭐ অতিথির সারি এক করা টাইলে — নিজের মডিউলের নামেও খোঁজায় আসে ("নিয়ন্ত্রণ ও নিরীক্ষা", "বার্তা")
+              if (item.ownModule != null) ..._guestWords(item.ownModule!, null),
             ],
             web: true,
           ));
@@ -829,11 +881,39 @@ class NavTree {
           ));
     }
 
+    // ⭐ এক করা মডিউল (মালিক, ২০ ও ২৩ নভেম্বর ২০২৬; ওয়েবের একই মিলন): অতিথির সারি আশ্রয়দাতার টাইলে, আশ্রয়দাতার নিজের
+    // সারির পরে — কেবল আশ্রয়দাতা এই মানুষের জন্য থাকলে, ওয়েবের মতোই; নইলে অতিথি নিজের টাইলে।
+    final hostOf = {...NavCatalog.hosts, ...server.hosts};
+    for (final guest in rowsByModule.keys.toList()) {
+      final host = hostOf[guest];
+      if (host == null || host == guest || !rowsByModule.containsKey(host)) continue;
+      final words = _guestWords(guest, serverModules[guest]);
+      final into = rowsByModule[host]!;
+      rowsByModule.remove(guest)!.forEach((group, rows) {
+        into.putIfAbsent(group, () => []).addAll(rows.map((r) => _moved(r, host, words)));
+      });
+    }
+
+    double rankOf(String code) {
+      final at = NavCatalog.tileOrder.indexOf(code);
+      if (at >= 0) return at.toDouble();
+      final host = NavCatalog.tileOrder.indexOf(hostOf[code] ?? '');
+      return host >= 0 ? host + 0.5 : NavCatalog.tileOrder.length.toDouble();
+    }
+
+    final defs = [...NavCatalog.modules, ...serverModules.values];
+    final order = [for (var i = 0; i < defs.length; i++) (rankOf(defs[i].code), i)]
+      ..sort((a, b) => a.$1 != b.$1 ? a.$1.compareTo(b.$1) : a.$2.compareTo(b.$2));
+
     final modules = <NavModule>[];
     final comingSoon = <NavModule>[];
-    for (final def in [...NavCatalog.modules, ...serverModules.values]) {
+    for (final (_, i) in order) {
+      var def = defs[i];
       final groups = rowsByModule[def.code];
       if (groups == null) continue;
+      // ⭐ এক করা টাইলের নাম সার্ভারের ("হিসাব ও অর্থ", "যোগাযোগ"); পুরনো সার্ভারে অ্যাপের নিজের নাম
+      final merged = server.mergedLabels[def.code];
+      if (merged != null) def = def.named(merged);
       final ordered = groups.keys.toList()
         ..sort((a, b) {
           int at(String g) {
@@ -851,6 +931,26 @@ class NavTree {
     }
     return NavTree._([...modules, ...comingSoon], extra);
   }
+
+  /// A guest's own names — its screens inside the host's tile still answer to them ("গ্রাহক", "অর্থ", "বার্তা").
+  static List<String> _guestWords(String guest, NavModuleDef? server) {
+    final def = NavCatalog.moduleDef(guest) ?? server;
+    return [if (def != null) ...[def.label, ...def.aliases], ...NavCatalog.guestAliases(guest)];
+  }
+
+  /// [row] standing in [host]'s tile, with its old module's words.
+  static NavRow _moved(NavRow row, String host, List<String> words) => NavRow(
+        id: row.id,
+        label: row.label,
+        icon: row.icon,
+        module: host,
+        path: row.path,
+        children: [for (final c in row.children) _moved(c, host, words)],
+        planned: row.planned,
+        aliases: [...row.aliases, ...words],
+        web: row.web,
+        mark: row.mark,
+      );
 
   /// The name a module tile carries — the catalogue's, or the server's for a module only the web knew.
   String? moduleLabel(String code) => module(code)?.label ?? NavCatalog.moduleDef(code)?.label;

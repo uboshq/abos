@@ -387,7 +387,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       // ⭐ The company's phone switches ([ModuleGate]) — `/me`'s menu is
       // already filtered, this catches this app's own tiles too.
       _items = ModuleGate.visible(home.items, modules);
-      _tree = NavTree.from(_items);
+      _tree = NavTree.from(_items, server: home.modules);
       _menuLoading = false;
       if (profile != null) _profile = profile;
       if (home.me != null) {

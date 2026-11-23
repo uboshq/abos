@@ -118,6 +118,8 @@ class _ModuleTile extends StatelessWidget {
   Widget build(BuildContext context) {
     // ⭐ সব সারি "শীঘ্রই আসছে" — টাইল থাকে, ধূসর (মালিক, ১২ অক্টোবর ২০২৬)
     final live = module.live;
+    // ⭐ নিজের চিহ্নের টাইল (Copilot-এর জীবন্ত "Ai") — পেছনে কোনো পট নেই (মালিক, ২৩ নভেম্বর ২০২৬, নমুনা v2)
+    final mark = module.def.mark;
     // ⭐ রং থিমের ভূমিকা থেকে (নকশার নিয়ম ০.৪.৩৮ §১)
     return Card(
       key: ValueKey('module-${module.code}'),
@@ -135,19 +137,25 @@ class _ModuleTile extends StatelessWidget {
                 isLabelVisible: count > 0,
                 label: Text(count > 99 ? '99+' : '$count'),
                 offset: const Offset(4, -4),
-                child: Container(
-                  width: 54,
-                  height: 54,
-                  decoration: BoxDecoration(
-                    // ⓘ সাদা আইকনের সাথে অন্তত ৩:১ — মডিউলের রঙের গাঢ় সুর ([[AppColors.moduleSolid]])
-                    color: live ? AppColors.moduleSolid(module.code) : context.palette.border,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  // ⓘ moduleSolid সাদার সাথে ৩:১ মেপে বানানো, তাই আইকন দুই মোডেই সাদা (AppColors.onPrimary);
-                  // ধূসর (শীঘ্রই আসছে) টাইলে থিমের মলিন রং
-                  child: Icon(module.def.icon,
-                      color: live ? AppColors.onPrimary : context.palette.onSurfaceMuted, size: 28), // dark-ok
-                ),
+                child: mark != null
+                    ? SizedBox.square(
+                        key: ValueKey('module-mark-${module.code}'),
+                        dimension: 54,
+                        child: Center(child: mark(48)),
+                      )
+                    : Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          // ⓘ সাদা আইকনের সাথে অন্তত ৩:১ — মডিউলের রঙের গাঢ় সুর ([[AppColors.moduleSolid]])
+                          color: live ? AppColors.moduleSolid(module.code) : context.palette.border,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        // ⓘ moduleSolid সাদার সাথে ৩:১ মেপে বানানো, তাই আইকন দুই মোডেই সাদা (AppColors.onPrimary);
+                        // ধূসর (শীঘ্রই আসছে) টাইলে থিমের মলিন রং
+                        child: Icon(module.def.icon,
+                            color: live ? AppColors.onPrimary : context.palette.onSurfaceMuted, size: 28), // dark-ok
+                      ),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
