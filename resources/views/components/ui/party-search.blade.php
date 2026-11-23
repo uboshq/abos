@@ -106,6 +106,7 @@
 @endphp
 
 <div {{ $attributes->class('min-w-0') }}
+     x-on:party-search-set="setFromOutside"
      x-data="partySearch({ value: @js($value), options: @js($rows), uid: @js($uid), clearable: @js((bool) $clearable), addable: @js((bool) $addable), adding: @js($addingNow), newName: @js($addable ? (string) old($addName, '') : '') })">
     @if ($label)
         <span id="{{ $uid }}-label" class="mb-1 block text-sm font-medium">

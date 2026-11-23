@@ -1459,6 +1459,7 @@ export function filterPanel () {
             if (! this.open) return
             for (const [el, was] of this.saved) {
                 if (el.type === 'checkbox' || el.type === 'radio') el.checked = was
+                else if (this.pickerOf(el)) this.setPicker(el, was)
                 else el.value = was
             }
             this.open = false
@@ -1470,8 +1471,19 @@ export function filterPanel () {
             return this.fields().filter((el) => {
                 if (el.type === 'checkbox' || el.type === 'radio') return el.checked && ! this.isDefault(el)
                 if (el.tagName === 'SELECT') return el.selectedIndex > 0
-                return el.type !== 'hidden' && el.value !== ''
+                // ⓘ লিখে-খোঁজা পক্ষের লুকানো ঘর বাছা গোনে; বাকি লুকানো ঘর ("শুরু থেকে") নয়
+                if (el.type === 'hidden') return this.pickerOf(el) !== null && el.value !== ''
+                return el.value !== ''
             }).length
+        },
+        /** ⓘ লিখে-খোঁজা পক্ষ/পণ্যের ঘর ([[x-ui.party-search]] প্যানেলে, `data-filter-party`) — লুকানো ঘরটা যার ভিতরে */
+        pickerOf (el) {
+            return el.type === 'hidden' ? el.closest('[data-filter-party]') : null
+        },
+        /** ⓘ পিকারের নিজের অবস্থাও বদলায় — কেবল লুকানো ঘর বদলালে নামটা পর্দায় থেকে যেত ([[partySearch]] `setFromOutside`) */
+        setPicker (el, value) {
+            el.value = value
+            this.pickerOf(el)?.dispatchEvent(new CustomEvent('party-search-set', { detail: { value } }))
         },
         isDefault (el) {
             // ⓘ একটাই-বাছাইয়ের অংশে ডিফল্ট (যেমন "চালু") চালু ছাঁকনি নয় — সার্ভার নিজেই চিহ্ন দেয় (`data-default`)
@@ -1538,6 +1550,8 @@ export function filterPanel () {
             this.fields().forEach((el) => {
                 if (el.type === 'checkbox') el.checked = false
                 else if (el.type === 'radio') el.checked = this.isDefault(el)
+                // ⭐ লিখে-খোঁজা পক্ষও খালি — আগে "সব সরান" এটাকে ছুঁত না (লুকানো ঘর), পক্ষ বাছাই থেকে যেত
+                else if (this.pickerOf(el)) this.setPicker(el, '')
                 else if (el.type !== 'hidden') el.value = ''
             })
             this.changed()
