@@ -42,7 +42,7 @@
         @vite('resources/js/messenger-page.js')
     @endpush
 
-    <div class="msgr" data-msgr
+    <div class="msgr" data-msgr data-live-off
          data-words="{{ json_encode($msgrWords, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}"
          data-routes="{{ json_encode($msgrRoutes, JSON_UNESCAPED_SLASHES) }}"
          data-me="{{ json_encode($msgrMe, JSON_UNESCAPED_UNICODE) }}"

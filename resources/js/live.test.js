@@ -62,6 +62,15 @@ describe('placeFresh', () => {
         expect(doc.querySelector('[data-live="approvals"] span').textContent).toBe('৩')
     })
 
+    it('leaves a page that fetches its own data (the messenger) alone, but still updates the footer', () => {
+        const doc = page('<main id="main"><div data-live-off><p id="chat">open chat</p></div></main><footer data-footer><span>পুরনো</span></footer>')
+        const fresh = page('<main id="main"><div data-live-off><p id="chat"></p></div></main><footer data-footer><span>নতুন</span></footer>')
+
+        expect(placeFresh(doc, fresh, fakeMorph)).toBe(1)
+        expect(doc.querySelector('#chat').textContent).toBe('open chat')
+        expect(doc.querySelector('footer span').textContent).toBe('নতুন')
+    })
+
     it('never touches a box the person is typing in, and still updates the rest of the form', () => {
         const doc = page('<main id="main"><form><input id="qty" value="10"><span id="stock">৫০</span></form></main>')
         const fresh = page('<main id="main"><form><input id="qty" value=""><span id="stock">৪০</span></form></main>')
