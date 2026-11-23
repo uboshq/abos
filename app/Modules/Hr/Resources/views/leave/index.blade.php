@@ -16,6 +16,11 @@
         ['key' => 'actions', 'label' => '—', 'width' => '14rem',
          'render' => fn ($a) => view('hr::leave.partials.actions', ['application' => $a])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('pending', __('hr::action.only_pending')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -41,11 +46,12 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('hr::menu.leave')"
                 :sort="$sortOptions"
-                :columns="$columns" :search="false">
+                :columns="$columns" :search="false" :facets="$facetPanel">
         <x-slot:actions>
             @can('hr.leave.manage')
                     <x-ui.button :href="route('hr.leave_type.index')">
@@ -56,10 +62,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="pending" value="1" @checked($onlyPending) class="size-4">
-                    {{ __('hr::action.only_pending') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -71,4 +73,5 @@
 
     <div class="mt-4">{{ $applications->links() }}</div>
     <x-ui.list-totals :rows="$applications" />
+    </x-ui.filter-layout>
 </x-layouts.app>

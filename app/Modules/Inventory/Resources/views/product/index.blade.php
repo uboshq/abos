@@ -180,6 +180,11 @@
             ),
         ));
     }
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('inactive', __('inventory::action.show_inactive')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -193,12 +198,14 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.products')" :count="trans_choice('inventory::message.count', $products->total(), ['count' => $products->total()])"
                 :search-placeholder="__('inventory::message.search_placeholder')"
                 :sort="$sortOptions"
                 :columns="$columns"
+                :facets="$facetPanel"
                 view>
         <x-slot:actions>
             @can('create', \App\Modules\Inventory\Models\Product::class)
@@ -207,10 +214,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
-                    {{ __('inventory::action.show_inactive') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -224,4 +227,5 @@
         <x-ui.pager :rows="$products" />
         <x-ui.list-totals :rows="$products" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

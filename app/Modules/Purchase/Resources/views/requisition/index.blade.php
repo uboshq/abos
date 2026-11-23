@@ -36,6 +36,10 @@
         ['key' => 'status', 'label' => __('purchase::field.state'), 'width' => '9rem',
          'render' => fn ($r) => view('purchase::requisition.partials.status', ['requisition' => $r])],
     ];
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -49,10 +53,11 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed
          class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('purchase::menu.requisitions')"
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$facetPanel" :title="__('purchase::menu.requisitions')"
                           :count="trans_choice('core.count.records', $requisitions->total(), ['count' => $requisitions->total()])"
                           :columns="$columns"
                           :sort="$sortOptions">
@@ -63,8 +68,6 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
-
-                <x-ui.date-range :dates="$dates" />
             </x-ui.toolbar>
         </form>
 
@@ -77,4 +80,5 @@
         <x-ui.pager :rows="$requisitions" />
         <x-ui.list-totals :rows="$requisitions" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

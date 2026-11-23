@@ -19,6 +19,11 @@
         ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($h) => view('hr::salary_head.partials.actions', ['head' => $h])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('inactive', __('hr::action.show_inactive')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -64,21 +69,17 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('hr::menu.salary_heads')"
                 :sort="$sortOptions"
-                :columns="$columns" :search="false">
+                :columns="$columns" :search="false" :facets="$facetPanel">
         <x-slot:actions>
             <x-ui.button tone="primary" icon="plus" :href="route('hr.salary_head.create')">
                     {{ __('hr::action.new_head') }}
                 </x-ui.button>
         </x-slot:actions>
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked(request()->boolean('inactive'))
-                           class="size-4">
-                    {{ __('hr::action.show_inactive') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -90,4 +91,5 @@
         <x-ui.pager :rows="$heads" />
         <x-ui.list-totals :rows="$heads" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
