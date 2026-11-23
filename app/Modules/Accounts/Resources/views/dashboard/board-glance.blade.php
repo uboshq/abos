@@ -36,6 +36,8 @@
         </div>
     </section>
 
+    {{-- ⛔ খাত ধরে খরচ কেবল `accounts.report.final`-এ — চাবি না থাকলে ঘরটাই নেই, "কিছু নেই" বলে মিথ্যা নয় (ড্যাশবোর্ড নিরীক্ষা, 23 Nov 2026) --}}
+    @if ($tree !== null)
     <section data-acc-tree style="grid-column: span 2; {{ $card }} gap: 0.625rem; border-top: 0.25rem solid var(--color-dash-f59e0b)">
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap">
             <h2 style="margin: 0; font-size: 1rem; font-weight: 700">{{ __('accounts::board.g.tree') }}</h2>
@@ -54,4 +56,5 @@
             </div>
         @endif
     </section>
+    @endif
 </div>
