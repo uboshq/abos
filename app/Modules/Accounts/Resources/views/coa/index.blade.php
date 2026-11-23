@@ -26,6 +26,11 @@
                     ['key' => 'is_active', 'label' => __('accounts::field.state'), 'width' => '7rem',
                      'render' => fn ($a) => view('accounts::coa.partials.state', ['account' => $a])],
                 ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('inactive', __('accounts::action.show_inactive')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -83,14 +88,11 @@
             @endcan
         </div>
     @else
+        <x-ui.filter-layout :filters="$facetPanel" form="list-form">
         <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-            <form method="GET" class="contents">
-                <x-ui.toolbar :columns="$columns">
-                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                        <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
-                        {{ __('accounts::action.show_inactive') }}
-                    </label>
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :columns="$columns" :facets="$facetPanel">
                 </x-ui.toolbar>
             </form>
 
@@ -144,6 +146,7 @@
                 </div>
             @endif
         </div>
+        </x-ui.filter-layout>
     @endif
     </x-money.page>
 </x-layouts.app>

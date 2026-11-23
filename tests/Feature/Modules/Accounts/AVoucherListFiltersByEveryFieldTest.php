@@ -196,7 +196,8 @@ final class AVoucherListFiltersByEveryFieldTest extends TestCase
 
         $html = (string) $this->get(route('accounts.voucher.index', ['type' => Voucher::PAYMENT]))->assertOk()->getContent();
         foreach (['party', 'account', 'method', 'state', 'by', 'min', 'max'] as $key) {
-            $this->assertStringContainsString('data-filter="'.$key.'"', $html, "⛔ পরিশোধের তালিকায় '{$key}'-এর ছাঁকনি নেই");
+            // ⓘ ঘরগুলো এখন ডান পাশের ছাঁকনির প্যানেলে, একই চাবিতে ([[Facets]], ২৩ নভেম্বর ২০২৬)
+            $this->assertStringContainsString('data-filter-section="'.$key.'"', $html, "⛔ পরিশোধের তালিকায় '{$key}'-এর ছাঁকনি নেই");
         }
 
         // ⛔ পরিশোধে পক্ষের নাম "পক্ষ" — "কাকে দেওয়া হল" ফর্মে খাতের ঘরের লেখা, এক লেখার দুই মানে হত

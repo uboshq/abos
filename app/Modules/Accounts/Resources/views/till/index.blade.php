@@ -39,6 +39,11 @@
             ]),
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('inactive', __('accounts::action.show_closed')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -64,11 +69,12 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('accounts::menu.cash_tills')" :count="__('accounts::message.till_total', ['amount' => \App\Core\Support\Money::format($total)])"
                 :sort="$sortOptions"
-                :columns="$columns">
+                :columns="$columns" :facets="$facetPanel">
         <x-slot:actions>
             @can('create', \App\Modules\Accounts\Models\CashTill::class)
                     <x-ui.button tone="primary" icon="plus" :href="route('accounts.till.create')">
@@ -76,10 +82,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
-                    {{ __('accounts::action.show_closed') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -91,4 +93,5 @@
             :rows="$tills"
             :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

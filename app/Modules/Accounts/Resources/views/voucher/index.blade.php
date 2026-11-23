@@ -74,6 +74,29 @@
              'revised' => in_array((int) $v->id, $revisedIds ?? [], true),
          ])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]], [[VoucherListFilters]])
+    // ⓘ পক্ষের মান আগের মতোই "ধরন:নম্বর" ([[PartyRegistry::forPicker()]]-এর একই দল); নামের পাশে পয়েন্ট, পক্ষ-খোঁজার মতোই
+    $voucherAll = __('accounts::voucher.filter.all');
+    $voucherPick = fn (string $key, string $options) => \App\Core\ListFilter\Facets::pick($key, $filterLabels[$key] ?? '',
+        $filterOptions[$options] ?? [], ($filterLabels[$key] ?? '').': '.$voucherAll);
+    $voucherParties = collect($filterOptions['parties'] ?? [])
+        ->flatMap(fn ($group) => collect($group['options'] ?? [])->mapWithKeys(fn ($o) => [
+            $group['type'].':'.(int) $o['id'] => (string) $o['label'].(($o['hint'] ?? '') !== '' ? ' · '.$o['hint'] : ''),
+        ]))->all();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        \App\Core\ListFilter\Facets::pick('party', $filterLabels['party'] ?? '', $voucherParties, ($filterLabels['party'] ?? '').': '.$voucherAll),
+        $voucherPick('account', 'accounts'),
+        $voucherPick('method', 'methods'),
+        $voucherPick('state', 'states'),
+        $voucherPick('by', 'makers'),
+        // ⓘ এক শাখা হলে শাখার ঘরের কিছু বলার নেই; উৎসের ঘর কেবল রসিদের তালিকায় — আগের শর্ত হুবহু
+        count($filterOptions['branches'] ?? []) < 2 ? null : $voucherPick('branch_id', 'branches'),
+        ($filterOptions['origins'] ?? []) === [] ? null : $voucherPick('origin', 'origins'),
+        \App\Core\ListFilter\Facets::text('min', $filterLabels['min'] ?? '', $filterLabels['min'] ?? ''),
+        \App\Core\ListFilter\Facets::text('max', $filterLabels['max'] ?? '', $filterLabels['max'] ?? ''),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -98,63 +121,14 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :sort="$sortOptions"
                 :columns="$columns"
                 :filter-labels="$filterLabels ?? []"
-                :filter-values="$filterValues ?? []">
-                {{-- তারিখের পরিসর — ভাউচারের তালিকায় এটাই সবচেয়ে বেশি
-                     ব্যবহৃত ফিল্টার, তাই লুকানো নয় --}}
-                <x-ui.date name="from"
-                           value="{{ $filters['from'] ?? '' }}"
-                           aria-label="{{ __('accounts::field.from_date') }}"
-                           :submit-on-change="true"
-                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-                <x-ui.date name="to"
-                           value="{{ $filters['to'] ?? '' }}"
-                           aria-label="{{ __('accounts::field.to_date') }}"
-                           :submit-on-change="true"
-                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-
-                {{--
-                    ⭐ বাকি ছাঁকনি — পক্ষ (খোঁজাসহ), খাত, পদ্ধতি, অবস্থা, টাকার পরিসর, কে বানালেন, শাখা (মালিকের প্রশ্ন, ২৪ অক্টোবর ২০২৬;
-                    [[VoucherListFilters]])। ⓘ প্যানেল যেকোনো ঘর বদলালেই জমা দেয় (`data-action="submit-form"`), বাছা ছাঁকনি চিপ হয়ে
-                    ✕-সহ ওঠে ([[x-ui.toolbar]]), আর সব ঠিকানায় — share আর ছাপা একই তালিকা।
-                --}}
-                @php
-                    $compact = 'h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm';
-                    $pick = fn (string $key, array $options, string $all) => ['key' => $key, 'options' => $options, 'all' => $all];
-                @endphp
-                {{-- ⓘ পক্ষের ঘর খালি থাকলে কেবল "—" দেখায় — নামটা পাশে, বাকি ঘরের "নাম: সব"-এর মতো চেনা যায় --}}
-                <div class="flex min-w-64 items-center gap-2" data-filter="party">
-                    <span class="shrink-0 text-xs text-(--color-ink-muted)">{{ $filterLabels['party'] ?? '' }}</span>
-                    <x-ui.party-search name="party" :groups="$filterOptions['parties'] ?? []" :selected="$filters['party'] ?? null"
-                                       clearable :aria-label="$filterLabels['party'] ?? ''" />
-                </div>
-                @foreach ([
-                    $pick('account', $filterOptions['accounts'] ?? [], $filterLabels['account'] ?? ''),
-                    $pick('method', $filterOptions['methods'] ?? [], $filterLabels['method'] ?? ''),
-                    $pick('state', $filterOptions['states'] ?? [], $filterLabels['state'] ?? ''),
-                    $pick('by', $filterOptions['makers'] ?? [], $filterLabels['by'] ?? ''),
-                    $pick('branch_id', $filterOptions['branches'] ?? [], $filterLabels['branch_id'] ?? ''),
-                    // ⭐ সব / কাউন্টার / অফিস — কেবল রসিদে (মালিক, ২০ নভেম্বর ২০২৬; [[VoucherListFilters]] `origin`)
-                    $pick('origin', $filterOptions['origins'] ?? [], $filterLabels['origin'] ?? ''),
-                ] as $f)
-                    {{-- ⓘ এক শাখা হলে শাখার ঘরের কিছু বলার নেই; উৎসের ঘর কেবল রসিদের তালিকায় (অন্যগুলোতে বাছাই খালি) --}}
-                    @continue($f['key'] === 'branch_id' && count($f['options']) < 2)
-                    @continue($f['key'] === 'origin' && $f['options'] === [])
-                    <select name="{{ $f['key'] }}" aria-label="{{ $f['all'] }}" class="{{ $compact }}" data-filter="{{ $f['key'] }}">
-                        <option value="">{{ $f['all'] }}: {{ __('accounts::voucher.filter.all') }}</option>
-                        @foreach ($f['options'] as $value => $text)
-                            <option value="{{ $value }}" @selected((string) ($filters[$f['key']] ?? '') === (string) $value)>{{ $text }}</option>
-                        @endforeach
-                    </select>
-                @endforeach
-                <input type="text" inputmode="decimal" name="min" value="{{ $filters['min'] ?? '' }}" data-filter="min"
-                       placeholder="{{ $filterLabels['min'] ?? '' }}" aria-label="{{ $filterLabels['min'] ?? '' }}" class="{{ $compact }} w-28 text-right">
-                <input type="text" inputmode="decimal" name="max" value="{{ $filters['max'] ?? '' }}" data-filter="max"
-                       placeholder="{{ $filterLabels['max'] ?? '' }}" aria-label="{{ $filterLabels['max'] ?? '' }}" class="{{ $compact }} w-28 text-right">
+                :filter-values="$filterValues ?? []"
+                :facets="$facetPanel">
             </x-ui.toolbar>
         </form>
 
@@ -226,5 +200,6 @@
             @include('accounts::voucher.partials.old-papers', ['papers' => $oldPapers])
         @endif
     </div>
+    </x-ui.filter-layout>
     </x-money.page>
 </x-layouts.app>
