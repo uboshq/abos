@@ -96,6 +96,27 @@ class SalesReportController extends Controller implements HasMiddleware
         'collection-efficiency-point' => 'sales.collection_efficiency_point',
         'collection-efficiency-customer' => 'sales.collection_efficiency_customer',
         'collection-efficiency-branch' => \App\Modules\Sales\Reports\CustomerInsightReports::EFFICIENCY_BRANCH,
+        // ⭐ স্কিম ও ছাড়ের খরচ ([[SchemeCostReports]])
+        'scheme-cost' => \App\Modules\Sales\Reports\SchemeCostReports::SCHEMES,
+        'scheme-cost-bills' => \App\Modules\Sales\Reports\SchemeCostReports::BILLS,
+        'discount-by-salesperson' => \App\Modules\Sales\Reports\SchemeCostReports::DISCOUNTS,
+        // ⭐ দামের প্রাপ্তি ([[ProductInsightReports]])
+        'price-realisation' => \App\Modules\Sales\Reports\ProductInsightReports::PRICE,
+        // ⭐ ফেরতের হার — পণ্য আর জায়গার স্তর ধরে ([[ReturnRateReports]])
+        'return-rate' => \App\Modules\Sales\Reports\ReturnRateReports::PRODUCT,
+        'return-rate-area' => 'sales.return_rate_area',
+        'return-rate-territory' => 'sales.return_rate_territory',
+        'return-rate-point' => 'sales.return_rate_point',
+        'return-rate-customer' => 'sales.return_rate_customer',
+        // ⭐ বিক্রয়কর্মীর কাজের হিসাব ([[SalesForceReports]])
+        'salesperson-productivity' => \App\Modules\Sales\Reports\SalesForceReports::KEY,
+        // ⭐ এলাকা ধরে বাকির বয়স ([[DueAgeingReports]])
+        'due-ageing' => 'sales.due_ageing_area',
+        'due-ageing-territory' => 'sales.due_ageing_territory',
+        'due-ageing-point' => 'sales.due_ageing_point',
+        'due-ageing-customer' => 'sales.due_ageing_customer',
+        // ⭐ দৈনিক বিক্রি ও আদায়ের সারাংশ ([[DailySummaryReports]])
+        'daily-summary' => \App\Modules\Sales\Reports\DailySummaryReports::KEY,
     ];
 
     /**
@@ -146,6 +167,23 @@ class SalesReportController extends Controller implements HasMiddleware
             'collection-efficiency-point' => 'sales::area_sales.tab_point',
             'collection-efficiency-customer' => 'sales::area_sales.tab_customer',
             'collection-efficiency-branch' => 'sales::customer_insight.tab_branch',
+        ],
+        [
+            'scheme-cost' => 'sales::scheme_cost.tab_schemes',
+            'discount-by-salesperson' => 'sales::scheme_cost.tab_discounts',
+        ],
+        [
+            'return-rate' => 'sales::return_rate.tab_product',
+            'return-rate-area' => 'sales::area_sales.tab_area',
+            'return-rate-territory' => 'sales::area_sales.tab_territory',
+            'return-rate-point' => 'sales::area_sales.tab_point',
+            'return-rate-customer' => 'sales::area_sales.tab_customer',
+        ],
+        [
+            'due-ageing' => 'sales::area_sales.tab_area',
+            'due-ageing-territory' => 'sales::area_sales.tab_territory',
+            'due-ageing-point' => 'sales::area_sales.tab_point',
+            'due-ageing-customer' => 'sales::area_sales.tab_customer',
         ],
     ];
 

@@ -422,6 +422,18 @@ return [
                 'route_params' => ['slug' => 'customers-new'], 'permission' => 'sales.report'],
             ['label' => 'sales::customer_insight.menu_efficiency', 'icon' => 'wallet', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'collection-efficiency'], 'permission' => 'sales.report'],
+            ['label' => 'sales::scheme_cost.menu', 'icon' => 'megaphone', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'scheme-cost'], 'permission' => 'sales.report'],
+            ['label' => 'sales::product_insight.menu_price', 'icon' => 'wallet', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'price-realisation'], 'permission' => 'sales.report'],
+            ['label' => 'sales::return_rate.menu', 'icon' => 'refresh', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'return-rate'], 'permission' => 'sales.report'],
+            ['label' => 'sales::sales_force.menu', 'icon' => 'people', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'salesperson-productivity'], 'permission' => 'sales.report'],
+            ['label' => 'sales::due_ageing.menu', 'icon' => 'clock', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'due-ageing'], 'permission' => 'sales.report'],
+            ['label' => 'sales::daily_summary.menu', 'icon' => 'calendar', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'daily-summary'], 'permission' => 'sales.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
@@ -916,6 +928,12 @@ return [
         \App\Modules\Sales\Reports\CustomerInsightReports::class,
         \App\Modules\Sales\Reports\ProductInsightReports::class,
         \App\Modules\Sales\Reports\SalesTrendReports::class,
+        // ⭐ স্কিম ও ছাড়ের খরচ, ফেরতের হার, বিক্রয়কর্মীর কাজ, এলাকা ধরে বাকির বয়স, দৈনিক সারাংশ (রিপোর্ট ১০–১৫; দামের প্রাপ্তি পণ্যের ফাইলে)
+        \App\Modules\Sales\Reports\SchemeCostReports::class,
+        \App\Modules\Sales\Reports\ReturnRateReports::class,
+        \App\Modules\Sales\Reports\SalesForceReports::class,
+        \App\Modules\Sales\Reports\DueAgeingReports::class,
+        \App\Modules\Sales\Reports\DailySummaryReports::class,
     ],
 
     /*

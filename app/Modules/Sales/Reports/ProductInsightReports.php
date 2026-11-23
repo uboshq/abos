@@ -23,9 +23,73 @@ final class ProductInsightReports
 {
     public const ABC = 'sales.product_abc';
 
+    public const PRICE = 'sales.price_realisation';
+
     public static function registerAll(ReportEngine $engine): void
     {
         $engine->register(self::abc());
+        $engine->register(self::priceRealisation());
+    }
+
+    /**
+     * ⭐ ১১. দামের প্রাপ্তি — তালিকার দামে কত হত আর আসলে কত এল, পণ্য ধরে (মালিক, ২৩ নভেম্বর ২০২৬)।
+     *
+     * ⓘ তালিকার দাম বিলের লাইনে লেখা থাকে না; থাকে আসল দর (`rate`) আর সেটা প্রমিত দামের চেয়ে কত % সরে আছে (`price_variance`,
+     * ঋণাত্মক মানে কমে বিক্রি)। তাই তালিকার দাম = দর ÷ (১ + সরণ%) — বিলের দিনের প্রমিত দাম, আজকেরটা নয়। সরণ লেখা নেই এমন লাইনে
+     * দরটাই তালিকার দাম ধরা হয় (প্রাপ্তি ১০০%)।
+     *   তালিকার দামে হত  Σ পরিমাণ × তালিকার দাম
+     *   আসলে হয়েছে      Σ পরিমাণ × দর − লাইনের ছাড় (ভ্যাট আগে; বিলের মাথার ছাড় এখানে নয় — সেটা পণ্যের দামের সিদ্ধান্ত নয়)
+     *   প্রাপ্তি          আসলে ÷ তালিকার দামে; "কম এসেছে" দুইয়ের তফাত
+     * ⓘ ফেরত এখানে নেই — প্রশ্নটা দামের, পরিমাণের নয়।
+     */
+    private static function priceRealisation(): ReportDefinition
+    {
+        $money = fn (string $key, array $more = []): array => ['key' => $key, 'label' => 'sales::product_insight.'.$key,
+            'type' => ReportColumn::MONEY, 'drill' => self::door(), ...$more];
+
+        return new ReportDefinition(
+            key: self::PRICE,
+            permission: 'sales.report',
+            title: 'sales::product_insight.price_title',
+            filters: ['date_range', 'branch'],
+            groupBy: 'product_id',
+            rankBy: 'lost',
+            query: function (array $f): Builder {
+                // ⓘ সরণ −১০০% হলে ভাগ শূন্যে — তখন দরটাই (অমন লাইন ভুল তথ্য, রিপোর্ট ভাঙে না)
+                $list = 'il.qty * il.rate / COALESCE(NULLIF(1 + COALESCE(il.price_variance, 0) / 100, 0), 1)';
+                $real = '(il.qty * il.rate - il.discount)';
+
+                return DB::table('sal_invoice_lines as il')
+                    ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')
+                    ->join('inv_products as p', 'p.id', '=', 'il.product_id')
+                    ->where('i.company_id', $f['company_id'])->whereNull('i.deleted_at')
+                    ->whereIn('i.status', \App\Core\Support\DocumentStatus::POSTED)
+                    ->whereBetween('i.trx_date', [$f['from'], $f['to']])
+                    ->tap(ReportEngine::branchWall($f, 'i.branch_id'))
+                    ->tap(ReportEngine::dealerWall($f, 'i.customer_id'))
+                    ->groupBy('il.product_id', 'p.code', 'p.name_en', 'p.name_bn')
+                    ->selectRaw('il.product_id as product_id, '.DB::getPdo()->quote(Product::drillSourceType()).' as source_type, '
+                        .self::productName().' as product, SUM(il.qty) as qty, '
+                        ."CASE WHEN SUM(il.qty) > 0 THEN ROUND(SUM({$list}) / SUM(il.qty), 2) END as list_price, "
+                        ."CASE WHEN SUM(il.qty) > 0 THEN ROUND(SUM({$real}) / SUM(il.qty), 2) END as avg_price, "
+                        ."SUM({$list}) as at_list, SUM({$real}) as realised, "
+                        ."CASE WHEN SUM({$list}) > 0 THEN ROUND(SUM({$real}) * 100 / SUM({$list}), 2) END as realisation, "
+                        ."SUM({$list}) - SUM({$real}) as lost")
+                    ->orderByRaw("SUM({$list}) - SUM({$real}) DESC")->orderBy('il.product_id');
+            },
+            columns: [
+                ['key' => 'product', 'label' => 'sales::field.product', 'type' => ReportColumn::DOCUMENT,
+                    'source_type' => 'source_type', 'source_id' => 'product_id'],
+                ['key' => 'qty', 'label' => 'sales::field.quantity', 'type' => ReportColumn::QUANTITY],
+                // ⓘ দামের ঘর যোগ হয় না (চাবিতে `price` — [[ReportColumn]]-এর নিয়ম); মোটের সারিতে খালি
+                $money('list_price'),
+                $money('avg_price'),
+                ['key' => 'realisation', 'label' => 'sales::product_insight.realisation', 'type' => ReportColumn::PERCENT, 'ratio' => ['realised', 'at_list'], 'width' => '7rem'],
+                $money('at_list'),
+                $money('realised'),
+                $money('lost'),
+            ],
+        );
     }
 
     /** পণ্যের নাম পড়ার ভাষায় — কোডসহ ([[SalesReports]]-এর একই রূপ) */
