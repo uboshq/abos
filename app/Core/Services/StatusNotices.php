@@ -156,6 +156,49 @@ final class StatusNotices
         Cache::forget(self::cacheKey($companyId, $userId));
     }
 
+    /** ⓘ সেশনে ✕ দেওয়া নোটিশের চাবি → কতক্ষণ লুকানো (ইউনিক্স সময়) */
+    public const CLOSED = 'shell.banner.closed';
+
+    /**
+     * ⭐ একটা নোটিশের ✕ — কেবল পরের ঘণ্টার পপআপ পর্যন্ত (মালিক, ১৮ নভেম্বর ২০২৬: "এক ঘন্টা পর পর আবার আসবে … ঠিক না হওয়া পর্যন্ত")।
+     * ⓘ সময়টা নিয়ন্ত্রণ প্যানেলের `accounts.day_close.popup_every` (মিনিট); "দেখাবে না" বা অচেনা হলে ১ ঘণ্টা — জরুরি খবর চুপ থাকে না।
+     * ⛔ আগে ✕ গোটা লগইনের জন্য লুকাত — না সারা সমস্যা দিনভর আর ফিরত না।
+     */
+    public static function snoozeMinutes(): int
+    {
+        $value = (string) (app(SettingsService::class)->get('accounts.day_close.popup_every') ?? '60');
+
+        return ctype_digit($value) && (int) $value > 0 ? (int) $value : 60;
+    }
+
+    /** এই নোটিশটা ✕ দিয়ে পরের পপআপ পর্যন্ত লুকানো */
+    public static function close(string $key): void
+    {
+        session()->put(self::CLOSED, [...self::closedUntil(), $key => now()->addMinutes(self::snoozeMinutes())->getTimestamp()]);
+    }
+
+    /**
+     * এখনো লুকানো নোটিশের চাবি — সময় পেরোলে নোটিশ আবার আসে। ⓘ আগের ধরনের (সময় ছাড়া চাবির তালিকা) জমা থাকলে সেটা পেরোনো ধরা হয়।
+     *
+     * @return list<string>
+     */
+    public static function closedKeys(): array
+    {
+        return array_map('strval', array_keys(self::closedUntil()));
+    }
+
+    /** @return array<string, int> */
+    private static function closedUntil(): array
+    {
+        $now = now()->getTimestamp();
+
+        return array_filter(
+            (array) session(self::CLOSED, []),
+            fn ($until, $key): bool => is_string($key) && is_int($until) && $until > $now,
+            ARRAY_FILTER_USE_BOTH,
+        );
+    }
+
     public function current(): ?array
     {
         return $this->all()[0] ?? null;
@@ -182,11 +225,42 @@ final class StatusNotices
          * হলুদ = অপেক্ষা) নিচে চলে, আর উপরের ফিতায় যেমন ছিল তেমনই থাকে — মালিক দুই জায়গাই বেছেছেন। ⓘ তথ্যের (সাধারণ) কথা নিচে নয়।
          * ⓘ এই সিদ্ধান্ত ২১ অক্টোবরের "যন্ত্রের সতর্কতা কখনো চলন্ত বারে নয়"-এর জায়গা নিল।
          */
-        return array_values(array_filter(
-            $this->all(),
-            fn (array $n): bool => (($n['kind'] ?? null) === 'own' && ! ($n['urgent'] ?? false))
-                || (($n['kind'] ?? null) === null && in_array($n['tone'] ?? '', ['danger', 'warning', 'pending'], true)),
-        ));
+        /*
+         * ⭐ মালিক, ১৮ নভেম্বর ২০২৬ (রাত): *"পপআপে যা দেখাবে ঠিক না হওয়ার আগ পর্যন্ত পপআপ কাটার পরে নিচের নোটিশ বারে অল টাইম চলতেই থাকবে"* —
+         *   তাই লেখকের "জরুরি" টিক দেওয়া ঘোষণাও এখানে (আগে কেবল উপরের ফিতায়, এখন পপআপে), লাল রঙে (`tone` = danger), সবার আগে;
+         *   আর দিন বা মাস বন্ধ হয়নি — পপআপের একই খবর ([[DayCloseReminder]]), লাল। ⓘ এটা "একই নোটিশ দুই জায়গায় নয়"-এর জায়গা নিল।
+         */
+        $all = $this->all();
+        $urgent = array_map(fn (array $n): array => [...$n, 'tone' => 'danger'],
+            array_values(array_filter($all, fn (array $n): bool => ($n['kind'] ?? null) === 'own' && ($n['urgent'] ?? false))));
+
+        return array_values(array_filter([
+            ...$urgent,
+            $this->dayReminder(),
+            ...array_filter(
+                $all,
+                fn (array $n): bool => (($n['kind'] ?? null) === 'own' && ! ($n['urgent'] ?? false))
+                    || (($n['kind'] ?? null) === null && in_array($n['tone'] ?? '', ['danger', 'warning', 'pending'], true)),
+            ),
+        ]));
+    }
+
+    /**
+     * ⓘ দিন বন্ধের খবর — এক মিনিট মনে রাখা, বারের বাকি নোটিশের মতো ([[TTL]]); কেবল লগইন করা কর্মী, কোম্পানির ভেতরে।
+     *
+     * @return array{text: string, url: ?string, tone: string}|null
+     */
+    private function dayReminder(): ?array
+    {
+        $user = auth()->user();
+        $companyId = CompanyContext::id();
+
+        if (! $user instanceof User || $companyId === null) {
+            return null;
+        }
+
+        return Cache::remember(self::cacheKey((int) $companyId, (int) $user->id).'.day', self::TTL,
+            fn () => app(\App\Core\Contracts\DayCloseReminder::class)->forTicker($user));
     }
 
     /**

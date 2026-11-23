@@ -322,9 +322,9 @@ class NotificationController extends Controller
     {
         $key = (string) $request->input('key', '');
 
+        // ⭐ একটা নোটিশের ✕ — পরের ঘণ্টার পপআপ পর্যন্ত, গোটা লগইন নয় (মালিক, ১৮ নভেম্বর ২০২৬; [[StatusNotices::close()]])
         if (preg_match('/^[a-f0-9]{40}$/', $key) === 1) {
-            $closed = (array) $request->session()->get('shell.banner.closed', []);
-            $request->session()->put('shell.banner.closed', array_values(array_unique([...$closed, $key])));
+            \App\Core\Services\StatusNotices::close($key);
         }
 
         /*
@@ -333,8 +333,7 @@ class NotificationController extends Controller
          * ⓘ এখানে, কারণ এই দরজা সবার — দিন বন্ধের চাবি ছাড়াও জরুরি খবর আসে।
          */
         if ($request->boolean('later')) {
-            $minutes = (int) (app(\App\Core\Services\SettingsService::class)->get('accounts.day_close.popup_every') ?? 60);
-            $request->session()->put('daycheck.snooze_until', now()->addMinutes($minutes > 0 ? $minutes : 60)->getTimestamp());
+            $request->session()->put('daycheck.snooze_until', now()->addMinutes(\App\Core\Services\StatusNotices::snoozeMinutes())->getTimestamp());
         }
 
         return back();

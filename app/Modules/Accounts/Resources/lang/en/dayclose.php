@@ -230,6 +230,10 @@ return [
         'go' => 'Fix',
         'see' => 'See',
     ],
+    // the moving bar keeps the open-day reminder until it is fixed (owner, 18 Nov 2026; [[TickerDayReminder]])
+    'ticker' => [
+        'days' => '{1} Day not closed: :dates|[2,*] :count days not closed: :dates',
+    ],
     'popup' => [
         'title' => 'Day not closed',
         'title_news' => 'Urgent news today',

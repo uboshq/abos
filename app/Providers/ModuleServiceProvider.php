@@ -98,6 +98,8 @@ class ModuleServiceProvider extends ServiceProvider
         $this->app->bind(PartyOpenBills::class, NoPartyOpenBills::class);
         // ⓘ ক্রয় বন্ধ থাকলে পরিশোধ ভাউচারে সরবরাহকারীর খোলা বিল নেই ([[\App\Core\Contracts\PayableOpenBills]], cb-ma-5)
         $this->app->bind(\App\Core\Contracts\PayableOpenBills::class, \App\Core\Services\NoPayableOpenBills::class);
+        // ⓘ হিসাব বন্ধ থাকলে চলন্ত বারে দিন বন্ধের খবর নেই ([[\App\Core\Contracts\DayCloseReminder]])
+        $this->app->bind(\App\Core\Contracts\DayCloseReminder::class, \App\Core\Services\NoDayCloseReminder::class);
 
         // ⓘ বিক্রয় বন্ধ থাকলে হোমের ছাঁকনিতে বাছার কিছু নেই ([[HomeSalesFilters]])
         $this->app->bind(HomeSalesFilters::class, NoHomeSalesFilters::class);

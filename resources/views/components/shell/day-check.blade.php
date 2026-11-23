@@ -9,7 +9,7 @@
 
     ⓘ দুই ভাগ:
       ১ · জরুরি খবর — আগে পাতার উপরের ফিতায় যা থাকত ([[shell.notice-banner]], [[StatusNotices::forStrip()]]): ব্যাকআপ, খসড়া, অনুমোদন,
-          লেখকের "জরুরি" নোটিশ। সবার জন্য, যার যা দেখার অধিকার। প্রতিটার ✕ আগের মতোই (এই লগইনে সেটা আর আসে না)।
+          লেখকের "জরুরি" নোটিশ। সবার জন্য, যার যা দেখার অধিকার। প্রতিটার ✕ কেবল পরের ঘণ্টার পপআপ পর্যন্ত লুকায় ([[StatusNotices::close()]]; মালিক, ১৮ নভেম্বর ২০২৬)।
           ⓘ নিচের চলন্ত বারে এগুলো আগে থেকেই চলে, ঠিক না হওয়া পর্যন্ত ([[StatusNotices::forTicker()]], মালিক ৭ নভেম্বর)।
       ২ · দিন আর মাস বন্ধ হয়নি — যাঁর দিন বন্ধের চাবি আছে (`accounts.day_close.close`): গত সাত দিনের বন্ধ-না-হওয়া কর্মদিবস
           ([[DayChecklist::openDays()]]), গত মাস ([[DayChecklist::openMonth()]]), আর সবচেয়ে নতুন খোলা দিনের চেকলিস্ট।
@@ -17,6 +17,8 @@
           ⓘ মাসের অংশ মাস বন্ধের চাবিওয়ালাকেও (`accounts.period.close`), সাথে মাসের বাকি কাজের তালিকা ([[DayChecklist::monthLeft()]]; ২১ নভেম্বর ২০২৬)।
     ⓘ "পরে মনে করাবেন" — এই লগইনে নিয়ন্ত্রণ প্যানেলের সময় পর্যন্ত (ডিফল্ট ১ ঘণ্টা) পুরো পপআপ লুকায়; তারপর যা তখনো বাকি তা নিয়ে আবার আসে
       ([[NotificationController::closeBanner()]] `later`, সবার জন্য খোলা — দিন বন্ধের চাবি ছাড়াও)।
+    ⭐ Copilot-এর এক লাইন — পপআপ খুললে তার মাথায় ([[CopilotLine]]; মালিক, ১৮ নভেম্বর ২০২৬: "কোপাইলটের সারাংশ পপআপে")। কেবল যাঁর
+      `assistant.use` আছে আর Copilot চালু ([[AssistantEngine::availableTo()]]); নিজে পপআপ খোলায় না। হোমের ঘর থেকে বানানো, পাঁচ মিনিট মনে রাখা।
     ⛔ পর্দা ঢাকে না: পেছনের পাতা চলতেই থাকে, দিন/মাস শেষের হিসাবের পাতায় নিজে আসে না, ছাপায় আসে না। জাভাস্ক্রিপ্ট ছাড়া।
 --}}
 @php
@@ -30,13 +32,14 @@
     $monthUrl = null;
     $closesMonth = false;
     $hasNews = false;
+    $copilot = null;
 
     if ($user !== null
         && \Illuminate\Support\Facades\Route::has('notifications.banner.close')
         && ! request()->routeIs('executive.dayclose', 'executive.dayclose.*', 'executive.month_close')
         && (int) session('daycheck.snooze_until', 0) <= now()->getTimestamp()) {
-        // ── ১ · জরুরি খবর (আগের উপরের ফিতা) — এই লগইনে ✕ দেওয়াগুলো বাদ, ফিতার একই নিয়ম ──
-        $closed = (array) session('shell.banner.closed', []);
+        // ── ১ · জরুরি খবর (আগের উপরের ফিতা) — ✕ দেওয়াগুলো পরের ঘণ্টার পপআপ পর্যন্ত বাদ, ফিতার একই নিয়ম ──
+        $closed = \App\Core\Services\StatusNotices::closedKeys();
         $hasNews = array_filter(
             app(\App\Core\Services\StatusNotices::class)->forStrip(),
             fn (array $n): bool => ! in_array(sha1($n['text']), $closed, true),
@@ -68,6 +71,28 @@
         }
 
         $show = $hasNews || $days !== [] || $month !== null;
+
+        // ── ৩ · Copilot-এর এক লাইন — কেবল পপআপ এমনিতেই খুললে; চাবি আর সুইচ না থাকলে লাইনটাই নেই ──
+        if ($show && class_exists(\App\Core\Engines\Assistant\AssistantEngine::class)) {
+            $assistant = app(\App\Core\Engines\Assistant\AssistantEngine::class);
+            // ⛔ সারাংশ বানাতে কিছু ভাঙলে পপআপ থাকে, কেবল লাইনটা নেই — প্রতিটা পাতা ৫০০ হত
+            if ($assistant->availableTo($user)) { try {
+                $copilot = \Illuminate\Support\Facades\Cache::remember(
+                    'daycheck.copilot.'.\App\Core\Support\CompanyContext::id().'.'.$user->id.'.'.(\App\Core\Support\CompanyContext::branchId() ?? 0).'.'.app()->getLocale(),
+                    300,
+                    function () use ($user) {
+                        $line = \App\Core\Dashboard\CopilotLine::from(
+                            \App\Core\Dashboard\HomePeriod::during('today', fn () => app(\App\Core\Dashboard\DashboardRegistry::class)->forUser($user)),
+                            'today');
+
+                        return ['text' => $line->text(), 'questions' => $line->questions];
+                    });
+                $copilot['name'] = $assistant->name();
+            } catch (\Throwable $e) {
+                report($e);
+                $copilot = null;
+            } }
+        }
     }
 @endphp
 
@@ -87,6 +112,20 @@
                     </button>
                 </form>
             </header>
+
+            {{-- ⭐ Copilot-এর এক লাইন আর দুটো প্রশ্ন — চাপলে উপরের বারের জিজ্ঞাসা খোলে, প্রশ্ন ঘরে লেখা; পাঠান মানুষ নিজে ([[copilot.js]]) --}}
+            @if ($copilot !== null)
+                <div class="flex flex-wrap items-center gap-2 border-b border-(--color-border) px-4 py-2 text-sm" data-popup-copilot>
+                    <x-ui.icon name="brain" :size="16" class="shrink-0 text-(--color-brand-500)" />
+                    <span class="font-semibold">{{ $copilot['name'] }}:</span>
+                    <span class="min-w-0 flex-1">{{ $copilot['text'] }}</span>
+                    @foreach ($copilot['questions'] as $question)
+                        <button type="button" data-copilot-ask="{{ $question }}"
+                                aria-label="{{ __('home.copilot_ask', ['name' => $copilot['name'], 'question' => $question]) }}"
+                                class="rounded-(--radius-pill) border border-(--color-border) px-2 py-0.5 text-xs text-(--color-link) hover:bg-(--color-surface-muted)">{{ $question }}</button>
+                    @endforeach
+                </div>
+            @endif
 
             {{-- ১ · জরুরি খবর — আগের উপরের ফিতার সারিগুলো, প্রতিটার নিজের ✕ আর "বিস্তারিত" সহ --}}
             @if ($hasNews)

@@ -100,6 +100,11 @@ return [
 
     'dashboard' => AccountsDashboard::class,
 
+    // ⭐ চলন্ত বারে দিন বা মাস বন্ধ হয়নি — কোরের প্রশ্ন, হিসাবের উত্তর (মালিক, ১৮ নভেম্বর ২০২৬; [[TickerDayReminder]])
+    'bindings' => [
+        \App\Core\Contracts\DayCloseReminder::class => \App\Modules\Accounts\Services\TickerDayReminder::class,
+    ],
+
     // ⭐ ফোনের নিজের পর্দায় লেনদেনের তালিকা আর পাতা (মালিক, ১৭ অক্টোবর ২০২৬; [[PhonePaperRegistry]])
     'phone_papers' => [
         \App\Modules\Accounts\Phone\InterCompanyPaper::class,
