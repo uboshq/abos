@@ -601,6 +601,20 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/{return}/cancel', [SalesReturnController::class, 'cancel'])->whereNumber('return')->name('cancel');
     });
 
+    /*
+     * ⭐ তালিকা থেকে একসাথে কাজ — আদেশ, চালান, বিল, ফেরত (মালিক, ১৯ নভেম্বর ২০২৬, নমুনা Q2W6mM3S v3; [[SalesBulkController]])।
+     * ⓘ চাবি পদ্ধতির ভিতরে (`$this->authorize()`): তালিকা দেখার চাবি + একটা একটা দরজার চাবি, কাগজ আর কাজ ধরে।
+     */
+    Route::post('bulk/{paper}/{action}', [\App\Modules\Sales\Http\Controllers\SalesBulkController::class, 'run'])
+        ->whereIn('paper', \App\Modules\Sales\Http\Controllers\SalesBulkController::PAPERS)
+        ->whereIn('action', ['submit', 'cancel'])
+        ->name('bulk');
+    // ⓘ অনুমোদন নিজের নামে — "সব শাখা" দেখাতেও খোলা, একটা একটা অনুমোদনের মতো ([[AllBranchesView::ALLOWED]]); পাঠানো/বাতিল সেখানে থামে
+    Route::post('bulk/{paper}/approve', [\App\Modules\Sales\Http\Controllers\SalesBulkController::class, 'run'])
+        ->whereIn('paper', \App\Modules\Sales\Http\Controllers\SalesBulkController::PAPERS)
+        ->defaults('action', 'approve')
+        ->name('bulk.approve');
+
     // ⭐ বিক্রয়ের সারসংক্ষেপ — প্রতিটা কার্ড নিজের চাবি দেখে ([[SalesOverview]])
     Route::get('/overview', [SalesOverviewController::class, 'index'])->name('overview');
     Route::get('/reports/{slug}', [SalesReportController::class, 'show'])->name('report.show');

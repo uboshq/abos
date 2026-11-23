@@ -103,6 +103,21 @@
             'render' => fn ($d) => $d->creator?->name ?? '—',
         ],
     ];
+
+    /*
+     * ⭐ সারি বাছাই — একসাথে নিশ্চিত/অনুমোদনে, খসড়া বাতিল, অনুমোদন, ছাপা, Excel (মালিক, ১৯ নভেম্বর ২০২৬; [[PurchaseBulkController]])।
+     * ⛔ কেবল তিন ABOS রূপে — SAP আর Dynamic-এ টিক-বাক্সের কলাম আর বার কিছুই নয় ([[BulkRun::showsHere()]])।
+     * ⓘ রপ্তানির ফাইলে টিক-বাক্সের কলাম নয় (`?export=`) — ছাপা আর Excel কেবল কাগজের কলাম।
+     */
+    $bulkActions = \App\Core\Bulk\BulkRun::showsHere() && (auth()->user()?->can('purchase.bill.view') ?? false)
+        ? \App\Modules\Purchase\Http\Controllers\PurchaseBulkController::actionsFor('bill', auth()->user())
+        : [];
+    // ⛔ কোনো কাজ খোলা নেই (চাবি নেই, রপ্তানিও নয়) — বারও নেই, টিক-বাক্সও নয় ([[BulkRun::barOpen()]])
+    $bulk = \App\Core\Bulk\BulkRun::showsHere() && (auth()->user()?->can('purchase.bill.view') ?? false) && \App\Core\Bulk\BulkRun::barOpen($bulkActions);
+
+    if ($bulk && ! request()->filled('export')) {
+        array_unshift($columns, \App\Core\Bulk\BulkRun::pickColumn('purchase-bill-bulk', fn ($d) => (string) $d->document_no));
+    }
 @endphp
 
 <x-layouts.app :menu="$menu" :process-band="$processBand ?? []">
@@ -133,6 +148,11 @@
                 </label>
             </x-ui.toolbar>
         </form>
+
+        @if ($bulk)
+            <x-ui.bulk-form id="purchase-bill-bulk"
+                :actions="$bulkActions" />
+        @endif
 
         <x-ui.table
             :grand="$grand ?? []"

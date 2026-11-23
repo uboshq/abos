@@ -224,8 +224,15 @@ return [
         'deposits' => ':count deposit reports not yet matched in the bank — :amount',
         'books' => 'Books do not balance — debit and credit differ by :amount',
         'supplier_paid' => ':count supplier payments today — :amount (check them)',
+        'count_gap' => 'Cash count is off in :count count(s) — gap :amount',
+        'credit_bills' => ':count bills went on credit today — :amount still due',
+        'supplier_due' => ':count supplier bills due today are not paid — :amount',
         'go' => 'Fix',
         'see' => 'See',
+    ],
+    // the moving bar keeps the open-day reminder until it is fixed (owner, 18 Nov 2026; [[TickerDayReminder]])
+    'ticker' => [
+        'days' => '{1} Day not closed: :dates|[2,*] :count days not closed: :dates',
     ],
     'popup' => [
         'title' => 'Day not closed',

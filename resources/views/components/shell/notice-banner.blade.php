@@ -17,7 +17,8 @@
     ⓘ জাভাস্ক্রিপ্ট ছাড়া, ছোট ফর্ম; ছাপায় আসে না। সর্বোচ্চ তিনটা — বাকিগুলো ঘণ্টায় (Fiori: ফিতা কম, নইলে পাতাটাই ঢাকা পড়ে)।
 --}}
 @php
-    $closed = (array) session('shell.banner.closed', []);
+    // ⓘ ✕ দেওয়াগুলো কেবল পরের ঘণ্টার পপআপ পর্যন্ত বাদ ([[StatusNotices::closedKeys()]])
+    $closed = \App\Core\Services\StatusNotices::closedKeys();
     $all = auth()->check()
         ? array_values(array_filter(
             app(\App\Core\Services\StatusNotices::class)->forStrip(),

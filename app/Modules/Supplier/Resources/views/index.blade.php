@@ -124,6 +124,21 @@
             'render' => fn ($s) => view('supplier::partials.row-actions', ['supplier' => $s]),
         ],
     ];
+
+    /*
+     * ⭐ একসাথে কাজের বার, ধাপ ২ — মালিক, ১৯ নভেম্বর ২০২৬ (নমুনা Q2W6mM3S v3; [[BulkRun]], [[x-ui.bulk-form]])।
+     * ⓘ সরবরাহকারী মাস্টার, খসড়া নয় — পাঠানো/বাতিল/অনুমোদন নেই (বাকির সীমা আর ব্যাংক বদলের সই আলাদা কাগজ, নিজের পাতায়);
+     *   কেবল "ছাপুন · Excel", বাছা সারি, এই তালিকার নিজের প্রশ্নে (শাখার দেয়াল অটুট — [[ListExport::picked()]])।
+     *   রপ্তানির চাবি না থাকলে ঘরও নেই — নইলে বারহীন টিক-বাক্স বসত আর ধাপ ১-এর পাতার বারটাও সরে যেত।
+     * ⛔ কেবল তিন ABOS রূপে; রপ্তানির আঁকায় টিক-বাক্সের কলাম নয় (ফাইলে খালি "বাছুন" কলাম হত)।
+     */
+    $bulk = \App\Core\Bulk\BulkRun::showsHere()
+        && (auth()->user()?->can('system_admin.list.export') ?? false)
+        && ! request()->filled('export');
+
+    if ($bulk) {
+        array_unshift($columns, \App\Core\Bulk\BulkRun::pickColumn('supplier-bulk', fn ($s) => trim($s->code.' '.$s->name_en)));
+    }
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -192,6 +207,10 @@
         --}}
         {{-- ⓘ চোখ একটাই — কাজের কলামে, মালিকের ২১ সেপ্টেম্বরের ছকে (দেখা আর সম্পাদনা); টেবিলের :view-url নেই, নইলে একই সারিতে
              চোখ দুবার (মালিক, ২৪ অক্টোবর ২০২৬)। টাকার তালিকার পাহারা কাজের কলামের চোখকেই "দেখুন" ধরে ([[EveryMoneyListShowsAGrandTotalTest]]) --}}
+        @if ($bulk)
+            <x-ui.bulk-form id="supplier-bulk" />
+        @endif
+
         <x-ui.table
             :grand="$grand ?? []"
             :empty="$q ? __('core.empty.no_results') : __('supplier::message.none_yet')"

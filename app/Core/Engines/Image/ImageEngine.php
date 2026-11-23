@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Core\Engines\Image;
 
+use App\Core\Services\SettingsService;
 use GdImage;
+use InvalidArgumentException;
 use RuntimeException;
 
 /**
@@ -125,6 +127,69 @@ final class ImageEngine
     public const MARK_STORED_MAX = 500 * 1024;
 
     /**
+     * ⭐ ধরন ধরে KB — কন্ট্রোল প্যানেলে বদলানো যায় (মালিক, ১৬–১৭ নভেম্বর ২০২৬: "deposit report flexible", ধরন ধরে KB)।
+     *
+     * ⓘ প্রতিটা ধরনের সেটিং `system.image_kb.<ধরন>` (SystemAdmin module.php), ডিফল্ট ঠিক ওপরের পুরনো ধ্রুবক — তাই কেউ না
+     *   বদলানো পর্যন্ত কিছুই বদলায় না। স্লিপের KB আলাদা (`system.image_kb.slip`, [[AttachmentEngine::budgetFor()]])।
+     *
+     *   - `paper` — সংযুক্তির কাগজ: বিল, চুক্তি, কর্মী ও পণ্যের ছবি ([[paper()]])
+     *   - `photo` — বার্তায় পাঠানো ছবি ([[photo()]])
+     *   - `face`  — প্রোফাইল ছবি ([[face()]])
+     *   - `cover` — প্রোফাইলের মলাট ([[cover()]])
+     *   - `mark`  — লোগো/সিলের JPEG ([[mark()]]); স্বচ্ছ PNG লোগো [[MARK_STORED_MAX]]-এ, আর কোনো লোগোই তার ওপরে নয়
+     *
+     * @var array<string, int>
+     */
+    public const KB_DEFAULTS = [
+        'paper' => self::PAPER_BYTES / 1024,
+        'photo' => self::PAPER_BYTES / 1024,
+        'face' => self::FACE_BYTES / 1024,
+        'cover' => self::COVER_BYTES / 1024,
+        'mark' => self::MARK_BYTES / 1024,
+    ];
+
+    /** ⓘ সেটিংয়ের সীমা — স্লিপের মতোই: নিচে ২০ KB ([[AttachmentEngine::budgetFor()]]), ওপরে ১০ MB ([[AttachmentEngine::SLIP_HARD_MAX_KB]]) */
+    public const MIN_KB = 20;
+
+    public const MAX_KB = 10240;
+
+    /**
+     * একটা ধরনের KB — সেটিংস থেকে, [[MIN_KB]]–[[MAX_KB]]-এর মধ্যে (লোগো [[MARK_STORED_MAX]]-এর মধ্যে)।
+     *
+     * ⛔ সেটিং না থাকলে, পড়া না গেলে (মডিউল বন্ধ, টেবিল নেই), বা শূন্য/ঋণাত্মক/লেখা হলে — পুরনো ধ্রুবক; ছবি তোলা থামে না।
+     */
+    public static function kbFor(string $type): int
+    {
+        if (! array_key_exists($type, self::KB_DEFAULTS)) {
+            throw new InvalidArgumentException("Unknown image type '{$type}'.");
+        }
+
+        $default = self::KB_DEFAULTS[$type];
+
+        try {
+            $raw = app(SettingsService::class)->get('system.image_kb.'.$type, $default);
+        } catch (\Throwable) {
+            $raw = $default;
+        }
+
+        $kb = is_numeric($raw) ? (int) $raw : 0;
+
+        if ($kb <= 0) {
+            return $default;
+        }
+
+        $ceiling = $type === 'mark' ? intdiv(self::MARK_STORED_MAX, 1024) : self::MAX_KB;
+
+        return min($ceiling, max(self::MIN_KB, $kb));
+    }
+
+    /** একটা ধরনের বাজেট, বাইটে — [[kbFor()]] × ১০২৪ */
+    public static function budgetFor(string $type): int
+    {
+        return self::kbFor($type) * 1024;
+    }
+
+    /**
      * এই ফাইলটা কি আমরা ছুঁতে পারি?
      *
      * ⓘ `getimagesize()` ফাইলের **ভিতর** দেখে, নাম বা ব্রাউজারের বলা
@@ -228,7 +293,7 @@ final class ImageEngine
         $image = $this->clarify($image);
         $image = $this->wear($image, $look);
 
-        return $this->squeezeSmaller($image, $budget ?? self::PAPER_BYTES);
+        return $this->squeezeSmaller($image, $budget ?? self::budgetFor('paper'));
     }
 
     /**
@@ -242,7 +307,7 @@ final class ImageEngine
         $image = $this->straighten($image, $path);
         $image = $this->fit($image, self::PAPER_EDGE);
 
-        return $this->squeezeSmaller($image, self::PAPER_BYTES);
+        return $this->squeezeSmaller($image, self::budgetFor('photo'));
     }
 
     /**
@@ -489,7 +554,7 @@ final class ImageEngine
             $image = $this->fit($image, self::FACE_EDGE);
         }
 
-        return $this->squeeze($image, self::FACE_BYTES);
+        return $this->squeeze($image, self::budgetFor('face'));
     }
 
     /**
@@ -505,7 +570,7 @@ final class ImageEngine
         $image = $this->cropToRatio($image, self::COVER_WIDTH / self::COVER_HEIGHT);
         $image = $this->fit($image, self::COVER_WIDTH);
 
-        return $this->squeeze($image, self::COVER_BYTES);
+        return $this->squeeze($image, self::budgetFor('cover'));
     }
 
     /** ⓘ মাঝখান থেকে চওড়া:উচ্চতা = $ratio কাটা — ছবি যেদিকে বেশি, সেদিক থেকেই ছাঁটা হয়। */
@@ -577,6 +642,7 @@ final class ImageEngine
         // PNG ও WebP স্বচ্ছতা বহন করতে পারে, তাই ওদের PNG-ই রাখা হয়।
         $transparent = $sourceMime === 'image/png' || $sourceMime === 'image/webp';
         $smallest = null;
+        $jpegBudget = self::budgetFor('mark');
 
         /* ⭐ সীমায় না ঢোকা পর্যন্ত বাহু ছোট — ৮০০ → ৬৪০ → ৫১২ → ৪১০ → ৩২৮ → ২৬২ ([[MARK_STORED_MAX]]) */
         foreach ([1.0, 0.8, 0.64, 0.512, 0.41, 0.328] as $step) {
@@ -586,7 +652,7 @@ final class ImageEngine
 
             $out = $transparent
                 ? ['bytes' => $this->pngWithin($try, self::MARK_STORED_MAX), 'extension' => 'png', 'mime' => 'image/png']
-                : ['bytes' => $this->squeeze($try, self::MARK_BYTES), 'extension' => 'jpg', 'mime' => 'image/jpeg'];
+                : ['bytes' => $this->squeeze($try, $jpegBudget), 'extension' => 'jpg', 'mime' => 'image/jpeg'];
 
             if (strlen($out['bytes']) <= self::MARK_STORED_MAX) {
                 return $out;
