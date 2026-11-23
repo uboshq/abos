@@ -97,7 +97,15 @@ class UserController extends Controller implements HasMiddleware
                  * ⚠️ CLAUDE.md-তে এটা রুচির কথা নয়: *"বহু-টেন্যান্ট বলেই
                  * টেন্যান্ট বিচ্ছিন্নতা সুবিধা নয়, **আইনি বাধ্যবাধকতা**।"*
                  */
-                ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+                /*
+                 * ⭐ সুপার অ্যাডমিন (মালিক) গোটা ব্যবসার মানুষ দেখেন — নিজের প্রতিটা কোম্পানির, শাখা বা চলতি কোম্পানি যাই বাছা থাকুক
+                 * (মালিক, ২৩ নভেম্বর ২০২৬: "সুপার অ্যাডমিন লগ ইনে তার ফুল বিজনেসের যতজন ব্যবহারকারী আছে সবগুলাই শো করার কথা";
+                 * SAP/D365/Odoo-তে ব্যবহারকারী-প্রশাসন কোম্পানি-জুড়ে)। ⛔ তবু কেবল **তাঁর নিজের** কোম্পানিগুলো — অন্য কারো নয়;
+                 * বাকিরা আগের মতো চলতি কোম্পানির মানুষই দেখেন।
+                 */
+                ->whereHas('companies', fn ($q) => $request->user()?->hasRole('super_admin')
+                    ? $q->whereIn('companies.id', $request->user()->companies()->pluck('companies.id'))
+                    : $q->whereKey(CompanyContext::id()))
 
                 /*
                  * টুলবারের খোঁজা — নাম বা ইমেইল, ১৯ সেপ্টেম্বর ২০২৬।
