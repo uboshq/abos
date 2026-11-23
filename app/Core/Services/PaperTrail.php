@@ -68,6 +68,8 @@ final class PaperTrail
         'accounts_voucher' => 'accounts.voucher.print',
         'accounts_transfer' => 'accounts.transfer.print',
         'accounts_note' => 'accounts.note.print',
+        // ⭐ স্টক ছাড়া বিক্রয়/ক্রয় ভাউচার (SV/PUV) — নকশা v5, ২৩ নভেম্বর ২০২৬; ⓘ ঠিকানায় দুই ঘর, তাই ফোনে আর শেয়ার-লিংকে নয় ([[routeParamsFor()]])
+        'accounts_trade_voucher' => 'accounts.trade_voucher.print',
         'hr_payslip' => 'hr.payslip.print',
         'inventory_transfer' => 'inventory.transfer.print',
     ];

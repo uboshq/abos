@@ -227,6 +227,7 @@ return [
         'count_gap' => 'Cash count is off in :count count(s) — gap :amount',
         'credit_bills' => ':count bills went on credit today — :amount still due',
         'supplier_due' => ':count supplier bills due today are not paid — :amount',
+        'bin_missing' => 'The company BIN is empty — :count VAT papers today (Mushak-6.7/6.8/6.3) print without it',
         'go' => 'Fix',
         'see' => 'See',
     ],

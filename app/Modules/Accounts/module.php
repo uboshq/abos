@@ -171,6 +171,14 @@ return [
             ['label' => 'accounts::menu.journal', 'cluster' => 'vouchers', 'icon' => 'edit', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'journal'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.contra', 'cluster' => 'vouchers', 'icon' => 'swap', 'route' => 'accounts.voucher.index', 'route_params' => ['type' => 'contra'], 'permission' => 'accounts.report'],
             ['label' => 'accounts::menu.voucher_list', 'cluster' => 'vouchers', 'icon' => 'list', 'route' => 'accounts.voucher.list', 'permission' => 'accounts.report'],
+            /*
+             * ⭐ স্টক ছাড়া বিক্রয় ভাউচার (SV) আর ক্রয় ভাউচার (PUV) — মালিকের নকশা v5, ২৩ নভেম্বর ২০২৬। ⓘ কোম্পানির সুইচ
+             * (`accounts.stock_free_vouchers`) বন্ধ থাকলে সারি নেই, ঠিকানাও বন্ধ ([[RefuseSwitchedOffScreens]]); মজুদ চালু কোম্পানিতে ডিফল্ট বন্ধ।
+             */
+            ['label' => 'accounts::trade.menu_sale', 'cluster' => 'vouchers', 'icon' => 'receipt', 'route' => 'accounts.trade_voucher.index',
+                'route_params' => ['kind' => 'sale'], 'permission' => 'accounts.report', 'setting' => 'accounts.stock_free_vouchers'],
+            ['label' => 'accounts::trade.menu_purchase', 'cluster' => 'vouchers', 'icon' => 'receipt', 'route' => 'accounts.trade_voucher.index',
+                'route_params' => ['kind' => 'purchase'], 'permission' => 'accounts.report', 'setting' => 'accounts.stock_free_vouchers'],
             ['label' => 'accounts::menu.money_custody', 'icon' => 'lock', 'route' => 'accounts.custody', 'permission' => 'accounts.till.view'],
             ['label' => 'accounts::menu.money_transfer', 'icon' => 'share', 'route' => 'accounts.transfer.index', 'permission' => 'accounts.transfer.create'],
             /*
@@ -340,7 +348,13 @@ return [
              * বসানোর একই মুহূর্তে রুটও বসেছে; আগে দুইবার এই সেতুটা ভুলে
              * যাওয়ায় পর্দা তৈরি থেকেও কেউ পৌঁছাতে পারেনি।
              */
-            ['label' => 'accounts::note.title', 'icon' => 'challan', 'route' => 'accounts.note.index', 'permission' => 'accounts.note.view'],
+            /*
+             * ⭐ তিন সারি, তিনটা তালিকা — মালিকের নকশা v5 (২৩ নভেম্বর ২০২৬): ক্রেডিট নোট আর গ্রাহকের ডেবিট নোট "পাওনা"-য়, সরবরাহকারীর
+             * ডেবিট নোট "দেনা"-য় ([[resources/menu-look.php]])। ⓘ চাবি একই (`accounts.note.view`); পুরনো ঠিকানা দিক ধরে নতুনটায় যায়।
+             */
+            ['label' => 'accounts::note.menu_cn', 'icon' => 'challan', 'route' => 'accounts.note.cn.index', 'permission' => 'accounts.note.view'],
+            ['label' => 'accounts::note.menu_cdn', 'icon' => 'challan', 'route' => 'accounts.note.cdn.index', 'permission' => 'accounts.note.view'],
+            ['label' => 'accounts::note.menu_dn', 'icon' => 'challan', 'route' => 'accounts.note.dn.index', 'permission' => 'accounts.note.view'],
 
             ['label' => 'accounts::menu.reconciliations', 'icon' => 'check-circle', 'route' => 'accounts.reconciliation.index', 'permission' => 'accounts.reconciliation.view'],
             // ⓘ স্থায়ী সম্পদের পর্দা আর রিপোর্ট নিজের রেলে — সিস্টেম অ্যাডমিনের ঠিক নিচে ([[FixedAssets/module.php]]; মালিক, ১০ অক্টোবর ২০২৬)
@@ -569,6 +583,9 @@ return [
          */
         'CN' => 'accounts::note.credit_note',
         'DN' => 'accounts::note.debit_note',
+        // ⭐ স্টক ছাড়া বিক্রয় ভাউচার আর ক্রয় ভাউচার — নিজের ক্রম SV-0001, PUV-0001 (নকশা v5, ২৩ নভেম্বর ২০২৬)
+        'SV' => 'accounts::trade.doc_sale',
+        'PUV' => 'accounts::trade.doc_purchase',
         'CHQ' => 'accounts::doc.cheque',
         'RV' => 'accounts::doc.receipt_voucher',
         'PV' => 'accounts::doc.payment_voucher',
@@ -641,6 +658,10 @@ return [
     'drill_sources' => [
         /* ⓘ এক নাম, দুই দিক — খাতটাই পার্থক্য বলে ([[Note::drillSourceType()]]) */
         'note' => Note::class,
+        // ⭐ স্টক ছাড়া ভাউচার — খাতায় দুই নাম, একটাই কাগজ ([[TradeVoucher::sourceType()]])
+        'trade_voucher' => \App\Modules\Accounts\Models\TradeVoucher::class,
+        'sales_voucher' => \App\Modules\Accounts\Models\TradeVoucher::class,
+        'purchase_voucher' => \App\Modules\Accounts\Models\TradeVoucher::class,
         'cheque' => Cheque::class,
         'account' => Account::class,
         'cash_till' => CashTill::class,
@@ -786,6 +807,9 @@ return [
 
         // ⭐ গ১ — ভাউচার ছাড়াই টাকা নাড়ানো হিসাবের কাগজ (Accounts-Finance অডিট, ৪ অক্টোবর ২০২৬; [[AccountsSignature]])
         'note' => 'accounts::approval.note',
+        // ⭐ স্টক ছাড়া বিক্রয়/ক্রয় ভাউচার (নকশা v5)
+        'sales_voucher' => 'accounts::approval.sales_voucher',
+        'purchase_voucher' => 'accounts::approval.purchase_voucher',
         'cheque_clear' => 'accounts::approval.cheque_clear',
         'cheque_bounce' => 'accounts::approval.cheque_bounce',
         'inter_company' => 'accounts::approval.inter_company',
@@ -820,7 +844,7 @@ return [
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ
      * ঢুকিয়ে দিত।
      */
-    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover', 'loan_draw', 'loan_instalment', 'loan_repay', 'loan_interest', 'fixed_asset_opening', 'fixed_asset_addition', 'fixed_asset_repair', 'fixed_asset_revalue', 'fixed_asset_impair'],
+    'moves_money' => ['expense', 'counter_deposit', 'counter_payment', 'transfer', 'receipt', 'payment', 'journal', 'contra', 'year_end', 'note', 'sales_voucher', 'purchase_voucher', 'cheque_clear', 'cheque_bounce', 'inter_company', 'till_opening', 'fixed_asset_register', 'fixed_asset_dispose', 'till_handover', 'loan_draw', 'loan_instalment', 'loan_repay', 'loan_interest', 'fixed_asset_opening', 'fixed_asset_addition', 'fixed_asset_repair', 'fixed_asset_revalue', 'fixed_asset_impair'],
 
     // রিপোর্ট সরবরাহকারী — কোর নিজে থেকে ডেকে নেবে (সেকশন ১৯.৩)।
     // কোর ফাইলে মডিউলের নাম লিখতে হয় না।
@@ -946,6 +970,17 @@ return [
             'options' => PaperSize::all(),
             'default' => PaperSize::A4,
             'group' => 'print',
+        ],
+        /*
+         * ⭐ স্টক ছাড়া বিক্রয় ভাউচার ও ক্রয় ভাউচার — কোম্পানির সুইচ (মালিকের নকশা v5, ২৩ নভেম্বর ২০২৬)। ⓘ মজুদ চালু কোম্পানিতে বন্ধ
+         * (ডিফল্ট); মজুদ বন্ধ কোম্পানিতে মাইগ্রেশন চালু করেছে। চালু থাকলে আর মজুদও চালু হলে পর্দায় ছোট সতর্কতা — থামায় না।
+         */
+        [
+            'key' => 'accounts.stock_free_vouchers',
+            'label' => 'accounts::settings.stock_free_vouchers',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
         ],
         [
             'key' => 'accounts.print.note_footnote',

@@ -40,4 +40,6 @@ return [
     'fixed_asset_repair' => 'Fixed asset repair',
     'fixed_asset_revalue' => 'Fixed asset revaluation',
     'fixed_asset_impair' => 'Fixed asset impairment',
+    'sales_voucher' => 'Sales voucher (no stock)',
+    'purchase_voucher' => 'Purchase voucher (no stock)',
 ];

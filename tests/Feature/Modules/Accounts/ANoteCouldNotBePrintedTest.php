@@ -100,7 +100,8 @@ final class ANoteCouldNotBePrintedTest extends TestCase
         $url = route('accounts.note.print', $note);
 
         $this->get(route('accounts.note.show', $note))->assertOk()->assertSee($url, false);
-        $this->get(route('accounts.note.index', ['direction' => Note::CREDIT]))->assertOk()
+        // ⓘ ক্রেডিট নোটের নিজের তালিকা — পুরনো দুই-দিকের ঠিকানা এখন সেখানে ফেরায় (নকশা v5, ২৩ নভেম্বর ২০২৬)
+        $this->get(route('accounts.note.cn.index'))->assertOk()
             ->assertSee('data-note-print', false)->assertSee($url, false);
     }
 

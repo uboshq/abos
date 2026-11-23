@@ -21,6 +21,8 @@ use Tests\TestCase;
  *
  * ⭐ "কাকে"-র পরেই পয়েন্ট (মালিকের নিয়ম, ২৮ সেপ্টেম্বর ২০২৬: সব তালিকায়); পক্ষ আর পয়েন্ট দিয়ে খোঁজা আর সাজানো।
  * আর "তৈরি করুন" মেনুতে ডেবিট নোট, ক্রেডিট নোট — নোট বানানোর চাবি যাঁর আছে কেবল তাঁর।
+ *
+ * ⓘ তালিকা এখন ভাগ ধরে নিজের পাতায় (নকশা v5, ২৩ নভেম্বর ২০২৬) — দাবিগুলো ক্রেডিট নোটের তালিকায়; পুরনো `?direction=` ঠিকানা সেখানে ফেরায়।
  */
 final class TheNoteListHadNoPointTest extends TestCase
 {
@@ -44,7 +46,7 @@ final class TheNoteListHadNoPointTest extends TestCase
     {
         [, $omega] = $this->twoShops();
 
-        $html = $this->get(route('accounts.note.index', ['direction' => Note::CREDIT]))->assertOk()->getContent();
+        $html = $this->get(route('accounts.note.cn.index'))->assertOk()->getContent();
 
         $party = mb_strpos($html, '>'.__('accounts::note.party').'<');
         $point = mb_strpos($html, '>'.__('accounts::note.point').'<');
@@ -61,10 +63,10 @@ final class TheNoteListHadNoPointTest extends TestCase
     {
         [$alpha, $omega] = $this->twoShops();
 
-        $this->get(route('accounts.note.index', ['direction' => Note::CREDIT, 'q' => 'Zeta Bazar']))->assertOk()
+        $this->get(route('accounts.note.cn.index', ['q' => 'Zeta Bazar']))->assertOk()
             ->assertSee($omega->document_no)->assertDontSee($alpha->document_no);
 
-        $this->get(route('accounts.note.index', ['direction' => Note::CREDIT, 'q' => 'Alpha Shop']))->assertOk()
+        $this->get(route('accounts.note.cn.index', ['q' => 'Alpha Shop']))->assertOk()
             ->assertSee($alpha->document_no)->assertDontSee($omega->document_no);
     }
 
@@ -73,13 +75,13 @@ final class TheNoteListHadNoPointTest extends TestCase
         [$alpha, $omega] = $this->twoShops();
 
         // ⓘ প্রস্তুতি: "নতুন আগে"-তে Omega আগে — নিচের দুই ক্রম এর উল্টো, তাই সাজানো সত্যিই কিছু করেছে কি না ধরা পড়ে
-        $html = $this->get(route('accounts.note.index', ['direction' => Note::CREDIT]))->getContent();
+        $html = $this->get(route('accounts.note.cn.index'))->getContent();
         $this->assertLessThan(strpos($html, $alpha->document_no), strpos($html, $omega->document_no));
 
-        $html = $this->get(route('accounts.note.index', ['direction' => Note::CREDIT, 'sort' => 'point']))->getContent();
+        $html = $this->get(route('accounts.note.cn.index', ['sort' => 'point']))->getContent();
         $this->assertLessThan(strpos($html, $omega->document_no), strpos($html, $alpha->document_no), '⛔ পয়েন্ট ধরে সাজানো হয়নি।');
 
-        $html = $this->get(route('accounts.note.index', ['direction' => Note::CREDIT, 'sort' => 'party']))->getContent();
+        $html = $this->get(route('accounts.note.cn.index', ['sort' => 'party']))->getContent();
         $this->assertLessThan(strpos($html, $omega->document_no), strpos($html, $alpha->document_no), '⛔ পক্ষ ধরে সাজানো হয়নি।');
     }
 

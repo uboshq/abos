@@ -1,178 +1,193 @@
 {{--
-    নতুন নোট — মানচিত্র §৭।
+    ⭐ নতুন নোট — ক্রেডিট নোট (CN), গ্রাহকের ডেবিট নোট, সরবরাহকারীর ডেবিট নোট (মালিকের নকশা v5, ২৩ নভেম্বর ২০২৬:
+    "আমি ওকে করে দিলাম")।
 
-    ── ⚠️ ফর্মটা ইচ্ছাকৃতভাবে ছোট ───────────────────────────────────
-    সারি ধরে নয়, একটাই অঙ্ক। ⓘ কারণ নোট একটা **সংশোধন**, তালিকা নয়:
-    "বিলটার দাম ১২০০ বেশি বসেছিল" — এক বাক্য, এক সংখ্যা। ⛔ সারি ধরে
-    করলে মানুষ মূল বিলটা আবার টাইপ করতে বসতেন, আর ভুল সেখানেই বাড়ত।
+    ⓘ মাথা এক সারিতে: নাম · নম্বর · অবস্থা · অনুমোদনকারী … বোতাম। নিচে মাথার কার্ড (পক্ষ | তারিখ·সময় | কারণ | মোট), দ্বিতীয়
+    সারিতে মূল বিল + "⇣ মূল বিল থেকে আনুন" আর ভ্যাটের ঘর (সরবরাহকারীর DN-এ তাঁর মূসক-৬.৭)। তারপর সারির ছক, ন্যারেশন,
+    "খাতায় যা উঠবে", ডানে সারাংশ ([[accounts::partials.trade-lines]], যুক্তি [[trade-lines.js]])।
+    ⛔ শাখার ঘর নেই — শাখা উপরের বার থেকে। ⛔ ব্যাখ্যার লাইন বা নোটিশের পটি নেই — সতর্কতা কেবল ছোট ব্যাজ।
 --}}
 @php
-    use App\Modules\Accounts\Models\Note;
+    $sells = $type !== 'dn';
+    $title = __('accounts::note.new_'.$type);
+    $chip = trim(implode(' · ', array_filter([
+        $numberPreview,
+        in_array($type, ['cn', 'cdn'], true) ? __('accounts::note_form.chip_'.$type) : null,
+    ])));
+    $types = array_values(array_filter([
+        $productsAllowed ? ['key' => 'product', 'label' => __('accounts::trade_form.type_product')] : null,
+        ['key' => 'account', 'label' => __('accounts::trade_form.type_account')],
+    ]));
+    $returnLabel = in_array($type, ['cn', 'dn'], true) ? __('accounts::note_form.returned_'.$type) : null;
+    $mainKind = ['cn' => 'customer', 'cdn' => 'customer', 'dn' => 'supplier'][$type];
+    $bottomLabel = $kind === $mainKind ? __('accounts::note_form.bottom_'.$type) : __('accounts::note_form.bottom_other');
 
-    $isCredit = $direction === Note::CREDIT;
+    // ⓘ কেবল এই কাগজের দামের দিক — বিক্রয়ের নোটে কেনা দাম পাতায় যায় না
+    $pickProducts = array_map(fn (array $p) => [
+        'id' => $p['id'], 'name' => $p['name'], 'unit' => $p['unit'],
+        'sale_price' => $sells ? $p['sale_price'] : '0', 'purchase_price' => $sells ? '0' : $p['purchase_price'],
+        'tax_id' => $p['tax_id'], 'vat_rate' => $p['vat_rate'],
+    ], $products);
+
+    $oldLines = json_decode((string) old('lines_json', ''), true);
+
+    $config = [
+        'doc' => $type,
+        'kind' => $kind,
+        'products' => $pickProducts,
+        'taxes' => $taxes,
+        'accounts' => $accounts,
+        'productsAllowed' => (bool) $productsAllowed,
+        'partyId' => old('party_id', $partyId),
+        'partyNames' => collect($parties)->mapWithKeys(fn (array $o) => [(string) $o['id'] => (string) $o['label']])->all(),
+        'billNo' => (string) old('against_no', $billNo),
+        'billUrl' => $billUrl,
+        'today' => $now->toDateString(),
+        'supplierNoteNo' => (string) old('supplier_note_no', ''),
+        'supplierNoteDate' => (string) old('supplier_note_date', ''),
+        'lines' => is_array($oldLines) ? $oldLines : [],
+        'labels' => collect(['1110', '1120', '1139', '2111', '2118', '2120', '2121', '4100', '4110', '5150', 'party'])
+            ->mapWithKeys(fn (string $c) => ['acc_'.$c => __('accounts::trade_form.acc_'.$c)])->all(),
+        'text' => [
+            'needParty' => __('accounts::note_form.need_party'),
+            'needNo' => __('accounts::note_form.need_no'),
+            'billFailed' => __('accounts::note_form.bill_failed'),
+            'vatFromBill' => __('accounts::note_form.vat_from_bill'),
+            'vatNoBill' => __('accounts::note_form.vat_no_bill'),
+            'room' => __('accounts::note_form.bill_room'),
+            'accountOf' => __('accounts::trade_form.account_of'),
+            'vatPrefix' => __('accounts::trade_form.vat_prefix'),
+            'days' => __('accounts::trade_form.days'),
+        ],
+    ];
 @endphp
 
 <x-layouts.app :menu="$menu">
-    <x-slot:title>{{ $isCredit ? __('accounts::note.new_credit') : __('accounts::note.new_debit') }}</x-slot:title>
+    <x-slot:title>{{ $title }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$isCredit ? __('accounts::note.new_credit') : __('accounts::note.new_debit')"
-                          :subtitle="$isCredit ? __('accounts::note.credit_hint') : __('accounts::note.debit_hint')"
-                          :info="__('accounts::note.no_goods_move')" />
+        <x-ui.page-header :title="$title" class="tv-head tv-tone-{{ $tone }}" data-note-head>
+            <x-slot:actions>
+                @if (filled($chip))
+                    <span class="tv-chip tv-chip-doc num" data-number-preview>{{ $chip }}</span>
+                @endif
+                <span class="tv-chip tv-chip-st">{{ __('core.status.draft') }}</span>
+                <span class="tv-chip tv-chip-ap" data-approver>
+                    @if ($approver)
+                        {{ __('accounts::trade_form.approver', ['who' => $approver['who']]) }}@if ($approver['levels'] > 1) · {{ __('accounts::trade_form.approver_levels', ['n' => $approver['levels']]) }}@endif
+                    @else
+                        {{ __('accounts::trade_form.approver_none') }}
+                    @endif
+                </span>
+                @if ($binMissing && $type !== 'dn')
+                    <span class="tv-badge tv-badge-warn" data-bin-missing>{{ __('accounts::note.bin_missing') }}</span>
+                @endif
+                <span class="tv-grow"></span>
+                <x-ui.button :href="$listUrl" tone="secondary">{{ __('accounts::trade_form.cancel') }}</x-ui.button>
+                <x-ui.button type="submit" form="tv-form" name="submit" value="draft" tone="secondary" data-save-draft>
+                    {{ __('accounts::trade_form.save_draft') }}
+                </x-ui.button>
+                <x-ui.button type="submit" form="tv-form" name="submit" value="send" tone="primary" class="tv-pri" data-send>
+                    {{ __('accounts::trade_form.send') }}
+                </x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
     </x-slot:header>
 
-    @if ($errors->any())
-        <div role="alert" class="mb-3 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2
-                                 text-sm text-(--color-badge-danger-ink)">
-            <ul class="list-inside list-disc">
-                @foreach ($errors->all() as $error)<li>{{ $error }}</li>@endforeach
-            </ul>
-        </div>
-    @endif
+    <x-ui.errors />
 
-    {{-- ⚠️ সীমানাটা ফর্মেই লেখা — মানুষ নোট আর ফেরত নিয়মিত গুলিয়ে ফেলেন --}}
-    {{-- ⭐ লেখাটা নামের পাশে ⓘ-এ (page-header-এর `info`), বাক্সটা "ABOS"/"Dynamic"-এ লুকায় — মালিক, ১৯ নভেম্বর ২০২৬ রাত --}}
-    <p data-page-subtitle class="mb-4 max-w-screen-2xl rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2
-              text-sm text-(--color-ink-muted)">
-        {{ __('accounts::note.no_goods_move') }}
-    </p>
+    <form id="tv-form" method="POST" action="{{ $storeUrl }}" novalidate
+          class="tv-screen tv-tone-{{ $tone }}" data-note-form="{{ $type }}"
+          x-data="tradeLines(@js($config))" x-on:change="changed($event)">
+        @csrf
+        <input type="hidden" name="note_type" value="{{ $type }}">
+        <input type="hidden" name="party_kind" value="{{ $kind }}">
 
-    {{-- ── ধাপ ১ · পক্ষের ধরন — মালিক, ৩ অক্টোবর ২০২৬: *"সব পক্ষেই ডেবিট ক্রেডিট হয়, দুই পক্ষেরই লাগে"* ──
-         ⓘ সাধারণ লিংক — ধরন বদলালে কেবল ঐ ধরনের পক্ষ ([[NoteAccounts::partyOptions()]]); নতুন JS নেই। --}}
-    <nav class="mb-4 flex flex-wrap gap-2" aria-label="{{ __('accounts::note.kind') }}" data-note-kinds>
-        @foreach (array_keys(Note::KINDS) as $option)
-            @php($on = $kind === $option)
-            <a href="{{ route('accounts.note.create', ['direction' => $direction, 'kind' => $option]) }}"
-               @if ($on) aria-current="page" @endif
-               class="rounded-(--radius-field) border px-3 py-1.5 text-sm
-                      {{ $on ? 'border-(--color-brand-600) bg-(--color-brand-600) font-semibold text-white'
-                             : 'border-(--color-border) bg-(--color-surface-card) text-(--color-ink) hover:bg-(--color-surface-hover)' }}">
-                {{ __('accounts::note.kind_'.$option) }}
-            </a>
-        @endforeach
-    </nav>
-
-    @if ($party === null)
-        {{-- ── ধাপ ২ · পক্ষ — কেবল বাছা ধরনের; খোঁজা যায় (নাম, কোড, মোবাইল, পয়েন্ট — [[x-ui.party-search]]) ── --}}
-        <form method="GET" action="{{ route('accounts.note.create') }}" data-note-pick-party
-              class="max-w-screen-2xl rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <input type="hidden" name="direction" value="{{ $direction }}">
-            <input type="hidden" name="kind" value="{{ $kind }}">
-
-            <div class="grid gap-4 sm:grid-cols-2">
-                <x-ui.party-search name="party_id"
-                                   :label="__('accounts::note.party')"
-                                   :options="$parties"
-                                   :selected="old('party_id')"
-                                   required />
-            </div>
-
-            <div class="mt-4">
-                <x-ui.button type="submit" tone="primary">{{ __('accounts::note.next_step') }}</x-ui.button>
-            </div>
-        </form>
-    @else
-        {{-- ── ধাপ ৩ · খাত আর অঙ্ক — পক্ষের চলতি খাত আর অন্য পাশ, আগে থেকে বাছা ([[NoteAccounts]]) ── --}}
-        <form method="POST" action="{{ route('accounts.note.store') }}"
-              class="max-w-screen-2xl rounded-(--radius-card) border border-(--color-border)
-                     bg-(--color-surface-card) p-4">
-            @csrf
-
-            <input type="hidden" name="direction" value="{{ $direction }}">
-            <input type="hidden" name="party_kind" value="{{ $kind }}">
-            <input type="hidden" name="party_id" value="{{ $party['id'] }}">
-
-            <div class="mb-4 flex flex-wrap items-baseline gap-3 text-sm" data-note-party>
-                <span class="text-2xs text-(--color-ink-muted)">{{ __('accounts::note.party') }}</span>
-                <span class="font-semibold">{{ $party['label'] }}</span>
-                <a href="{{ route('accounts.note.create', ['direction' => $direction, 'kind' => $kind]) }}"
-                   class="text-(--color-brand-600) underline-offset-2 hover:underline">{{ __('accounts::note.change_party') }}</a>
-            </div>
-
-            @if ($controls->isEmpty())
-                <p role="alert" class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm text-(--color-badge-danger-ink)">
-                    {{ __('accounts::note.control_none') }}
-                </p>
-            @endif
-
-            <div class="grid gap-4 sm:grid-cols-2">
-                <label class="block">
-                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::note.control_account') }}</span>
-                    <select name="control_account_id" required data-note-control
-                            class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border)
-                                   bg-(--color-surface-card) px-2 text-sm">
-                        @if ($controls->count() > 1)
-                            <option value="">{{ __('accounts::note.choose_account') }}</option>
-                        @endif
-                        @foreach ($controls as $account)
-                            <option value="{{ $account->id }}" @selected((int) old('control_account_id', $defaultControl) === (int) $account->id)>
-                                {{ $account->code }} — {{ $account->name() }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
-
-                <label class="block">
-                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::note.other_account') }}</span>
-                    <select name="other_account_id" required data-note-other
-                            class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border)
-                                   bg-(--color-surface-card) px-2 text-sm">
-                        @if ($others->count() > 1)
-                            <option value="">{{ __('accounts::note.choose_account') }}</option>
-                        @endif
-                        @foreach ($others as $account)
-                            <option value="{{ $account->id }}" @selected((int) old('other_account_id', $defaultOther) === (int) $account->id)>
-                                {{ $account->code }} — {{ $account->name() }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
-
-                <x-ui.field name="trx_date" type="date"
-                            :label="__('accounts::field.date')"
-                            :value="old('trx_date', now()->toDateString())" required />
-
-                <x-ui.field name="amount" type="number" step="0.01"
-                            :label="__('accounts::note.amount')"
-                            :value="old('amount')" required />
-
-                {{-- ⓘ ভ্যাট কেবল কেনা-বেচার পক্ষে — সেবাদাতা আর ব্যক্তির সমন্বয়ে ভ্যাটের খাত নেই --}}
-                @if (in_array($kind, [Note::KIND_CUSTOMER, Note::KIND_SUPPLIER], true))
-                    <x-ui.field name="tax_amount" type="number" step="0.01"
-                                :label="__('accounts::note.tax_amount')"
-                                :value="old('tax_amount')" />
-                @endif
-
-                <label class="block">
-                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('accounts::note.reason') }}</span>
-                    <select name="reason" required
-                            class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border)
-                                   bg-(--color-surface-card) px-2 text-sm">
+        <div class="tv-card">
+            <div class="tv-hdr tv-hdr-note">
+                <div class="tv-f">
+                    <span class="tv-label">{{ __('accounts::note_form.party_label') }}</span>
+                    <div class="tv-box">
+                        <select class="tv-kind" x-on:change="goKind($event)" aria-label="{{ __('accounts::note_form.kind') }}" data-note-kind>
+                            @foreach ($kinds as $option)
+                                <option value="{{ $option['url'] }}" @selected($option['key'] === $kind)>{{ $option['label'] }}</option>
+                            @endforeach
+                        </select>
+                        <x-ui.party-search name="party_id" class="tv-grow-1" :options="$parties"
+                                           :selected="old('party_id', $partyId)" :aria-label="__('accounts::note_form.party_label')" />
+                    </div>
+                    @error('party_id')<span class="tv-badge tv-badge-bad">{{ $message }}</span>@enderror
+                </div>
+                <div class="tv-f">
+                    <label class="tv-label" for="tv-when">{{ __('accounts::trade_form.date_time') }}</label>
+                    <div class="tv-lock">
+                        <input id="tv-when" type="text" class="num" readonly value="{{ $now->format('d M Y · H:i') }}">
+                        <x-ui.icon name="lock" :size="13" />
+                    </div>
+                </div>
+                <div class="tv-f">
+                    <label class="tv-label" for="tv-reason">{{ __('accounts::note.reason') }}</label>
+                    <select id="tv-reason" name="reason">
                         @foreach ($reasons as $reason)
-                            <option value="{{ $reason }}" @selected(old('reason') === $reason)>
-                                {{ __('accounts::note.reason_'.$reason) }}
-                            </option>
+                            <option value="{{ $reason }}" @selected(old('reason') === $reason)>{{ __('accounts::note.reason_'.$reason) }}</option>
                         @endforeach
                     </select>
-                </label>
+                </div>
+                <div class="tv-f">
+                    <label class="tv-label" for="tv-total">{{ __('accounts::trade_form.total') }}</label>
+                    <input id="tv-total" type="text" class="num tv-n" readonly :value="sumGrossText">
+                </div>
 
-                {{-- ⓘ মূল কাগজের নম্বরটা ঐচ্ছিক, কিন্তু প্রায় সবসময় থাকে — আর
-                     ওটাই পরে "কোন বিলের সংশোধন" প্রশ্নের একমাত্র উত্তর --}}
-                <x-ui.field name="against_no"
-                            :label="__('accounts::note.against_no')"
-                            :hint="__('accounts::note.against_hint')"
-                            :value="old('against_no')" />
-            </div>
+                <div class="tv-f tv-w2">
+                    <label class="tv-label" for="tv-bill">{{ $sells ? __('accounts::note_form.bill_sale') : __('accounts::note_form.bill_purchase') }}</label>
+                    <div class="tv-box">
+                        <input id="tv-bill" type="text" name="against_no" maxlength="64" x-model="billNo"
+                               x-on:keydown.enter.prevent="fetchBill()"
+                               placeholder="{{ __('accounts::note_form.bill_placeholder') }}" data-against-no>
+                        <button type="button" class="tv-mini" x-on:click="fetchBill()" :disabled="billBusy" data-fetch-bill>
+                            <span x-show="! billBusy">{{ __('accounts::note_form.fetch_bill') }}</span>
+                            <span x-show="billBusy" x-cloak>{{ __('accounts::note_form.fetching') }}</span>
+                        </button>
+                        <span class="tv-chip tv-chip-bill num" x-show="hasBill" x-cloak x-text="billInfo" data-bill-info></span>
+                        <button type="button" class="tv-x" x-show="hasBill" x-cloak x-on:click="clearBill()"
+                                title="{{ __('accounts::note_form.clear_bill') }}" aria-label="{{ __('accounts::note_form.clear_bill') }}">×</button>
+                    </div>
+                    <span class="tv-badge tv-badge-bad" x-show="hasBillError" x-cloak x-text="billError" data-bill-error></span>
+                    @error('against_no')<span class="tv-badge tv-badge-bad">{{ $message }}</span>@enderror
+                </div>
 
-            <div class="mt-4">
-                <x-ui.field name="narration"
-                            :label="__('accounts::field.narration')"
-                            :value="old('narration')" />
+                @if ($type === 'dn')
+                    <div class="tv-f">
+                        <label class="tv-label" for="tv-sup-no">{{ __('accounts::note_form.supplier_note_no') }}</label>
+                        <input id="tv-sup-no" type="text" name="supplier_note_no" maxlength="64" x-model="supNo" data-supplier-note-no>
+                    </div>
+                    <div class="tv-f">
+                        <span class="tv-label">{{ __('accounts::note_form.supplier_note_date') }}</span>
+                        <x-ui.date dense name="supplier_note_date" id="tv-sup-date" :value="old('supplier_note_date')"
+                                   :max="$now->toDateString()" bind-model="supDate" />
+                        @error('supplier_note_date')<span class="tv-badge tv-badge-bad">{{ $message }}</span>@enderror
+                    </div>
+                @else
+                    <div class="tv-f">
+                        <label class="tv-label" for="tv-vatbox">{{ __('accounts::note_form.vat') }}</label>
+                        <div class="tv-lock">
+                            <input id="tv-vatbox" type="text" readonly :value="vatBoxText" data-vat-box>
+                            <x-ui.icon name="lock" :size="13" />
+                        </div>
+                    </div>
+                @endif
             </div>
+        </div>
 
-            <div class="mt-4">
-                <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
-            </div>
-        </form>
-    @endif
+        @include('accounts::partials.trade-lines', [
+            'types' => $types,
+            'pickProducts' => $pickProducts,
+            'isNote' => true,
+            'returnLabel' => $returnLabel,
+            'returnChip' => $returnLabel ? __('accounts::note_form.return_chip_'.$type) : null,
+            'returnNote' => $returnLabel ? __('accounts::note_form.return_note_'.$type) : null,
+            'bottomLabel' => $bottomLabel,
+            'withTds' => false,
+        ])
+    </form>
 </x-layouts.app>

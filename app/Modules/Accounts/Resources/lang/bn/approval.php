@@ -41,4 +41,6 @@ return [
     'fixed_asset_repair' => 'স্থায়ী সম্পদের মেরামত',
     'fixed_asset_revalue' => 'স্থায়ী সম্পদের পুনর্মূল্যায়ন',
     'fixed_asset_impair' => 'স্থায়ী সম্পদের দাম পড়ে যাওয়া',
+    'sales_voucher' => 'বিক্রয় ভাউচার (স্টক ছাড়া)',
+    'purchase_voucher' => 'ক্রয় ভাউচার (স্টক ছাড়া)',
 ];

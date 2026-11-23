@@ -45,8 +45,8 @@ final class FinishTheAccountsPaperOnTheLastSignature
      */
     public function handle(ApprovalDecided $event): void
     {
-        // ⓘ অন্য মডিউলের সইয়ে বাড়তি খোঁজা নয়
-        if (($event->payload['module'] ?? null) !== AccountsSignature::MODULE) {
+        // ⓘ অন্য মডিউলের সইয়ে বাড়তি খোঁজা নয় — কেবল ক্রেডিট নোটের মালিকের ছাড়ের সই বাদে (নকশা v5, [[NoteService::waitsForASignature()]])
+        if (($event->payload['module'] ?? null) !== AccountsSignature::MODULE && ! $this->isACreditNoteDiscount($event)) {
             return;
         }
 
@@ -64,8 +64,8 @@ final class FinishTheAccountsPaperOnTheLastSignature
         $action = (string) ($event->payload['action'] ?? '');
 
         // ⓘ `transfer` — স্থানান্তরের সই এখন হস্তান্তরের আগে (Accounts-Finance অডিট ম৬); চাবিটা পুরনো, তাই ACTIONS-এর বাইরে
-        if (($event->payload['module'] ?? null) !== AccountsSignature::MODULE
-            || (! in_array($action, AccountsSignature::ACTIONS, true) && $action !== 'transfer')) {
+        if (! $this->isACreditNoteDiscount($event) && (($event->payload['module'] ?? null) !== AccountsSignature::MODULE
+            || (! in_array($action, AccountsSignature::ACTIONS, true) && $action !== 'transfer'))) {
             return;
         }
 
@@ -117,6 +117,13 @@ final class FinishTheAccountsPaperOnTheLastSignature
             if (! $paper->isPaid()) {
                 app(LoanService::class)->payInstalment($paper, (int) ($signed['from_account_id'] ?? 0), $signed['on'] ?? null, isset($signed['amount']) ? (string) $signed['amount'] : null);
             }
+
+            return;
+        }
+
+        // ⭐ স্টক ছাড়া বিক্রয়/ক্রয় ভাউচার — শেষ সইয়ে খাতায় (নকশা v5); খসড়া থাকলেই
+        if ($paper instanceof \App\Modules\Accounts\Models\TradeVoucher && $paper->isDraft()) {
+            app(\App\Modules\Accounts\Services\TradeVoucherService::class)->confirm($paper);
 
             return;
         }
@@ -210,5 +217,18 @@ final class FinishTheAccountsPaperOnTheLastSignature
                 default => null,
             };
         }
+    }
+
+    /** ⭐ ক্রেডিট নোট মালিকের ছাড়ের ছকে সই চায় (`sales`/`discount`) — শেষ সইয়ে নোটটা এখানেই পাকা হয় */
+    private function isACreditNoteDiscount(ApprovalDecided $event): bool
+    {
+        if (($event->payload['module'] ?? null) !== NoteService::DISCOUNT_MODULE || ($event->payload['action'] ?? null) !== NoteService::DISCOUNT_ACTION) {
+            return false;
+        }
+
+        $approval = Approval::query()->find((int) ($event->payload['approval_id'] ?? 0));
+        $type = $approval === null ? '' : (Relation::getMorphedModel((string) $approval->approvable_type) ?? (string) $approval->approvable_type);
+
+        return $type === Note::class;
     }
 }

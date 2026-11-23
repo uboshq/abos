@@ -4,34 +4,41 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Http\Controllers;
 
-use App\Core\Concerns\GrandTotals;
-use App\Core\Concerns\SortsLists;
+use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\PartyRegistry;
-use App\Core\Support\DocumentStatus;
+use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Modules\Accounts\Models\Note;
+use App\Modules\Accounts\Services\AccountsSignature;
 use App\Modules\Accounts\Services\NoteAccounts;
+use App\Modules\Accounts\Services\NoteLineBuilder;
+use App\Modules\Accounts\Services\NotePosting;
 use App\Modules\Accounts\Services\NoteService;
+use App\Modules\Accounts\Support\TradeCatalog;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * ডেবিট ও ক্রেডিট নোট — মানচিত্র §৭।
+ * ⭐ ডেবিট ও ক্রেডিট নোট — তিন ভাগ, নিজের ফর্ম (মালিকের নকশা v5, ২৩ নভেম্বর ২০২৬: *"আমি ওকে করে দিলাম"*)।
  *
- * ── ⚠️ একটা পর্দা, দুইটা দিক ────────────────────────────────────────
- * ট্যাব দিয়ে ভাগ, আলাদা দুইটা পর্দা নয়। ⓘ কাজটা এক — "টাকার অঙ্কটা
- * ভুল ছিল, শোধরাও" — কেবল কাকে দেওয়া হচ্ছে সেটা আলাদা। ⛔ দুইটা পর্দা
- * বানালে একদিন একটায় ভ্যাটের ঘর যোগ হত, অন্যটায় না।
+ * ⓘ ক্রেডিট নোট (CN, মূসক-৬.৭), গ্রাহকের ডেবিট নোট (DN, মূসক-৬.৮), সরবরাহকারীর ডেবিট নোট (DN)। চাবি একই
+ * (`accounts.note.view/manage`); তালিকা [[NoteListController]]-এ, ছাপা [[NotePrintController]]-এ। ⓘ পুরনো দুই ঠিকানা
+ * (`/notes`, `/notes/create`) দিক ধরে নতুন পাতায় যায় — বুকমার্ক ভাঙে না।
  */
 class NoteController extends Controller implements HasMiddleware
 {
-    use GrandTotals;
-    use SortsLists;
+    /** ⓘ কাগজের রং — ক্রেডিট নোট সবুজ, ডেবিট নোট গোলাপি, গ্রাহকের ডেবিট নোট অ্যাম্বার (নকশা v5) */
+    public const TONES = [Note::TYPE_CN => 'green', Note::TYPE_DN => 'rose', Note::TYPE_CDN => 'amber'];
 
     public function __construct(
         private readonly NoteService $notes,
@@ -42,151 +49,139 @@ class NoteController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:accounts.note.view', only: ['index', 'show']),
-            new Middleware('can:accounts.note.manage', only: ['create', 'store', 'confirm', 'cancel']),
+            new Middleware('can:accounts.note.view', only: ['legacyIndex', 'show', 'bill']),
+            new Middleware('can:accounts.note.manage', only: ['create', 'legacyCreate', 'store', 'confirm', 'cancel']),
         ];
     }
 
-    public function index(Request $request): View
+    /** ⭐ পুরনো তালিকার ঠিকানা — দিক ধরে নতুন পাতায় (`?direction=debit&kind=customer` → গ্রাহকের ডেবিট নোট) */
+    public function legacyIndex(Request $request): RedirectResponse
     {
-        $direction = in_array($request->query('direction'), Note::DIRECTIONS, true)
-            ? (string) $request->query('direction')
-            : Note::CREDIT;
+        $type = self::typeFor((string) $request->query('direction', Note::CREDIT), (string) $request->query('kind', ''));
 
-        /* ⭐ পক্ষের নাম, কোড আর পয়েন্ট দিয়েও খোঁজা — মালিক, ৩ অক্টোবর ২০২৬ ([[PartyRegistry::matching()]]) */
-        $parties = $request->filled('q') ? $this->parties->matching((string) $request->query('q'), $this->parties->types()) : [];
+        return redirect()->route('accounts.note.'.$type.'.index', $request->except(['direction', 'kind']), 301);
+    }
 
-        $list = Note::query()
-            ->ofDirection($direction)
-            ->when($request->query('q'), fn ($q, $term) => $q
-                ->where(function ($w) use ($term, $parties) {
-                    $w->where('document_no', 'like', "%{$term}%")
-                        ->orWhere('against_no', 'like', "%{$term}%")
-                        ->orWhere('narration', 'like', "%{$term}%");
+    /** ⭐ পুরনো "নতুন নোট" ঠিকানা — দিক আর পক্ষের ধরন ধরে */
+    public function legacyCreate(Request $request): RedirectResponse
+    {
+        $kind = (string) $request->query('kind', '');
+        $type = self::typeFor((string) $request->query('direction', Note::CREDIT), $kind);
+        $query = $request->except(['direction']);
 
-                    foreach ($parties as $type => $ids) {
-                        $w->orWhere(fn ($p) => $p->where('party_type', $type)->whereIn('party_id', $ids));
-                    }
-                }));
+        if (! in_array($kind, Note::TYPE_KINDS[$type], true)) {
+            unset($query['kind']);
+        }
 
-        $this->applySort($list, $request, $this->sorts($list));
+        return redirect()->route('accounts.note.'.$type.'.create', $query, 301);
+    }
 
-        // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
-        $grand = $this->grandTotals($list, ['total' => 't.total']);
-        $rows = $list->paginate(\App\Core\Support\PerPage::of())->withQueryString();
+    /** দিক + পক্ষের ধরন → ভাগ (পুরনো ঠিকানা আর পুরনো নোটের একই নিয়ম, [[Note::type()]]) */
+    public static function typeFor(string $direction, string $kind): string
+    {
+        if ($direction !== Note::DEBIT) {
+            return Note::TYPE_CN;
+        }
 
-        /*
-         * ⓘ পক্ষের নাম একবারে — সারি প্রতি একটা প্রশ্ন করলে পঞ্চাশ সারির
-         * পাতায় পঞ্চাশটা হত ([[PartyRegistry::labelsOf()]])।
-         */
-        $pairs = collect($rows->items())->map(fn (Note $n) => [$n->party_type, (int) $n->party_id]);
-
-        return view('accounts::note.index', [
-            'menu' => $this->menu->forUser($request->user()),
-            'direction' => $direction,
-            'rows' => $rows,
-            'grand' => $grand,
-            'names' => $this->parties->labelsOf($pairs),
-            'places' => $this->parties->placesOf($pairs),
-            'sortOptions' => $this->sortLabels(),
-
-            // ⭐ নামটা যেন তাঁর নিজের পাতায় নিয়ে যায় — মালিকের নিয়ম
-            'routes' => $this->parties->routesOf($pairs),
-            'counts' => [
-                Note::CREDIT => Note::query()->ofDirection(Note::CREDIT)->count(),
-                Note::DEBIT => Note::query()->ofDirection(Note::DEBIT)->count(),
-            ],
-        ]);
+        return $kind === Note::KIND_CUSTOMER ? Note::TYPE_CDN : Note::TYPE_DN;
     }
 
     /**
-     * সাজানো — তারিখ, অঙ্ক, পক্ষ, পয়েন্ট।
+     * নতুন নোটের পর্দা — এক সারির মাথা, সারির ছক, ডানে সারাংশ (নকশা v5)।
      *
-     * ⓘ পক্ষ আর পয়েন্টের নাম অন্য মডিউলে, তাই সেগুলো দিয়ে সাজাতে ছাঁকা তালিকার সারিগুলোর নাম একবারে এনে ক্রম
-     * বানানো হয় ([[PartyRegistry::labelsOf()]], [[placesOf()]]) — নোট অল্প, প্রতিটা পক্ষে আলাদা জোড় নয়।
-     *
-     * @return array<string, \Closure>
+     * ⓘ পক্ষের ধরন বদলালে পাতা নতুন ধরনের পক্ষ নিয়ে আবার খোলে (`?kind=`); বিলের সারি আসে [[bill()]] থেকে।
      */
-    private function sorts(\Illuminate\Database\Eloquent\Builder $list): array
-    {
-        $byNames = function ($query, bool $places) use ($list) {
-            $rows = (clone $list)->get(['id', 'party_type', 'party_id']);
-            $pairs = $rows->map(fn (Note $n) => [$n->party_type, (int) $n->party_id]);
-            $names = $places ? $this->parties->placesOf($pairs) : $this->parties->labelsOf($pairs);
-
-            $ordered = $rows
-                ->sortBy(fn (Note $n) => mb_strtolower($names[$n->party_type.':'.$n->party_id] ?? "\u{FFFF}"))
-                ->pluck('id')->all();
-
-            $ordered === []
-                ? $query->orderByDesc('id')
-                : $query->orderByRaw('FIELD(id, '.implode(',', array_map('intval', $ordered)).')');
-        };
-
-        return [
-            'latest' => fn ($q) => $q->orderByDesc('trx_date')->orderByDesc('id'),
-            'oldest' => fn ($q) => $q->orderBy('trx_date')->orderBy('id'),
-            'amount' => fn ($q) => $q->orderByDesc('total')->orderByDesc('id'),
-            'party' => fn ($q) => $byNames($q, false),
-            'point' => fn ($q) => $byNames($q, true),
-        ];
-    }
-
-    /** @return array<string, string> */
-    private function sortLabels(): array
-    {
-        return [
-            'latest' => __('accounts::sort.latest'),
-            'oldest' => __('accounts::sort.oldest'),
-            'amount' => __('accounts::sort.amount'),
-            'party' => __('accounts::sort.party'),
-            'point' => __('accounts::sort.point'),
-        ];
-    }
-
     public function create(Request $request): View
     {
-        $direction = in_array($request->query('direction'), Note::DIRECTIONS, true)
-            ? (string) $request->query('direction')
-            : Note::CREDIT;
-
-        /*
-         * ⭐ আগে পক্ষের ধরন, তারপর পক্ষ, তারপর খাত — মালিক, ৩ অক্টোবর ২০২৬: *"সব পক্ষেই ডেবিট ক্রেডিট হয়"*।
-         * ⓘ তিন ধাপ একই পাতায়, ঠিকানা ধরে (`kind`, `party_id`) — নতুন JS ছাড়া: ধরন বদলালে কেবল ঐ ধরনের পক্ষ,
-         * পক্ষ বাছলে তাঁর চলতি খাতগুলো আর আগে থেকে বাছা খাত ([[NoteAccounts]])। ধরন না দিলে দিকের পুরনো নিয়ম।
-         */
+        $type = $this->typeOf($request);
+        $kinds = Note::TYPE_KINDS[$type];
+        $kind = in_array((string) $request->query('kind'), $kinds, true) ? (string) $request->query('kind') : $kinds[0];
         $accounts = app(NoteAccounts::class);
-        $kind = array_key_exists((string) $request->query('kind'), Note::KINDS)
-            ? (string) $request->query('kind')
-            : ($direction === Note::CREDIT ? Note::KIND_CUSTOMER : Note::KIND_SUPPLIER);
-        $parties = $accounts->partyOptions($kind);
-        $partyId = $request->integer('party_id');
-        $party = collect($parties)->firstWhere('id', $partyId);
+        $catalog = app(TradeCatalog::class);
+        $builder = app(NoteLineBuilder::class);
+        $productsAllowed = $builder->productsAllowed($type, $kind);
 
         return view('accounts::note.create', [
             'menu' => $this->menu->forUser($request->user()),
-            'direction' => $direction,
+            'type' => $type,
+            'tone' => self::TONES[$type],
+            'kinds' => array_map(fn (string $k) => ['key' => $k, 'label' => __('accounts::note.kind_'.$k),
+                'url' => route('accounts.note.'.$type.'.create', ['kind' => $k])], $kinds),
             'kind' => $kind,
-            'parties' => $parties,
-            'party' => $party,
-            'controls' => $party === null ? collect() : $accounts->controls($kind, $partyId),
-            'others' => $party === null ? collect() : $accounts->others($kind, $direction),
-            'defaultControl' => $party === null ? null : $accounts->defaultControl($kind, $partyId),
-            'defaultOther' => $party === null ? null : $accounts->defaultOther($kind, $direction, $partyId),
+            'parties' => $accounts->partyOptions($kind),
+            'partyId' => $request->integer('party_id') ?: null,
+            'billNo' => (string) $request->query('bill', ''),
             'reasons' => Note::REASONS,
+            'numberPreview' => app(NumberSeriesEngine::class)->upcoming(Note::TYPES[$type] === Note::CREDIT ? 'CN' : 'DN'),
+            'approver' => $this->approverFor($type),
+            'productsAllowed' => $productsAllowed,
+            'products' => $productsAllowed ? $catalog->products() : [],
+            'taxes' => $catalog->taxes(),
+            'accounts' => $builder->accountChoices($type),
+            'billUrl' => route('accounts.note.bill'),
+            'storeUrl' => route('accounts.note.store'),
+            'listUrl' => route('accounts.note.'.$type.'.index'),
+            'now' => Carbon::now(),
+            'binMissing' => self::companyBinMissing(),
+            'narrationRequired' => (bool) app(SettingsService::class)->get('accounts.require_narration', true),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
+        // ⓘ পুরনো এক-অঙ্কের পথ — API আর পুরনো ফর্ম (দিক + অঙ্ক)
+        if (! $request->has('note_type')) {
+            return $this->storeOld($request);
+        }
+
+        $lines = $request->input('lines');
+
+        if (! is_array($lines) && is_string($request->input('lines_json'))) {
+            $lines = json_decode((string) $request->input('lines_json'), true);
+        }
+
+        $request->merge(['lines' => is_array($lines) ? array_values($lines) : []]);
+
+        $data = $request->validate([
+            'note_type' => ['required', Rule::in(array_keys(Note::TYPES))],
+            'party_kind' => ['nullable', Rule::in(array_keys(Note::KINDS))],
+            'party_id' => ['required', 'integer', 'min:1'],
+            'reason' => ['nullable', Rule::in(Note::REASONS)],
+            'against_no' => ['nullable', 'string', 'max:64'],
+            'supplier_note_no' => ['nullable', 'string', 'max:64'],
+            'supplier_note_date' => ['nullable', 'date', 'before_or_equal:today'],
+            // ⭐ ন্যারেশন — ভাউচারের সেটিং মেনে (`accounts.require_narration`)
+            'narration' => [(bool) app(SettingsService::class)->get('accounts.require_narration', true) ? 'required' : 'nullable', 'string', 'max:500'],
+            'lines' => ['required', 'array', 'min:1', 'max:200'],
+            'lines.*' => ['array'],
+            'submit' => ['nullable', 'string'],
+        ]);
+
+        // ⓘ তারিখ আজ, তালাবদ্ধ — নকশার "তারিখ · সময়" ঘর (পিছনের তারিখের পথ আলাদা নিয়মের)
+        $data['trx_date'] = Carbon::today()->toDateString();
+
+        $note = $this->notes->create($data);
+
+        // ⭐ "অনুমোদনে পাঠান" — খসড়া বানিয়েই পাকা করার চেষ্টা: সই লাগলে অনুরোধ যায়, না লাগলে খাতায় ওঠে
+        if ($request->input('submit') === 'send') {
+            $note = $this->notes->confirm($note);
+
+            return redirect()->route('accounts.note.show', $note)
+                ->with('saved', $note->isDraft() ? __('accounts::note.awaiting_signature') : __('accounts::note.confirmed'));
+        }
+
+        return redirect()->route('accounts.note.show', $note)->with('saved', __('accounts::note.saved'));
+    }
+
+    /** ⓘ পুরনো এক-অঙ্কের ফর্ম আর API — আগের যাচাই হুবহু */
+    private function storeOld(Request $request): RedirectResponse
+    {
         $data = $request->validate([
             'direction' => ['required', Rule::in(Note::DIRECTIONS)],
-            // ⭐ পক্ষের ধরন আর দুই খাত — যাচাই সেবায়, তালিকা ধরে ([[NoteService::resolve()]])
             'party_kind' => ['nullable', Rule::in(array_keys(Note::KINDS))],
             'party_id' => ['required', 'integer', 'min:1'],
             'control_account_id' => ['nullable', 'integer', 'min:1'],
             'other_account_id' => ['nullable', 'integer', 'min:1'],
-            /* ⛔ কাল-পরশুর তারিখে নোট কাটা যায় না — বই ভবিষ্যৎ চেনে না */
             'trx_date' => ['required', 'date', 'before_or_equal:today'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'tax_amount' => ['nullable', 'numeric', 'min:0'],
@@ -195,27 +190,51 @@ class NoteController extends Controller implements HasMiddleware
             'narration' => ['nullable', 'string', 'max:500'],
         ]);
 
-        // ⓘ খাতার পক্ষ-ধরন ফর্ম থেকে নয় — নোটের ধরন থেকে, সেবায় ([[NoteService::resolve()]])
         unset($data['party_type']);
 
         $note = $this->notes->create($data);
 
-        return redirect()
-            ->route('accounts.note.show', $note)
-            ->with('saved', __('accounts::note.saved'));
+        return redirect()->route('accounts.note.show', $note)->with('saved', __('accounts::note.saved'));
+    }
+
+    /**
+     * ⭐ "⇣ মূল বিল থেকে আনুন" — এই পক্ষের এই নম্বরের পাকা বিল আর তার সারি (JSON)।
+     */
+    public function bill(Request $request): JsonResponse
+    {
+        $type = (string) $request->query('type', '');
+        $kind = (string) $request->query('kind', '');
+        $found = $this->notes->billFor($type, $kind, $request->integer('party_id'), (string) $request->query('no', ''));
+
+        if ($found === null) {
+            return response()->json(['message' => __('accounts::note.against_not_found', ['no' => (string) $request->query('no', '')])], 404);
+        }
+
+        return response()->json($found);
     }
 
     public function show(Request $request, Note $note): View
     {
+        $note->load('lines.account');
+        $pair = [[$note->party_type, (int) $note->party_id]];
+        $key = $note->party_type.':'.$note->party_id;
+        $accounts = app(NoteAccounts::class)->of($note);
+        $target = $this->notes->targetOf($note);
+
         return view('accounts::note.show', [
             'menu' => $this->menu->forUser($request->user()),
             'note' => $note,
-            'partyName' => $this->parties->labelsOf([[$note->party_type, (int) $note->party_id]])
-                [$note->party_type.':'.$note->party_id] ?? '—',
-            'partyRoute' => $this->parties->routesOf([[$note->party_type, (int) $note->party_id]])
-                [$note->party_type.':'.$note->party_id] ?? null,
-            // ⭐ দুই খাত পর্দায় — সমন্বয়কের শর্ত, ৩ অক্টোবর ২০২৬
-            'accounts' => app(NoteAccounts::class)->of($note),
+            'type' => $note->type(),
+            'tone' => self::TONES[$note->type()],
+            'partyName' => $this->parties->labelsOf($pair)[$key] ?? '—',
+            'partyRoute' => $this->parties->routesOf($pair)[$key] ?? null,
+            'accounts' => $accounts,
+            'postings' => $this->postingPreview($note, $accounts['control']),
+            'billIssuedAt' => $target instanceof \App\Core\Contracts\NoteTargetLines ? $target->noteTargetIssuedAt() : null,
+            'returnLinks' => $this->returnLinks($note),
+            'approver' => $this->approverFor($note->type()),
+            'binMissing' => self::companyBinMissing(),
+            'listUrl' => route('accounts.note.'.$note->type().'.index'),
         ]);
     }
 
@@ -244,5 +263,74 @@ class NoteController extends Controller implements HasMiddleware
         $this->notes->cancel($note, $data['cancel_reason']);
 
         return back()->with('saved', __('accounts::note.cancelled'));
+    }
+
+    /**
+     * ⓘ অনুমোদনকারী — অনুমোদনের ছক থেকে, কেবল পড়ার জন্য (কোনো বাছাই নয়)। ক্রেডিট নোট মালিকের ছাড়ের ছকে।
+     *
+     * @return array{who: string, levels: int}|null
+     */
+    private function approverFor(string $type): ?array
+    {
+        $engine = app(ApprovalEngine::class);
+
+        return $type === Note::TYPE_CN
+            ? $engine->firstSigner(NoteService::DISCOUNT_MODULE, NoteService::DISCOUNT_ACTION, null, class_basename(Note::class))
+            : $engine->firstSigner(AccountsSignature::MODULE, AccountsSignature::NOTE, null, class_basename(Note::class));
+    }
+
+    /**
+     * ⭐ "খাতায় যা উঠবে" — নোট নিজে যা তোলে, খাতের কোড আর নামসহ।
+     *
+     * @return list<array{code: string, name: string, party: bool, debit: string, credit: string}>
+     */
+    private function postingPreview(Note $note, \App\Modules\Accounts\Models\Account $control): array
+    {
+        if ($note->lines->isEmpty()) {
+            return [];
+        }
+
+        $rows = app(NotePosting::class)->lines($note, $control);
+        $names = \App\Modules\Accounts\Models\Account::query()->whereIn('id', array_column($rows, 'account_id'))->get()->keyBy('id');
+
+        return array_map(fn (array $r) => [
+            'code' => (string) ($names[$r['account_id']]->code ?? ''),
+            'name' => (string) ($names[$r['account_id']]?->name() ?? ''),
+            'party' => isset($r['party_id']),
+            'debit' => (string) ($r['debit'] ?? '0'),
+            'credit' => (string) ($r['credit'] ?? '0'),
+        ], $rows);
+    }
+
+    /** @return list<array{no: string, url: string|null}> */
+    private function returnLinks(Note $note): array
+    {
+        $map = app(\App\Core\Engines\Drill\DrillResolver::class)->map();
+
+        return $note->lines->whereNotNull('return_id')
+            ->unique(fn ($l) => $l->return_type.':'.$l->return_id)
+            ->map(function ($l) use ($map) {
+                $class = $map[(string) $l->return_type] ?? null;
+                $paper = is_string($class) ? $class::query()->withoutGlobalScope('user-branch')->find($l->return_id) : null;
+                [$route, $params] = $paper instanceof \App\Core\Contracts\Drillable ? $paper->drillRoute() : [null, []];
+
+                return ['no' => (string) $l->return_no, 'url' => $route !== null && \Illuminate\Support\Facades\Route::has($route) ? route($route, $params) : null];
+            })->values()->all();
+    }
+
+    private function typeOf(Request $request): string
+    {
+        $type = (string) $request->route('type', Note::TYPE_CN);
+
+        return array_key_exists($type, Note::TYPES) ? $type : Note::TYPE_CN;
+    }
+
+    /**
+     * ⛔ কোম্পানির BIN নেই — মূসক-৬.৭/৬.৮-এ নিজের BIN বাধ্যতামূলক (মূসক আইন ২০১২, ধারা ৫২(১))। ⓘ সতর্কতা কেবল, থামায় না
+     * (মালিকের নিয়ম "সতর্কতা কাজ থামায় না"); দিন শেষের তালিকাতেও ওঠে ([[DayChecklist]])। লাইভে ADI-র BIN খালি।
+     */
+    public static function companyBinMissing(): bool
+    {
+        return blank(Company::query()->whereKey(CompanyContext::id())->value('bin'));
     }
 }
