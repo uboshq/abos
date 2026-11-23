@@ -30,6 +30,7 @@ import documentScan from './document-scan.js'
 import { listenForColumnChoice } from './columns.js'
 import { listenForFreshData } from './live.js'
 import { guardAllBranchesView } from './all-branches-view.js'
+import { holdPrintTabOnSubmit, handPrintToTab } from './print-tab.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -186,6 +187,9 @@ guardAllBranchesView()
 // ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ — একবার-জমার পাহারার আগে (capture), মালিক ৪ অক্টোবর ২০২৬ ([[confirm-overview.js]])
 guardConfirmOverview()
 guardOneSubmit()
+// ⭐ ছাপা নতুন ট্যাবে — কাউন্টার যেখানে ছিল সেখানেই (মালিক, ২৩ নভেম্বর ২০২৬; [[print-tab.js]]); একবার-জমার পাহারার পরে, তাই থামানো জমায় ট্যাব খোলে না
+holdPrintTabOnSubmit()
+handPrintToTab()
 
 // ⭐ "ABOS" রূপে টাকার পাতার মাথা টুলবারের এক সারিতে — Alpine-এর আগে, তাই সরানো বোতামগুলো নতুন জায়গাতেই জাগে ([[abos-list-head.js]])
 mergeMoneyHead()

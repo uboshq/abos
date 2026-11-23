@@ -12,6 +12,9 @@
             :title="__('hr::action.monthly_sheet')"
             :subtitle="$month->translatedFormat('F Y')">
             <x-slot:actions>
+                {{-- ⭐ প্রিন্ট ভিউ — হাজিরার কাগজ নতুন ট্যাবে (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) --}}
+                @php \App\Core\Support\ReportPaper::describe((string) __('hr::action.monthly_sheet'), $month->format('m/Y')); @endphp
+                <x-ui.print-view-button />
                 <x-ui.button :href="route('hr.attendance.index')">
                     {{ __('hr::menu.attendance') }}
                 </x-ui.button>

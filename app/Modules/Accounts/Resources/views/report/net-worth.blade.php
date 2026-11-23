@@ -15,6 +15,32 @@
         'stock' => __('accounts::field.nw_stock'),
         'other_assets' => __('accounts::field.nw_other_assets'),
     ];
+
+    /* ⭐ ছাপার কাগজ — চারটা ঘর তাদের খাতাসহ, তারপর হিসাব আর মিল; পর্দার একই সংখ্যা ([[ReportPaper]], মালিক ২৩ নভেম্বর ২০২৬) */
+    $paperRows = [];
+    foreach ($tiles as $key => $label) {
+        $paperRows[] = ['cells' => [$label, $money($figures[$key])], 'kind' => 'head'];
+        foreach ($accounts[$key] ?? [] as $a) {
+            $paperRows[] = ['cells' => [$a['code'].' · '.$a['name'], $money($a['amount'])]];
+        }
+    }
+    $paperRows[] = ['cells' => [__('accounts::field.nw_assets'), $money($figures['assets'])], 'kind' => 'head'];
+    $paperRows[] = ['cells' => [__('accounts::field.nw_less_payable'), '−'.$money($figures['payable'])]];
+    $paperRows[] = ['cells' => [__('accounts::field.nw_less_other_liabilities'), '−'.$money($figures['other_liabilities'])]];
+    $paperRows[] = ['cells' => ['= '.__('accounts::field.nw_net'), $money($figures['net'])], 'kind' => 'total'];
+    $paperRows[] = ['cells' => [__('accounts::field.nw_capital'), $money($figures['capital'])], 'kind' => 'head'];
+    $paperRows[] = ['cells' => [__('accounts::field.nw_drawings'), '−'.$money($figures['drawings'])]];
+    $paperRows[] = ['cells' => [__('accounts::field.nw_earlier'), $money($figures['earlier'])]];
+    $paperRows[] = ['cells' => [__('accounts::field.nw_this_year'), $money($figures['this_year'])]];
+    $paperRows[] = ['cells' => ['= '.__('accounts::field.nw_net'), $money($figures['equity'])], 'kind' => 'total'];
+    \App\Core\Support\ReportPaper::capture(
+        (string) __('accounts::field.nw_title'),
+        (string) __('accounts::field.nw_subtitle', ['date' => \App\Core\Support\DateFormat::format($asOf)]),
+        [$agrees ? __('accounts::field.nw_agrees') : __('accounts::field.nw_does_not_agree')],
+        [[__('accounts::field.nw_title'), false], [__('core.print.total'), true]],
+        $paperRows,
+        [__('accounts::field.nw_net'), $money($figures['net'])],
+    );
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -24,9 +50,8 @@
     <x-money.page kind="networth" :title="__('accounts::field.nw_title')" icon="wallet"
         :count="__('accounts::field.nw_subtitle', ['date' => \App\Core\Support\DateFormat::format($asOf)])">
         <x-slot:actions>
-            <x-ui.button tone="secondary" icon="print" data-action="print">
-                {{ __('core.action.print') }}
-            </x-ui.button>
+            {{-- ⭐ প্রিন্ট ভিউ — নিজের কাগজ নতুন ট্যাবে (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) --}}
+            <x-ui.print-view-button />
         </x-slot:actions>
 
     {{-- ── কোম্পানি বাছা — নাম লেখা, সংকেত নয় (ADI, UB নয় — "আদি কর্পোরেশন") ── --}}

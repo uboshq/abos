@@ -198,7 +198,8 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
      */
     public function test_without_a_counter_rule_the_counter_prints_straight_away(): void
     {
-        $this->sell()->assertRedirectContains('/print/invoice/');
+        $this->sell()->assertRedirect(route('sales.direct.create'))
+            ->assertSessionHas('print_url', fn ($url) => str_contains((string) $url, '/print/invoice/'));
 
         $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
 
@@ -226,7 +227,8 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
         $floor = $this->floor();
         $approvals = Approval::query()->count();
 
-        $this->sell()->assertSessionHasNoErrors()->assertRedirectContains('/print/invoice/');
+        $this->sell()->assertSessionHasNoErrors()->assertRedirect(route('sales.direct.create'))
+            ->assertSessionHas('print_url', fn ($url) => str_contains((string) $url, '/print/invoice/'));
 
         $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
 
@@ -320,7 +322,8 @@ final class TheCounterDepositWaitedForItsSignatureTest extends TestCase
     {
         $this->flow(Voucher::RECEIPT);
 
-        $this->sell()->assertRedirectContains('/print/invoice/');
+        $this->sell()->assertRedirect(route('sales.direct.create'))
+            ->assertSessionHas('print_url', fn ($url) => str_contains((string) $url, '/print/invoice/'));
 
         $this->assertFalse(SalesInvoice::query()->latest('id')->firstOrFail()->isHeldAtCounter(),
             'হাতে লেখা রসিদের নিয়মে কাউন্টারের বিক্রয় আটকে গেছে।');

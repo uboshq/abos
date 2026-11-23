@@ -22,7 +22,7 @@
             @if ($nextUrl)
                 <x-ui.button tone="secondary" :href="$nextUrl">{{ $t('next_day') }}</x-ui.button>
             @endif
-            <x-ui.button tone="secondary" icon="printer" :href="$pdfUrl" target="_blank" data-daily-pdf>{{ $t('pdf') }}</x-ui.button>
+            <x-ui.button tone="secondary" icon="printer" :href="$pdfUrl" target="_blank" rel="noopener" data-daily-pdf>{{ $t('pdf') }}</x-ui.button>
         </x-slot:actions>
 
     {{-- ── ছয়টা বড় অঙ্ক ── --}}

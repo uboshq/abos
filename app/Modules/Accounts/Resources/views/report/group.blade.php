@@ -87,6 +87,13 @@
     foreach (['income', 'expense', 'profit', 'asset', 'liability', 'equity'] as $key) {
         $totals[$key] = \App\Core\Support\Money::format($group['total'][$key]);
     }
+
+    /* ⭐ ছাপার কাগজের মাথা — টেবিল আর মোট `x-ui.table` নিজেই ধরে ([[ReportPaper::describe()]], মালিক ২৩ নভেম্বর ২০২৬) */
+    \App\Core\Support\ReportPaper::describe(
+        (string) __('accounts::menu.group_report'),
+        \App\Core\Support\DateFormat::format($group['from']).' – '.\App\Core\Support\DateFormat::format($group['to']),
+        [(string) __('accounts::message.group_not_consolidated')],
+    );
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -99,9 +106,8 @@
                               'to' => \App\Core\Support\DateFormat::format($group['to']),
                           ])">
             <x-slot:actions>
-                <x-ui.button tone="secondary" icon="print" data-action="print">
-                    {{ __('core.action.print') }}
-                </x-ui.button>
+                {{-- ⭐ প্রিন্ট ভিউ — নিজের কাগজ নতুন ট্যাবে, পর্দার ছাপা নয় (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) --}}
+                <x-ui.print-view-button />
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
