@@ -418,7 +418,12 @@ final class AccountsDashboard implements ProvidesDashboard
                 [
                     'view' => 'accounts::dashboard.board-statements',
                     'place' => 'bottom',
-                    'permission' => 'accounts.view',
+                    /*
+                     * ⛔ লাভ-ক্ষতি, বিক্রীত পণ্যের খরচ, স্থিতিপত্রে মজুদের মূল্য, স্থায়ী সম্পদ আর জমা লাভ — চূড়ান্ত বিবরণীর একই চাবি
+                     *   (`accounts.report.final`; লাভ-ক্ষতি আর স্থিতিপত্রের পাতা যেটা চায়)। ড্যাশবোর্ড নিরীক্ষা, 23 Nov 2026: আগে কেবল
+                     *   `accounts.view`-এ দেখা যেত, অথচ উপরের প্রথম গ্রাফ একই লাভ চাবি ছাড়া লুকায়।
+                     */
+                    'permission' => ['accounts.view', 'accounts.report.final'],
                     'data' => function (): array {
                         $board = app(AccountsBoard::class);
 
@@ -433,7 +438,13 @@ final class AccountsDashboard implements ProvidesDashboard
                     'data' => function (): array {
                         $board = app(AccountsBoard::class);
 
-                        return ['glance' => $board->glance(), 'tree' => $board->expenseTree()];
+                        // ⛔ নিট লাভের সারি আর খাত ধরে খরচ (খরচের খাতের রিপোর্টের চাবি) — কেবল `accounts.report.final`-এ; বাকি সারি সবার
+                        $final = auth()->user()?->can('accounts.report.final') === true;
+
+                        return [
+                            'glance' => $final ? $board->glance() : array_values(array_filter($board->glance(), fn (array $k): bool => $k['key'] !== 'profit')),
+                            'tree' => $final ? $board->expenseTree() : null,
+                        ];
                     },
                 ],
                 // ⭐ সারি 4 — মাস বন্ধের সময়রেখা, ব্যাংক মিলকরণ, কর ও সরকারি দায়
@@ -451,7 +462,8 @@ final class AccountsDashboard implements ProvidesDashboard
                 [
                     'view' => 'accounts::dashboard.board-trends',
                     'place' => 'bottom',
-                    'permission' => 'accounts.view',
+                    // ⛔ খাত ধরে খরচ আর আয় বনাম খরচ — খরচ/আয়ের খাতের রিপোর্টের একই চাবি (ড্যাশবোর্ড নিরীক্ষা, 23 Nov 2026)
+                    'permission' => ['accounts.view', 'accounts.report.final'],
                     'data' => function (): array {
                         $board = app(AccountsBoard::class);
 

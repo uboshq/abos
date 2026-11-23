@@ -221,7 +221,14 @@ final class ApprovalDashboard implements ProvidesDashboard
                         'party' => $facts[$a->id]['party'] ?? null,
                     ])],
                 ['key' => 'amount', 'label' => __('approval::dashboard.amount'), 'width' => '9rem',
-                    'render' => fn ($a) => $a->amount === null ? '—' : Money::format((string) $a->amount)],
+                    /*
+                     * ⛔ বেতনের রানের অঙ্ক কেবল `hr.payroll.view`-এ (ড্যাশবোর্ড নিরীক্ষা, 23 Nov 2026): `approval.report`-ওয়ালা গোটা কোম্পানির
+                     *   অনুমোদন দেখেন, আর তাতে বেতনের মোট অঙ্কও দেখা যেত — বেতনের পাতা যেটা চাবি ছাড়া দেখায় না।
+                     */
+                    'render' => fn ($a) => $a->amount === null
+                        || ($a->module === ApprovalFlowService::PAYROLL[0] && $a->action === ApprovalFlowService::PAYROLL[1]
+                            && auth()->user()?->can('hr.payroll.view') !== true)
+                        ? '—' : Money::format((string) $a->amount)],
                 /*
                  * ⭐ ডানে অবস্থার চিপ (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬) — `x-ui.paper-state` (paper_states.json):
                  * অপেক্ষমাণ = waiting, ধাপ ছক থেকে ([[ApprovalEngine::stepsFor()]])।
