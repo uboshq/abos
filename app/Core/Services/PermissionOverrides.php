@@ -58,6 +58,19 @@ final class PermissionOverrides
         return $this->byUser[$key][$ability] ?? null;
     }
 
+    /**
+     * ⓘ every override of the user in this company, key => granted — the dashboard figure cache folds it into its
+     * key ([[DashboardFigureCache]], speed work 23 Nov 2026), so a changed override never meets an old figure
+     *
+     * @return array<string, bool>
+     */
+    public function allFor(User $user): array
+    {
+        $this->granted($user, '');
+
+        return $this->byUser[CompanyContext::id().':'.$user->id] ?? [];
+    }
+
     /** লেখার পর স্মৃতিটা ফেলে দেওয়া। */
     public function forget(): void
     {

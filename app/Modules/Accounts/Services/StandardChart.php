@@ -928,9 +928,12 @@ final class StandardChart implements ProvisionsCompany
      */
     public static function find(string $code): ?Account
     {
-        $account = Account::query()->where('code', $code)->first();
+        // ⭐ once per code on a read-only page ([[AccountLookups]]; speed work 23 Nov 2026) — live /dashboard/finance asked 483 times
+        return app(AccountLookups::class)->byCode($code, function () use ($code): ?Account {
+            $account = Account::query()->where('code', $code)->first();
 
-        return $account !== null && self::isStandardCode($code) && ! self::holdsItsMeaning($account) ? null : $account;
+            return $account !== null && self::isStandardCode($code) && ! self::holdsItsMeaning($account) ? null : $account;
+        });
     }
 
     /**

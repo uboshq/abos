@@ -190,7 +190,18 @@ trait ScopedToUserWarehouse
      */
     private static function warehousesOfBranch(int $branchId): ?array
     {
-        $ours = DB::table('branches')->where('id', $branchId)->where('company_id', CompanyContext::id())->exists();
+        // ⭐ once per company and branch on a read-only page ([[ReadWindow::remember()]]; speed work 23 Nov 2026) —
+        // live home asked it 37 times; a warehouse saved inside the page asks again
+        return app(\App\Core\Services\ReadWindow::class)->remember(
+            'warehouses-of-branch|'.CompanyContext::id().'|'.$branchId,
+            fn (): ?array => self::readWarehousesOfBranch($branchId),
+        );
+    }
+
+    /** @return list<int>|null */
+    private static function readWarehousesOfBranch(int $branchId): ?array
+    {
+        $ours =DB::table('branches')->where('id', $branchId)->where('company_id', CompanyContext::id())->exists();
 
         if (! $ours) {
             return null;

@@ -383,6 +383,9 @@ return Application::configure(basePath: dirname(__DIR__))
          */
         $middleware->append(ContentSecurityPolicy::class);
 
+        // ⭐ a GET/HEAD page asks each permission key once ([[GateMemo]], speed work 23 Nov 2026)
+        $middleware->append(\App\Http\Middleware\RemembersPermissionAnswersOnReads::class);
+
         /*
          * রুট-মডেল বাইন্ডিং-এর আগে।
          *

@@ -70,10 +70,15 @@ final class BranchModule extends Model
             return [];
         }
 
-        return self::query()
-            ->where('branch_id', $branchId)
-            ->where('is_enabled', false)
-            ->pluck('module')
-            ->all();
+        // ⭐ once per company and branch on a read-only page ([[ReadWindow::remember()]]; speed work 23 Nov 2026) — live home
+        // asked it 21 times; a switch saved inside the page empties the memory ([[AppServiceProvider::boot()]])
+        return app(\App\Core\Services\ReadWindow::class)->remember(
+            'branch-modules-off|'.\App\Core\Support\CompanyContext::id().'|'.$branchId,
+            fn (): array => self::query()
+                ->where('branch_id', $branchId)
+                ->where('is_enabled', false)
+                ->pluck('module')
+                ->all(),
+        );
     }
 }

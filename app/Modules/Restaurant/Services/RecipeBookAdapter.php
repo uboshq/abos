@@ -39,9 +39,16 @@ final class RecipeBookAdapter implements RecipeBook
 
     public function consumesOnSale(int $productId): bool
     {
-        $product = Product::query()->find($productId);
+        // ⭐ once per product on a read-only page ([[ReadWindow::remember()]]; speed work 23 Nov 2026) — live /sales/direct
+        // asked the same products 26 times; a product or recipe saved inside the page asks again
+        return app(\App\Core\Services\ReadWindow::class)->remember(
+            'recipe-consumes|'.\App\Core\Support\CompanyContext::id().'|'.$productId,
+            function () use ($productId): bool {
+                $product = Product::query()->find($productId);
 
-        return $product !== null && $this->recipes->consumesOnSale($product);
+                return $product !== null && $this->recipes->consumesOnSale($product);
+            },
+        );
     }
 
     /**
@@ -109,6 +116,16 @@ final class RecipeBookAdapter implements RecipeBook
     }
 
     public function sellableQty(int $productId, string $ownStock, ?int $warehouseId = null): string
+    {
+        // ⭐ once per product, stock and warehouse on a read-only page ([[ReadWindow::remember()]]; speed work 23 Nov 2026);
+        // ⓘ the warehouse wall is the user's — the user is in the key
+        return app(\App\Core\Services\ReadWindow::class)->remember(
+            'recipe-sellable|'.\App\Core\Support\CompanyContext::id().'|'.(auth()->id() ?? '-').'|'.$productId.'|'.$ownStock.'|'.($warehouseId ?? '-'),
+            fn (): string => $this->readSellableQty($productId, $ownStock, $warehouseId),
+        );
+    }
+
+    private function readSellableQty(int $productId, string $ownStock, ?int $warehouseId): string
     {
         $product = Product::query()->find($productId);
 

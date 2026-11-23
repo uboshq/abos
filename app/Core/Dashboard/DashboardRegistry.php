@@ -58,7 +58,31 @@ class DashboardRegistry
     {
         $grouped = array_fill_keys(Widget::GROUPS, []);
 
-        foreach ($this->modulesSwitchedOn() as $module) {
+        $modules = $this->modulesSwitchedOn();
+
+        /*
+         * ⭐ The providers' figures, remembered five minutes for this user's scope ([[DashboardFigureCache]]; speed work
+         * 23 Nov 2026). ⛔ Only the computed widgets are remembered — the key check below runs on every page, against
+         * the user of now; and only for the signed-in user (another user's list is always counted afresh).
+         */
+        $compute = function () use ($modules): array {
+            $out = [];
+
+            foreach ($modules as $module) {
+                foreach ($module->widgets as $provider) {
+                    $out[$provider] = $provider::widgets();
+                }
+            }
+
+            return $out;
+        };
+
+        $byProvider = $user !== null && $user->is(auth()->user())
+            ? app(\App\Core\Services\DashboardFigureCache::class)->remember(
+                'home-widgets|'.implode(',', array_map(fn ($m) => $m->code, $modules)), $compute)
+            : $compute();
+
+        foreach ($modules as $module) {
             foreach ($module->widgets as $provider) {
                 /*
                  * সরবরাহকারী ব্যতিক্রম ছুঁড়লে পাতাটা ভাঙবে — চাপা দেওয়া
@@ -69,7 +93,7 @@ class DashboardRegistry
                  * সেটার অনুপস্থিতি কেউ খেয়াল করে না। ভুল সংখ্যার চেয়ে
                  * নিখোঁজ সংখ্যা কম বিপজ্জনক নয়।
                  */
-                foreach ($provider::widgets() as $widget) {
+                foreach ($byProvider[$provider] ?? [] as $widget) {
                     if ($user?->can($widget->permission) !== true) {
                         continue;
                     }

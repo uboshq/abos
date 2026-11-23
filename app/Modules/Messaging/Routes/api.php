@@ -25,7 +25,8 @@ Route::prefix('v1/messenger')
         RefuseModulesOffOnThePhone::class.':messaging',
     ])
     ->group(function (): void {
-        Route::get('/threads', [MessengerApiController::class, 'threads'])->name('threads');
+        // ⭐ unchanged → 304, scoped weak ETag ([[AnswersUnchanged]], speed work 23 Nov 2026)
+        Route::get('/threads', [MessengerApiController::class, 'threads'])->middleware(\App\Http\Middleware\AnswersUnchanged::class)->name('threads');
         Route::get('/threads/{thread}', [MessengerApiController::class, 'thread'])->name('thread');
         Route::get('/threads/{thread}/messages', [MessengerApiController::class, 'messages'])->name('messages');
         Route::post('/threads/{thread}/messages', [MessengerApiController::class, 'send'])->name('send');

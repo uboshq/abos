@@ -15,6 +15,7 @@ use App\Core\Services\LedgerBalances;
 use App\Core\Support\RunningBalance;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Modules\Accounts\Services\AccountLookups;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -396,15 +397,17 @@ class Account extends Model implements Drillable, IsAMasterRecord
          * ডেবিট-ক্রেডিট তোলা আর প্রকৃতি ধরে চিহ্ন বসানো দুইটা আলাদা
          * কাজ, আর দ্বিতীয়টা টাকার নিয়ম।
          */
-        $preloaded = app(LedgerBalances::class)->raw($this->id, $upto, $branchId);
+        $balances = app(LedgerBalances::class);
+        $preloaded = $balances->raw($this->id, $upto, $branchId);
 
+        // ⓘ the single sum is remembered for a read-only page ([[LedgerBalances::leaf()]]; speed work 23 Nov 2026)
         $row = $preloaded === null
-            ? LedgerEntry::query()
+            ? $balances->leaf((int) $this->id, $upto, $branchId, fn () => LedgerEntry::query()
                 ->forAccount($this->id)
                 ->when($upto, fn (Builder $q, string $date) => $q->where('trx_date', '<=', $date))
                 ->when($branchId, fn (Builder $q, int $branch) => $q->where('branch_id', $branch))
                 ->selectRaw('COALESCE(SUM(debit), 0) as d, COALESCE(SUM(credit), 0) as c')
-                ->first()
+                ->first())
             : (object) ['d' => $preloaded[0], 'c' => $preloaded[1]];
 
         /*
@@ -447,9 +450,11 @@ class Account extends Model implements Drillable, IsAMasterRecord
      */
     private function groupBalanceOn(?string $upto, ?int $branchId): string
     {
+        // ⓘ the pool walk is remembered for a read-only page ([[AccountLookups::subtree()]]) — same tree, same leaves
         $family = $this->relationLoaded('children')
             ? $this->gather(null)
-            : $this->gather($this->balancePool());
+            : AccountLookups::subtree((int) $this->getKey(), ['id', 'parent_id', 'is_group', 'nature'],
+                fn () => $this->gather($this->balancePool()));
 
         $leaves = $family->reject(fn (self $account) => (bool) $account->is_group);
 
@@ -500,10 +505,8 @@ class Account extends Model implements Drillable, IsAMasterRecord
      */
     private function balancePool(): \Illuminate\Support\Collection
     {
-        return static::query()
-            ->select(['id', 'parent_id', 'is_group', 'nature'])
-            ->get()
-            ->groupBy('parent_id');
+        // ⭐ once per read-only page ([[AccountLookups]]; speed work 23 Nov 2026) — the same query, the same scopes
+        return AccountLookups::accountPool(['id', 'parent_id', 'is_group', 'nature']);
     }
 
     /** এই খাতে কোনো এন্ট্রি বসেছে কি না — মোছার আগে দেখা হয়। */
@@ -618,11 +621,13 @@ class Account extends Model implements Drillable, IsAMasterRecord
          * দুইশো সারির ছকে একটাই কোয়েরি। ধরা পড়েছে preventLazyLoading
          * চালু করার পর, ৩১ আগস্ট ২০২৬-এ পর্দা খুলে।
          */
-        $pool = $this->relationLoaded('children')
-            ? null
-            : static::query()->select(['id', 'parent_id'])->get()->groupBy('parent_id');
+        if ($this->relationLoaded('children')) {
+            return $this->gather(null);
+        }
 
-        return $this->gather($pool);
+        // ⭐ once per read-only page ([[AccountLookups]]; speed work 23 Nov 2026) — the same query, the same scopes
+        return AccountLookups::subtree((int) $this->getKey(), ['id', 'parent_id'],
+            fn () => $this->gather(AccountLookups::accountPool(['id', 'parent_id'])));
     }
 
     /**

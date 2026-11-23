@@ -444,6 +444,123 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
         );
     }
 
+    /**
+     * ⭐ A page of bills learns its money figures in seven queries, not seven per bill (speed work, 23 Nov 2026).
+     *
+     * ⓘ Live /sales/invoices, owner: each row's action menu asked [[dueAmount()]], and every bill ran seven sums —
+     * 350 queries on a 50-row page. ⛔ The figures cannot change: each query below is the per-bill query of the same
+     * method — the same model, the same global scopes, the same conditions — with `whereIn` and `GROUP BY` in place of
+     * one bill's id, and the sums are added in PHP the way the per-bill methods add them. The answers are then set on
+     * each bill exactly where [[scopeWithCollected()]] puts them (`collected_total`, `voucher_total`, …), which the
+     * money methods already read first.
+     *
+     *   collected_total = posted collection lines ([[collectedAmount()]]) + open credits applied ([[clearedByCredits()]])
+     *   voucher_total   = posted receipt vouchers against the bill + their per-bill rows ([[paidByReceiptVouchers()]])
+     *   returned_total  = posted returns ([[returnedAmount()]]) · claimed_total ([[claimedAmount()]]) · noted_total ([[notedAmount()]])
+     *
+     * @param  iterable<int, self>  $invoices
+     */
+    public static function primeDue(iterable $invoices): void
+    {
+        $bills = collect($invoices)->filter(fn ($bill) => $bill instanceof self && $bill->getKey() !== null)
+            // ⓘ a bill that already carries the figures (withCollected) keeps them
+            ->reject(fn (self $bill) => $bill->getAttribute('collected_total') !== null)
+            ->keyBy(fn (self $bill) => (int) $bill->getKey());
+
+        if ($bills->isEmpty()) {
+            return;
+        }
+
+        $ids = $bills->keys()->all();
+        $type = static::drillSourceType();
+        $sums = fn ($rows) => collect($rows)->mapWithKeys(fn ($row) => [(int) $row->id => (string) ($row->s ?? '0')]);
+
+        $lines = $sums(CollectionLine::query()
+            ->whereIn('sal_collection_lines.sales_invoice_id', $ids)
+            ->whereNotNull('sal_collection_lines.sales_invoice_id')
+            ->whereHas('collection', fn ($q) => $q->posted())
+            ->groupBy('sal_collection_lines.sales_invoice_id')
+            ->selectRaw('sal_collection_lines.sales_invoice_id as id, SUM(amount) as s')
+            ->get());
+
+        $credits = collect();
+
+        foreach ($bills->groupBy(fn (self $bill) => (int) $bill->company_id) as $companyId => $ofCompany) {
+            $credits = $credits->union($sums(DB::table('sal_collection_applications as a')
+                ->join('sal_collections as c', 'c.id', '=', 'a.collection_id')
+                ->where('c.company_id', (int) $companyId)
+                ->whereIn('a.target_invoice_id', $ofCompany->keys()->all())
+                ->whereNull('c.deleted_at')
+                ->whereIn('c.status', DocumentStatus::POSTED)
+                ->groupBy('a.target_invoice_id')
+                ->selectRaw('a.target_invoice_id as id, SUM(a.amount) as s')
+                ->get()));
+        }
+
+        $single = $sums(Voucher::query()
+            ->where('type', Voucher::RECEIPT)
+            ->where('against_type', $type)
+            ->whereIn('against_id', $ids)
+            ->posted()
+            ->groupBy('against_id')
+            ->selectRaw('against_id as id, SUM(amount) as s')
+            ->get());
+
+        $rows = $sums(VoucherAllocation::query()
+            ->where('against_type', $type)
+            ->whereIn('against_id', $ids)
+            ->whereHas('voucher', fn ($v) => $v->where('type', Voucher::RECEIPT)->posted())
+            ->groupBy('against_id')
+            ->selectRaw('against_id as id, SUM(amount) as s')
+            ->get());
+
+        $returns = SalesReturn::query()
+            ->whereIn('sales_invoice_id', $ids)
+            ->posted()
+            ->get(['sales_invoice_id', 'total'])
+            ->groupBy(fn ($return) => (int) $return->sales_invoice_id);
+
+        $claims = $sums(CommissionClaim::query()
+            ->whereIn('sales_invoice_id', $ids)
+            ->where('status', '!=', CommissionClaim::CANCELLED)
+            ->groupBy('sales_invoice_id')
+            ->selectRaw('sales_invoice_id as id, SUM(amount) as s')
+            ->get());
+
+        $notes = self::notesOnTheBill()
+            ->whereIn('against_id', $ids)
+            ->get(['company_id', 'party_id', 'against_id', 'direction', 'total'])
+            ->groupBy(fn ($note) => (int) $note->against_id);
+
+        foreach ($bills as $id => $bill) {
+            $collected = bcadd((string) ($lines[$id] ?? '0') ?: '0', bcadd((string) ($credits[$id] ?? '0') ?: '0', '0', 4), 4);
+            $vouchers = bcadd((string) ($single[$id] ?? '0') ?: '0', (string) ($rows[$id] ?? '0') ?: '0', 4);
+            $returned = ($returns[$id] ?? collect())
+                ->reduce(fn (string $sum, $return) => bcadd($sum, (string) $return->total, 4), '0.0000');
+            $claimed = bcadd((string) ($claims[$id] ?? '0') ?: '0', '0', 4);
+            $noted = ($notes[$id] ?? collect())
+                ->filter(fn ($note) => (int) $note->company_id === (int) $bill->company_id
+                    && (int) $note->party_id === (int) $bill->customer_id)
+                ->reduce(fn (string $sum, $n) => $n->direction === \App\Modules\Accounts\Models\Note::CREDIT
+                    ? bcadd($sum, (string) $n->total, 4) : bcsub($sum, (string) $n->total, 4), '0.0000');
+
+            $figures = [
+                'collected_total' => $collected,
+                'voucher_total' => $vouchers,
+                'returned_total' => $returned,
+                'claimed_total' => $claimed,
+                'noted_total' => $noted,
+            ];
+
+            foreach ($figures as $name => $value) {
+                $bill->setAttribute($name, $value);
+            }
+
+            // ⓘ figures, not columns — never "changed", so a later save() never tries to write them
+            $bill->syncOriginalAttributes(array_keys($figures));
+        }
+    }
+
     public function dueAmount(): string
     {
         /*
