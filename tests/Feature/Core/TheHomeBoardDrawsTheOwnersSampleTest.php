@@ -198,7 +198,10 @@ final class TheHomeBoardDrawsTheOwnersSampleTest extends TestCase
             $this->assertNull($response->viewData('board'), "⛔ {$look}: বোর্ডের কোয়েরি চলেছে।");
             $this->assertStringNotContainsString('data-home-board-charts', $html, "⛔ {$look}: নতুন বোর্ড অন্য রূপে বসেছে।");
             $this->assertStringNotContainsString('data-module-picker', $html, "⛔ {$look}: মডিউল-তালিকা অন্য রূপে বসেছে।");
-            $this->assertStringNotContainsString('data-notice-tag', $html, "⛔ {$look}: নোটিশের চিহ্ন অন্য রূপে বসেছে।");
+            // ⓘ ABOS Navy ২৩ নভেম্বর ২০২৬ থেকে নিজেও "Notice" চিহ্ন পরে (মালিক) — [[TheNavyFooterRunsTheNoticesTest]]
+            if ($look !== 'navy') {
+                $this->assertStringNotContainsString('data-notice-tag', $html, "⛔ {$look}: নোটিশের চিহ্ন অন্য রূপে বসেছে।");
+            }
             $this->assertStringContainsString('hm-pictures', $html, "⛔ {$look}: আগের হোমের চার্টের সারি নেই।");
         }
 

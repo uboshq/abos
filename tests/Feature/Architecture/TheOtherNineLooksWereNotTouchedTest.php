@@ -260,8 +260,9 @@ class TheOtherNineLooksWereNotTouchedTest extends TestCase
         $this->assertSame('#2160d8', $light['--color-sidebar'], '⛔ রেল মালিকের নীল নয়।');
         $this->assertSame('#eef3fc', $light['--color-surface-app'], '⛔ কাজের জায়গা মালিকের হালকা নীল নয়।');
         $this->assertSame('22px', $light['--radius-card'], '⛔ কার্ডের কোণ স্পষ্ট গোল নয়।');
-        $this->assertStringContainsString('--blue-frame: #3a7be9;', (string) file_get_contents(resource_path('css/blue-look.css')),
-            '⛔ ফ্রেমের নীল মালিকের নয়।');
+        // ⓘ বাইরের নীল ফ্রেম মালিক নিজেই তুলে দিয়েছেন (২৩ নভেম্বর ২০২৬) — [[TheBlueLookHasNoOuterFrameTest]]
+        $this->assertStringNotContainsString('--blue-frame', (string) file_get_contents(resource_path('css/blue-look.css')),
+            '⛔ ABOS Blue-র বাইরের নীল ফ্রেম ফিরে এসেছে।');
     }
     /**
      * ⭐ নতুন "ABOS" (`rose`) — মালিকের অনুমোদিত নমুনা, ১৯ নভেম্বর ২০২৬ (claude.ai artifact AAjAfjZ8TnCfnjtt3Kthjz v11)।

@@ -20,7 +20,12 @@
 
     ── অঞ্চল ─────────────────────────────────────────────────────────────
         page-foot   যোগফলের পট্টি + কীবোর্ডের হিন্ট
+        ticker-start  নিচের বারের চলন্ত নোটিশের আগে "Notice" চিহ্ন (মালিক, ২৩ নভেম্বর ২০২৬; "ABOS"-এর একই চিহ্ন, নেভির রঙে)
 --}}
+
+@if ($region === 'ticker-start')
+    <span class="abos-notice-tag" data-notice-tag><i aria-hidden="true"></i>{{ __('core.picker.notice') }}</span>
+@endif
 
 @if ($region === 'page-foot')
     @php

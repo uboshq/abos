@@ -3,17 +3,16 @@
    BTey3zZ3nnwspGzPMDVfMd সংস্করণ ৫)।
 
    ⓘ রং আর কোণ `app/Core/Support/Looks/blue.php`-এ (টোকেন); এখানে কেবল যা markup-এর জায়গা বদলায়:
-     · উজ্জ্বল নীল ফ্রেম (#3a7be9, হালকা দুটো আলোর বৃত্ত) — তার ভিতরে #2160d8-এর অ্যাপ, ৩০px গোল কোণ
+     · বাইরের ফ্রেম নেই (মালিক, ২৩ নভেম্বর ২০২৬) — উপরের বার আর রেল-মেনু #2160d8, কাজের জায়গা ডান কিনারা ও নিচের বার পর্যন্ত
      · মেনু আর কাজের জায়গা নীলের উপর আলাদা ভাসমান প্যানেল (২৪px আর ২৬px কোণ)
      · খোঁজার ঘর, বোতাম, চিপ, মেনুর সারি — পুরো গোল (পিল)
-     · নিচের বার একটা সাদা পিল
+     · নিচের বার পাতার সাধারণ সাদা বার, পুরো চওড়ায়
      · চার্টের রং কেবল নীলের পরিবার — লাল, কমলা, সবুজ, হলুদ কেবল অবস্থা বোঝায় (মালিক: "একটা রঙের একটাই অর্থ")
    ⛔ কেবল `[data-ui='blue']`-এ — বাকি দশটা রূপের একটা পিক্সেলও নড়ে না ([[TheOtherNineLooksWereNotTouchedTest]])।
    ⓘ স্তরহীন (unlayered) — Tailwind-এর utilities-কে জেতে, তাই `!important` কেবল যেখানে markup নিজেই inline style বসায়।
    ───────────────────────────────────────────────────────────────────── */
 
 :root[data-ui='blue'] {
-    --blue-frame: #3a7be9;
     --blue-shell: var(--color-topbar);
     --blue-ring: 0px;
     --blue-gap: 10px;
@@ -34,7 +33,6 @@
 }
 
 :root[data-ui='blue'][data-theme='dark'] {
-    --blue-frame: #1c3f8f;
     --color-chart-1: #6c9bff;
     --color-chart-2: #a9c2fb;
     --color-chart-3: #3b6fe0;
@@ -45,18 +43,14 @@
     --color-chart-8: #7aa2f7;
 }
 
-@media (min-width: 768px) {
-    :root[data-ui='blue'] { --blue-ring: 12px; }
-}
+/* ⛔ বাইরের নীল ফ্রেম উঠে গেছে (মালিক, ২৩ নভেম্বর ২০২৬, ছবিতে লাল বাক্সে: চারপাশের ১২px ফ্রেম, ডানের নীল পট্টি, নিচের নীল ফালি)।
+   ⓘ `--blue-ring` সব পর্দায় ০ — উপরের বার আর বাঁয়ের রেল-মেনু আগের মতোই নীল; কাজের জায়গা ডান কিনারা আর নিচের বার পর্যন্ত টানা,
+   নিচের বার পাতার সাধারণ জমিনে (ABOS স্মার্টের মতো, ডান কিনারায় কোনো নীল নেই)। */
 
-/* ── ফ্রেম আর অ্যাপ ───────────────────────────────────────────────────── */
+/* ── অ্যাপ ───────────────────────────────────────────────────────────── */
 :root[data-ui='blue'] body {
-    background:
-        radial-gradient(circle at 12% 18%, rgb(255 255 255 / 0.14) 0 18%, transparent 19%),
-        radial-gradient(circle at 88% 82%, rgb(255 255 255 / 0.12) 0 16%, transparent 17%),
-        var(--blue-frame);
-    background-attachment: fixed;
-    padding: var(--blue-ring) var(--blue-ring) 0;
+    background: var(--color-surface-app);
+    padding: 0;
 }
 
 /* উপরের বার — অ্যাপের মাথা, উপরের দুই কোণ গোল */
@@ -66,12 +60,10 @@
     border-radius: calc(var(--blue-ring) * 2.5) calc(var(--blue-ring) * 2.5) 0 0;
 }
 
-/* বারের নিচের সারি (রেল + মেনু + কাজের জায়গা) — অ্যাপের শরীর, নিচের দুই কোণ গোল */
+/* বারের নিচের সারি (রেল + মেনু + কাজের জায়গা) — রেল আর মেনুর পেছনে নীল; ডানে আর নিচে কোনো নীল ফাঁক নেই */
 :root[data-ui='blue'] body > div.flex:has(> div > #main) {
     background: var(--blue-shell);
-    border-radius: 0 0 calc(var(--blue-ring) * 2.5) calc(var(--blue-ring) * 2.5);
-    padding: 0 var(--blue-ring) var(--blue-ring) 0;
-    margin-bottom: calc(var(--spacing-status-bar) + var(--blue-ring) * 2);
+    margin-bottom: var(--spacing-status-bar);
 }
 
 /* রেল আর মেনুর খুঁটি — বারের নিচে আটকে থাকে; ফ্রেম আর নিচের পিলের জায়গা বাদ (inline style-কে হারাতে !important) */
@@ -159,10 +151,10 @@
     color: #cfe0ff;
 }
 
-/* ⭐ কাজের জায়গা — হালকা নীল, ২৬px কোণ, মেনুর পাশে আলাদা প্যানেল */
+/* ⭐ কাজের জায়গা — হালকা নীল, মেনুর পাশে বাঁয়ে ২৬px গোল; ডান কিনারা আর নিচের বার পর্যন্ত টানা (ফ্রেম নেই) */
 :root[data-ui='blue'] body > div.flex > div:has(> #main) {
     background: var(--color-surface-app);
-    border-radius: 26px;
+    border-radius: 26px 0 0 26px;
     margin-top: 4px;
     min-height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - var(--blue-ring) * 4);
     overflow: clip;
@@ -204,44 +196,8 @@
     background: var(--color-status-urgent-soft);
 }
 
-/* ⭐ নিচের বার — কাজের জায়গার নিচে আলাদা একটা সাদা পিল, পাতার উপরে চাপে না (নমুনা `.status`)।
-   ⓘ বারটা আগের মতোই স্থির (ঘোষণা সবসময় চোখে — মালিক, ২১ অক্টোবর ২০২৬); তার পেছনে অ্যাপের নীলের একটা স্থির পট্টি
-   (`body::after`, নিচের দুই কোণ গোল), তাই স্ক্রল করা পাতা পিলের নিচে না ঢুকে পট্টির কিনারায় থামে — ফ্রেম, অ্যাপের তলা, পিল,
-   ঠিক নমুনার মতো। */
-@media (min-width: 768px) {
-    :root[data-ui='blue'] body::after {
-        content: "";
-        position: fixed;
-        z-index: 19;
-        inset-inline: var(--blue-ring);
-        bottom: var(--blue-ring);
-        height: calc(var(--spacing-status-bar) + var(--blue-ring) * 1.5);
-        background: var(--blue-shell);
-        border-radius: 0 0 calc(var(--blue-ring) * 2.5) calc(var(--blue-ring) * 2.5);
-        pointer-events: none;
-    }
-
-    /* ⓘ পট্টির নিচে ফ্রেমের ফালি — স্ক্রলে পাতা ওখানেও দেখা না যায় */
-    :root[data-ui='blue'] body::before {
-        content: "";
-        position: fixed;
-        z-index: 19;
-        inset-inline: 0;
-        bottom: 0;
-        height: var(--blue-ring);
-        background: var(--blue-frame);
-        pointer-events: none;
-    }
-
-    :root[data-ui='blue'] footer[data-footer] {
-        inset-inline: calc(var(--blue-ring) * 2);
-        bottom: calc(var(--blue-ring) * 1.5);
-        border-radius: 999px;
-        border: 0;
-        box-shadow: var(--shadow-card);
-        padding-inline: 18px;
-    }
-}
+/* ⓘ নিচের বার — পাতার সাধারণ স্থির বার, পুরো চওড়ায় (মালিক, ২৩ নভেম্বর ২০২৬): তার পেছনের নীল পট্টি (`body::after`) আর
+   নিচের ফ্রেমের ফালি (`body::before`) উঠে গেছে। */
 
 /* ── উপরের বারের ভিতরটা — সব পিল ───────────────────────────────────────── */
 :root[data-ui='blue'] [data-logo-plate] {

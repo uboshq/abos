@@ -48,7 +48,7 @@ final class Accent
      * "`dark` বলে কোনো ঘর নেই" — আর তখন সত্যিকারের ছাপার ভুলও ঐ একই
      * কথা শুনত, অর্থাৎ আলাদা করা যেত না।
      *
-     * @return array<string, array{label: string, swatch: string, ink: string, dark: string, dark_600: string, dark_ink: string, scale: array<string, string>}>
+     * @return array<string, array{label: string, swatch: string, ink: string, dark: string, dark_600: string, dark_ink: string, scale: array<string, string>, frame?: array{bg: string, ink: string, ink_muted: string, field: string, hover: string, border: string}}>
      */
     public static function all(): array
     {
@@ -392,7 +392,82 @@ final class Accent
                     '600' => '12 90 158', '700' => '10 72 127', '900' => '11 42 74',
                 ],
             ],
+
+            /*
+             * ⭐ ফ্রেমের তিন রং — সাদা, Redwood, নেভি (মালিক, ২৩ নভেম্বর ২০২৬; প্রোফাইল › চেহারা › রং)।
+             *
+             * ── বাকিদের থেকে কী আলাদা ────────────────────────────────────
+             * বাকি রংগুলো কেবল কাজের রং (বোতাম, লিংক)। এই তিনটা **ফ্রেমের জমিনও** রাঙায় — `frame`: উপরের বার আর বাঁয়ের
+             * মডিউল-রেল, ABOS Navy রূপে, আলো থিমে ([[resources/css/tokens.css]]-এর `[data-accent-frame]`)। ⛔ বাকি রূপ (SAP,
+             * Dynamic, নকলগুলো, ABOS স্মার্ট ও ABOS Blue-র নিজের নীল ফ্রেম) কেবল বোতামের রংটাই পায় — তাদের ফ্রেম তাদের পরিচয়।
+             *
+             * ── রং কোথা থেকে ─────────────────────────────────────────────
+             * · Redwood — Redwood রূপের ইটরঙার গাঢ় ধাপ #8A2F23 (`brick`-এর ৭০০); বোতাম ঐ পরিবারেরই
+             * · নেভি — ABOS Navy-র নিজের উপরের বার #0F2F57 ([[Looks/navy.php]]); ফ্রেমের মাঠ, হোভার আর ফিকে কালিও ওখানকার হুবহু
+             * · সাদা — ফ্রেম সাদা, কালি ও বোতাম Navy-র নিজের কালি #0B1F33 (সাদা বোতাম সাদা পাতায় হারিয়ে যেত)
+             *
+             * ⓘ মাপা (WCAG): ফ্রেমের কালি — সাদা ১৬.৭ · নেভি ১৩.৪ · Redwood ৮.৪; ফিকে কালি ৮.১ · ১০.০ · ৬.৫; খোঁজার ঘরে কালি
+             * ১৫.২ · ১০.৫ · ৬.৩ — পাহারা [[AppearanceTest]]।
+             */
+            'white' => [
+                'label' => 'core.accent.white',
+                'ink' => '255 255 255',
+                'swatch' => '#ffffff',
+                'dark' => '180 195 206',
+                'dark_600' => '214 223 230',
+                'dark_ink' => '26 26 26',
+                'scale' => [
+                    '50' => '248 250 252', '100' => '241 245 249', '500' => '65 82 94',
+                    '600' => '11 31 51', '700' => '6 20 34', '900' => '2 10 18',
+                ],
+                'frame' => [
+                    'bg' => '255 255 255', 'ink' => '11 31 51', 'ink_muted' => '65 82 94',
+                    'field' => '241 245 249', 'hover' => '226 232 240', 'border' => '228 235 239',
+                ],
+            ],
+            'redwood' => [
+                'label' => 'core.accent.redwood',
+                'ink' => '255 255 255',
+                'swatch' => '#8a2f23',
+                'dark' => '224 110 94',
+                'dark_600' => '232 140 127',
+                'dark_ink' => '26 26 26',
+                'scale' => [
+                    '50' => '250 240 238', '100' => '247 230 226', '500' => '169 58 43',
+                    '600' => '138 47 35', '700' => '112 38 28', '900' => '60 20 15',
+                ],
+                'frame' => [
+                    'bg' => '138 47 35', 'ink' => '255 255 255', 'ink_muted' => '246 222 218',
+                    'field' => '160 66 53', 'hover' => '154 58 45', 'border' => '112 38 28',
+                ],
+            ],
+            'navy' => [
+                'label' => 'core.accent.navy',
+                'ink' => '255 255 255',
+                'swatch' => '#0f2f57',
+                'dark' => '100 150 212',
+                'dark_600' => '140 180 230',
+                'dark_ink' => '26 26 26',
+                'scale' => [
+                    '50' => '238 243 249', '100' => '214 225 240', '500' => '36 82 138',
+                    '600' => '22 62 110', '700' => '15 47 87', '900' => '8 25 48',
+                ],
+                'frame' => [
+                    'bg' => '15 47 87', 'ink' => '255 255 255', 'ink_muted' => '213 223 236',
+                    'field' => '27 64 109', 'hover' => '24 58 100', 'border' => '10 35 66',
+                ],
+            ],
         ];
+    }
+
+    /**
+     * রংটা ফ্রেমও রাঙায় কি না — সাদা, Redwood, নেভি (উপরের মন্তব্য)।
+     *
+     * @return array{bg: string, ink: string, ink_muted: string, field: string, hover: string, border: string}|null
+     */
+    public static function frame(?string $key): ?array
+    {
+        return self::all()[(string) $key]['frame'] ?? null;
     }
 
     /** @return list<string> */
@@ -464,6 +539,11 @@ final class Accent
          */
         $css .= "--accent-dark:{$accent['dark']};";
         $css .= "--accent-dark-600:{$accent['dark_600']};";
+
+        // ⓘ ফ্রেমের রং — কেবল তিনটা রঙে; html-এর `data-accent-frame` দেখে [[tokens.css]] এগুলো Navy রূপের বার আর রেলে বসায়
+        foreach (self::frame($key) ?? [] as $part => $rgb) {
+            $css .= '--frame-'.str_replace('_', '-', $part).":{$rgb};";
+        }
 
         return $css."--accent-dark-ink:{$accent['dark_ink']};";
     }
