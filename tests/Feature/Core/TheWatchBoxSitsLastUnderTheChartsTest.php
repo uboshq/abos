@@ -69,9 +69,10 @@ final class TheWatchBoxSitsLastUnderTheChartsTest extends TestCase
         }
     }
 
+    // ⓘ SAP, Dynamic আর ABOS-এর বাইরের রূপ (classic) — সরানো কেবল তিন ABOS রূপে
     public function test_kh_sap_and_dynamic_keep_todays_order(): void
     {
-        foreach (['tiles', 'dynamic'] as $look) {
+        foreach (['tiles', 'dynamic', 'classic'] as $look) {
             foreach (['hr', 'purchase'] as $code) {
                 $html = $this->page($code, $look);
 

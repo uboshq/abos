@@ -144,9 +144,9 @@
              *   (সমস্যা কেন্দ্র) একদম শেষে — অর্থ/মজুদ/বিক্রয়ের মতো ([[board-arrange.js]])। তখন প্রথম চার্ট বাকি চার্টের সারিতে নিজের জায়গায়।
              * ⛔ SAP আর Dynamic রূপ হুবহু আগের মতো — সেখানে এই সরানো নেই।
              */
+            // ⛔ কেবল তিন ABOS রূপে (rose, navy, blue) — অর্থ/মজুদ/বিক্রয়ের সাজানোও কেবল ABOS-এ; বাকি রূপের একটা পিক্সেলও নয় (মালিক, ১৯ নভেম্বর ২০২৬)
             $watchLast = ! $ownBoard
-                && ! \App\Core\Support\FioriLaunchpad::on()
-                && ! \App\Core\Support\DynamicLook::on()
+                && in_array(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)), \App\Core\Support\Ui::FOLD_MENU_LOOKS, true)
                 && collect($dashboard->sections)->contains(fn (array $s) => ($s['view'] ?? null) === 'dashboard.viz-board');
 
             // ⭐ নমুনার সারি: বাঁয়ে প্রথম চার্ট (মাথার প্রথম রঙের দাগ), ডানে "নজরে রাখুন" (দ্বিতীয় রঙের দাগ) — পাশাপাশি
