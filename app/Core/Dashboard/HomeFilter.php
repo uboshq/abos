@@ -11,7 +11,8 @@ use Illuminate\Http\Request;
 /**
  * হোমের ছাঁকনি — মালিক, ৪ অক্টোবর ২০২৬: গুদাম, এলাকা আর SR; বদলায় **কেবল বিক্রি আর বকেয়া**।
  *
- * ⓘ নিয়ম বিক্রয়ের "এক নজরে" পাতার সাথে এক (abos-bb, SalesAnalytics): SR মানে বিলটা যিনি কেটেছেন (`created_by`),
+ * ⓘ নিয়ম বিক্রয়ের "এক নজরে" পাতার সাথে এক (abos-bb, SalesAnalytics): ⭐ SR মানে বিলে লেখা দায়িত্বপ্রাপ্ত জন (`sales_person_id`;
+ * মালিক, ২৩ নভেম্বর ২০২৬ — ⛔ আগে বিলটা যিনি কেটেছেন, `created_by`),
  * এলাকা মানে গ্রাহকের জায়গা থেকে গাছ বেয়ে উপরের টেরিটরি (বন্ধ থাকলে এরিয়া), গুদাম মানে বিলের গুদাম।
  * ⓘ বকেয়া গ্রাহকের, বিলের নয় — তাই বকেয়ায় খাটে কেবল এলাকা; গুদাম বা SR বকেয়া বদলায় না, পাতায় সেটা লেখা থাকে।
  *
@@ -106,13 +107,14 @@ final class HomeFilter
     {
         return $query
             ->when($this->warehouse !== null, fn ($q) => $q->where($table.'.warehouse_id', $this->warehouse))
-            ->when($this->seller !== null, fn ($q) => $q->where($table.'.created_by', $this->seller))
+            ->when($this->seller !== null, fn ($q) => $q->where($table.'.sales_person_id', $this->seller))
             ->when($this->customers !== null, fn ($q) => $q->whereIn($table.'.customer_id', $this->customers ?: [0]));
     }
 
     /**
      * ⭐ বিক্রয় ফেরতের কোয়েরি ছাঁকা — বিলের একই ছাঁকনি, যাতে নিট বিক্রি = বিল − ফেরত একই ভাগে গোনা হয় (IFRS 15, ২০ অক্টোবর ২০২৬)।
-     * ⓘ গুদাম আর এলাকা ফেরতের নিজের ঘরে; বিক্রেতা ফেরতের বিলের বিক্রেতা — ফেরত যিনি লেখেন তিনি প্রায়ই ডেস্কের মানুষ।
+     * ⓘ গুদাম আর এলাকা ফেরতের নিজের ঘরে; ⭐ বিক্রেতা ফেরতে লেখা দায়িত্বপ্রাপ্ত জন (`sales_person_id`; মালিক, ২৩ নভেম্বর ২০২৬) —
+     * ফেরত যিনি লেখেন তিনি নন, তিনি প্রায়ই ডেস্কের মানুষ।
      *
      * @template T of \Illuminate\Contracts\Database\Query\Builder
      *
@@ -123,9 +125,7 @@ final class HomeFilter
     {
         return $query
             ->when($this->warehouse !== null, fn ($q) => $q->where($table.'.warehouse_id', $this->warehouse))
-            ->when($this->seller !== null, fn ($q) => $q->whereIn($table.'.sales_invoice_id',
-                \Illuminate\Support\Facades\DB::table('sal_invoices')->select('id')
-                    ->where('company_id', \App\Core\Support\CompanyContext::id())->where('created_by', $this->seller)))
+            ->when($this->seller !== null, fn ($q) => $q->where($table.'.sales_person_id', $this->seller))
             ->when($this->customers !== null, fn ($q) => $q->whereIn($table.'.customer_id', $this->customers ?: [0]));
     }
 

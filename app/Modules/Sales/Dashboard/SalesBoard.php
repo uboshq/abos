@@ -364,7 +364,7 @@ final class SalesBoard
     }
 
     /**
-     * ⭐ আদায়ের দক্ষতা · SR ধরে — বিলের SR (বিল যিনি লিখেছেন) ধরে: দক্ষতা = এ মাসে আদায় ÷ (এ মাসে আদায় + এখনো মেয়াদ পেরোনো বাকি),
+     * ⭐ আদায়ের দক্ষতা · SR ধরে — বিলের SR (বিলে লেখা দায়িত্বপ্রাপ্ত জন, `sales_person_id`; ⛔ বিল যিনি লিখেছেন নন — মালিক, ২৩ নভেম্বর ২০২৬) ধরে: দক্ষতা = এ মাসে আদায় ÷ (এ মাসে আদায় + এখনো মেয়াদ পেরোনো বাকি),
      * আর DSO = এখনকার বাকি ÷ শেষ 90 দিনের বিক্রি × 90। ⓘ CEI-এর প্রচলিত সংক্ষিপ্ত রূপ — মাস-শুরুর বাকির ছবি খাতায় SR ধরে রাখা নেই।
      *
      * @return array{rows: list<array{name: string, pct: ?int, dso: ?int}>, total: ?int}
@@ -378,13 +378,13 @@ final class SalesBoard
             ->whereHas('collection', fn ($q) => $q->whereIn('status', DocumentStatus::POSTED)->where('trx_date', '>=', $month))
             ->whereIn('target_invoice_id', $invoices->pluck('id')->all() ?: [0])
             ->groupBy('target_invoice_id')->selectRaw('target_invoice_id, SUM(amount) as v')->pluck('v', 'target_invoice_id');
-        $names = \App\Models\User::query()->whereHas('companies', fn ($q) => $q->whereKey(\App\Core\Support\CompanyContext::id()))->whereIn('id', $invoices->pluck('created_by')->filter()->unique()->all() ?: [0])->pluck('name', 'id');
+        $names = \App\Models\User::query()->whereHas('companies', fn ($q) => $q->whereKey(\App\Core\Support\CompanyContext::id()))->whereIn('id', $invoices->pluck('sales_person_id')->filter()->unique()->all() ?: [0])->pluck('name', 'id');
         $today = Carbon::today()->toDateString();
         $rows = [];
         $tc = 0.0;
         $to = 0.0;
 
-        foreach ($invoices->groupBy('created_by') as $sr => $list) {
+        foreach ($invoices->groupBy('sales_person_id') as $sr => $list) {
             $collected = $list->sum(fn ($i) => (float) ($applied[$i->id] ?? 0));
             $overdue = $list->filter(fn ($i) => $i->due_on !== null && substr((string) $i->due_on, 0, 10) < $today)->sum(fn ($i) => max(0, (float) $i->dueAmount()));
             $due = $list->sum(fn ($i) => max(0, (float) $i->dueAmount()));
@@ -576,7 +576,7 @@ final class SalesBoard
     }
 
     /**
-     * ⭐ SR কমিশন · এ মাস এ পর্যন্ত — বিলের SR ধরে বিক্রি, কমিশন ([[CommissionEngine::preview()]]) আর হার; বড় সাতজন + মোট।
+     * ⭐ SR কমিশন · এ মাস এ পর্যন্ত — বিলের SR (বিলে লেখা দায়িত্বপ্রাপ্ত জন; মালিক, ২৩ নভেম্বর ২০২৬) ধরে বিক্রি, কমিশন ([[CommissionEngine::preview()]]) আর হার; বড় সাতজন + মোট।
      *
      * @return array{rows: list<array{name: string, sales: string, rate: ?string, commission: string}>, sales: string, commission: string}
      */
@@ -592,7 +592,8 @@ final class SalesBoard
             $by = [];
 
             foreach (SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$from, $to])->get() as $invoice) {
-                $sr = (int) $invoice->created_by;
+                // ⛔ বিলে লেখা দায়িত্বপ্রাপ্ত জন, বিল যিনি লিখেছেন নন (মালিক, ২৩ নভেম্বর ২০২৬); জন বসানো নেই = 0 → "কেউ নন"
+                $sr = (int) $invoice->sales_person_id;
                 $by[$sr] ??= ['sales' => '0', 'commission' => '0'];
                 $by[$sr]['sales'] = bcadd($by[$sr]['sales'], bcsub((string) $invoice->subtotal, (string) $invoice->discount, 4), 4);
                 $by[$sr]['commission'] = bcadd($by[$sr]['commission'], (string) $engine->preview($invoice)['total'], 4);
@@ -611,6 +612,7 @@ final class SalesBoard
     /**
      * ⭐ সেরা দুই SR — রাডার (এ মাসে বিক্রিতে প্রথম দুজন): ছয় মাপ 0–100 — লক্ষ্যের অর্জন, আদায়ের দক্ষতা, দোকান (দুজনের বেশিজনের তুলনায়),
      * গড় অর্ডার (তুলনায়), ফেরত কম (100 − ফেরতের হার × 10), বৃদ্ধি (গত মাসের একই দিনের তুলনায়, ±50% = 0–100)।
+     * ⭐ SR = বিল আর ফেরতে লেখা দায়িত্বপ্রাপ্ত জন (`sales_person_id`), বিল যিনি লিখেছেন নন (মালিক, ২৩ নভেম্বর ২০২৬)।
      *
      * @return list<array{name: string, values: list<int>}>
      */
@@ -620,12 +622,12 @@ final class SalesBoard
         $to = Carbon::today();
         $lastFrom = $from->copy()->subMonthNoOverflow();
         $lastTo = $lastFrom->copy()->addDays($to->day - 1)->min($lastFrom->copy()->endOfMonth());
-        $now = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])->get(['id', 'created_by', 'customer_id', 'subtotal', 'discount']);
+        $now = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])->get(['id', 'sales_person_id', 'customer_id', 'subtotal', 'discount']);
         $last = SalesInvoice::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$lastFrom->toDateString(), $lastTo->toDateString()])
-            ->groupBy('created_by')->selectRaw('created_by, SUM(subtotal - discount) as v')->pluck('v', 'created_by');
+            ->groupBy('sales_person_id')->selectRaw('sales_person_id, SUM(subtotal - discount) as v')->pluck('v', 'sales_person_id');
         $returns = \App\Modules\Sales\Models\SalesReturn::query()->whereIn('status', DocumentStatus::POSTED)->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
-            ->whereNotNull('sales_invoice_id')->with('invoice:id,created_by')->get(['sales_invoice_id', 'subtotal']);
-        $bySr = $now->groupBy('created_by')->map(fn ($l) => ['sales' => $l->sum(fn ($i) => (float) $i->subtotal - (float) $i->discount), 'shops' => $l->pluck('customer_id')->unique()->count(), 'bills' => $l->count()])
+            ->get(['sales_invoice_id', 'sales_person_id', 'subtotal']);
+        $bySr = $now->groupBy('sales_person_id')->map(fn ($l) => ['sales' => $l->sum(fn ($i) => (float) $i->subtotal - (float) $i->discount), 'shops' => $l->pluck('customer_id')->unique()->count(), 'bills' => $l->count()])
             ->sortByDesc('sales');
         $top = $bySr->take(2);
 
@@ -642,7 +644,7 @@ final class SalesBoard
 
         return $top->map(function (array $s, $id) use ($names, $targets, $cei, $maxShops, $maxAvg, $last, $returns, $clamp): array {
             $name = (string) ($names[(int) $id] ?? __('sales::board.r4.nobody'));
-            $ret = $returns->filter(fn ($r) => (int) ($r->invoice?->created_by ?? 0) === (int) $id)->sum(fn ($r) => (float) $r->subtotal);
+            $ret = $returns->filter(fn ($r) => (int) ($r->sales_person_id ?? 0) === (int) $id)->sum(fn ($r) => (float) $r->subtotal);
             $prev = (float) ($last[$id] ?? 0);
 
             return ['name' => $name, 'values' => [

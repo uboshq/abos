@@ -68,6 +68,24 @@
                 {{ $location->assignee->name }}
             </p>
         @endif
+
+        {{-- ⭐ বিক্রয়ের দায়িত্ব — আজ চালু এলাকা-বাঁধন (মালিক, ২৩ নভেম্বর ২০২৬).
+             ⛔ এখানে বদলানো নয়: বদলানো মাঠকর্মীর পাতায়, যেখানে ডিপো, এলাকা, উপরওয়ালা আর পদ বসে। --}}
+        <div class="mt-3 flex flex-wrap items-center gap-2 text-sm" data-responsibility>
+            <span class="text-2xs text-(--color-ink-muted)">
+                {{ __('master_data::field.responsibility') }}:
+            </span>
+            <span>{{ $responsible === [] ? '—' : implode(', ', $responsible) }}</span>
+
+            @can('customer.binding.manage')
+                @if (\Illuminate\Support\Facades\Route::has('customer.fieldforce.index'))
+                    <a href="{{ route('customer.fieldforce.index') }}" data-change-responsibility
+                       class="text-(--color-brand-500) underline-offset-2 hover:underline">
+                        {{ __('master_data::action.change_responsibility') }}
+                    </a>
+                @endif
+            @endcan
+        </div>
     </section>
 
     @if ($childLevel !== null)

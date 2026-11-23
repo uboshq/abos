@@ -21,6 +21,7 @@ use App\Modules\Inventory\Models\Product;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Models\SalesTarget;
+use App\Modules\Sales\Services\SalesResponsibility;
 use App\Modules\Sales\Services\SalesTargetService;
 use App\Modules\Sales\Widgets\TargetSummary;
 use Database\Seeders\DemoSeeder;
@@ -192,6 +193,8 @@ final class TheTargetWidgetReadsTheTargetPageTest extends TestCase
             'total' => $amount,
             'status' => DocumentStatus::CONFIRMED,
             'created_by' => $this->owner->id,
+            // ⓘ নিশ্চিতের মুহূর্তের মতো দায়িত্বপ্রাপ্ত জন বসানো (মালিক, ২৩ নভেম্বর ২০২৬) — বিক্রি এখন বিলের `sales_person_id` পড়ে
+            'sales_person_id' => app(SalesResponsibility::class)->on((int) $customer->id, Carbon::today()),
         ]);
 
         (new SalesInvoiceLine)->forceFill([

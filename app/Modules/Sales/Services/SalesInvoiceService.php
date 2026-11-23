@@ -830,6 +830,15 @@ final class SalesInvoiceService
             $this->takeCostFromLayers($invoice);
             $this->postToLedger($invoice);
 
+            /*
+             * ⭐ বিক্রিটা কার — পাকা হওয়ার মুহূর্তের ছবি (মালিক, ২৩ নভেম্বর ২০২৬; [[SalesResponsibility]])।
+             * ⓘ `created_by` ছোঁয়া হয় না — ওটা "বিল করেছেন"; অফিসে বিল কাটলেও কৃতিত্ব দায়িত্বের মানুষের।
+             * ⓘ আগে থেকে বসানো থাকলে (বাতিলের বদলি বিল মূলের জন কপি করে আনলে) বদলায় না।
+             */
+            if ($invoice->sales_person_id === null) {
+                $invoice->sales_person_id = app(SalesResponsibility::class)->forInvoice($invoice);
+            }
+
             $invoice->update(['status' => DocumentStatus::CONFIRMED]);
 
             // ⭐ আদেশের বিলের অগ্রগতি — খাতা বসার পরে, একই লেনদেনে (SO+DO ধাপ ৫; [[OrderProgress::refreshOrders()]])
@@ -963,7 +972,8 @@ final class SalesInvoiceService
         $this->unpost($invoice, $date, $reason);
 
         // ⓘ কাউন্টারের খসড়ার চিহ্ন — পর্দার ছবি; কাউন্টার এটা দেখেই বিলটা "রাখা" বলে চেনে ([[DirectSaleService::parkedFor()]])
-        $invoice->update(['status' => DocumentStatus::DRAFT, 'counter_draft' => $invoice->counter_screen ?? []]);
+        // ⛔ দায়িত্বের ছাপও মোছা — সম্পাদনায় গ্রাহক বা তারিখ বদলাতে পারে, আবার নিশ্চিত করলে নতুন করে বসে ([[SalesResponsibility]], মালিক, 23 Nov 2026)
+        $invoice->update(['status' => DocumentStatus::DRAFT, 'counter_draft' => $invoice->counter_screen ?? [], 'sales_person_id' => null]);
     }
 
     /**

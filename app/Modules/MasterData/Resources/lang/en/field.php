@@ -15,7 +15,8 @@ return [
     'name_bn' => 'Name (Bangla)',
     'level' => 'Level',
     'parent' => 'Parent location',
-    'assigned_to' => 'Assigned to',
+    // Old undated field: who goes on the route for delivery and collection; not the sales responsibility (owner, 23 Nov 2026)
+    'assigned_to' => 'Route person',
     'base_unit' => 'Base unit',
     'factor' => 'Conversion',
     'allows_fraction' => 'Allows fractions',
@@ -73,4 +74,7 @@ return [
     'mobile' => 'Mobile',
     'address' => 'Address',
     'note' => 'Note',
+    // Sales responsibility of an area, from area bindings active today (owner, 23 Nov 2026)
+    'responsibility' => 'Responsibility',
+    'responsible_from' => ':name (from :date)',
 ];

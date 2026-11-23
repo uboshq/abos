@@ -129,11 +129,12 @@ final class CommissionEngine
         );
 
         /*
-         * ⭐ কার বিক্রি — বিলের দিনে ডিলারটা যাঁর নামে বাঁধা (⛔১৬; মালিকের উত্তর ৫ আর "ক", ৩ অক্টোবর
-         * ২০২৬)। ⓘ লক্ষ্যমাত্রার অর্জনের অবিকল একই নিয়ম ([[DealerOwnership::srOn()]]); বাঁধনহীন হলে null।
+         * ⭐ কার বিক্রি — বিলের দিনে ডিলারের দায়িত্বপ্রাপ্ত জন ([[SalesResponsibility::on()]]; মালিক, ২৩ নভেম্বর ২০২৬)। ⓘ বিলে যে
+         * জন বসে, লক্ষ্যের অর্জন আর বিক্রয়কর্মীর রিপোর্ট যাঁকে গোনে, কমিশনও একই উত্তর পায়। ⛔ বিল যিনি লিখেছেন নন; জন না
+         * থাকলে null। ⓘ আগে [[DealerOwnership::srOn()]] — কেবল বাঁধন, দায়িত্বের নিয়ম নয়।
          */
         $rep = $invoice->customer_id === null ? null
-            : app(DealerOwnership::class)->srOn((int) $invoice->customer_id, \Illuminate\Support\Carbon::parse($invoice->trx_date));
+            : app(SalesResponsibility::class)->on((int) $invoice->customer_id, \Illuminate\Support\Carbon::parse($invoice->trx_date));
 
         return ['base' => $base, 'lines' => $lines, 'total' => $total, 'reason' => null, 'sales_rep_id' => $rep];
     }

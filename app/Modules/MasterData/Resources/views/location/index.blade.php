@@ -17,6 +17,9 @@
                  'render' => fn ($l) => __('master_data::level.' . $l->level)],
                 ['key' => 'assigned_to', 'label' => __('master_data::field.assigned_to'), 'width' => '11rem',
                  'render' => fn ($l) => $l->assignee?->name ?? '—'],
+                // ⭐ বিক্রয়ের দায়িত্ব — আজ চালু এলাকা-বাঁধন, এক কোয়েরিতে আনা (মালিক, ২৩ নভেম্বর ২০২৬)
+                ['key' => 'responsibility', 'label' => __('master_data::field.responsibility'), 'width' => '14rem',
+                 'render' => fn ($l) => implode(', ', $responsible[$l->id] ?? []) ?: '—'],
                 // অবস্থা — নিষ্ক্রিয় সারি তালিকায় থাকে, মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬
                 ['key' => 'state', 'label' => __('core.table.status'), 'width' => '8rem',
                  'render' => fn ($l) => view('master_data::location.partials.state', ['location' => $l])],
@@ -216,6 +219,10 @@
                                 <th scope="col" style="width: 11rem"
                                     class="hidden lg:table-cell">
                                     {{ __('master_data::field.assigned_to') }}
+                                </th>
+                                <th scope="col" style="width: 14rem"
+                                    class="hidden lg:table-cell">
+                                    {{ __('master_data::field.responsibility') }}
                                 </th>
                                 <th scope="col" style="width: 8rem" class="text-end" data-row-menu>{{ __('core.table.action_menu') }}</th>
                             </tr>

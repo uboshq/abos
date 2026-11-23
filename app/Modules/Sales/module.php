@@ -13,6 +13,7 @@ use App\Modules\Sales\Integrity\SalesChecks;
 use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Services\CreditExposure;
 use App\Modules\Sales\Services\SalesDefaults;
+use App\Modules\Sales\Services\SalesResponsibility;
 use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\CommissionClaim;
 use App\Modules\Sales\Models\DeliveryChallan;
@@ -391,6 +392,9 @@ return [
             /* ⭐ বিক্রয়কর্মী ধরে বিক্রি — পরিকল্পনা সংস্করণ ২ §৯ গ, ৬ অক্টোবর ২০২৬ ([[SalespersonReports]]) */
             ['label' => 'sales::salesperson_report.title', 'icon' => 'people', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'by-salesperson'], 'permission' => 'sales.report'],
+            /* ⭐ কে কত বিল করেছেন — কাজের হিসাব, বিক্রি বা লক্ষ্য নয় (মালিক, ২৩ নভেম্বর ২০২৬; [[BillerReports]]) */
+            ['label' => 'sales::biller_report.title', 'icon' => 'people', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'by-biller'], 'permission' => 'sales.report'],
             /* ⭐ আদেশ থেকে রওনার সময় — DO ধরে, পরিকল্পনা সংস্করণ ২ §৯ ঘ ([[DeliveryReports::ORDER_TO_DISPATCH]]) */
             ['label' => 'sales::order_dispatch.title', 'icon' => 'clock', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'order-to-dispatch'], 'permission' => 'sales.report'],
@@ -875,6 +879,8 @@ return [
         \App\Modules\Sales\Reports\DeliveryReports::class,
         // ⭐ বিক্রয়কর্মী ধরে বিক্রি (পরিকল্পনা সংস্করণ ২ §৯ গ)
         \App\Modules\Sales\Reports\SalespersonReports::class,
+        // ⭐ কে কত বিল করেছেন — কাজের হিসাব (মালিক, ২৩ নভেম্বর ২০২৬)
+        \App\Modules\Sales\Reports\BillerReports::class,
         // ⭐ আদায়ের লক্ষ্য বনাম অর্জন (পরিকল্পনা সংস্করণ ২ §৯ ঙ)
         \App\Modules\Sales\Reports\CollectionTargetReports::class,
         // ⭐ পক্ষভিত্তিক লক্ষ্য বনাম আদায় — মালিক, ১৪ অক্টোবর ২০২৬ ([[PartyTargetReport]])
@@ -1405,6 +1411,20 @@ return [
             'key' => 'sales.price_tolerance_percent',
             'label' => 'sales::settings.price_tolerance_percent',
             'type' => 'integer',
+            'default' => 0,
+            'group' => 'entry',
+        ],
+        /*
+         * ⭐ দায়িত্বে কেউ না থাকলে বিক্রি কার খাতায় — ডিলারে বা এলাকায় কেউ বাঁধা না থাকলে শেষ ধাপ
+         *   (মালিক, ২৩ নভেম্বর ২০২৬; [[SalesResponsibility]])।
+         * ⓘ বাছাই কেবল এই কোম্পানির চালু ব্যবহারকারী; ফাঁকা (০) = কারো খাতায় নয়।
+         * ⛔ অন্য কোম্পানির কেউ বসে থাকলেও খাটে না — [[SalesResponsibility]] সদস্যপদ মিলিয়ে নেয়।
+         */
+        [
+            'key' => SalesResponsibility::SETTING,
+            'label' => 'sales::settings.default_sales_person',
+            'type' => 'integer',
+            'options' => [SalesResponsibility::class, 'choices'],
             'default' => 0,
             'group' => 'entry',
         ],

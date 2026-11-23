@@ -22,6 +22,7 @@ use App\Modules\Sales\Models\SalesInvoiceLine;
 use App\Modules\Sales\Services\CollectionInput;
 use App\Modules\Sales\Services\CollectionService;
 use App\Modules\Sales\Services\DealerOwnership;
+use App\Modules\Sales\Services\SalesResponsibility;
 use App\Modules\Sales\Services\SalesTargetService;
 use App\Core\Engines\Sync\SyncService;
 use Database\Seeders\DemoSeeder;
@@ -264,6 +265,8 @@ final class TheSaleBelongsToTheSalesmanBoundThatDayTest extends TestCase
             'total' => $amount,
             'status' => DocumentStatus::CONFIRMED,
             'created_by' => $this->owner->id,
+            // ⓘ নিশ্চিতের মুহূর্তের মতো দায়িত্বপ্রাপ্ত জন বসানো (মালিক, ২৩ নভেম্বর ২০২৬) — বিক্রি এখন বিলের `sales_person_id` পড়ে
+            'sales_person_id' => app(SalesResponsibility::class)->on((int) $customer->id, $on),
         ]);
 
         (new SalesInvoiceLine)->forceFill([

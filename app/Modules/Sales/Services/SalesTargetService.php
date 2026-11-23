@@ -20,9 +20,9 @@ use Illuminate\Validation\ValidationException;
  *
  * ── অর্জন কোথা থেকে গোনা হয়, আর কেন ─────────────────────────────────
  * নিশ্চিত ও সম্পন্ন বিল, লেনদেনের তারিখ ধরে, আর **ভ্যাট বাদ দিয়ে** —
- * ভ্যাট সরকারের টাকা, কারও বিক্রয় নয়। কে বিক্রি করলেন তা আসে বিলের
- * `created_by` থেকে, কারণ ওটাই একমাত্র জায়গা যেখানে লেখা থাকে কাগজটা
- * কে কেটেছিলেন।
+ * ভ্যাট সরকারের টাকা, কারও বিক্রয় নয়। ⭐ কে বিক্রি করলেন তা আসে বিলের
+ * `sales_person_id` থেকে — নিশ্চিতের মুহূর্তে বসা দায়িত্বপ্রাপ্ত জন (মালিক,
+ * ২৩ নভেম্বর ২০২৬)। ⛔ `created_by` কেবল কে কাগজটা লিখেছেন — বিক্রি নয়।
  *
  * ── কেন খসড়া বিল গোনা হয় না ────────────────────────────────────────
  * খসড়া মানে বিক্রিটা এখনো হয়নি — টাকা কেউ দেয়নি, খাতায় কিছু বসেনি।
@@ -166,18 +166,13 @@ final class SalesTargetService
             ->whereIn('i.status', DocumentStatus::POSTED)
             ->whereBetween('i.trx_date', [$from->toDateString(), $to->toDateString()])
             /*
-             * ⭐ কার বিক্রি — **বিলের দিনে ডিলারটা যাঁর নামে বাঁধা**, বিল যিনি কেটেছেন তিনি নন (মালিকের
-             * উত্তর ৫, ২৬ সেপ্টেম্বর; "ক", ৩ অক্টোবর ২০২৬; ⛔১৬)। ⓘ হাতবদলের আগের বিক্রি পুরনো জনের।
-             * ⓘ নিয়মটা একটাই জায়গায় ([[DealerOwnership::boundOn()]]) — কমিশনও ওটাই ডাকে।
-             * ⛔ বাঁধনহীন ডিলারের বিক্রি কারো ঘরে ওঠে না। ⚠️ ডিলারের দেয়াল বন্ধ রাখা কোম্পানিতে বাঁধনই
-             * নেই, তাই সেখানে আগের নিয়ম (বিল যিনি কেটেছেন) — নইলে সবার অর্জন শূন্য হত।
-             * ⓘ ভিতরে সারি-প্রতি বিক্রেতা, বাইরে যোগ — ONLY_FULL_GROUP_BY-তে নিরাপদ।
+             * ⭐ কার বিক্রি — বিলে লেখা **দায়িত্বপ্রাপ্ত জন** (`i.sales_person_id`), বিল যিনি কেটেছেন (`created_by`) কখনো নন
+             * (মালিক, ২৩ নভেম্বর ২০২৬)। ⓘ জনটা নিশ্চিত করার মুহূর্তে বিলে বসে ([[SalesResponsibility::forInvoice()]]) — তাই পরে
+             * বাঁধন বদলালেও পুরনো বিল পুরনো জনেরই থাকে, আর দেয়াল চালু-বন্ধে উত্তর বদলায় না।
+             * ⛔ আগে দেয়াল বন্ধ থাকলে `created_by` — বিল লেখা কম্পিউটার-অপারেটর বিক্রির কৃতিত্ব পেতেন। সেই পথ আর নেই।
+             * ⛔ জন বসানো নেই (NULL) এমন বিল কারো ঘরে ওঠে না। ⓘ ভিতরে সারি-প্রতি বিক্রেতা, বাইরে যোগ — ONLY_FULL_GROUP_BY-তে নিরাপদ।
              */
-            ->when(
-                app(\App\Core\Services\DealerScope::class)->switchOn(),
-                fn ($q) => $q->selectSub(\App\Modules\Sales\Services\DealerOwnership::boundOn('i.customer_id', 'i.trx_date', 'i.company_id'), 'seller_id'),
-                fn ($q) => $q->selectRaw('i.created_by as seller_id'),
-            )
+            ->selectRaw('i.sales_person_id as seller_id')
 
             // ভ্যাট বাদ — ওটা সরকারের টাকা, কারও বিক্রয় নয়; ⛔ বিলের ছাড়ের ভাগও বাদ ([[LineNetSale]], ১৩ অক্টোবর ২০২৬, Sales লাইন-ধরা নিরীক্ষা)
             ->selectRaw(LineNetSale::sql().' as line_amount');
@@ -185,20 +180,16 @@ final class SalesTargetService
         /*
          * ⭐ অর্জন নিট বিক্রিতে — ভ্যাট বাদে **আর ফেরত বাদে** (IFRS 15; fe, ২০ অক্টোবর ২০২৬)। ফেরত **নিজের তারিখে**, নিজের
          * নিট অঙ্কে ([[SalesMetrics::returnNetSql()]] — ফেরতের `total − tax`, হোম আর ফোনের নিট বিক্রির একই সংজ্ঞা), আর
-         * বিক্রির একই নিয়মে কার ঘরে: ফেরতের দিনে ডিলারটা যাঁর নামে বাঁধা; দেয়াল বন্ধ থাকলে ফেরতের বিল যিনি কেটেছেন
-         * (বিলহীন ফেরত হলে ফেরত যিনি লিখেছেন)। ⓘ বিয়োগ হিসেবে একই যোগফলে, তাই সারির যোগ = বিক্রি − ফেরত।
+         * বিক্রির একই নিয়মে কার ঘরে: ফেরতে লেখা দায়িত্বপ্রাপ্ত জন (মালিক, ২৩ নভেম্বর ২০২৬)। ⓘ বিয়োগ হিসেবে একই যোগফলে, তাই
+         * সারির যোগ = বিক্রি − ফেরত।
          */
         $perReturn = DB::table('sal_returns as r')
-            ->leftJoin('sal_invoices as ri', 'ri.id', '=', 'r.sales_invoice_id')
             ->where('r.company_id', CompanyContext::id())
             ->whereNull('r.deleted_at')
             ->whereIn('r.status', DocumentStatus::POSTED)
             ->whereBetween('r.trx_date', [$from->toDateString(), $to->toDateString()])
-            ->when(
-                app(\App\Core\Services\DealerScope::class)->switchOn(),
-                fn ($q) => $q->selectSub(\App\Modules\Sales\Services\DealerOwnership::boundOn('r.customer_id', 'r.trx_date', 'r.company_id'), 'seller_id'),
-                fn ($q) => $q->selectRaw('COALESCE(ri.created_by, r.created_by) as seller_id'),
-            )
+            // ⭐ ফেরতের নিজের দায়িত্বপ্রাপ্ত জন (`r.sales_person_id`, ফেরত নিশ্চিতের মুহূর্তে বসা; মালিক, ২৩ নভেম্বর ২০২৬) — বিলের বা ফেরতের লেখক নন
+            ->selectRaw('r.sales_person_id as seller_id')
             ->selectRaw('0 - '.\App\Modules\Sales\Metrics\SalesMetrics::returnNetSql('r').' as line_amount');
 
         $rows = DB::query()->fromSub($perLine->unionAll($perReturn), 'x')

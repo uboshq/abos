@@ -51,6 +51,8 @@ class SalesReportController extends Controller implements HasMiddleware
         'collection-target' => \App\Modules\Sales\Reports\CollectionTargetReports::KEY,
         // ⭐ বিক্রয়কর্মী ধরে বিক্রি — লক্ষ্যের একই নিয়মে (পরিকল্পনা সংস্করণ ২ §৯ গ; [[SalespersonReports]])
         'by-salesperson' => \App\Modules\Sales\Reports\SalespersonReports::KEY,
+        // ⭐ কে কত বিল করেছেন — কাজের হিসাব, বিক্রি নয় (মালিক, ২৩ নভেম্বর ২০২৬; [[BillerReports]])
+        'by-biller' => \App\Modules\Sales\Reports\BillerReports::KEY,
         // ⭐ প্রতিদিনের জমার খাতা (জমার খবর ধাপ গ, ১৮ নভেম্বর ২০২৬; [[DepositRegisterReport]])
         'deposit-register' => \App\Modules\Sales\Reports\DepositRegisterReport::KEY,
     ];

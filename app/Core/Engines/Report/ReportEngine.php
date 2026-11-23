@@ -189,7 +189,7 @@ final class ReportEngine
 
         if ($byBranch) {
             foreach ($this->branchPlan($report, $filters, $top, $comparison) as $part) {
-                $section = $this->section($report, $part['filters'], $part['id'], $part['name'], $perPage);
+                $section = $this->section($report, $part['filters'], $part['id'], $part['name'], $perPage, $part['total_label'] ?? null);
 
                 if ($section->rowCount > 0) {
                     $sections[] = $section;
@@ -258,7 +258,7 @@ final class ReportEngine
     }
 
     /** @param  array<string, mixed>  $filters */
-    private function section(ReportDefinition $report, array $filters, ?int $id, string $name, int $perPage): BranchSection
+    private function section(ReportDefinition $report, array $filters, ?int $id, string $name, int $perPage, ?string $totalLabel = null): BranchSection
     {
         $query = $this->applySearch($report, $this->queryFor($report, $filters), $filters['q'] ?? null);
 
@@ -272,7 +272,7 @@ final class ReportEngine
             $rows = $this->addContribution($report, $rows, $totals);
         }
 
-        return new BranchSection($id, $name, $rows->values()->all(), $totals, $count);
+        return new BranchSection($id, $name, $rows->values()->all(), $totals, $count, $totalLabel);
     }
 
     /**

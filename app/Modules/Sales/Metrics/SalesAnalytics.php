@@ -405,8 +405,9 @@ final class SalesAnalytics
     }
 
     /**
-     * কে কত বিক্রি করেছেন — নিট বিক্রি (VAT আর ফেরত বাদে), বিলের `created_by` ধরে; ফেরত কমে মূল বিলের মানুষের ঘর থেকে
-     * ([[SalesMetrics::sellerOfReturnSql()]], [[SalespersonReports]]-এর একই নিয়ম; fe, ২১ অক্টোবর ২০২৬)। `count` = বিলের সংখ্যা।
+     * কে কত বিক্রি করেছেন — নিট বিক্রি (VAT আর ফেরত বাদে), ⭐ বিলে লেখা দায়িত্বপ্রাপ্ত জন ধরে, ফেরত ফেরতে লেখা জনের ঘর থেকে
+     * ([[SalesMetrics::sellerOfInvoiceSql()]], [[SalesMetrics::sellerOfReturnSql()]], [[SalespersonReports]]-এর একই নিয়ম; মালিক,
+     * ২৩ নভেম্বর ২০২৬)। ⛔ আগে বিলের `created_by` — বিল যিনি লিখেছেন তিনি বিক্রি পেতেন। `count` = বিলের সংখ্যা।
      *
      * ⓘ টার্গেটও এই মানুষটাকেই মাপে (লক্ষ্যমাত্রার মাইগ্রেশনে লেখা
      * কারণ) — কর্মী তালিকা আর লগইনের কোনো বাঁধা সম্পর্ক নেই।
@@ -415,7 +416,7 @@ final class SalesAnalytics
      */
     public function bySeller(string $from, string $to): array
     {
-        $rows = collect(SalesMetrics::netBy($from, $to, 'sal_invoices.created_by', SalesMetrics::sellerOfReturnSql()))
+        $rows = collect(SalesMetrics::netBy($from, $to, SalesMetrics::sellerOfInvoiceSql(), SalesMetrics::sellerOfReturnSql()))
             ->map(fn (array $p, int|string $id): array => [
                 'id' => (string) $id === '' ? null : (int) $id, 'count' => $p['count'], 'amount' => $p['net'],
             ])

@@ -16,4 +16,5 @@ return [
     'save_rate' => 'Save Rate',
     'back_to_currencies' => '← Currencies',
     'new_level' => 'New :level',
+    'change_responsibility' => 'Change responsibility',
 ];

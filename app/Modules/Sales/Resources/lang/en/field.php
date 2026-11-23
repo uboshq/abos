@@ -500,4 +500,9 @@ return [
     'tab_awaiting_approval' => 'Awaiting approval',
     // Vehicle and fare on the challan and bill pages (owner, 7 Nov 2026)
     'vehicle_and_fare' => 'Vehicle and fare',
+    // Sales credit goes to the responsible person, not the biller (owner, 23 Nov 2026)
+    'responsible' => 'Responsible',
+    'responsible_as_of_now' => '(as of now)',
+    'no_responsible' => 'No one assigned',
+    'billed_by' => 'Billed by',
 ];

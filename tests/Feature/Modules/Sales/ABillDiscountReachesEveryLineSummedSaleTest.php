@@ -67,7 +67,8 @@ final class ABillDiscountReachesEveryLineSummedSaleTest extends TestCase
             'company_id' => $company->id, 'branch_id' => $this->branch, 'document_no' => 'ZD-1', 'customer_id' => $this->customer,
             'trx_date' => '2019-02-10', 'status' => DocumentStatus::CONFIRMED, 'subtotal' => 10000, 'discount' => 0,
             'bill_discount' => 500, 'rounding_amount' => 0.40, 'tax' => 200, 'freight_charge' => 100, 'total' => 9800.40,
-            'cost_of_goods' => self::COST, 'created_by' => $this->owner,
+            // ⓘ দায়িত্বপ্রাপ্ত জন বিলে বসানো (মালিক, ২৩ নভেম্বর ২০২৬) — অর্জন এখন `sales_person_id` পড়ে, বাঁধন বা লেখক নয়
+            'cost_of_goods' => self::COST, 'created_by' => $this->owner, 'sales_person_id' => $this->owner,
         ]);
 
         DB::table('sal_invoice_lines')->insert([
@@ -107,8 +108,9 @@ final class ABillDiscountReachesEveryLineSummedSaleTest extends TestCase
         $from = Carbon::parse('2019-02-01');
 
         /*
-         * ⓘ এই দাবি বিলের ছাড় মাপে, কার বিক্রি সেটা নয়। ডেমো ডিলারের দেয়াল চালু রাখে, আর তখন বিক্রি যায় বিলের দিনে ডিলারটা
-         * যাঁর নামে বাঁধা তাঁর ঘরে — ২০১৯-এ কেউ বাঁধা নেই, তাই অর্জন শূন্য হত। দেয়াল বন্ধে বিক্রি বিল যিনি কেটেছেন তাঁর।
+         * ⓘ এই দাবি বিলের ছাড় মাপে, কার বিক্রি সেটা নয়। ⭐ বিক্রি বিলে লেখা দায়িত্বপ্রাপ্ত জনের (`sales_person_id`, এখানে মালিক —
+         * প্রস্তুতিতে বসানো; মালিক, ২৩ নভেম্বর ২০২৬); দেয়াল চালু-বন্ধে উত্তর বদলায় না। ⓘ দেয়াল বন্ধ রাখা আগের মতোই — রুটের
+         * অর্জনের পরিবেশ অক্ষত থাকে।
          */
         app(\App\Core\Services\SettingsService::class)->set(\App\Core\Services\DealerScope::SWITCH, false);
 

@@ -34,6 +34,7 @@ use App\Modules\Sales\Models\Collection;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Models\SalesReturn;
 use App\Modules\Sales\Models\SalesTarget;
+use App\Modules\Sales\Services\SalesResponsibility;
 use App\Modules\Supplier\Models\Supplier;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -501,8 +502,9 @@ final class MonthClosePack
     }
 
     /**
-     * এসআর ধরে — নিট বিক্রি (বিল যিনি কেটেছেন; ফেরত মূল বিলের লেখকের, [[SalesMetrics::sellerOfReturnSql()]]), মাসের লক্ষ্য
-     * ([[SalesTarget]]), অর্জন, আর তাঁর লেখা আদায়; এরিয়া = তাঁর সবচেয়ে বড় দুই গ্রাহকের পয়েন্ট।
+     * এসআর ধরে — নিট বিক্রি (⭐ বিল আর ফেরতে লেখা দায়িত্বপ্রাপ্ত জন, [[SalesMetrics::sellerOfInvoiceSql()]] /
+     * [[SalesMetrics::sellerOfReturnSql()]]; মালিক, ২৩ নভেম্বর ২০২৬ — বিল যিনি লিখেছেন নন), মাসের লক্ষ্য ([[SalesTarget]]), অর্জন,
+     * আর তাঁর ডিলারদের আদায়; এরিয়া = তাঁর সবচেয়ে বড় দুই গ্রাহকের পয়েন্ট।
      *
      * @return array{rows: list<array<string, mixed>>, target: string, net: string, collected: string}
      */
@@ -510,19 +512,37 @@ final class MonthClosePack
     {
         $from = $p->from->toDateString();
         $to = $p->to->toDateString();
-        $sold = SalesMetrics::netBy($from, $to, 'sal_invoices.created_by', SalesMetrics::sellerOfReturnSql());
+        $sold = SalesMetrics::netBy($from, $to, SalesMetrics::sellerOfInvoiceSql(), SalesMetrics::sellerOfReturnSql());
         $targets = SalesTarget::query()->forMonth($p->month->toDateString())->get()
             ->groupBy('user_id')->map(fn ($rows) => $rows->reduce(fn (string $s, $t) => bcadd($s, (string) $t->amount, 4), '0'));
 
-        $collected = [];
+        /*
+         * ⭐ আদায় — ডিলার ধরে, তারপর মাসের শেষ দিনে ডিলারের দায়িত্বপ্রাপ্ত জনের ঘরে ([[SalesResponsibility::forMany()]]; মালিক,
+         * ২৩ নভেম্বর ২০২৬)। ⛔ আগে রসিদ যিনি লিখেছেন (`created_by`) — অথচ রসিদ লেখে অফিস, এসআর নন ("এসআর আদায় নেন না"),
+         * তাই এসআরের আদায় ঘর প্রায় সবসময় শূন্য দেখাত।
+         */
+        $byCustomer = [];
 
         foreach ([
-            Collection::query()->posted()->whereBetween('trx_date', [$from, $to])->groupBy('created_by')->selectRaw('created_by as u, SUM(amount) as a')->toBase()->get(),
+            Collection::query()->posted()->whereBetween('trx_date', [$from, $to])->groupBy('customer_id')->selectRaw('customer_id as c, SUM(amount) as a')->toBase()->get(),
             Voucher::query()->where('type', Voucher::RECEIPT)->where('party_type', Customer::drillSourceType())->posted()
-                ->whereBetween('trx_date', [$from, $to])->groupBy('created_by')->selectRaw('created_by as u, SUM(amount) as a')->toBase()->get(),
+                ->whereBetween('trx_date', [$from, $to])->groupBy('party_id')->selectRaw('party_id as c, SUM(amount) as a')->toBase()->get(),
         ] as $set) {
             foreach ($set as $row) {
-                $collected[(int) $row->u] = bcadd($collected[(int) $row->u] ?? '0', (string) $row->a, 4);
+                if ($row->c !== null) {
+                    $byCustomer[(int) $row->c] = bcadd($byCustomer[(int) $row->c] ?? '0', (string) $row->a, 4);
+                }
+            }
+        }
+
+        $collected = [];
+        $people = $byCustomer === [] ? [] : app(SalesResponsibility::class)->forMany(array_keys($byCustomer), $to);
+
+        foreach ($byCustomer as $customer => $amount) {
+            $person = $people[$customer] ?? null;
+
+            if ($person !== null) {
+                $collected[(int) $person] = bcadd($collected[(int) $person] ?? '0', $amount, 4);
             }
         }
 
@@ -563,12 +583,13 @@ final class MonthClosePack
             return [];
         }
 
-        $pairs = SalesInvoice::query()->posted()->whereBetween('trx_date', [$from, $to])->whereIn('created_by', $ids)
-            ->groupBy('created_by', 'customer_id')->selectRaw('created_by, customer_id, SUM(total) as t')->orderByDesc('t')->toBase()->get();
+        // ⓘ বিলে লেখা দায়িত্বপ্রাপ্ত জন ধরে (মালিক, ২৩ নভেম্বর ২০২৬) — বিল যিনি লিখেছেন নন
+        $pairs = SalesInvoice::query()->posted()->whereBetween('trx_date', [$from, $to])->whereIn('sales_person_id', $ids)
+            ->groupBy('sales_person_id', 'customer_id')->selectRaw('sales_person_id, customer_id, SUM(total) as t')->orderByDesc('t')->toBase()->get();
         $customers = Customer::query()->with(Customer::PLACE)->whereIn('id', $pairs->pluck('customer_id')->unique()->all() ?: [0])->get()->keyBy('id');
         $out = [];
 
-        foreach ($pairs->groupBy('created_by') as $seller => $rows) {
+        foreach ($pairs->groupBy('sales_person_id') as $seller => $rows) {
             $points = [];
 
             foreach ($rows as $row) {
@@ -829,7 +850,8 @@ final class MonthClosePack
             $id = (int) $r['party_id'];
             $since = $this->books->oldestUnpaidDate(null, Customer::drillSourceType(), $id, $asOf);
             $seller = SalesInvoice::query()->posted()->where('customer_id', $id)->where('trx_date', '<=', $asOf)
-                ->orderByDesc('trx_date')->orderByDesc('id')->value('created_by');
+                // ⓘ শেষ বিলে লেখা দায়িত্বপ্রাপ্ত জন (মালিক, ২৩ নভেম্বর ২০২৬) — বিল যিনি লিখেছেন নন
+                ->orderByDesc('trx_date')->orderByDesc('id')->value('sales_person_id');
 
             $out[] = [
                 'name' => $customers->get($id)?->name() ?? '#'.$id,

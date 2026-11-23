@@ -45,6 +45,11 @@
         {{ $location->assignee?->name ?? '' }}
     </td>
 
+    {{-- ⭐ বিক্রয়ের দায়িত্ব — আজ চালু এলাকা-বাঁধন (মালিক, ২৩ নভেম্বর ২০২৬; [[LocationController::responsibleAt()]]) --}}
+    <td class="hidden lg:table-cell" data-responsibility>
+        {{ implode(', ', ($responsible ?? [])[$location->id] ?? []) }}
+    </td>
+
     {{-- ⭐ গাছের সারিতেও "অ্যাকশন ▾" — মালিক, ৯ নভেম্বর ২০২৬ ("Abos er sokol list sob skin dekhe deke update koro"); আগের "+" (নিচের স্তর যোগ) মেনুর প্রথম কাজ --}}
     <td class="text-end" data-row-menu>
         @include('master_data::location.partials.actions', [

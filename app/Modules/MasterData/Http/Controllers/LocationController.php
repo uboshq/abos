@@ -6,6 +6,7 @@ namespace App\Modules\MasterData\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
+use App\Core\Support\DateFormat;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\MasterData\Models\Location;
@@ -14,7 +15,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
@@ -137,6 +140,7 @@ class LocationController extends Controller implements HasMiddleware
             'ladder' => $ladder,
             'counts' => $counts,
             'level' => null,
+            'responsible' => $this->responsibleAt($all->pluck('id')->all()),
         ]);
     }
 
@@ -199,6 +203,7 @@ class LocationController extends Controller implements HasMiddleware
             'counts' => $counts,
             'level' => $level,
             'rows' => $rows,
+            'responsible' => $this->responsibleAt($rows->getCollection()->pluck('id')->all()),
             'parentLevel' => $parentLevel,
             /*
              * ⚠️ `$counts` থেকে নয়, আলাদা করে — "নিষ্ক্রিয়ও দেখাও" চালু
@@ -305,6 +310,7 @@ class LocationController extends Controller implements HasMiddleware
             // ⓘ সব শাখার এলাকার নিচে কেবল দেখার শাখার সন্তান (৬ অক্টোবর ২০২৬)
             'location' => $location->load(['parent', 'assignee', 'children' => fn ($q) => $q->inViewedBranch()->with('assignee')]),
             'childLevel' => Location::childLevelOf($location->level),
+            'responsible' => $this->responsibleAt([$location->id])[$location->id] ?? [],
         ]);
     }
 
@@ -372,6 +378,46 @@ class LocationController extends Controller implements HasMiddleware
         $this->locations->installBangladesh();
 
         return back()->with('saved', __('master_data::message.bangladesh_installed'));
+    }
+
+    /**
+     * ⭐ এলাকার বিক্রয়-দায়িত্ব — আজ চালু এলাকা-বাঁধন, "নাম (তারিখ থেকে)" (মালিক, ২৩ নভেম্বর ২০২৬)।
+     *
+     * ⓘ সব সারির জন্য এক কোয়েরিতে — গাছ কয়েকশো সারি এক পাতায় আঁকে, সারি ধরে আনলে কোয়েরিও তত।
+     * ⓘ টেবিল ধরে, মডেল ধরে নয়: বাঁধন গ্রাহক মডিউলের, আর এই মডিউল তাকে `depends_on`-এ চেনে না
+     * ([[DealerScope::areaLocationIds()]]-এর একই পথ, একই দিনের নিয়ম — [[AreaBinding::scopeCurrent()]])।
+     * ⛔ বদলানো এখানে নয় — মাঠকর্মীর পাতায় ([[FieldForceController]])।
+     *
+     * @param  list<int>  $locationIds
+     * @return array<int, list<string>>
+     */
+    private function responsibleAt(array $locationIds): array
+    {
+        if ($locationIds === []) {
+            return [];
+        }
+
+        $today = Carbon::today()->toDateString();
+        $out = [];
+
+        $rows = DB::table('area_bindings')
+            ->join('users', 'users.id', '=', 'area_bindings.user_id')
+            ->where('area_bindings.company_id', CompanyContext::id())
+            ->whereIn('area_bindings.location_id', $locationIds)
+            ->where('area_bindings.starts_on', '<=', $today)
+            ->where(fn ($q) => $q->whereNull('area_bindings.ends_on')->orWhere('area_bindings.ends_on', '>=', $today))
+            ->orderBy('area_bindings.starts_on')
+            ->orderBy('users.name')
+            ->get(['area_bindings.location_id', 'area_bindings.starts_on', 'users.name']);
+
+        foreach ($rows as $row) {
+            $out[(int) $row->location_id][] = __('master_data::field.responsible_from', [
+                'name' => $row->name,
+                'date' => DateFormat::format((string) $row->starts_on),
+            ]);
+        }
+
+        return $out;
     }
 
     /** @return array<string, mixed> */

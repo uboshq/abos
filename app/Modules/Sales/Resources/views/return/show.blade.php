@@ -52,6 +52,9 @@
                         <dd class="mt-1 text-xs font-medium text-(--color-badge-warning-ink)" data-return-awaiting>{{ __('sales::message.return_awaiting') }}</dd>
                     @endif
                 </div>
+
+                {{-- ⭐ দায়িত্বে · বিল করেছেন (মালিক, ২৩ নভেম্বর ২০২৬) --}}
+                @include('sales::invoice.partials.responsibility-facts', ['paper' => $return->loadMissing(['salesPerson', 'creator'])])
             </dl>
         </section>
 
