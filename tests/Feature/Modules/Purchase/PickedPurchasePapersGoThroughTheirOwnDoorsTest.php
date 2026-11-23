@@ -70,7 +70,7 @@ final class PickedPurchasePapersGoThroughTheirOwnDoorsTest extends TestCase
 
         $this->assertSame(DocumentStatus::CONFIRMED, $draft->fresh()->status, '⛔ বাছা খসড়া বিল পাকা হয়নি।');
         $this->assertSame(DocumentStatus::CONFIRMED, $done->fresh()->status);
-        $result = $this->result();
+        $result = $this->bulkResult();
         $this->assertStringContainsString($done->document_no.': '.BulkOutcome::reason('not_draft'), (string) $result['details'],
             '⛔ পাকা বিলটা "খসড়া নয়" বলে বাদের তালিকায় নেই।');
         $this->assertStringNotContainsString($draft->document_no, (string) $result['details'], 'পাকা হওয়া বিলটাও বাদের তালিকায়।');
@@ -111,7 +111,7 @@ final class PickedPurchasePapersGoThroughTheirOwnDoorsTest extends TestCase
 
         $this->assertSame(DocumentStatus::DRAFT, $theirs->fresh()->status, '⛔ অন্য শাখার বিল পাকা হয়ে গেল।');
         $this->assertSame(DocumentStatus::CONFIRMED, $ours->fresh()->status, 'নিজের শাখার বিল পাকা হয়নি।');
-        $this->assertStringContainsString('#'.$theirs->id.': '.BulkOutcome::reason('not_found'), (string) $this->result()['details'],
+        $this->assertStringContainsString('#'.$theirs->id.': '.BulkOutcome::reason('not_found'), (string) $this->bulkResult()['details'],
             '⛔ অন্য শাখার বিল "পাওয়া গেল না" বলে বাদ নয়।');
     }
 
@@ -126,7 +126,7 @@ final class PickedPurchasePapersGoThroughTheirOwnDoorsTest extends TestCase
             ->assertRedirect();
         $this->assertSame(DocumentStatus::DRAFT, $one->fresh()->status, '⛔ কারণ ছাড়াই বিল বাতিল হলো।');
         $this->assertSame(DocumentStatus::DRAFT, $two->fresh()->status, '⛔ কারণ ছাড়াই বিল বাতিল হলো।');
-        $this->assertStringContainsString($one->document_no.': '.BulkOutcome::reason('no_reason'), (string) $this->result()['details']);
+        $this->assertStringContainsString($one->document_no.': '.BulkOutcome::reason('no_reason'), (string) $this->bulkResult()['details']);
 
         $this->post(route('purchase.bulk', ['paper' => 'bill', 'action' => 'cancel']), [
             'ids' => [$one->id, $two->id, $posted->id], 'reason' => 'Wrong supplier',
@@ -138,7 +138,7 @@ final class PickedPurchasePapersGoThroughTheirOwnDoorsTest extends TestCase
             $this->assertSame('Wrong supplier', $fresh->cancel_reason, 'বাতিলের কারণ কাগজে বসেনি।');
         }
         $this->assertSame(DocumentStatus::CONFIRMED, $posted->fresh()->status, '⛔ একসাথে বাতিলে পাকা বিলও বাতিল হলো।');
-        $this->assertStringContainsString($posted->document_no.': '.BulkOutcome::reason('not_draft'), (string) $this->result()['details']);
+        $this->assertStringContainsString($posted->document_no.': '.BulkOutcome::reason('not_draft'), (string) $this->bulkResult()['details']);
     }
 
     /**
@@ -160,24 +160,24 @@ final class PickedPurchasePapersGoThroughTheirOwnDoorsTest extends TestCase
         $this->assertSame(DocumentStatus::DRAFT, $order->fresh()->status, '⛔ ছক থাকা আদেশ সই ছাড়াই পাকা হলো।');
         $asked = app(ApprovalEngine::class)->latestFor($order->fresh(), 'order');
         $this->assertSame(Approval::PENDING, $asked?->status, '⛔ "পাঠান" আদেশটাকে অনুমোদনে পাঠায়নি।');
-        $this->assertNull($this->result()['details'], 'অনুমোদনে পাঠানো আদেশ বাদের তালিকায় গেছে।');
+        $this->assertNull($this->bulkResult()['details'], 'অনুমোদনে পাঠানো আদেশ বাদের তালিকায় গেছে।');
 
         $this->post(route('purchase.bulk', ['paper' => 'order', 'action' => 'submit']), ['ids' => [$order->id]])->assertRedirect();
-        $this->assertStringContainsString($order->document_no.': '.BulkOutcome::reason('already_waiting'), (string) $this->result()['details']);
+        $this->assertStringContainsString($order->document_no.': '.BulkOutcome::reason('already_waiting'), (string) $this->bulkResult()['details']);
         $this->assertSame(1, Approval::query()->where('approvable_type', PurchaseOrder::class)->where('approvable_id', $order->id)->count(),
             '⛔ দ্বিতীয় "পাঠান" নতুন অনুরোধ বসাল।');
 
         $this->post(route('purchase.bulk.approve', ['paper' => 'order']), ['ids' => [$order->id]])->assertRedirect();
         $this->assertSame(Approval::PENDING, $asked->fresh()->status, '⛔ কর্মী নিজের আদেশ নিজে অনুমোদন দিলেন।');
         $this->assertSame(DocumentStatus::DRAFT, $order->fresh()->status);
-        $this->assertStringContainsString($order->document_no.': '.BulkOutcome::reason('own_paper'), (string) $this->result()['details']);
+        $this->assertStringContainsString($order->document_no.': '.BulkOutcome::reason('own_paper'), (string) $this->bulkResult()['details']);
 
         $this->actingAs($this->owner->fresh())
             ->post(route('purchase.bulk.approve', ['paper' => 'order']), ['ids' => [$order->id]])
             ->assertRedirect();
         $this->assertSame(Approval::APPROVED, $asked->fresh()->status, '⛔ মালিকের একসাথে অনুমোদন খাটেনি।');
         $this->assertSame(DocumentStatus::CONFIRMED, $order->fresh()->status, '⛔ শেষ সইয়ের পরে আদেশ পাকা হয়নি।');
-        $this->assertNull($this->result()['details']);
+        $this->assertNull($this->bulkResult()['details']);
     }
 
     /** ⓘ বিল টাকার কাজ — একসাথে অনুমোদন নেই (বোতামও না, ঠিকানাও না) */
@@ -221,7 +221,7 @@ final class PickedPurchasePapersGoThroughTheirOwnDoorsTest extends TestCase
     }
 
     /** @return array{summary?: string, details?: ?string} শেষ একসাথে কাজের ফল */
-    private function result(): array
+    private function bulkResult(): array
     {
         $result = session(BulkOutcome::FLASH);
         $this->assertIsArray($result, 'একসাথে কাজের ফলের বার্তা নেই।');
