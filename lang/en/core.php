@@ -275,6 +275,7 @@ return [
         'view' => 'View',
         'approve' => 'Approve',
         'print' => 'Print',
+        'print_view' => 'Print view',
         'export' => 'Export',
         'share' => 'Share',
         'duplicate' => 'Duplicate',
@@ -690,6 +691,8 @@ return [
         'revoke_link' => 'Revoke the link',
         'link_revoked' => 'The link is revoked — it opens nothing now',
         'as_file' => 'Download PDF',
+        'open_print' => 'Open the print (new tab)',
+        'preparing' => 'Preparing the print…',
         // ⭐ Paper language (checklist ভা-১৬)
         'paper_language' => 'Paper language',
         'paper_language_company' => 'Company language',

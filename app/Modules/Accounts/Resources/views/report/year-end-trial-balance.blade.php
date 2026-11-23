@@ -30,7 +30,7 @@
                                  :href="route('accounts.year_end_trial_balance', [...$query, 'export' => 'print', 'lang' => 'en'])">
                         {{ __('accounts::fs.ytb.print_en') }}
                     </x-ui.button>
-                    <x-ui.button tone="secondary" data-paper="pdf"
+                    <x-ui.button tone="secondary" data-paper="pdf" target="_blank" rel="noopener"
                                  :href="route('accounts.year_end_trial_balance', [...$query, 'export' => 'pdf'])">
                         {{ __('core.toolbar.export_pdf') }}
                     </x-ui.button>

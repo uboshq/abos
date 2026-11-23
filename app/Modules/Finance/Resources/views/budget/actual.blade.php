@@ -81,8 +81,10 @@
                     bg-(--color-surface-card)">
         @if ($isReport)
             {{-- ⓘ টুলবার: ছাপা আর CSV — রিপোর্টের কাজটাই এটা --}}
+            {{-- ⭐ প্রিন্ট ভিউ বারেই, নতুন ট্যাবে; কাগজের মাথায় সময়কাল (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) --}}
+            @php \App\Core\Support\ReportPaper::describe((string) __('finance::budget.report'), (string) $periodLabel); @endphp
             <x-ui.toolbar :title="__('finance::budget.report')" :subtitle="$periodLabel" :columns="$columns" :report="true"
-                          :search="false" :filter="false" :share="false"
+                          :search="false" :filter="false" :share="false" :print-view="true"
                           :quiet="['year', 'center', 'month', 'scope', 'by_center']" />
         @else
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">

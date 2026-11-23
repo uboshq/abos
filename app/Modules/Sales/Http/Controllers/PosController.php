@@ -325,12 +325,14 @@ class PosController extends Controller implements HasMiddleware
          * ৮০mm ডিফল্ট: থার্মাল রোলই কাউন্টারের স্বাভাবিক কাগজ। যিনি A4
          * চান তিনি বিলের পাতা থেকে নিতে পারেন।
          */
+        // ⭐ ছাপা নতুন ট্যাবে, POS খালি হয়ে পরের ক্রেতার জন্য (মালিক, ২৩ নভেম্বর ২০২৬; [[print-tab.js]], [[x-ui.print-ready]])
         return redirect()
-            ->route('sales.print.invoice', ['invoice' => $result['invoice']->id, 'paper' => '80mm'])
+            ->route('sales.pos.index')
             ->with('saved', __('sales::message.pos_done', [
                 'no' => $result['invoice']->document_no,
                 'change' => Money::format($result['change']),
-            ]));
+            ]))
+            ->with('print_url', route('sales.print.invoice', ['invoice' => $result['invoice']->id, 'paper' => '80mm']));
     }
 
     /**

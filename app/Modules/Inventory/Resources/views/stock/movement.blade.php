@@ -30,6 +30,29 @@
         \App\Modules\Inventory\Models\Product::class,
         'purchase_price',
     );
+
+    /* ⭐ ছাপার কাগজ — পর্দার একই তালিকা আর কলাম (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) */
+    \App\Core\Support\ReportPaper::capture(
+        (string) __('inventory::analysis.title'),
+        trans_choice('inventory::analysis.days', $days, ['count' => $days]),
+        [(string) __('inventory::analysis.'.$type)],
+        array_values(array_filter([
+            [__('inventory::analysis.product'), false],
+            [__('inventory::analysis.available'), true],
+            $showsCost ? [__('inventory::analysis.value_stuck'), true] : null,
+            [$type === 'fast' ? __('inventory::analysis.sold') : __('inventory::analysis.moves'), true],
+        ])),
+        collect($products)->map(function ($p) use ($showsCost, $type) {
+            $qty = (string) ($p->available_qty ?? '0');
+
+            return ['cells' => array_values(array_filter([
+                $p->name().' · '.$p->code,
+                rtrim(rtrim($qty, '0'), '.').' '.$p->unit?->code,
+                $showsCost ? \App\Core\Support\Money::format(bcmul($qty, (string) ($p->purchase_price ?? '0'), 2)) : null,
+                (string) ($type === 'fast' ? ($p->sold_moves ?? 0) : ($p->touches ?? 0)),
+            ], fn ($v) => $v !== null))];
+        })->values()->all(),
+    );
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -37,6 +60,7 @@
 
     <div class="py-6">
         <h1 class="text-xl font-bold text-(--color-ink)">{{ __('inventory::analysis.title') }}</h1>
+        <div class="mt-2 print-hide"><x-ui.print-view-button /></div>
 
         {{-- জানালা: ৭ / ৩০ / ৯০ দিন --}}
         <div class="mt-4 flex flex-wrap items-center gap-2 text-sm">

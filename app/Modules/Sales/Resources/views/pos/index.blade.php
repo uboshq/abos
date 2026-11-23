@@ -25,6 +25,7 @@
              class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm
                     text-(--color-badge-success-ink)">
             {{ session('saved') }}
+            <x-ui.print-ready :url="session('print_url')" class="ms-1" />
         </div>
     @endif
 
@@ -512,7 +513,9 @@
                     </div>
                 @endif
 
-                <x-ui.button type="submit" tone="primary" class="w-full"
+                {{-- ⭐ রসিদ নতুন ট্যাবে, POS এখানেই (মালিক, ২৩ নভেম্বর ২০২৬; [[print-tab.js]]) --}}
+                <x-ui.button type="submit" tone="primary" class="w-full" data-opens-print
+                             data-print-waiting="{{ __('core.print.preparing') }}"
                              ::disabled="lines.length === 0"
                              x-ref="checkout">
                     {{ __('sales::action.checkout') }}

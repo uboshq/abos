@@ -16,6 +16,22 @@
         'other' => __('accounts::field.equity_other'),
         'closing' => __('accounts::field.equity_closing'),
     ];
+
+    /* ⭐ ছাপার কাগজ — পর্দার একই সংখ্যা, কেন্দ্রীয় ছাঁচে ([[ReportPaper]], মালিক ২৩ নভেম্বর ২০২৬) */
+    $paperBranch = $branchId !== null ? $branches->firstWhere('id', $branchId) : null;
+    \App\Core\Support\ReportPaper::capture(
+        (string) __('accounts::menu.equity_statement'),
+        \App\Core\Support\DateFormat::format($statement['from']).' – '.\App\Core\Support\DateFormat::format($statement['to']),
+        array_filter([
+            $paperBranch ? __('core.company.branch').': '.$paperBranch->name() : null,
+            $statement['agrees'] ? __('accounts::field.equity_agrees') : __('accounts::field.equity_does_not_agree'),
+        ]),
+        [[__('accounts::field.equity_component'), false], ...array_map(fn ($c) => [$c['label'], true], $statement['columns']), [__('accounts::field.equity_total'), true]],
+        array_map(fn ($key, $label) => [
+            'cells' => [$label, ...array_map(fn ($c) => $money($c[$key]), $statement['columns']), $money($statement['total'][$key])],
+            'kind' => in_array($key, ['opening', 'closing'], true) ? 'total' : 'row',
+        ], array_keys($rows), $rows),
+    );
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -25,9 +41,8 @@
         <x-ui.page-header :title="__('accounts::menu.equity_statement')"
                           :subtitle="\App\Core\Support\DateFormat::format($statement['from']).' – '.\App\Core\Support\DateFormat::format($statement['to'])">
             <x-slot:actions>
-                <x-ui.button tone="secondary" icon="print" data-action="print">
-                    {{ __('core.action.print') }}
-                </x-ui.button>
+                {{-- ⭐ প্রিন্ট ভিউ — নিজের কাগজ নতুন ট্যাবে, পর্দার ছাপা নয় (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) --}}
+                <x-ui.print-view-button />
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>

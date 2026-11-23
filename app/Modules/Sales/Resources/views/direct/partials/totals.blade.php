@@ -657,7 +657,9 @@
                      ডেলিভারি প্রসেসিংয়ে, নয়তো চালান বা বিল ছাপার আগে পপআপে ([[RequireTransportBeforePrint]])। --}}
                 {{-- ⭐ সারি ৩ — "নিশ্চিত করুন" একা, পুরো প্রস্থে (মালিক, ৪ অক্টোবর ২০২৬)। "খসড়া রাখুন" উপরে, সারি ২-এ। --}}
                 <div class="mt-2 grid grid-cols-1 gap-2">
-                    <x-ui.button type="submit" tone="primary" class="py-2" x-ref="confirm" data-overview-trigger
+                    {{-- ⭐ `data-opens-print` — চাপার মুহূর্তে ছাপার ট্যাব খোলে, কাউন্টার এখানেই থাকে (মালিক, ২৩ নভেম্বর ২০২৬; [[print-tab.js]]) --}}
+                    <x-ui.button type="submit" tone="primary" class="py-2" x-ref="confirm" data-overview-trigger data-opens-print
+                                 data-print-waiting="{{ __('core.print.preparing') }}"
                                  name="save_as_draft" value="0"
                                  ::disabled="! canConfirm">
                         {{ __('sales::action.confirm') }}
@@ -676,6 +678,7 @@
                          class="mt-2 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-xs
                                 text-(--color-badge-success-ink)">
                         {{ session('saved') }}
+                        <x-ui.print-ready :url="session('print_url')" class="ms-1" />
                     </div>
                 @endif
 
