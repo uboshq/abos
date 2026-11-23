@@ -25,6 +25,12 @@ use Illuminate\Support\Collection;
  */
 final class ReportPanel
 {
+    /** ⓘ রিপোর্টের পক্ষের চাবি => [[PartyRegistry]]-এর ধরন (খোঁজার লেখা — মোবাইল, ঠিকানা, পয়েন্ট — সেখান থেকে) */
+    private const PARTY_TYPES = ['customer_id' => 'customer', 'supplier_id' => 'supplier', 'person_id' => 'person'];
+
+    /** ⓘ এর বেশি নাম হলে নিচে নামের তালিকার বদলে লিখে খোঁজার ঘর ([[Facets::search()]]) */
+    private const FIND_UP_TO = 30;
+
     /**
      * @param  array<string, mixed>  $filters  ইঞ্জিনের মানা ছাঁকনি ([[ReportResult::$filters]])
      * @param  list<string>  $own  পাতা নিজে যে ঘরগুলো আঁকে (`$ownFilters`) — এখানে দ্বিতীয়বার নয়
@@ -60,10 +66,12 @@ final class ReportPanel
             $branches->isNotEmpty()
                 ? Facets::pick('branch_id', __('core.company.branch'), $branches->mapWithKeys(fn ($b) => [(string) $b->id => $b->name()])->all())->look('blue', '🏬')
                 : null,
+            // ⭐ পক্ষ লিখে খোঁজা — নাম, কোড, মোবাইল, ঠিকানা, পয়েন্ট; তালিকা আগের মতোই পাতার নিজের (মালিক, ২৩ নভেম্বর ২০২৬)
             ! empty($partyFilter)
-                ? Facets::pick($partyFilter, __('accounts::party_ledger.pick_party'),
+                ? Facets::search($partyFilter, __('accounts::party_ledger.pick_party'), Facets::partyRows(
+                    self::PARTY_TYPES[$partyFilter] ?? '',
                     collect($parties)->mapWithKeys(fn ($p) => [(string) $p->id => (string) $p->name])->all(),
-                    __('accounts::party_ledger.pick_party'))->look('green', '👤')
+                ))->look('green', '👤')
                 : null,
             $partyTypes->isNotEmpty()
                 ? Facets::pick('party_type_id', __('master_data::menu.party_types'), $partyTypes->mapWithKeys(fn ($t) => [(string) $t->id => $t->name()])->all())->look('slate', '◇')
@@ -105,7 +113,17 @@ final class ReportPanel
             }
 
             $name = __($sources[$key]->label());
-            $facets[] = Facets::find($key, $name, $sources[$key]->options(), $name.' — '.__('core.report.filters.any'));
+            $options = $sources[$key]->options();
+
+            /*
+             * ⭐ লম্বা তালিকা (দোকান, সরবরাহকারী, পণ্য) — লিখে খোঁজার ঘর, মান নম্বর (ইঞ্জিন নম্বর নেয়, [[ModelFilterSource::resolve()]]);
+             *   পক্ষ হলে মোবাইল, ঠিকানা, পয়েন্ট দিয়েও (মালিক, ২৩ নভেম্বর ২০২৬)। ছোট তালিকা আগের মতো "কোড · নাম" লেখার ঘর।
+             */
+            $facets[] = count($options) > self::FIND_UP_TO
+                ? Facets::search($key, $name, isset(self::PARTY_TYPES[$key])
+                    ? Facets::partyRows(self::PARTY_TYPES[$key], $options)
+                    : array_map(fn ($id, $label) => ['id' => (int) $id, 'label' => (string) $label], array_keys($options), $options))
+                : Facets::find($key, $name, $options, $name.' — '.__('core.report.filters.any'));
         }
 
         return $facets;

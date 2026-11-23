@@ -80,13 +80,10 @@
     $voucherAll = __('accounts::voucher.filter.all');
     $voucherPick = fn (string $key, string $options) => \App\Core\ListFilter\Facets::pick($key, $filterLabels[$key] ?? '',
         $filterOptions[$options] ?? [], ($filterLabels[$key] ?? '').': '.$voucherAll);
-    $voucherParties = collect($filterOptions['parties'] ?? [])
-        ->flatMap(fn ($group) => collect($group['options'] ?? [])->mapWithKeys(fn ($o) => [
-            $group['type'].':'.(int) $o['id'] => (string) $o['label'].(($o['hint'] ?? '') !== '' ? ' · '.$o['hint'] : ''),
-        ]))->all();
     $facetPanel = \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
-        \App\Core\ListFilter\Facets::pick('party', $filterLabels['party'] ?? '', $voucherParties, ($filterLabels['party'] ?? '').': '.$voucherAll),
+        // ⭐ পক্ষ — আগের মতোই লিখে খোঁজা ঘর (নাম, কোড, মোবাইল, ঠিকানা, পয়েন্ট), মান "ধরন:নম্বর" (মালিক, ২৩ নভেম্বর ২০২৬)
+        \App\Core\ListFilter\Facets::party('party', $filterLabels['party'] ?? '', $filterOptions['parties'] ?? []),
         $voucherPick('account', 'accounts'),
         $voucherPick('method', 'methods'),
         $voucherPick('state', 'states'),

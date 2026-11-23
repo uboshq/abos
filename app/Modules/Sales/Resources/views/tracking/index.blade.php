@@ -87,8 +87,9 @@
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
     $facetPanel = \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
-        \App\Core\ListFilter\Facets::pick('customer', __('sales::field.customer'),
-            $customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])->all()),
+        // ⭐ দোকান — লিখে খোঁজা (নাম, কোড, মোবাইল, ঠিকানা, পয়েন্ট), একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬)
+        \App\Core\ListFilter\Facets::search('customer', __('sales::field.customer'),
+            \App\Core\ListFilter\Facets::partyRows('customer', $customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])->all())),
         \App\Core\ListFilter\Facets::pick('branch', __('sales::tracking.branch'),
             $branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])->all()),
     ]);

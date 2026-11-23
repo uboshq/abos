@@ -85,10 +85,10 @@ class SalesReturnReasonReportController extends Controller implements HasMiddlew
             //   সাধারণ ছাঁকনি সেগুলো আবার আঁকে না
             'ownFilters' => ['customer_id', 'product_id'],
             'extraFacets' => [
-                Facets::pick('customer_id', __('sales::field.customer'),
+                // ⭐ দোকান লিখে খোঁজা — নাম, কোড, মোবাইল, ঠিকানা, পয়েন্ট (মালিক, ২৩ নভেম্বর ২০২৬)
+                Facets::search('customer_id', __('sales::field.customer'), Facets::partyRows('customer',
                     Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('name_en')->get()
-                        ->mapWithKeys(fn (Customer $c) => [(string) $c->id => $c->nameWithPoint()])->all(),
-                    __('sales::return_reason.any_customer'))->look('green', '👤'),
+                        ->mapWithKeys(fn (Customer $c) => [(string) $c->id => $c->nameWithPoint()])->all()))->look('green', '👤'),
                 Facets::pick('product_id', __('sales::field.product'),
                     Product::query()->soldInViewedBranch()->active()->orderBy('name_en')->get()
                         ->mapWithKeys(fn (Product $p) => [(string) $p->id => $p->name()])->all(),

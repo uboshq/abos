@@ -41,6 +41,11 @@
     'addable' => false,
     'addName' => 'party_new',
     'addMobile' => 'party_mobile',
+    /*
+     * ⓘ ফর্মের id — ঘরটা ফর্মের বাইরে বসলে (ডান পাশের ছাঁকনির প্যানেল, [[filter-layout]]) মানটা এই ফর্মের সাথে যায়
+     *   (মালিক, ২৩ নভেম্বর ২০২৬: পক্ষ খুঁজে না পাওয়ার অভিযোগ — প্যানেলেও লিখে খোঁজা)। না দিলে আগের মতো।
+     */
+    'form' => null,
 ])
 
 {{--
@@ -115,7 +120,7 @@
     <div @class(['relative', 'flex gap-2' => $addable])
          x-on:click.outside="closeList()"
          x-on:keydown.escape.prevent.stop="escape()">
-        <input type="hidden" name="{{ $name }}" value="{{ $value }}"
+        <input type="hidden" name="{{ $name }}" value="{{ $value }}" @if ($form) form="{{ $form }}" @endif
                x-ref="input" x-bind:value="value">
 
         {{-- ⓘ নাম আর তার নিচে কোড · পয়েন্ট · মোবাইল — একই নামের দুই দোকান বাছার পরেও আলাদা দেখা যায় --}}

@@ -160,6 +160,12 @@
                                                         <option value="{{ $value }}" @selected((string) $field['value'] === (string) $value)>{{ $label }}</option>
                                                     @endforeach
                                                 </select>
+                                            @elseif ($field['type'] === 'party')
+                                                {{-- ⭐ লিখে খোঁজা পক্ষ/পণ্য — নাম, কোড, মোবাইল, ঠিকানা, পয়েন্ট ([[x-ui.party-search]]; মালিক, ২৩ নভেম্বর ২০২৬:
+                                                     পক্ষ খুঁজে পাওয়া যায় না)। মান আগের চাবিতেই — দল থাকলে "ধরন:নম্বর", নাহলে নম্বর ([[Facets::party()]]) --}}
+                                                <x-ui.party-search :name="$field['key']" :groups="$field['groups'] ?? null" :options="$field['options'] ?? []"
+                                                                   :selected="$field['value'] !== '' ? $field['value'] : null" clearable wide
+                                                                   :aria-label="$field['label']" :form="$form" data-filter-party="{{ $field['key'] }}" />
                                             @elseif ($field['type'] === 'month')
                                                 {{-- ⓘ মাস — বাংলায় মাসের তালিকা, মান Y-m ([[ui/month]]; [[Facets::month()]]) --}}
                                                 <x-ui.month :name="$field['key']" :value="$field['value'] !== '' ? $field['value'] : null" :form="$form" class="list-filter-input" />

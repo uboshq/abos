@@ -121,6 +121,36 @@ final class AVoucherListFiltersByEveryFieldTest extends TestCase
         }
     }
 
+    /**
+     * ⭐ পক্ষের ছাঁকনি লিখে খোঁজা — ডান পাশের প্যানেলেও (মালিক, ২৩ নভেম্বর ২০২৬: পক্ষ খুঁজে পাওয়া যায় না)।
+     * ⓘ ঘরটা খোঁজার পিকার ([[x-ui.party-search]]): সব পক্ষ দল ধরে, প্রতিটার খোঁজার লেখায় নাম-কোড-মোবাইল-ঠিকানা-পয়েন্ট; বাছলে
+     *   তালিকার ফর্মে যায় আগের "ধরন:নম্বর" — আর তালিকা সেটা ধরেই ছাঁকে।
+     */
+    public function test_the_party_filter_is_a_searchable_picker_that_sends_type_and_id(): void
+    {
+        $html = (string) $this->get(route('accounts.voucher.index', ['type' => Voucher::RECEIPT, 'party' => $this->party['two']]))
+            ->assertOk()->getContent();
+
+        $start = (int) strpos($html, 'data-filter-panel');
+        $panel = substr($html, $start, (int) strpos($html, '</aside>', $start) - $start);
+
+        $this->assertStringContainsString('data-filter-party="party"', $panel, '⛔ পক্ষের ঘর প্যানেলে নেই।');
+        $this->assertStringContainsString('data-party-picker', $panel, '⛔ পক্ষের ঘরটা লিখে খোঁজার পিকার নয় — সাধারণ নামার তালিকা।');
+        $this->assertStringContainsString('x-data="partySearch(', $panel, '⛔ খোঁজার আচরণ (party-search.js) বসেনি।');
+        $this->assertMatchesRegularExpression('/<input type="hidden" name="party" value="'.preg_quote($this->party['two'], '/').'"\s+form="list-form"/', $panel,
+            '⛔ বাছা পক্ষ "ধরন:নম্বর" হয়ে তালিকার ফর্মে যায় না।');
+        $this->assertStringNotContainsString('<select form="list-form" name="party"', $panel, '⛔ পক্ষ আবার নামার তালিকা হয়ে গেছে।');
+
+        // ⓘ খোঁজার লেখায় পক্ষের মোবাইল — শেষ চার অঙ্ক লিখলেও পাওয়া যায় (fe/search-এর নিয়ম)
+        $customer = Customer::query()->find((int) explode(':', $this->party['two'])[1]);
+        if (filled($customer?->phone)) {
+            $this->assertStringContainsString(substr((string) preg_replace('/\D/', '', (string) $customer->phone), -4), $panel,
+                '⛔ খোঁজার লেখায় মোবাইল নেই — মোবাইল লিখে পক্ষ পাওয়া যাবে না।');
+        }
+
+        $this->assertSame([$this->v['party']], $this->ids(['party' => $this->party['two']]), '⛔ বাছা "ধরন:নম্বর" দিয়ে তালিকা ছাঁকে না।');
+    }
+
     /** ২ — অবস্থা = মোটের দল */
     public function test_the_state_filter_is_the_summarys_own_group(): void
     {

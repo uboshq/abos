@@ -111,9 +111,9 @@
                 __('sales::transport_board.any_vehicle'))
             : null,
         \App\Core\ListFilter\Facets::text('driver', __('sales::field.driver_name'), __('sales::transport_board.driver_filter')),
-        \App\Core\ListFilter\Facets::pick('customer', __('sales::field.customer'),
-            $customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])->all(),
-            __('sales::transport_board.any_customer')),
+        // ⭐ দোকান — লিখে খোঁজা (নাম, কোড, মোবাইল, ঠিকানা, পয়েন্ট), একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬)
+        \App\Core\ListFilter\Facets::search('customer', __('sales::field.customer'),
+            \App\Core\ListFilter\Facets::partyRows('customer', $customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])->all())),
     ]);
 @endphp
 

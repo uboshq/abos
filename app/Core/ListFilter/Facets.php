@@ -68,7 +68,15 @@ final class Facets
         $any ??= __('core.list_filter.any');
 
         if (count($options) > self::RADIO_UP_TO) {
-            return self::select($key, $label, $options, $any);
+            /*
+             * ⭐ নম্বরের লম্বা তালিকা (দোকান, পণ্য, কর্মী) — লিখে খোঁজা ঘর, নামার তালিকা নয় (মালিক, ২৩ নভেম্বর ২০২৬: *পক্ষ খুঁজে পাওয়া
+             *   যায় না*)। ⓘ নম্বর নয় এমন চাবির তালিকা (খুব কম) আগের মতো নামার তালিকায়।
+             */
+            $numeric = array_filter(array_keys($options), fn ($k) => ! ctype_digit((string) $k)) === [];
+
+            return $numeric
+                ? self::search($key, $label, array_map(fn ($id, $name) => ['id' => (int) $id, 'label' => (string) $name], array_keys($options), $options))
+                : self::select($key, $label, $options, $any);
         }
 
         $choices = ['' => ['label' => $any, 'apply' => self::none()]];
@@ -199,6 +207,86 @@ final class Facets
 
         return (new FieldsFacet($key, $label, [['key' => $key, 'label' => $label, 'type' => 'find', 'options' => $names, 'placeholder' => $placeholder]],
             self::none(), fn (array $v) => $label.': '.($names[$v[$key]] ?? $v[$key])))->look('teal', '◈');
+    }
+
+    /**
+     * ⭐ লিখে খোঁজা পক্ষ — কয়েক ধরনের পক্ষ এক ঘরে, মান "ধরন:নম্বর" (ভাউচারের তালিকার পুরোনো ঘরের হুবহু; [[x-ui.party-search]])।
+     *   নাম, কোড, মোবাইল, ঠিকানা আর পয়েন্ট দিয়ে খোঁজা যায় ([[PartyRegistry::forPicker()]]; মালিক, ২৩ নভেম্বর ২০২৬)।
+     *
+     * @param  list<array{type: string, label: string, options: list<array<string, mixed>>}>  $groups
+     */
+    public static function party(string $key, string $label, array $groups): FieldsFacet
+    {
+        $names = [];
+
+        foreach ($groups as $group) {
+            foreach ($group['options'] ?? [] as $o) {
+                $names[$group['type'].':'.(int) $o['id']] = (string) $o['label'];
+            }
+        }
+
+        return (new FieldsFacet($key, $label, [['key' => $key, 'label' => $label, 'type' => 'party', 'groups' => $groups]],
+            self::none(), fn (array $v) => $label.': '.($names[$v[$key]] ?? $v[$key])))->look('green', '👤');
+    }
+
+    /**
+     * ⭐ লিখে খোঁজা তালিকা — এক ধরনের অনেক জিনিস (দোকান, পণ্য, কর্মী), মান নম্বর। ⓘ [[pick()]] নিজেই এখানে আসে ৩০টার বেশি
+     *   নম্বরের ঘর হলে — লম্বা নামার তালিকায় খোঁজা যেত না।
+     *
+     * @param  list<array{id: int|string, label: string, hint?: string, find?: string}>  $rows
+     */
+    public static function search(string $key, string $label, array $rows): FieldsFacet
+    {
+        $names = [];
+
+        foreach ($rows as $row) {
+            $names[(string) $row['id']] = (string) $row['label'];
+        }
+
+        return (new FieldsFacet($key, $label, [['key' => $key, 'label' => $label, 'type' => 'party', 'options' => $rows]],
+            self::none(), fn (array $v) => $label.': '.($names[$v[$key]] ?? $v[$key])))->look('teal', '◈');
+    }
+
+    /**
+     * এক ধরনের পক্ষের সারি — পাতার নিজের নাম-তালিকা (নম্বর => নাম, কোনোটা বাদ নয়), সাথে পক্ষ-খোঁজার পয়েন্ট আর খোঁজার লেখা
+     * (মোবাইল, ঠিকানা, পয়েন্ট) যেখানে [[PartyRegistry::forPicker()]] জানে।
+     *
+     * @param  array<int|string, string>  $names
+     * @return list<array{id: int, label: string, hint: string, find: string}>
+     */
+    public static function partyRows(string $type, array $names): array
+    {
+        // ⓘ এক অনুরোধে একবার — রিপোর্টের পাতায় দোকান আর সরবরাহকারী দুই ঘর একই তালিকা চাইলে দুইবার সব পক্ষ পড়া নয়
+        $groups = app()->bound('facets.party_groups') ? app('facets.party_groups') : null;
+
+        if ($groups === null) {
+            $groups = app(\App\Core\Services\PartyRegistry::class)->forPicker(true);
+            app()->instance('facets.party_groups', $groups);
+        }
+
+        $known = [];
+
+        foreach ($groups as $group) {
+            if ($group['type'] === $type) {
+                foreach ($group['options'] as $o) {
+                    $known[(int) $o['id']] = $o;
+                }
+            }
+        }
+
+        $rows = [];
+
+        foreach ($names as $id => $name) {
+            $o = $known[(int) $id] ?? null;
+            $rows[] = [
+                'id' => (int) $id,
+                'label' => (string) $name,
+                'hint' => (string) ($o['hint'] ?? ''),
+                'find' => mb_strtolower((string) ($o['find'] ?? $name).' '.$name),
+            ];
+        }
+
+        return $rows;
     }
 
     /** টাকার পরিসর — কেবল যে পাতা আগে থেকেই `<key>_min` / `<key>_max` পাঠাত */
