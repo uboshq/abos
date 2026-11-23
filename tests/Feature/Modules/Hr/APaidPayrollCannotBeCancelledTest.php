@@ -36,6 +36,7 @@ final class APaidPayrollCannotBeCancelledTest extends TestCase
 {
     use PutsMoneyInTheTill;
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private int $cash;
 
@@ -114,7 +115,7 @@ final class APaidPayrollCannotBeCancelledTest extends TestCase
 
     private function confirmed(string $month): PayrollRun
     {
-        return app(PayrollService::class)->confirm(app(PayrollService::class)->build($month));
+        return $this->confirmedPayroll(app(PayrollService::class)->build($month));
     }
 
     private function pay(string $amount, string $on): int

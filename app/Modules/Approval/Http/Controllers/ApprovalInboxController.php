@@ -413,7 +413,8 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * [[BulkApproval]] সার্ভারেও আলাদা করে দেখে — লুকানো একটা চেকবক্স হাতে বানিয়ে পাঠানো যায়।
              */
             'bulkable' => $own && in_array($tab, ['waiting', 'behalf'], true)
-                ? $rows->reject(fn (Approval $a) => $this->bulk->movesMoney($a))->pluck('id')->all()
+                // ⛔ আর মডিউল যে কাজ একটা একটা করে চায় (`no_bulk`; fe, ২১ অক্টোবর ২০২৬)
+                ? $rows->reject(fn (Approval $a) => $this->bulk->movesMoney($a) || $this->bulk->oneByOne($a))->pluck('id')->all()
                 : [],
 
             'opened' => $opened,

@@ -4,13 +4,18 @@
     উপরে মোট, তারপর কর্মী ধরে ধরে শিট। খসড়া অবস্থায় "আবার বানান" আছে
     (কাঠামো শুধরে), নিশ্চিত করার পর নেই — তখন অঙ্ক খাতায় বসে গেছে।
 --}}
+@php
+    // ⛔ বেতনের অঙ্ক কেবল `hr.salary.view`-এ — মোট আর প্রতিটা স্লিপ; চাবি ছাড়া মানুষ আর পথ দেখা যায়, অঙ্ক ঢাকা (fe, ২১ অক্টোবর ২০২৬)
+    $pay = $pay ?? auth()->user()?->can('hr.salary.view');
+    $money = fn ($value) => $pay ? \App\Core\Support\Money::format($value) : \App\Core\Security\FieldSecurity::mask();
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $run->document_no }}</x-slot:title>
 
     <x-slot:header>
         <x-ui.page-header
             :title="$run->month->locale(app()->getLocale())->translatedFormat('F Y')"
-            :subtitle="$run->document_no . ' · ' . __('core.status.' . $run->status)">
+            :subtitle="$run->document_no . ' · ' . __('hr::kind.run_' . ($run->run_type ?? 'salary')) . ' · ' . __('core.status.' . $run->status)">
             <x-slot:actions>
                 @can('hr.payroll.view')
                     <x-ui.button :href="route('hr.payroll.payslips', $run->id)">
@@ -52,14 +57,30 @@
         </div>
     @endif
 
+    {{-- ⭐ করের ধাপ বসানো নেই — উৎসে কিছুই কাটা হয়নি (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax::note()]]) --}}
+    @if (($taxNote ?? null) !== null)
+        <div role="status" data-tax-note
+             class="mb-4 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
+                    text-(--color-badge-danger-ink)">
+            {{ $taxNote }}
+        </div>
+    @endif
+
+    {{-- ⭐ মাতৃত্বকালীন সুবিধার সারি আছে — গড়ের নিয়ম লেখা: উৎসব বোনাস মজুরি নয় (ধারা ২(৪৫), ৪৮; fe, ২১ অক্টোবর ২০২৬; [[MaternityBenefit::averageDailyWage()]]) --}}
+    @if ($run->payslips->contains(fn ($s) => $s->lines->contains('head_code', \App\Modules\Hr\Services\MaternityBenefit::LINE_CODE)))
+        <p role="note" data-maternity-wage-rule class="mb-4 text-2xs text-(--color-ink-muted)">
+            {{ __('hr::message.maternity_wage_rule') }}
+        </p>
+    @endif
+
     <div class="mb-4 grid gap-4 lg:grid-cols-[1fr_22rem]">
         <div class="grid gap-3 sm:grid-cols-4">
             {{-- ⓘ নাগালের কর্মীদের মোট — সীমা না থাকলে রানের নিজের (অডিট HR ⛔২) --}}
             @foreach ([
                 'hr::field.employee_count' => $summary['count'],
-                'hr::field.gross' => \App\Core\Support\Money::format($summary['gross']),
-                'hr::field.deductions' => \App\Core\Support\Money::format($summary['deductions']),
-                'hr::field.net' => \App\Core\Support\Money::format($summary['net']),
+                'hr::field.gross' => $money($summary['gross']),
+                'hr::field.deductions' => $money($summary['deductions']),
+                'hr::field.net' => $money($summary['net']),
             ] as $label => $value)
                 <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">
@@ -114,6 +135,34 @@
         @endcan
     </div>
 
+    {{-- ⛔ দ্বিতীয় সই দিতে পারেন এমন কেউ না থাকলে — কোন চাবি কাকে দিতে হবে (cb-র রিভিউ, ২১ অক্টোবর ২০২৬) --}}
+    <x-ui.no-second-signer :approval="app(\App\Core\Engines\Approval\ApprovalEngine::class)->latestFor($run, 'payroll')" />
+
+    {{-- ⭐ ব্যাংক ফাইলে কারা নেই আর কেন — সই-না-পড়া হিসাবে বেতন আটকে (fe, ২১ অক্টোবর ২০২৬; [[PayrollService::heldReason()]]) --}}
+    @if (! empty($leftOut))
+        <section data-bank-left-out role="status" data-boxed
+                 class="mb-4 rounded-(--radius-card) border border-(--color-badge-warning-ink) bg-(--color-badge-warning-bg) p-4 text-sm">
+            <p class="font-semibold text-(--color-badge-warning-ink)">{{ __('hr::payroll.left_out_title') }}</p>
+            <ul class="mt-2 list-inside list-disc">
+                @foreach ($leftOut as $row)
+                    {{-- ⛔ আইনের শেষ দিন (ধারা ১২৩) — পেরোলে লাল, যতক্ষণ না বকেয়া হয়ে কোনো ফাইলে যায় (fe, ২১ অক্টোবর ২০২৬) --}}
+                    <li data-left-out="{{ $row['code'] }}" @if ($row['late']) data-held-late class="font-semibold text-(--color-badge-danger-ink)" @endif>
+                        {{ $row['code'] }} · {{ $row['name'] }} — {{ $row['reason'] }}
+                        @unless ($row['paid'])
+                            · {{ __('hr::payroll.held_deadline', ['date' => \Illuminate\Support\Carbon::parse($row['deadline'])->format('d M Y')]) }}
+                            @if ($row['late']) · {{ __('hr::payroll.held_late') }} @endif
+                        @endunless
+                    </li>
+                @endforeach
+            </ul>
+            @if ($run->isConfirmed())
+                @can('hr.identity.view')
+                    <x-ui.button class="mt-3" :href="route('hr.payroll.bank_file_left_out', $run->id)">{{ __('hr::payroll.left_out_title') }} (CSV)</x-ui.button>
+                @endcan
+            @endif
+        </section>
+    @endif
+
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <x-ui.table
             :empty="__('hr::message.no_runs')"
@@ -126,13 +175,16 @@
                 ['key' => 'method', 'label' => __('hr::field.payment_method'), 'width' => '9rem',
                  'render' => fn ($s) => __('hr::kind.' . $s->payment_method)],
                 ['key' => 'gross', 'label' => __('hr::field.gross'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($s) => \App\Core\Support\Money::format($s->gross)],
+                 'render' => fn ($s) => $money($s->gross)],
                 ['key' => 'deductions', 'label' => __('hr::field.deductions'), 'numeric' => true,
-                 'width' => '9rem', 'render' => fn ($s) => \App\Core\Support\Money::format($s->deductions)],
+                 'width' => '9rem', 'render' => fn ($s) => $money($s->deductions)],
                 ['key' => 'net', 'label' => __('hr::field.net'), 'numeric' => true, 'width' => '9rem',
-                 'render' => fn ($s) => \App\Core\Support\Money::format($s->net)],
+                 'render' => fn ($s) => $money($s->net)],
                 ['key' => 'print', 'label' => '—', 'width' => '6rem',
                  'render' => fn ($s) => view('hr::payroll.partials.slip_print', ['slip' => $s])],
-            ]" />
+            ]"
+            :totals="['gross' => $money($summary['gross']), 'deductions' => $money($summary['deductions']), 'net' => $money($summary['net'])]"
+            :totalsLabel="__('core.print.total')" />
+        {{-- ⓘ ওপরের যোগের সারি — বেতন আর উৎসব ভাতা দুই রানেরই, নাগালের স্লিপের যোগ; চাবি ছাড়া ঢাকা (fe, দফা ৯) --}}
     </div>
 </x-layouts.app>

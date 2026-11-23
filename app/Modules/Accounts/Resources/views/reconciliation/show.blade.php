@@ -178,6 +178,14 @@
         </div>
     @endif
 
+    {{-- ⭐ বাতিল বেতনের রানের ব্যাংক ফাইলের লাইন — বিবরণী মিলিয়ে "ব্যাংক এই লাইন দেয়নি" বলার পাতায় যাওয়ার পথ (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬);
+         ⓘ HR-এর পাতা, তাই কেবল রুট থাকলে আর বেতনের রান দেখার চাবিতে --}}
+    @if (\Illuminate\Support\Facades\Route::has('hr.payroll.held.index') && auth()->user()?->can('hr.payroll.view'))
+        <p data-salary-bank-lines class="mb-4 text-sm">
+            <a class="underline" href="{{ route('hr.payroll.held.index') }}#bank-awaiting">{{ __('accounts::recon.salary_lines_awaiting') }}</a>
+        </p>
+    @endif
+
     {{-- অঙ্কটা — পাঁচটা সংখ্যা, আর শেষেরটাই আসল। --}}
     <div class="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         @foreach ([

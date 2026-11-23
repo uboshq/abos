@@ -76,8 +76,10 @@ final class ApprovalFacts
     {
         $idsByType = [];
         $rows = [];
+        $seen = [];
 
         foreach ($approvals as $approval) {
+            $seen[] = $approval;
             $rows[(int) $approval->id] = ['no' => null, 'party' => null, 'about' => null, 'where' => null, 'branch' => null];
 
             if (is_string($approval->approvable_type) && class_exists($approval->approvable_type)) {
@@ -149,6 +151,20 @@ final class ApprovalFacts
                         'url' => $links ? self::urlOf($document) : null,
                     ] + ($partyLinks[PaperParties::slot($document)] ?? ['party_name' => null, 'party_url' => null, 'point' => null]);
                 }
+            }
+        }
+
+        /*
+         * ⭐ অনুরোধ নিজে যা বলে — কাগজের "কী বাবদ"-এর জায়গায় (a6, ২১ অক্টোবর ২০২৬; fe-র উত্তর ৪; [[ApprovalRules::summaryOf()]])।
+         * ⓘ বেতনের কাঠামো বদলে কাগজটা কর্মী, বদলটা অনুরোধে — সারি আগে-পরের অঙ্ক দেখায়, চাবি না থাকলে ঢাকা; একসাথে সইয়ের তালিকাও এই সারিই।
+         */
+        $rules = app(\App\Core\Engines\Approval\ApprovalRules::class);
+
+        foreach ($seen as $approval) {
+            $summary = $rules->summaryOf($approval);
+
+            if ($summary !== null) {
+                $rows[(int) $approval->id]['about'] = $summary;
             }
         }
 

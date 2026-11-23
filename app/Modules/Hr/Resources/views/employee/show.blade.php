@@ -44,6 +44,64 @@
 
     <x-ui.errors />
 
+    {{-- ⭐ বেতনের ঠিকানার অপেক্ষার বদল — দ্বিতীয় সইয়ের আগে বসে না (#৮, ২০ অক্টোবর ২০২৬; [[PaymentChanges]])।
+         ⓘ নম্বর ঢাকা — শেষ চার অঙ্ক; পুরোটা কেবল hr.identity.view-এ। সই সইয়ের ইঞ্জিনের নিয়মে — চাবি থাকা আরেকজন, লেখক নন (মালিক
+         নিজের চাওয়ায় পারেন, চিহ্নসহ); লেখক নিজে ফিরিয়ে নেন। --}}
+    @if ($paymentChange)
+        @php
+            $viewer = auth()->user();
+            $now = \App\Modules\Hr\Services\PaymentChanges::detailsOf($employee);
+            $asked = $paymentChange->proposed;
+            $mine = (int) $paymentChange->requested_by === (int) $viewer?->id;
+            // ⓘ ইনবক্সের একই প্রশ্ন — সইয়ের ইঞ্জিন বলে ইনি এখন সই দিতে পারেন কি না (মালিকের ব্যতিক্রম, a6, ২১ অক্টোবর ২০২৬)
+            $canSign = app(\App\Modules\Hr\Services\PaymentChanges::class)->canSign($paymentChange, $viewer);
+        @endphp
+        <section data-payment-change role="status" data-boxed
+                 class="mb-4 rounded-(--radius-card) border border-(--color-badge-warning-ink) bg-(--color-badge-warning-bg) p-4 text-sm">
+            <p class="font-semibold text-(--color-badge-warning-ink)">
+                {{ __('hr::payment_change.banner', ['by' => $paymentChange->requester?->name, 'at' => \App\Core\Support\DateFormat::format($paymentChange->created_at)]) }}
+            </p>
+            <p class="mt-1 text-(--color-ink-muted)">{{ __('hr::payment_change.banner_note') }}</p>
+            {{-- ⛔ দ্বিতীয় সই দিতে পারেন এমন কেউ না থাকলে (cb-র রিভিউ, ২১ অক্টোবর ২০২৬) --}}
+            <x-ui.no-second-signer :approval="app(\App\Modules\Hr\Services\PaymentChanges::class)->approvalOf($paymentChange)" />
+
+            <table class="ui-lines mt-3 w-full">
+                <thead>
+                    <tr>
+                        <th class="text-start">{{ __('hr::payment_change.field') }}</th>
+                        <th class="text-start">{{ __('hr::payment_change.now') }}</th>
+                        <th class="text-start">{{ __('hr::payment_change.asked') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (\App\Modules\Hr\Models\PaymentChange::FIELDS as $field)
+                        @continue(($now[$field] ?? null) === ($asked[$field] ?? null))
+                        <tr data-changed-field="{{ $field }}">
+                            <td data-label="{{ __('hr::payment_change.field') }}">{{ __('hr::field.'.$field) }}</td>
+                            <td data-label="{{ __('hr::payment_change.now') }}">{{ \App\Modules\Hr\Services\PaymentChanges::shown($field, $now[$field] ?? null, $viewer) }}</td>
+                            <td data-label="{{ __('hr::payment_change.asked') }}">{{ \App\Modules\Hr\Services\PaymentChanges::shown($field, $asked[$field] ?? null, $viewer) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
+            <div class="mt-3 flex flex-wrap gap-2">
+                @if ($canSign)
+                    <form method="POST" action="{{ route('hr.employee.payment_change.approve', [$employee, $paymentChange]) }}">
+                        @csrf
+                        <x-ui.button type="submit" tone="primary">{{ __('hr::payment_change.approve') }}</x-ui.button>
+                    </form>
+                @endif
+                @if ($canSign || $mine)
+                    <form method="POST" action="{{ route('hr.employee.payment_change.reject', [$employee, $paymentChange]) }}">
+                        @csrf
+                        <x-ui.button type="submit" tone="secondary">{{ $mine ? __('hr::payment_change.withdraw') : __('hr::payment_change.reject') }}</x-ui.button>
+                    </form>
+                @endif
+            </div>
+        </section>
+    @endif
+
     {{-- ── কভার ─────────────────────────────────────────────────────────
          ব্র্যান্ডের রঙে ব্যানার, তার উপর গোল ছবির ঘর, নাম আর এক লাইনে পরিচয়। --}}
     <section data-profile-cover data-boxed
@@ -108,18 +166,24 @@
     <div id="general" class="mb-4 grid gap-4 lg:grid-cols-2">
         @foreach ([
             'hr::profile.personal_info' => [
-                'hr::field.father_name' => $employee->father_name,
-                'hr::field.mother_name' => $employee->mother_name,
-                'hr::field.date_of_birth' => $employee->date_of_birth?->format('d M Y'),
-                'hr::field.blood_group' => $employee->blood_group,
+                {{-- ⭐ ব্যক্তিগত তথ্য — পরিচয়ের চাবি ছাড়া ঢাকা ([[Employee::GUARDED]]; ঘাটতির তালিকা #১৯) --}}
+                'hr::field.father_name' => \App\Core\Security\FieldSecurity::show($employee, 'father_name', $employee->father_name),
+                'hr::field.mother_name' => \App\Core\Security\FieldSecurity::show($employee, 'mother_name', $employee->mother_name),
+                'hr::field.date_of_birth' => \App\Core\Security\FieldSecurity::show($employee, 'date_of_birth', $employee->date_of_birth?->format('d M Y')),
+                'hr::field.blood_group' => \App\Core\Security\FieldSecurity::show($employee, 'blood_group', $employee->blood_group),
+                'hr::field.surviving_children' => \App\Core\Security\FieldSecurity::show($employee, 'surviving_children', $employee->surviving_children === null ? __('hr::message.no_information') : (string) $employee->surviving_children),
+                'hr::field.gender' => \App\Core\Security\FieldSecurity::show($employee, 'gender', $employee->gender === null ? null : __('hr::kind.gender_'.$employee->gender)),
                 'hr::field.mobile' => $employee->mobile,
                 'hr::field.email' => $employee->email,
                 'hr::field.national_id' => \App\Core\Security\FieldSecurity::show(
                     $employee, 'national_id', $employee->national_id),
-                'hr::field.present_address' => $employee->present_address,
-                'hr::field.permanent_address' => $employee->permanent_address,
-                'hr::field.emergency_name' => collect([$employee->emergency_name, $employee->emergency_relation ? '('.$employee->emergency_relation.')' : null])->filter()->implode(' '),
-                'hr::field.emergency_mobile' => $employee->emergency_mobile,
+                // ⭐ e-TIN — পরিচয়ের চাবি ছাড়া ঢাকা (a6, ২১ অক্টোবর ২০২৬)
+                'hr::field.e_tin' => \App\Core\Security\FieldSecurity::show($employee, 'e_tin', $employee->e_tin),
+                'hr::field.present_address' => \App\Core\Security\FieldSecurity::show($employee, 'present_address', $employee->present_address),
+                'hr::field.permanent_address' => \App\Core\Security\FieldSecurity::show($employee, 'permanent_address', $employee->permanent_address),
+                'hr::field.emergency_name' => \App\Core\Security\FieldSecurity::show($employee, 'emergency_name',
+                    collect([$employee->emergency_name, $employee->emergency_relation ? '('.$employee->emergency_relation.')' : null])->filter()->implode(' ')),
+                'hr::field.emergency_mobile' => \App\Core\Security\FieldSecurity::show($employee, 'emergency_mobile', $employee->emergency_mobile),
             ],
             'hr::profile.job_info' => [
                 'hr::field.department' => $employee->department?->name(),
@@ -381,6 +445,20 @@
                                   text-sm font-semibold text-(--color-brand-700) hover:bg-(--color-brand-100)">
                             {{ __('hr::profile.see_leave') }}
                         </a>
+
+                        {{-- ⭐ ছাড়লে না-নেওয়া অর্জিত ছুটির টাকা — বেতনের চাবিতে; নিয়ম লেখা নিচে (ধারা ১১, ১১৭, ২(৪৫); [[EarnedLeave::encashment()]]) --}}
+                        @if ($encashment !== null)
+                            <div data-encashment class="mt-3 border-t border-(--color-border) pt-3">
+                                <h3 class="mb-2 text-sm font-semibold">{{ __('hr::profile.encashment', ['date' => $encashment['on']]) }}</h3>
+                                <dl class="grid grid-cols-2 gap-1 text-sm">
+                                    <dt class="text-(--color-ink-muted)">{{ __('hr::profile.encashment_days') }}</dt><dd class="tabular text-right">{{ $encashment['days'] }}</dd>
+                                    <dt class="text-(--color-ink-muted)">{{ __('hr::profile.encashment_wages') }}</dt><dd class="tabular text-right">{{ \App\Core\Support\Money::format($encashment['monthly_wage']) }}</dd>
+                                    <dt class="text-(--color-ink-muted)">{{ __('hr::profile.encashment_rate') }}</dt><dd class="tabular text-right">{{ \App\Core\Support\Money::format($encashment['daily_rate']) }}</dd>
+                                    <dt class="font-semibold">{{ __('hr::profile.encashment_amount') }}</dt><dd class="tabular text-right font-semibold">{{ \App\Core\Support\Money::format($encashment['amount']) }}</dd>
+                                </dl>
+                                <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('hr::profile.encashment_rule') }}</p>
+                            </div>
+                        @endif
                     </div>
                 @endif
             </div>
@@ -390,7 +468,11 @@
     {{-- ── বেতন ──────────────────────────────────────────────────────────── --}}
     @can('viewSalary', $employee)
         <section id="salary" data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" style="max-width: 36rem">
-            <h2 class="mb-3 font-semibold">{{ __('hr::action.salary') }}</h2>
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="font-semibold">{{ __('hr::action.salary') }}</h2>
+                {{-- ⭐ বছরের কর-সনদ — আয়ের বছর ধরে উৎসে কাটা কর (a6, ২১ অক্টোবর ২০২৬) --}}
+                <x-ui.button :href="route('hr.employee.tax_certificate', $employee)">{{ __('hr::action.tax_certificate') }}</x-ui.button>
+            </div>
 
             @if ($components === [])
                 <p class="text-sm text-(--color-ink-muted)">{{ __('hr::message.no_salary_yet') }}</p>
@@ -416,6 +498,42 @@
                 </dl>
             @endif
         </section>
+
+        {{-- ⭐ ভবিষ্য তহবিলের খাতা — মাস ধরে কর্মীর ভাগ, প্রতিষ্ঠানের ভাগ, চলতি জের; বেতনের চাবিতে (a6, ২১ অক্টোবর ২০২৬) --}}
+        @if (($pfLedger ?? []) !== [])
+            <section id="provident-fund" data-boxed class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4" style="max-width: 36rem">
+                <h2 class="mb-3 font-semibold">{{ __('hr::menu.report_provident_fund') }}</h2>
+                <dl class="space-y-1 text-sm">
+                    <div class="flex items-center justify-between gap-2 text-2xs text-(--color-ink-muted)">
+                        <dt>{{ __('hr::field.month') }}</dt>
+                        <dd>{{ __('hr::report.pf_employee_share') }} · {{ __('hr::report.pf_employer_share') }} · {{ __('hr::report.pf_balance') }}</dd>
+                    </div>
+                    @foreach ($pfLedger as $row)
+                        <div class="flex items-center justify-between gap-2" data-pf-month="{{ $row['month']->format('Y-m') }}">
+                            <dt class="text-(--color-ink-muted)">{{ $row['month']->format('M Y') }}</dt>
+                            <dd class="num">
+                                {{ \App\Core\Support\Money::format($row['employee_share']) }} ·
+                                {{ \App\Core\Support\Money::format($row['employer_share']) }} ·
+                                <span class="font-semibold">{{ \App\Core\Support\Money::format($row['balance']) }}</span>
+                            </dd>
+                        </div>
+                    @endforeach
+                    {{-- ⭐ নিচে যোগের সারি — দুই ভাগের যোগ আর শেষ জের (fe, ২১ অক্টোবর ২০২৬, দফা ৯) --}}
+                    @php
+                        $pfEmployee = collect($pfLedger)->reduce(fn ($c, $r) => bcadd($c, $r['employee_share'], 4), '0');
+                        $pfEmployer = collect($pfLedger)->reduce(fn ($c, $r) => bcadd($c, $r['employer_share'], 4), '0');
+                    @endphp
+                    <div class="mt-2 flex items-center justify-between gap-2 border-t border-(--color-border) pt-2 font-semibold" data-pf-total>
+                        <dt>{{ __('core.print.total') }}</dt>
+                        <dd class="num">
+                            {{ \App\Core\Support\Money::format($pfEmployee) }} ·
+                            {{ \App\Core\Support\Money::format($pfEmployer) }} ·
+                            {{ \App\Core\Support\Money::format(bcadd($pfEmployee, $pfEmployer, 4)) }}
+                        </dd>
+                    </div>
+                </dl>
+            </section>
+        @endif
     @endcan
 
     {{-- ⭐ জোড়া ডকুমেন্ট (ডকুমেন্ট পরিকল্পনা §১৫, ৯ অক্টোবর ২০২৬) — কোরের উপাদান; কিছু না থাকলে কিছুই বসে না --}}

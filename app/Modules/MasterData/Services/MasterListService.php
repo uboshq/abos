@@ -851,6 +851,8 @@ final class MasterListService implements ProvisionsCompany
             ['CONTRACT', 'Contract', 'চুক্তিভিত্তিক', []],
             ['DAILY', 'Daily wage', 'দৈনিক মজুরি', []],
             ['PART', 'Part time', 'খণ্ডকালীন', []],
+            // ⭐ শ্রমিক — BLA ২০০৬ ধারা ২(৬৫)-এর "শ্রমিক"; অধিকাল (ধারা ১০৮) ডিফল্টে কেবল এই ধরনের (a6, ২১ অক্টোবর ২০২৬; HR-এর `hr.ot.eligible_types`)
+            ['WORKER', 'Worker', 'শ্রমিক', []],
         ]);
 
         $made['vehicle_types'] = $this->seed(VehicleType::class, [

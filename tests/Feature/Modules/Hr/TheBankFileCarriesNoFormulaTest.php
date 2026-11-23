@@ -25,6 +25,7 @@ use Tests\TestCase;
 final class TheBankFileCarriesNoFormulaTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     public function test_a_cell_that_starts_like_a_formula_is_written_as_text(): void
     {
@@ -36,7 +37,7 @@ final class TheBankFileCarriesNoFormulaTest extends TestCase
         app(SalaryHeadService::class)->installDefaults();
         Employee::query()->delete();
 
-        $employee = app(EmployeeService::class)->create([
+        $employee = $this->employeeWithSignedDetails([
             'code' => 'EMP-CSV', 'name_en' => 'Formula Name', 'joining_date' => '2026-01-15', 'payment_method' => 'bank',
             'bank_name' => '@SUM(1+1)', 'bank_account_no' => '1234567890', 'bank_account_name' => '=HYPERLINK("http://evil.test","Pay")',
         ]);

@@ -82,4 +82,6 @@ return [
     'paper_already_matched' => 'A ticked paper is already matched to a bank line — each paper is matched once.',
     'total_must_equal' => 'The ticked papers total :total; the bank line is :line. They must be equal.',
     'line_in_a_confirmed_recon' => 'A paper of this line is ticked in a closed reconciliation — reopen it first.',
+    // ⭐ a cancelled payroll run's bank-file lines — the way to them during reconciliation (fe decision 2, 21 Oct 2026)
+    'salary_lines_awaiting' => 'Salary bank lines — sent to bank, awaiting confirmation',
 ];

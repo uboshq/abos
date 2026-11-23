@@ -76,4 +76,9 @@ return [
     'viz_basic' => 'মূল বেতন',
     'viz_allowances' => 'ভাতা',
     'viz_heads' => 'ভাতা ও কর্তন — এ মাস',
+
+    // ⭐ নিজের সইয়ের গোনা আর HR-এর গোটা গোনা (fe, ২১ অক্টোবর ২০২৬; [[LeaveSigner::countSignable()]])
+    'my_pending_leave' => 'আমার অনুমোদনের অপেক্ষায়',
+    'my_pending_leave_hint' => 'যে ছুটিতে আপনি এখনই অনুমোদন দিতে পারেন',
+    'all_pending_leave' => 'সব অপেক্ষার ছুটি',
 ];

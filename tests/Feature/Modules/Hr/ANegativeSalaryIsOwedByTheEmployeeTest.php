@@ -31,6 +31,7 @@ use Tests\TestCase;
 final class ANegativeSalaryIsOwedByTheEmployeeTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private Employee $short;
 
@@ -67,7 +68,7 @@ final class ANegativeSalaryIsOwedByTheEmployeeTest extends TestCase
     {
         app(SalaryStructureService::class)->set($this->short, SalaryHead::query()->where('code', 'FINE')->firstOrFail(), '2026-01-15', '25000');
 
-        $run = app(PayrollService::class)->confirm(app(PayrollService::class)->build('2026-08-01'));
+        $run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
 
         $slip = $run->payslips()->where('employee_id', $this->short->id)->firstOrFail();
         $this->assertSame('-5000.00', bcadd((string) $slip->net, '0', 2), 'প্রস্তুতিটাই ভুল — নিট ঋণাত্মক হওয়ার কথা');
@@ -99,7 +100,7 @@ final class ANegativeSalaryIsOwedByTheEmployeeTest extends TestCase
 
     public function test_no_shortfall_no_advance_line(): void
     {
-        $run = app(PayrollService::class)->confirm(app(PayrollService::class)->build('2026-08-01'));
+        $run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
 
         $this->assertSame(0, LedgerEntry::query()->where('source_type', PayrollRun::SOURCE_TYPE)->where('source_id', $run->id)
             ->where('account_id', StandardChart::find(StandardChart::EMPLOYEE_ADVANCE)->id)->count(), 'ঋণাত্মক নিট নেই, অথচ অগ্রিমে সারি বসল');

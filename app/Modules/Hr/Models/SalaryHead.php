@@ -40,6 +40,8 @@ class SalaryHead extends Model
     protected $fillable = [
         'company_id', 'code', 'name_en', 'name_bn',
         'kind', 'calculation', 'is_basic', 'prorated_by_attendance',
+        // ⭐ ধারা ২(৪৫)-এর মজুরির বাইরে — বোনাস/উৎসব ভাতা, মালিকের PF চাঁদা, যাতায়াত বা বিশেষ খরচের ভাতা (a6, ২১ অক্টোবর ২০২৬)
+        'outside_wages',
         'account_id', 'sort_order', 'is_active', 'created_by',
     ];
 
@@ -48,6 +50,7 @@ class SalaryHead extends Model
         return [
             'is_basic' => 'boolean',
             'prorated_by_attendance' => 'boolean',
+            'outside_wages' => 'boolean',
             'sort_order' => 'integer',
             'is_active' => 'boolean',
         ];

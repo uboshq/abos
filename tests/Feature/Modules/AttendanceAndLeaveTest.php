@@ -248,7 +248,7 @@ class AttendanceAndLeaveTest extends TestCase
         $casual = $this->leaveTypeNamed('CASUAL');
 
         // নৈমিত্তিক ছুটি বছরে ১০ দিন
-        $first = $this->leave()->apply($employee, $casual, '2026-03-01', '2026-03-09', '9');
+        $first = $this->leave()->apply($employee, $casual, '2026-03-01', '2026-03-10', '9');  // ⓘ ১০ দিনের পরিসর, শুক্রবার ৬ মার্চ বাদে ৯ কাজের দিন ([[WorkCalendar]], a6, ২১ অক্টোবর ২০২৬)
         $this->leave()->approve($first, $this->user);
 
         $balance = $this->leave()->balance($employee, $casual, Carbon::parse('2026-08-01'));
@@ -274,7 +274,7 @@ class AttendanceAndLeaveTest extends TestCase
         $employee = $this->employee();
 
         $application = $this->leave()->apply(
-            $employee, $this->leaveTypeNamed('UNPAID'), '2026-08-01', '2026-08-20', '20');
+            $employee, $this->leaveTypeNamed('UNPAID'), '2026-08-01', '2026-08-20', '18');  // ⓘ শুক্রবার ৭ আর ১৪ বাদে ১৮ কাজের দিন ([[WorkCalendar]])
 
         $this->assertSame(LeaveApplication::PENDING, $application->status);
     }
@@ -366,7 +366,7 @@ class AttendanceAndLeaveTest extends TestCase
             'বেতনসহ ছুটিতে কিছু কাটার কথা নয়');
 
         $unpaid = $this->leave()->apply(
-            $employee, $this->leaveTypeNamed('UNPAID'), '2026-08-20', '2026-08-21', '2');
+            $employee, $this->leaveTypeNamed('UNPAID'), '2026-08-18', '2026-08-19', '2');  // ⓘ মঙ্গল–বুধ; আগের বৃহস্পতি–শুক্রে শুক্রবার এখন কাজের দিন নয়
         $this->leave()->approve($unpaid, $this->user);
 
         $this->assertSame(0, bccomp(

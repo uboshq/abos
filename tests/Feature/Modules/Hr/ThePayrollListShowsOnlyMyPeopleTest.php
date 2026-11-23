@@ -44,9 +44,11 @@ final class ThePayrollListShowsOnlyMyPeopleTest extends TestCase
         $netrokona = Branch::query()->create(['company_id' => $this->company->id, 'code' => 'NTK', 'name_en' => 'Netrokona', 'is_active' => true]);
 
         Permission::findOrCreate('hr.payroll.view', 'web');
+        // ⓘ অঙ্ক দেখতে বেতনের চাবিও লাগে — সব জায়গায় এক নিয়ম (fe, ২১ অক্টোবর ২০২৬)
+        Permission::findOrCreate('hr.salary.view', 'web');
         $this->clerk = User::factory()->create(['current_company_id' => $this->company->id]);
         $this->clerk->companies()->attach($this->company->id);
-        $this->clerk->givePermissionTo('hr.payroll.view');
+        $this->clerk->givePermissionTo(['hr.payroll.view', 'hr.salary.view']);
         UserDataScope::query()->create(['company_id' => $this->company->id, 'user_id' => $this->clerk->id,
             'scope_type' => UserDataScope::BRANCH, 'scope_id' => $dhaka->id]);
         app(DataScope::class)->forget();
@@ -79,9 +81,41 @@ final class ThePayrollListShowsOnlyMyPeopleTest extends TestCase
     {
         $manager = User::factory()->create(['current_company_id' => $this->company->id]);
         $manager->companies()->attach($this->company->id);
-        $manager->givePermissionTo('hr.payroll.view');
+        $manager->givePermissionTo(['hr.payroll.view', 'hr.salary.view']);
 
         $this->actingAs($manager)->get(route('hr.payroll.index'))->assertOk()
             ->assertSee(Money::format('88888'));
+    }
+
+    /**
+     * ⛔ বেতনের চাবি ছাড়া রানগুলো দেখা যায়, অঙ্ক নয় — তালিকায়, রানের পাতায়, আর তালিকার CSV-তে (fe, ২১ অক্টোবর ২০২৬)।
+     */
+    public function test_without_the_salary_key_the_runs_show_and_the_amounts_are_masked(): void
+    {
+        $viewer = User::factory()->create(['current_company_id' => $this->company->id]);
+        $viewer->companies()->attach($this->company->id);
+        $viewer->givePermissionTo('hr.payroll.view');
+
+        $list = $this->actingAs($viewer)->get(route('hr.payroll.index'))->assertOk()
+            ->assertSee('PAY-ALL')
+            ->assertSee(\App\Core\Security\FieldSecurity::mask());
+
+        foreach (['88888', '11111', '77777'] as $amount) {
+            $list->assertDontSee(Money::format($amount));
+        }
+
+        $run = PayrollRun::acrossBranches()->where('document_no', 'PAY-ALL')->firstOrFail();
+        $page = $this->actingAs($viewer)->get(route('hr.payroll.show', $run))->assertOk()
+            ->assertSee('Person E-1')
+            ->assertSee(\App\Core\Security\FieldSecurity::mask());
+
+        foreach (['88888', '11111', '77777'] as $amount) {
+            $page->assertDontSee(Money::format($amount));
+        }
+
+        $csv = (string) $this->actingAs($viewer)->get(route('hr.payroll.index', ['export' => 'csv']))->getContent();
+        $this->assertStringContainsString('PAY-ALL', $csv);
+        $this->assertStringNotContainsString('88,888', $csv, '⛔ তালিকার ফাইলে বেতনের অঙ্ক।');
+        $this->assertStringNotContainsString('88888', $csv, '⛔ তালিকার ফাইলে বেতনের অঙ্ক।');
     }
 }

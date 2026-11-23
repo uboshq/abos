@@ -59,6 +59,8 @@ final class ASalaryAmountOfOneE5IsAReasonNotACrashTest extends TestCase
             'amounts' => [$this->basic->id => '25000.5'],
         ])->assertSessionHasNoErrors();
 
-        $this->assertSame(1, SalaryStructure::query()->where('employee_id', $this->employee->id)->count(), 'ঠিক অঙ্ক আগের মতোই যায়');
+        // ⓘ ঠিক অঙ্ক আগের মতোই যায় — এখন দ্বিতীয় সইয়ের অপেক্ষায় (মালিকের ব্যতিক্রম, a6, ২১ অক্টোবর ২০২৬; [[ApprovalRules::secondHand()]])
+        $this->assertNotNull(app(\App\Modules\Hr\Services\SalaryStructureService::class)->waitingChange($this->employee),
+            'ঠিক অঙ্ক আগের মতোই যায় — সইয়ের অপেক্ষায়');
     }
 }

@@ -28,6 +28,7 @@ use Tests\TestCase;
 final class AReversalNeverLandsBeforeThePayrollTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     public function test_cancelling_before_the_runs_own_date_dates_the_reversal_on_that_date(): void
     {
@@ -46,7 +47,7 @@ final class AReversalNeverLandsBeforeThePayrollTest extends TestCase
         $this->travelTo('2026-08-20 10:00:00');
 
         $payroll = app(PayrollService::class);
-        $run = $payroll->confirm($payroll->build('2026-08-01'));
+        $run = $this->confirmedPayroll($payroll->build('2026-08-01'));
         $this->assertSame('2026-08-31', $run->trx_date->toDateString(), 'দৃশ্যটাই বানানো যায়নি — রান মাস-শেষে বসেনি');
 
         $this->travelTo('2026-08-21 10:00:00');
@@ -75,7 +76,7 @@ final class AReversalNeverLandsBeforeThePayrollTest extends TestCase
         $this->travelTo('2026-09-05 10:00:00');
 
         $payroll = app(PayrollService::class);
-        $run = $payroll->confirm($payroll->build('2026-08-01'));
+        $run = $this->confirmedPayroll($payroll->build('2026-08-01'));
         $payroll->cancel($run->fresh(), 'Wrong amounts');
 
         $dates = LedgerEntry::query()->where('source_type', PayrollRun::SOURCE_TYPE.':reversal')->where('source_id', $run->id)

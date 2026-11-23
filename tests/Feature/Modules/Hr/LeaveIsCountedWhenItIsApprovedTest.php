@@ -288,7 +288,7 @@ final class LeaveIsCountedWhenItIsApprovedTest extends TestCase
 
         $this->post(route('hr.leave.store'), [
             'employee_id' => $this->employee->id, 'leave_type_id' => $this->type('UNPAID')->id,
-            'from_date' => '2026-03-02', 'to_date' => '2026-03-11', 'days' => '9.5',
+            'from_date' => '2026-03-02', 'to_date' => '2026-03-12', 'days' => '9.5',  // ⓘ শুক্রবার ৬ মার্চ বাদে ১০ কাজের দিন ([[WorkCalendar]])
         ])->assertSessionHasNoErrors();
         $this->assertSame('9.5', (string) LeaveApplication::query()->where('employee_id', $this->employee->id)->value('days'));
     }

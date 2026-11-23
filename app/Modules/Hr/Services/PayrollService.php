@@ -18,13 +18,17 @@ use App\Models\User;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\MaternityDelivery;
+use App\Modules\Hr\Models\HeldWagePayment;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryHead;
 use App\Modules\Hr\Support\AdvanceBalance;
 use App\Modules\Hr\Support\BranchReach;
+use App\Modules\Hr\Support\WorkCalendar;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -45,6 +49,14 @@ final class PayrollService
 {
     use ReadsTheRowUnderLock;
 
+    /** ⭐ উৎসব ভাতা — বছরে বড়জোর দুইটা, মূলের শতাংশ (a6, ২১ অক্টোবর ২০২৬; [[buildBonus()]]) */
+    public const BONUSES_A_YEAR = 2;
+
+    public const BONUS_PERCENT = 'hr.bonus.percent_of_basic';
+
+    /** ⓘ বেতনের স্লিপের সারির কোড */
+    public const BONUS_CODE = 'BONUS';
+
     public function __construct(
         private readonly SalaryStructureService $salaries,
         private readonly AttendanceService $attendance,
@@ -52,6 +64,10 @@ final class PayrollService
         private readonly PostingEngine $posting,
         private readonly NumberSeriesEngine $numbers,
         private readonly DocumentApproval $approvals,
+        private readonly ProvidentFund $fund,
+        private readonly OvertimeService $overtime,
+        private readonly SalaryTax $tax,
+        private readonly Gratuity $gratuity,
     ) {}
 
     /**
@@ -75,7 +91,7 @@ final class PayrollService
             ]);
         }
 
-        $this->assertNoLiveRun($monthStart);
+        $this->assertNoLiveRun($monthStart, PayrollRun::SALARY);
 
         /*
          * পুরো কোম্পানির কর্মী, শাখা ধরে ভাগ নয়।
@@ -107,13 +123,14 @@ final class PayrollService
              * সারিতে তালা দিলে দ্বিতীয়জন প্রথমজনের কমিটের পরে দেখেন, আর ফিরে যান।
              */
             Company::query()->whereKey(CompanyContext::id())->lockForUpdate()->first();
-            $this->assertNoLiveRun($monthStart);
+            $this->assertNoLiveRun($monthStart, PayrollRun::SALARY);
 
             $run = PayrollRun::create([
                 'company_id' => CompanyContext::id(),
                 'branch_id' => CompanyContext::branchId(),
                 'financial_year_id' => $this->financialYear($trx)?->id,
                 'document_no' => $this->numbers->next('PRL'),
+                'run_type' => PayrollRun::SALARY,
                 'month' => $monthStart->toDateString(),
                 'trx_date' => $trx->toDateString(),
                 'status' => DocumentStatus::DRAFT,
@@ -161,6 +178,17 @@ final class PayrollService
                 $slip->forceDelete();
             });
 
+            // ⭐ উৎসব ভাতার রান নিজের নিয়মে — রানের দিনে এক বছরের চাকরি, মূলের শতাংশ ([[buildBonus()]])
+            if ($run->isBonus()) {
+                $on = $run->trx_date->copy()->startOfDay();
+
+                foreach ($this->bonusEligible($on) as $employee) {
+                    $this->buildBonusPayslip($run, $employee, $on);
+                }
+
+                return $this->recount($run);
+            }
+
             // build()-এর হুবহু একই পরিধি — নাহলে "আবার বানান" চাপলে
             // তালিকা বদলে যেত, আর কেউ নীরবে বাদ পড়ত
             $employees = Employee::query()
@@ -173,6 +201,73 @@ final class PayrollService
             }
 
             return $this->recount($run);
+        });
+    }
+
+    /**
+     * ⭐ উৎসব ভাতার রান — আলাদা ধরন, নিজের সই, নিজের খরচের খাত (শ্রম বিধিমালা ২০১৫ বিধি ১১১; মালিকের অনুমোদিত আইনি বেতনের পরিকল্পনা,
+     * a6, ২১ অক্টোবর ২০২৬)।
+     *
+     * ── ⭐ নিয়ম ──────────────────────────────────────────────────────────
+     *  · কে পান — রানের দিনে যাঁর চাকরি অন্তত এক বছরের (যোগদান ≤ রানের দিন − ১ বছর), আর সেদিন যিনি চাকরিতে আছেন।
+     *  · কত — কাঠামোর মূল (রানের দিনে) × সেটিংয়ের শতাংশ (ডিফল্ট ১০০% — এক মাসের মূল; কমানো যায়, বাড়ানো নয়), পয়সায় গোল।
+     *  · বছরে বড়জোর দুইটা — কোম্পানি জুড়ে, বাতিল ছাড়া, পঞ্জিকা-বছর ধরে; তৃতীয়টা ফেরে।
+     *  · "এক মাসে একটা জীবিত রান" ধরন ধরে — একই মাসে বেতনের রান আর উৎসব ভাতার রান দুটোই চলে, দুইটা ভাতার রান নয়।
+     *
+     * ⓘ বাকিটা বেতনের রানের হুবহু: খসড়া → সই (একই `hr`·`payroll` ছক, নিট ধরে) → নিশ্চিত, খাতায় ৫২২৬ ডেবিট আর প্রদেয় বেতন (২১৩০)
+     * ক্রেডিট, কর্মীর শাখায় ([[ledgerLines()]]); বাতিলে উল্টো দাখিলা। ⚠️ ভাতার উপর উৎসে কর এখানে কাটা হয় না — খোলা প্রশ্ন।
+     *
+     * @param  string  $date  রানের দিন — যোগ্যতা এই দিনে মাপা হয়, আর খরচও এই দিনের
+     */
+    public function buildBonus(string $date, ?string $narration = null): PayrollRun
+    {
+        $on = Carbon::parse($date)->startOfDay();
+        $monthStart = $on->copy()->startOfMonth();
+
+        $this->assertNoLiveRun($monthStart, PayrollRun::BONUS);
+        $this->assertBonusRoom($on);
+
+        if ($this->accountByCode(StandardChart::FESTIVAL_BONUS_EXPENSE) === null) {
+            throw ValidationException::withMessages(['account' => __('hr::validation.bonus_account_missing')]);
+        }
+
+        $employees = $this->bonusEligible($on);
+
+        if ($employees->isEmpty()) {
+            throw ValidationException::withMessages(['bonus_date' => __('hr::validation.nobody_due_a_bonus')]);
+        }
+
+        return DB::transaction(function () use ($employees, $on, $monthStart, $narration) {
+            // ⛔ তালা দিয়ে আবার — বেতনের রানের একই কারণে ([[build()]]); দুইজন একসাথে চাপলে বছরের তৃতীয় ভাতাও বসত
+            Company::query()->whereKey(CompanyContext::id())->lockForUpdate()->first();
+            $this->assertNoLiveRun($monthStart, PayrollRun::BONUS);
+            $this->assertBonusRoom($on);
+
+            $run = PayrollRun::create([
+                'company_id' => CompanyContext::id(),
+                'branch_id' => CompanyContext::branchId(),
+                'financial_year_id' => $this->financialYear($on)?->id,
+                'document_no' => $this->numbers->next('PRL'),
+                'run_type' => PayrollRun::BONUS,
+                'month' => $monthStart->toDateString(),
+                'trx_date' => $on->toDateString(),
+                'status' => DocumentStatus::DRAFT,
+                'narration' => $narration,
+                'created_by' => auth()->id(),
+            ]);
+
+            foreach ($employees as $employee) {
+                $this->buildBonusPayslip($run, $employee, $on);
+            }
+
+            $run = $this->recount($run);
+
+            // ⓘ সবার মূল শূন্য — খালি রান রাখা হয় না (লেনদেন ফেরে)
+            if ($run->employee_count === 0) {
+                throw ValidationException::withMessages(['bonus_date' => __('hr::validation.nobody_due_a_bonus')]);
+            }
+
+            return $run;
         });
     }
 
@@ -263,6 +358,14 @@ final class PayrollService
 
             $run->forceFill(['status' => DocumentStatus::CONFIRMED])->save();
 
+            /*
+             * ⭐ মাসের বেতন নিশ্চিত হলে সেই মাসের গ্র্যাচুইটি সঞ্চিতিও — একই লেনদেনে; সুইচ চালু থাকলে, আর মাসটা আগে বসানো না থাকলে
+             * (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity::accrue()]])। ⓘ উৎসব ভাতার রানে নয়।
+             */
+            if (! $run->isBonus() && $this->gratuity->enabled()) {
+                $this->gratuity->accrue($run->month->copy());
+            }
+
             return $run->fresh();
         });
 
@@ -329,6 +432,198 @@ final class PayrollService
      *
      * @return array{name: string, content: string, rows: int}
      */
+    /**
+     * ⛔ বেতনশিটের "আটকে" পথ — কর্মীর সারিতে পথ ব্যাংক বা MFS, অথচ সই-পড়া নম্বর নেই (fe, ২১ অক্টোবর ২০২৬; a6; [[PaymentChanges]])।
+     *
+     * ⓘ নিয়ম, সবচেয়ে নিরাপদ আর এক রকম: বেতন যায় কেবল সই-পড়া তথ্যে। ঠিকানা বদল অপেক্ষায় থাকলে কর্মীর সারিতে আগের, সই-পড়া
+     * তথ্যই থাকে — বেতন সেখানে যায় (আগের পথ)। আগের তথ্য না থাকলে (নতুন কর্মীর প্রথম নম্বর, বা খালি থেকে বসানো) বেতন
+     * **আটকে**: নগদেও নয় (নগদে দিলে সই ছাড়া পথ খুলত), ব্যাংক ফাইলে নাম থাকে না, রানের পাতা আর ফাইলের সঙ্গী-তালিকায় কারণ।
+     *
+     * ⛔ "আটকে" মানে কেবল "এই ব্যাংক ফাইলে নেই" — পাওনা নয় এমন নয় (fe, ২১ অক্টোবর ২০২৬; শ্রম আইন ধারা ১২৩: মজুরিকাল শেষের সাত
+     * কর্মদিবসের মধ্যে মজুরি)। রান পোস্ট হলে স্লিপের পুরো নিট প্রদেয় বেতনে বসে, আটকে হোক বা না হোক (IAS 19 accrual; [[ledgerLines()]]
+     * পথ দেখে না)। পোস্ট-হওয়া রান বদলায় না। সই পড়লে আটকে থাকা নিট **পরের ব্যাংক ফাইলে "বকেয়া মজুরি"** হয়ে একবারই যায়
+     * ([[arrearsFor()]], [[HeldWagePayment]]) — আবার বানানো লাগে না।
+     */
+    public const HELD = 'held';
+
+    /** @return string|null কারণের ভাষা-চাবি; `null` = আটকে নয় */
+    public static function heldReason(Employee $employee): ?string
+    {
+        $method = (string) $employee->payment_method;
+        $missing = ($method === 'bank' && blank($employee->bank_account_no)) || ($method === 'mfs' && blank($employee->mfs_number));
+
+        if (! $missing) {
+            return null;
+        }
+
+        return app(PaymentChanges::class)->pendingFor($employee) !== null ? 'hr::payroll.held_waiting' : 'hr::payroll.held_no_account';
+    }
+
+    /** ⓘ মজুরিকাল শেষের পরে কত কর্মদিবস — শ্রম আইন ২০০৬ ধারা ১২৩ */
+    public const WAGE_DAYS = 7;
+
+    /**
+     * ⛔ মজুরি দেওয়ার শেষ দিন — মজুরিকাল (রানের মাস) শেষের পরে সাত কর্মদিবস, শ্রম আইন ২০০৬ ধারা ১২৩।
+     *
+     * ⭐ কর্মদিবস গোনা ছুটির পঞ্জিকায় — কর্মীর নিজের শাখার সাপ্তাহিক ছুটি (নইলে কোম্পানির), আর তালিকার সরকারি ছুটি (সব শাখার বা তাঁর
+     * শাখার) বাদ ([[WorkCalendar::addWorkingDays()]]; মেশানোর পর, a6, ২১ অক্টোবর ২০২৬; [[TheWageDeadlineCountsTheWorkCalendarTest]])।
+     * ⓘ আগে কেবল শুক্রবার বাদ যেত — ঈদের সপ্তাহ বা শনিবারে বন্ধ দোকানের কর্মীর শেষ দিন আইনের আগেই "পেরিয়ে গেছে" (লাল) দেখাত।
+     * ⓘ কর্মী না দিলে (বা শাখাহীন কর্মী) কোম্পানির পঞ্জিকা — সাপ্তাহিক ছুটি কোম্পানির, তালিকার কেবল সব-শাখার ছুটি।
+     */
+    public static function wageDeadline(PayrollRun $run, ?Employee $employee = null, ?WorkCalendar $calendar = null): Carbon
+    {
+        return ($calendar ?? app(WorkCalendar::class))->addWorkingDays(
+            $run->month->copy()->endOfMonth(),
+            self::WAGE_DAYS,
+            (int) $run->company_id,
+            $employee?->branch_id === null ? null : (int) $employee->branch_id,
+        );
+    }
+
+    /**
+     * ⭐ ব্যাংক ফাইলের সঙ্গী-তালিকা — কারা বাদ, কেন, আর আইনের শেষ দিন; পেরোলে লাল (fe, ২১ অক্টোবর ২০২৬)। ⓘ রানের পাতা আর
+     * `bank-file/left-out` ফাইল দুইটাই এটা পড়ে।
+     *
+     * @return list<array{code: string, name: string, reason: string, deadline: string, late: bool, paid: bool}>
+     */
+    public function leftOutOfTheBankFile(PayrollRun $run, ?User $user = null): array
+    {
+        $slips = ($user === null ? $run->payslips()->getQuery() : app(BranchReach::class)->throughEmployee($run->payslips()->getQuery(), $user))
+            ->with('employee')
+            ->where('payment_method', self::HELD)
+            ->get();
+
+        // ⓘ শেষ দিন কর্মী ধরে — শাখার সাপ্তাহিক ছুটি আলাদা হতে পারে ([[wageDeadline()]]); এক পঞ্জিকা, ছুটির তালিকা একবার পড়া
+        $calendar = app(WorkCalendar::class);
+        $paid = HeldWagePayment::query()->whereIn('payslip_id', $slips->modelKeys())->with(['paidIn', 'voucher'])->get()->keyBy('payslip_id');
+        // ⭐ বকেয়া যে রানের ফাইলে গেল সেটা বাতিল — "ব্যাংকে পাঠানো — নিশ্চিতের অপেক্ষায়" (fe-র সিদ্ধান্ত ২; [[HeldWages::awaitingBank()]])
+        $carriers = PayrollRun::acrossBranches()->whereKey($paid->pluck('paid_in_run_id')->filter()->all())->get(['id', 'status', 'document_no'])->keyBy('id');
+
+        return $slips->map(function (Payslip $slip) use ($run, $calendar, $paid, $carriers): array {
+            $employee = $slip->employee;
+            $deadline = self::wageDeadline($run, $employee, $calendar);
+            $payment = $paid->get($slip->id);
+            $reason = $employee === null ? null : self::heldReason($employee);
+            $carrier = $payment?->paid_in_run_id === null ? null : $carriers->get($payment->paid_in_run_id);
+
+            return [
+                'code' => (string) $employee?->code,
+                'name' => (string) $employee?->name(),
+                'reason' => $payment !== null
+                    ? ($payment->paid_in_run_id === null
+                        // ⓘ বকেয়ার নিজের কাগজে, যেকোনো দিন ([[HeldWages::pay()]])
+                        ? (string) __('hr::payroll.held_paid_voucher', ['no' => (string) $payment->voucher?->document_no])
+                        : ($carrier?->status === DocumentStatus::CANCELLED
+                            // ⛔ বাতিল রানের ফাইলে গিয়েছিল — ব্যাংক হয়তো দিয়েছে; নিজে নিজে ছাড়া নয়
+                            ? (string) __('hr::payroll.bank_awaiting_on', ['no' => (string) $carrier->document_no])
+                            : (string) __('hr::payroll.held_paid_later', ['no' => (string) ($carrier?->document_no ?? $payment->paidIn?->document_no)])))
+                    // ⓘ সই পড়ে গেছে — পরের ব্যাংক ফাইলে "বকেয়া মজুরি" হয়ে যাবে
+                    : (string) __($reason ?? 'hr::payroll.held_next_file'),
+                'deadline' => $deadline->toDateString(),
+                'late' => $payment === null && Carbon::today()->greaterThan($deadline),
+                'paid' => $payment !== null,
+            ];
+        })->values()->all();
+    }
+
+    /**
+     * ⭐ আটকে থাকা মজুরি, এখনো যা দেওয়া হয়নি — সব নিশ্চিত রান জুড়ে, HR-এর ড্যাশবোর্ডের তালিকা (fe, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⭐ সাথে বাতিল রানের ব্যাংক ফাইলে যাওয়া বকেয়া — `state` = `bank_awaiting`, "ব্যাংকে পাঠানো — নিশ্চিতের অপেক্ষায়" (fe-র সিদ্ধান্ত ২,
+     * ২১ অক্টোবর ২০২৬; [[HeldWages::awaitingBank()]]); বাকিগুলো `owed`। ⓘ ব্যাংক হয়তো দিয়েছে, তাই "শেষ দিন পেরিয়েছে" লাল নয়।
+     *
+     * @return Collection<int, array{employee: string, channel: ?string, run: string, deadline: string, late: bool, state: string}>
+     */
+    public function heldWagesOwed(?User $user = null): Collection
+    {
+        $query = Payslip::query()
+            ->where('payment_method', self::HELD)
+            ->whereDoesntHave('heldPayment')
+            ->whereHas('run', fn ($q) => $q->where('status', DocumentStatus::CONFIRMED))
+            ->with(['employee', 'run']);
+
+        $query = $user === null ? $query : app(BranchReach::class)->throughEmployee($query, $user);
+
+        $calendar = app(WorkCalendar::class);
+
+        $owed = $query->orderBy('id')->get()->map(function (Payslip $slip) use ($calendar): array {
+            $deadline = self::wageDeadline($slip->run, $slip->employee, $calendar);
+
+            return [
+                'employee' => (string) $slip->employee?->name(),
+                // ⓘ সই-পড়া পথ — ব্যাংক বা MFS; না থাকলে `null` (হিসাব সইয়ের অপেক্ষায়) — fe, ২১ অক্টোবর ২০২৬
+                'channel' => $slip->employee === null ? null : HeldWages::channelOf($slip->employee),
+                'run' => (string) $slip->run?->document_no,
+                'deadline' => $deadline->toDateString(),
+                'late' => Carbon::today()->greaterThan($deadline),
+                'state' => 'owed',
+            ];
+        });
+
+        $awaiting = app(HeldWages::class)->awaitingBank($user)->map(fn (array $line): array => [
+            'employee' => (string) $line['employee']?->name(),
+            'channel' => (string) $line['payment']->channel,
+            'run' => (string) $line['held_run']?->document_no,
+            'deadline' => $line['held_run'] === null ? Carbon::today()->toDateString()
+                : self::wageDeadline($line['held_run'], $line['employee'], $calendar)->toDateString(),
+            'late' => false,
+            'state' => 'bank_awaiting',
+        ]);
+
+        return $owed->concat($awaiting)->values();
+    }
+
+    /**
+     * ⭐ বকেয়া মজুরি — আগের নিশ্চিত রানের আটকে থাকা স্লিপ, যার হিসাব এখন সই-পড়া, এই রানের ব্যাংক ফাইলে (fe, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⛔ একবারই: প্রথম যে পরের ফাইলে ঢোকে, সেটা [[HeldWagePayment]]-এ লেখা হয় (স্লিপ প্রতি একটা সারি, unique) — একই রানের ফাইল আবার
+     * নামালে আবার আসে (একই টাকা, একই ফাইল), কিন্তু তার পরের রানের ফাইলে আর নয়। ⓘ আগের রান ছোঁয়া হয় না।
+     *
+     * @return list<array{0: Payslip, 1: string}> স্লিপ আর ফাইলের রেফারেন্স
+     */
+    private function arrearsFor(PayrollRun $run, ?User $user): array
+    {
+        $query = Payslip::query()
+            ->where('payment_method', self::HELD)
+            ->where('payroll_run_id', '!=', $run->id)
+            ->where('net', '>', 0)
+            ->whereHas('run', fn ($q) => $q->where('status', DocumentStatus::CONFIRMED)->where('month', '<', $run->month))
+            ->with(['employee', 'run']);
+
+        $query = $user === null ? $query : app(BranchReach::class)->throughEmployee($query, $user);
+        $out = [];
+
+        foreach ($query->orderBy('id')->get() as $slip) {
+            $employee = $slip->employee;
+
+            if ($employee === null || $employee->payment_method !== 'bank' || self::heldReason($employee) !== null) {
+                continue;
+            }
+
+            HeldWagePayment::query()->insertOrIgnore([[
+                'public_id' => (string) \Illuminate\Support\Str::uuid7(),
+                'company_id' => (int) $slip->company_id,
+                'payslip_id' => (int) $slip->id,
+                'payroll_run_id' => (int) $slip->payroll_run_id,
+                'paid_in_run_id' => (int) $run->id,
+                'amount' => (string) $slip->net,
+                'created_by' => auth()->id(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]]);
+
+            // ⓘ তালা নয়, unique — যে রান আগে লিখল, বকেয়াটা তারই; এই রানের না হলে বাদ
+            if ((int) HeldWagePayment::query()->where('payslip_id', $slip->id)->value('paid_in_run_id') !== (int) $run->id) {
+                continue;
+            }
+
+            $out[] = [$slip, (string) __('hr::payroll.arrears_reference', ['no' => (string) $slip->run?->document_no,
+                'month' => $slip->run?->month->format('M Y')])];
+        }
+
+        return $out;
+    }
+
     public function bankFile(PayrollRun $run, ?User $user = null): array
     {
         // ⓘ নাম ধরে কেউ চাইলে কেবল তাঁর নাগালের কর্মী ([[BranchReach]], অডিট HR ⛔২)
@@ -366,6 +661,21 @@ final class PayrollService
             ];
         }
 
+        // ⭐ বকেয়া মজুরি — আগের রানের আটকে থাকা, এখন সই-পড়া হিসাবে, একবারই ([[arrearsFor()]])
+        foreach ($this->arrearsFor($run, $user) as [$slip, $arrears]) {
+            $employee = $slip->employee;
+
+            $rows[] = [
+                (string) $employee->bank_account_no,
+                (string) ($employee->bank_account_name ?: $employee->name_en),
+                Money::round($slip->net, 2),
+                (string) $employee->bank_routing_no,
+                (string) $employee->bank_name,
+                (string) $employee->code,
+                $arrears,
+            ];
+        }
+
         $csv = '';
 
         foreach ($rows as $row) {
@@ -399,11 +709,33 @@ final class PayrollService
          */
         $factor = $this->attendanceFactor($employee, $monthEnd);
 
+        /*
+         * ⭐ মাতৃত্বকালীন সুবিধা — ধারা ৪৮ (fe-র উত্তর ২, ২১ অক্টোবর ২০২৬; [[MaternityBenefit]]; a6)।
+         * ⓘ বেতনসহ মাতৃত্বকালীন ছুটির দিনগুলো কাঠামোর বেতনে নয়, আগের তিন মাসের গড় দৈনিক মজুরিতে: হাজিরায় কমে এমন আয়ের খাত থেকে
+         * সেই দিনগুলোর ভাগ (দিন ÷ মাসের দিন) বাদ, আর "মাতৃত্বকালীন সুবিধা" সারি = দিন × গড়। আগের মজুরি না থাকলে (গড় নেই) কাঠামোই চলে।
+         */
+        $benefits = [];
+        $maternity = app(MaternityBenefit::class);
+
+        foreach ($maternity->daysIn($employee, $monthEnd) as ['application' => $application, 'days' => $mDays]) {
+            $average = $maternity->averageDailyWage($application);
+
+            if ($average === null) {
+                continue;
+            }
+
+            $factor = bcsub($factor, bcdiv($mDays, (string) $monthEnd->daysInMonth, 10), 10);
+            $benefits[] = Money::round(bcmul($mDays, $average, 10), 2);
+        }
+
+        $factor = bccomp($factor, '0', 10) < 0 ? '0' : $factor;
+
         $slip = Payslip::create([
             'company_id' => $run->company_id,
             'payroll_run_id' => $run->id,
             'employee_id' => $employee->id,
-            'payment_method' => $employee->payment_method,
+            // ⛔ সই-না-পড়া প্রথম হিসাব — বেতন কোথাও যায় না, "আটকে" ([[heldReason()]]; fe, ২১ অক্টোবর ২০২৬)
+            'payment_method' => self::heldReason($employee) === null ? $employee->payment_method : self::HELD,
             'bank_name' => $employee->bank_name,
             'bank_account_name' => $employee->bank_account_name,
             'bank_account_no' => $employee->bank_account_no,
@@ -413,6 +745,18 @@ final class PayrollService
 
         $gross = '0';
         $deductions = '0';
+        // ⓘ ভবিষ্য তহবিল আর অধিকালের দুই প্রশ্ন — দেওয়া মূল (কাজের দিনের ভাগে), আর কর্মী তহবিলে কিছু দিলেন কি না ([[ProvidentFund]])
+        $paidBasic = '0';
+        $paysIntoFund = false;
+        $fundId = $this->fund->enabled() ? $this->fund->fundAccount()?->id : null;
+
+        /*
+         * ⛔ তহবিল চালু অথচ খাত নেই — রান থামে, বাংলায় কারণ বলে; ভুল খাতে (প্রদেয় বেতন বা বেতন-খরচ) নীরবে বসে না (a6, ২১ অক্টোবর ২০২৬;
+         * খাত বসানোর কমান্ড `abos:hr-law-accounts`)।
+         */
+        if ($this->fund->enabled() && ($fundId === null || $this->fund->expenseAccount() === null)) {
+            throw ValidationException::withMessages(['account' => __('hr::validation.pf_accounts_missing')]);
+        }
 
         foreach ($components as $component) {
             /** @var SalaryHead $head */
@@ -427,6 +771,14 @@ final class PayrollService
             $amount = Money::round($head->prorated_by_attendance
                 ? bcmul($component['amount'], $factor, 10)
                 : $component['amount'], 2);
+
+            /*
+             * ⭐ দেওয়া মূল — স্লিপের মূল-সারির অঙ্ক: মাসের কাজের দিনের ভাগে (যোগদান/ছাড়া আর বিনা-বেতনের দিন বাদ), পয়সায় গোল
+             * ([[attendanceFactor()]])। প্রতিষ্ঠানের PF ভাগ আর অধিকালের ভিত এটাই — কাঠামোর পুরো মূল নয় (fe, ২১ অক্টোবর ২০২৬, দফা ৪)।
+             */
+            if ($head->is_basic) {
+                $paidBasic = $amount;
+            }
 
             /*
              * ⛔ অগ্রিমের কিস্তি কর্মীর খোলা অগ্রিমের বেশি নয় — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⛔৪)। ⓘ কিস্তি মাসিক নির্দিষ্ট
@@ -454,7 +806,157 @@ final class PayrollService
                 $gross = bcadd($gross, $amount, 4);
             } else {
                 $deductions = bcadd($deductions, $amount, 4);
+
+                if ($fundId !== null && $this->accountFor($head)?->id === $fundId && bccomp($amount, '0', 2) > 0) {
+                    $paysIntoFund = true;
+                }
             }
+        }
+
+        /*
+         * ⭐ অধিকাল — BLA ধারা ১০৮: মূল ÷ ২০৮ × ২ × অনুমোদিত বাড়তি ঘণ্টা (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])।
+         * ⛔ সুইচ চালু, কর্মী যোগ্য (নিয়োগের ধরন), আর ব্যবস্থাপকের সই হওয়া শিট — তিনটাই, তবে। সইয়ের অপেক্ষায় থাকা ঘণ্টার এক পয়সাও নয়।
+         * ⓘ আয়ের সারি, "বেতন ও মজুরি" খরচে; মোট আয় আর নিটে ঢোকে, তাই রানের সই আর ব্যাংকের ফাইলও এটা ধরে।
+         */
+        if ($this->overtime->enabled() && $this->overtime->isEligible($employee)) {
+            $hours = $this->overtime->signedHours($employee, $monthEnd);
+            // ⓘ দেওয়া মূলের উপর — মাসের মাঝে যোগ দিলে ঘণ্টা-হারও সেই ভাগের (fe, দফা ৪)
+            $pay = bccomp($hours, '0', 4) > 0 ? $this->overtime->amountFor($paidBasic, $hours) : '0';
+
+            if (bccomp($pay, '0', 2) > 0) {
+                PayslipLine::create([
+                    'company_id' => $run->company_id,
+                    'payslip_id' => $slip->id,
+                    'salary_head_id' => null,
+                    'head_code' => OvertimeService::LINE_CODE,
+                    'head_name_en' => 'Overtime ('.rtrim(rtrim($hours, '0'), '.').' h)',
+                    'head_name_bn' => 'অধিকাল ভাতা ('.rtrim(rtrim($hours, '0'), '.').' ঘণ্টা)',
+                    'kind' => SalaryHead::EARNING,
+                    'amount' => $pay,
+                    'sort_order' => 900,
+                    'account_id' => $this->accountByCode(StandardChart::SALARY_EXPENSE)?->id,
+                ]);
+
+                $gross = bcadd($gross, $pay, 4);
+            }
+        }
+
+        /*
+         * ⭐ বেতন থেকে উৎসে কর — আনুমানিক বার্ষিক কর ÷ ১২ (আয়কর আইন ২০২৩ ধারা ৮৬; a6, ২১ অক্টোবর ২০২৬; সূত্র [[SalaryTax]])।
+         * ⛔ ধাপ বসানো না থাকলে কিছুই কাটা হয় না (রানের পাতা বলে "করের ধাপ বসানো নেই")। ⓘ কর্তনের সারি, ২১৩২-এ ক্রেডিট; খাত না
+         * থাকলে থামে — প্রদেয় বেতনে নীরবে মিশে গেলে সরকারের পাওনা কর্মীর পাওনা হয়ে দেখাত।
+         */
+        if ($this->tax->hasSlabs()) {
+            // ⭐ আয়ের বছরের শেষ মাসে (জুন) আনুমানিক ভাগ নয়, বছরের আসল আয়ের উপর সমন্বয় (fe, দফা ২; [[SalaryTax::trueUp()]])
+            $tds = SalaryTax::closesTheIncomeYear($monthEnd)
+                ? $this->tax->trueUp($employee, $monthEnd, $gross)['due']
+                : $this->tax->estimate($employee, $monthEnd, $components)['monthly'];
+
+            if (bccomp($tds, '0', 2) > 0) {
+                $account = $this->tax->payableAccount();
+
+                if ($account === null) {
+                    throw ValidationException::withMessages(['account' => __('hr::validation.tds_account_missing')]);
+                }
+
+                PayslipLine::create([
+                    'company_id' => $run->company_id,
+                    'payslip_id' => $slip->id,
+                    'salary_head_id' => null,
+                    'head_code' => SalaryTax::LINE_CODE,
+                    'head_name_en' => 'Tax deducted at source',
+                    'head_name_bn' => 'উৎসে কর',
+                    'kind' => SalaryHead::DEDUCTION,
+                    'amount' => $tds,
+                    'sort_order' => 900,
+                    'account_id' => $account->id,
+                ]);
+
+                $deductions = bcadd($deductions, $tds, 4);
+            }
+        }
+
+        /*
+         * ⭐ ভবিষ্য তহবিলে প্রতিষ্ঠানের সমান ভাগ — সুইচ চালু আর কর্মী এই মাসে তহবিলে কিছু দিয়েছেন, তবেই (BLA ধারা ২৬৪; a6, ২১ অক্টোবর
+         * ২০২৬, [[ProvidentFund]])। ⓘ স্লিপে আলাদা সারি, নিটের বাইরে — মোট আয়, কর্তন আর নিট যেমন ছিল তেমনই; খাতায় খরচ আর তহবিলের দায়
+         * ([[ledgerLines()]])। ⛔ সুইচ বন্ধ বা সদস্য নন — কোনো সারি নেই, আগের অবিকল বেতনশিট।
+         */
+        if ($paysIntoFund) {
+            $share = $this->fund->employerShare($paidBasic);
+
+            if (bccomp($share, '0', 2) > 0) {
+                PayslipLine::create([
+                    'company_id' => $run->company_id,
+                    'payslip_id' => $slip->id,
+                    'salary_head_id' => null,
+                    'head_code' => PayslipLine::PF_EMPLOYER_CODE,
+                    'head_name_en' => 'Provident Fund (employer)',
+                    'head_name_bn' => 'ভবিষ্য তহবিল (প্রতিষ্ঠানের অংশ)',
+                    'kind' => PayslipLine::EMPLOYER,
+                    'amount' => $share,
+                    'sort_order' => 10,
+                    'account_id' => $this->fund->expenseAccount()?->id,
+                ]);
+            }
+        }
+
+        /*
+         * ⭐ প্রসবের আসল দিনে সরে যাওয়া মাতৃত্বকালীন ছুটির দেওয়া মাসের পার্থক্য — পরের রানে, একটা সমন্বয়ের সারিতে (ধারা ৪৫; fe-র উত্তর ৩,
+         * ২১ অক্টোবর ২০২৬; [[MaternityDeliveryService::paidMonthsDifference()]]; a6)। ⓘ নিশ্চিত রান কখনো বদলায় না — পার্থক্য এই খসড়ায় বসে;
+         * পাওনা হলে আয়, ফেরতযোগ্য হলে কর্তন। কোন রানে বসল তা লেখা থাকে: আবার-বানানো একই রানে আবার বসায়, বাতিল রান হলে পরের রানে।
+         */
+        $adjustments = MaternityDelivery::query()->withoutGlobalScopes()
+            ->where('employee_id', $employee->id)
+            ->where('status', MaternityDelivery::APPROVED)
+            ->where('adjustment', '!=', 0)
+            ->where(fn ($q) => $q->whereNull('payroll_run_id')->orWhere('payroll_run_id', $run->id)
+                ->orWhereIn('payroll_run_id', PayrollRun::acrossBranches()->where('status', DocumentStatus::CANCELLED)->select('id')))
+            ->orderBy('id')
+            ->get();
+
+        foreach ($adjustments as $change) {
+            $amount = (string) $change->adjustment;
+            $kind = bccomp($amount, '0', 2) > 0 ? SalaryHead::EARNING : SalaryHead::DEDUCTION;
+            $amount = Money::round(ltrim($amount, '-'), 2);
+
+            PayslipLine::create([
+                'company_id' => $run->company_id,
+                'payslip_id' => $slip->id,
+                'salary_head_id' => null,
+                'head_code' => MaternityBenefit::ADJUSTMENT_CODE,
+                'head_name_en' => 'Maternity adjustment ('.$change->actual_delivery_date->toDateString().')',
+                'head_name_bn' => 'মাতৃত্বকালীন সমন্বয় ('.$change->actual_delivery_date->toDateString().')',
+                'kind' => $kind,
+                'amount' => $amount,
+                'sort_order' => 910,
+                'account_id' => $this->fallbackAccount($kind)?->id,
+            ]);
+
+            if ($kind === SalaryHead::EARNING) {
+                $gross = bcadd($gross, $amount, 4);
+            } else {
+                $deductions = bcadd($deductions, $amount, 4);
+            }
+
+            $change->forceFill(['payroll_run_id' => $run->id])->save();
+        }
+
+        foreach ($benefits as $amount) {
+            PayslipLine::create([
+                'company_id' => $run->company_id,
+                'payslip_id' => $slip->id,
+                'salary_head_id' => null,
+                'head_code' => MaternityBenefit::LINE_CODE,
+                'head_name_en' => 'Maternity benefit',
+                'head_name_bn' => 'মাতৃত্বকালীন সুবিধা',
+                'kind' => SalaryHead::EARNING,
+                'amount' => $amount,
+                'sort_order' => 900,
+                // ⓘ বেতনের খরচেই — খাতের নিজের হিসাব-খাত নেই, তাই আয়ের ফলব্যাক ([[fallbackAccount()]])
+                'account_id' => $this->fallbackAccount(SalaryHead::EARNING)?->id,
+            ]);
+
+            $gross = bcadd($gross, $amount, 4);
         }
 
         $slip->forceFill([
@@ -568,6 +1070,28 @@ final class PayrollService
             }
 
             foreach ($slip->lines as $line) {
+                /*
+                 * ⭐ প্রতিষ্ঠানের অংশ — খরচ ডেবিট, তহবিলের দায় ক্রেডিট, দুটোই কর্মীর শাখায় ([[ProvidentFund]]; a6, ২১ অক্টোবর ২০২৬)।
+                 * ⓘ নিটের বাইরে, তাই প্রদেয় বেতনে কিছু নয়; দুই পাশ সমান, তাই শাখার দাখিলা মেলে।
+                 */
+                if ($line->isEmployerShare()) {
+                    $expenseId = $line->account_id ?? $this->fund->expenseAccount()?->id;
+                    $fundId = $this->fund->fundAccount()?->id;
+
+                    if ($expenseId === null || $fundId === null) {
+                        throw ValidationException::withMessages([
+                            'account' => __('hr::validation.pf_accounts_missing'),
+                        ]);
+                    }
+
+                    $key = $expenseId.':'.$branch;
+                    $debits[$key] = [(int) $expenseId, $branch, bcadd($debits[$key][2] ?? '0', (string) $line->amount, 4)];
+                    $key = $fundId.':'.$branch;
+                    $credits[$key] = [(int) $fundId, $branch, bcadd($credits[$key][2] ?? '0', (string) $line->amount, 4)];
+
+                    continue;
+                }
+
                 // ⛔ খাত কোড ধরে, মানে ধরেই — না পেলে থামা, ভুল খাতে বা অর্ধেক জাবেদায় নয় ([[StandardChart::accountFor()]])
                 // ⓘ শূন্য সারি খাতায় যায় না ([[bccomp]] নিচে), তাই তার জন্য প্রমিত খাত খোঁজা হয় না
                 if ($line->account_id === null && bccomp((string) $line->amount, '0', 4) === 0) {
@@ -784,8 +1308,11 @@ final class PayrollService
      *
      * বাতিল করাগুলো বাদ — নাহলে ভুল রান বাতিল করে আর নতুন বানানো যেত না।
      */
-    private function assertNoLiveRun(Carbon $monthStart): void
+    private function assertNoLiveRun(Carbon $monthStart, string $type): void
     {
+        /*
+         * ⭐ ধরন ধরে — a6, ২১ অক্টোবর ২০২৬ ([[buildBonus()]])। ⓘ একই মাসে বেতন আর উৎসব ভাতা দুটোই বৈধ; একই ধরনের দুইটা নয়।
+         */
         /*
          * ⛔ সব শাখা জুড়ে — পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ (HR ⛔১)। ⓘ রানটা পুরো কোম্পানির কর্মীদের ([[build()]]), অথচ
          * `PayrollRun` হেডারের শাখার দেয়ালে; এক শাখা বাছা থাকলে অন্য শাখায় বানানো রান অদৃশ্য থাকত, যাচাই পার হত, আর একই মাসের
@@ -793,16 +1320,119 @@ final class PayrollService
          */
         $exists = PayrollRun::acrossBranches()
             ->forMonth($monthStart->toDateString())
+            ->ofType($type)
             ->where('status', '<>', DocumentStatus::CANCELLED)
             ->exists();
 
         if ($exists) {
             throw ValidationException::withMessages([
-                'month' => __('hr::validation.month_already_run', [
+                'month' => __($type === PayrollRun::BONUS ? 'hr::validation.bonus_month_already_run' : 'hr::validation.month_already_run', [
                     'month' => $monthStart->format('M Y'),
                 ]),
             ]);
         }
+    }
+
+    /** ⛔ বছরে বড়জোর দুইটা উৎসব ভাতা — কোম্পানি জুড়ে, বাতিল ছাড়া, রানের পঞ্জিকা-বছরে */
+    private function assertBonusRoom(Carbon $on): void
+    {
+        $taken = PayrollRun::acrossBranches()
+            ->ofType(PayrollRun::BONUS)
+            ->where('status', '<>', DocumentStatus::CANCELLED)
+            ->whereYear('month', $on->year)
+            ->count();
+
+        if ($taken >= self::BONUSES_A_YEAR) {
+            throw ValidationException::withMessages([
+                'bonus_date' => __('hr::validation.bonus_limit_reached', ['year' => $on->year, 'max' => self::BONUSES_A_YEAR]),
+            ]);
+        }
+    }
+
+    /**
+     * উৎসব ভাতা কারা পান — রানের দিনে অন্তত এক বছরের চাকরি, আর সেদিন চাকরিতে।
+     *
+     * @return \Illuminate\Support\Collection<int, Employee>
+     */
+    private function bonusEligible(Carbon $on): \Illuminate\Support\Collection
+    {
+        return Employee::query()
+            ->whereNotNull('joining_date')
+            ->whereDate('joining_date', '<=', $on->copy()->subYearNoOverflow()->toDateString())
+            ->where(fn ($q) => $q->whereNull('leaving_date')->orWhereDate('leaving_date', '>=', $on->toDateString()))
+            ->orderBy('code')
+            ->get();
+    }
+
+    /** একজনের উৎসব ভাতার স্লিপ — মূল × শতাংশ; শূন্য হলে স্লিপই নয় */
+    private function buildBonusPayslip(PayrollRun $run, Employee $employee, Carbon $on): ?Payslip
+    {
+        $basic = '0';
+
+        foreach ($this->salaries->componentsOn($employee, $on) as $component) {
+            if ($component['head']->is_basic) {
+                $basic = (string) $component['amount'];
+            }
+        }
+
+        $amount = Money::round(bcdiv(bcmul($basic, $this->bonusPercent(), 10), '100', 10), 2);
+
+        if (bccomp($amount, '0', 2) <= 0) {
+            return null;
+        }
+
+        $slip = Payslip::create([
+            'company_id' => $run->company_id,
+            'payroll_run_id' => $run->id,
+            'employee_id' => $employee->id,
+            /*
+             * ⛔ সই-না-পড়া প্রথম হিসাব — ভাতাও "আটকে", বেতনের স্লিপের একই নিয়ম ([[heldReason()]]; মেশানোর পর, a6, ২১ অক্টোবর ২০২৬;
+             * [[AHeldFestivalBonusNeverReachesTheBankFileTest]])। ⓘ পে-শাখার ভাতা কর্মীর পথ সোজা কপি করত, অথচ সই-শাখায় প্রথম নম্বর সই
+             * না পড়া পর্যন্ত কর্মীর সারিতে খালি থাকে — ভাতার ব্যাংক ফাইলে খালি হিসাব-নম্বরের সারি যেত। এখন আটকে থাকে, সই পড়লে পরের
+             * ব্যাংক ফাইলে বা বকেয়ার কাগজে একবারই যায় ([[arrearsFor()]], [[HeldWages]])।
+             */
+            'payment_method' => self::heldReason($employee) === null ? $employee->payment_method : self::HELD,
+            'bank_name' => $employee->bank_name,
+            'bank_account_name' => $employee->bank_account_name,
+            'bank_account_no' => $employee->bank_account_no,
+            'bank_routing_no' => $employee->bank_routing_no,
+            'mfs_number' => $employee->mfs_number,
+        ]);
+
+        PayslipLine::create([
+            'company_id' => $run->company_id,
+            'payslip_id' => $slip->id,
+            'salary_head_id' => null,
+            'head_code' => self::BONUS_CODE,
+            'head_name_en' => 'Festival bonus',
+            'head_name_bn' => 'উৎসব ভাতা',
+            'kind' => SalaryHead::EARNING,
+            'amount' => $amount,
+            'sort_order' => 10,
+            'account_id' => $this->accountByCode(StandardChart::FESTIVAL_BONUS_EXPENSE)?->id,
+        ]);
+
+        $slip->forceFill(['gross' => $amount, 'deductions' => '0', 'net' => $amount])->save();
+
+        return $slip->fresh();
+    }
+
+    /** ⓘ উৎসব ভাতা — মূলের শতাংশ, ০ থেকে ১০০ (আইনের সীমা এক মাসের মূল); ভুল লেখায় ১০০ */
+    private function bonusPercent(): string
+    {
+        return self::clampBonusPercent($this->settings->get(self::BONUS_PERCENT));
+    }
+
+    /** ⓘ খাঁটি নিয়ম — সেটিংয়ের মান থেকে শতাংশ, ১০০-এর বেশি নয়; করের আনুমানিক হিসাবও এটাই পড়ে ([[SalaryTax::expectedBonus()]]) */
+    public static function clampBonusPercent(mixed $raw): string
+    {
+        $value = trim((string) $raw);
+
+        if (! preg_match('/^\d{1,3}(\.\d{1,4})?$/', $value)) {
+            return '100';
+        }
+
+        return bccomp($value, '100', 4) > 0 ? '100' : bcadd($value, '0', 4);
     }
 
     /**

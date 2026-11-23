@@ -156,6 +156,7 @@ class SalaryHeadController extends Controller implements HasMiddleware
         $request->merge([
             'is_basic' => $request->boolean('is_basic'),
             'prorated_by_attendance' => $request->boolean('prorated_by_attendance'),
+            'outside_wages' => $request->boolean('outside_wages'),
         ]);
 
         return $request->validate([
@@ -167,6 +168,8 @@ class SalaryHeadController extends Controller implements HasMiddleware
             'calculation' => ['required', Rule::in(SalaryHead::CALCULATIONS)],
             'is_basic' => ['boolean'],
             'prorated_by_attendance' => ['boolean'],
+            // ⭐ ধারা ২(৪৫)-এর মজুরির বাইরে কি না ([[EarnedLeave::encashment()]])
+            'outside_wages' => ['boolean'],
             'account_id' => ['nullable', 'integer',
                 Rule::exists('accounts', 'id')->where('company_id', $companyId),
                 /*

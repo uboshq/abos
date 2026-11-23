@@ -31,6 +31,7 @@ use Tests\TestCase;
 final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private const ACCOUNT = '1234567890123';
 
@@ -48,7 +49,7 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         app(SalaryHeadService::class)->installDefaults();
-        $employee = app(EmployeeService::class)->create([
+        $employee = $this->employeeWithSignedDetails([
             'code' => 'EMP-BANK', 'name_en' => 'Bank Paid', 'joining_date' => '2026-01-15',
             'payment_method' => 'bank', 'bank_account_no' => self::ACCOUNT, 'bank_name' => 'Sonali', 'bank_routing_no' => '200270001',
         ]);
@@ -56,7 +57,7 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
         $employee->forceFill(['payment_method' => 'bank'])->save();
         app(SalaryStructureService::class)->set($employee, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-15', '20000');
 
-        $this->run = app(PayrollService::class)->confirm(app(PayrollService::class)->build('2026-08-01'));
+        $this->run = $this->confirmedPayroll(app(PayrollService::class)->build('2026-08-01'));
     }
 
     public function test_the_same_clerk_is_shut_out_without_the_key_and_let_in_with_it(): void
@@ -110,7 +111,10 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
 
         $this->give($clerk, 'hr.identity.view');
         $this->as($clerk)->put(route('hr.employee.update', $employee->id), [...$form, 'bank_account_no' => '5555555555555'])->assertSessionHasNoErrors();
-        $this->assertSame('5555555555555', (string) $employee->fresh()->bank_account_no, 'চাবি থাকলে বদলায়, আগের মতো');
+        // ⓘ চাবি থাকলে বদলটা লেখা হয় — কিন্তু বসে দ্বিতীয় সইয়ে (#৮, ২০ অক্টোবর ২০২৬; [[TheSalaryWentWhereOneHandSaidTest]])
+        $this->assertSame(self::ACCOUNT, (string) $employee->fresh()->bank_account_no, '⛔ একজনের হাতেই ব্যাংকের নম্বর বসল');
+        $this->assertSame('5555555555555', (string) \App\Modules\Hr\Models\PaymentChange::query()->where('employee_id', $employee->id)
+            ->where('status', 'pending')->firstOrFail()->proposed['bank_account_no'], 'চাবি থাকলে বদলটা সইয়ের অপেক্ষায় লেখা হয়');
     }
 
     /**
@@ -141,7 +145,7 @@ final class TheBankNumberNeedsTheIdentityKeyTest extends TestCase
         $slip->load(['employee.department', 'employee.designation', 'lines', 'run']);
         $method = new \ReflectionMethod(PayslipPrintController::class, 'documentFor');
 
-        return $method->invoke(app(PayslipPrintController::class), $slip)->meta[__('hr::field.bank_account_no')] ?? null;
+        return $method->invoke(app(PayslipPrintController::class), $slip, true)->meta[__('hr::field.bank_account_no')] ?? null;
     }
 
     private function png(): \Illuminate\Http\UploadedFile

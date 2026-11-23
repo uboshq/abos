@@ -12,4 +12,8 @@ return [
     'risk_medium_at' => 'Medium risk from this score',
     'risk_high_at' => 'High risk from this score',
     'risk_critical_at' => 'Critical risk from this score',
+    'ecl_rate_current' => 'Expected loss rate on dues of 0-30 days (%)',
+    'ecl_rate_30' => 'Expected loss rate on dues of 31-60 days (%)',
+    'ecl_rate_60' => 'Expected loss rate on dues of 61-90 days (%)',
+    'ecl_rate_90' => 'Expected loss rate on dues over 90 days (%)',
 ];

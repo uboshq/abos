@@ -136,7 +136,7 @@ final class MenuBuilder
                         $offered++;
                     }
 
-                    if (! $this->allowed($user, $item['permission'] ?? null)) {
+                    if (! $this->allowed($user, $item['permission'] ?? null) && ! $this->pageLets($user, $item['policy'] ?? null)) {
                         continue;
                     }
 
@@ -830,6 +830,23 @@ final class MenuBuilder
         }
 
         return $user->can($permission);
+    }
+
+    /**
+     * ⭐ চাবি ছাড়াও পাতা যাঁকে খোলে — সারির `policy` = [ক্ষমতা, মডেলের ক্লাস], পাতার নিজের `authorize()`-এর হুবহু প্রশ্ন
+     * (a6, ২১ অক্টোবর ২০২৬; fe: "মেনুর প্রশ্ন আর পাতার প্রশ্ন এক")। ⓘ যেমন দল থাকা ব্যবস্থাপক অধিকাল আর ছুটির তালিকা খোলেন হাজিরা/ছুটির
+     * চাবি ছাড়া — সারিটা তখন চাবিতে নয়, নীতিতে দেখা যায়; পাতা ৪০৩ দিলে সারিও নেই। ⓘ কোর কোনো মডিউলের নাম জানে না — ক্লাসটা
+     * মডিউলের ঘোষণা থেকে আসে।
+     *
+     * @param  array{0: string, 1: class-string}|null  $policy
+     */
+    private function pageLets(?User $user, ?array $policy): bool
+    {
+        if ($user === null || $policy === null || count($policy) !== 2) {
+            return false;
+        }
+
+        return $user->can((string) $policy[0], (string) $policy[1]);
     }
 
     /**

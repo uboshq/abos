@@ -146,6 +146,22 @@ final class StandardChart implements ProvisionsCompany
 
     public const RECEIVABLE = '1110';
 
+    /**
+     * ⭐ পাওনার সম্ভাব্য ক্ষতির ভাতা (loss allowance) — IFRS 9.5.5.15, সরল পদ্ধতি (মালিক, ২১ অক্টোবর ২০২৬: "plan onujayi koro")।
+     * ⓘ সম্পদের পক্ষে ক্রেডিট-প্রকৃতির বিপরীত খাত (সঞ্চিত অবচয় ১২৯০-এর মতো): স্থিতিপত্রে পাওনার পাশে ঋণাত্মক।
+     * বাড়ে সংরক্ষণের ভাউচারে, কমে অনাদায়ী বাদের ভাউচারে ([[ReceivableCreditLoss]])।
+     */
+    public const LOSS_ALLOWANCE = '1119';
+
+    /**
+     * ⭐ পাওনার সম্ভাব্য ক্ষতির খরচ (impairment loss, ECL) — সংরক্ষণ বাড়লে, আর ভাতার চেয়ে বেশি বাদ দিলে।
+     * ⛔ ৫২২৩ নয় — সেটা WPPF-এর ([[WPPF_EXPENSE]]); তাই ৫২২৮।
+     */
+    public const IMPAIRMENT_LOSS = '5228';
+
+    /** ⭐ IFRS 9 সম্ভাব্য ক্ষতির দুই খাত — পুরনো কোম্পানিতে মাইগ্রেশন এই তালিকাই বসায় */
+    public const ECL_CODES = [self::LOSS_ALLOWANCE, self::IMPAIRMENT_LOSS];
+
     public const INVENTORY = '1120';
 
     /**
@@ -518,6 +534,46 @@ final class StandardChart implements ProvisionsCompany
 
     public const PROVIDENT_FUND_PAYABLE = '2131';
 
+    /**
+     * ⭐ ভবিষ্য তহবিলে প্রতিষ্ঠানের চাঁদা — খরচ (BLA ২০০৬ ধারা ২৬৪, IAS 19 ¶৫১: নির্ধারিত-চাঁদার পরিকল্পনা; a6, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ কর্মীর ভাগ তাঁর বেতন থেকে কাটা — খরচ নয়, দায় ([[PROVIDENT_FUND_PAYABLE]])। প্রতিষ্ঠানের সমান ভাগটা প্রতিষ্ঠানের নিজের
+     * খরচ, আর দুই ভাগই তহবিলে জমা দেওয়ার দায় হয়ে ২১৩১-এ বসে ([[ProvidentFund]])।
+     */
+    public const PF_EMPLOYER_EXPENSE = '5225';
+
+    /**
+     * ⭐ বেতন থেকে উৎসে কাটা কর — সরকারের পাওনা, জমা না দেওয়া পর্যন্ত দায় (আয়কর আইন ২০২৩ ধারা ৮৬; a6, ২১ অক্টোবর ২০২৬,
+     * [[SalaryTax]])। ⓘ প্রদেয় বেতনে মেশে না — "কর্মীকে কত দিতে হবে" আর "সরকারকে কত জমা দিতে হবে" আলাদা প্রশ্ন।
+     */
+    public const TDS_PAYABLE = '2132';
+
+    /** ⭐ উৎসব ভাতা — বেতন থেকে আলাদা খরচ, বছরে দুই উৎসবের (শ্রম বিধিমালা ২০১৫ বিধি ১১১; a6, ২১ অক্টোবর ২০২৬) */
+    public const FESTIVAL_BONUS_EXPENSE = '5226';
+
+    /**
+     * ⭐ গ্র্যাচুইটি — খরচ আর দায় (BLA ২০০৬ ধারা ২(১০), IAS 19 ¶৬৭–৭০: চাকরির সাথে জমে ওঠা সুবিধা, প্রতি মাসে বই-এ; a6,
+     * ২১ অক্টোবর ২০২৬; [[Gratuity]])। ⓘ ৫২২৩ (শ্রমিকের মুনাফা) আর ২১৩৩ অন্য শাখার — তাই ৫২২৭ আর ২১৩৪।
+     */
+    public const GRATUITY_EXPENSE = '5227';
+
+    public const GRATUITY_LIABILITY = '2134';
+
+    /** ⭐ HR-এর আইনি বেতনের খাত — বসানোর কমান্ড ([[HrLawAccounts]]) আর বেতনের রান এই তালিকাই দেখে */
+    public const HR_LAW_CODES = [
+        self::PF_EMPLOYER_EXPENSE, self::TDS_PAYABLE, self::FESTIVAL_BONUS_EXPENSE, self::GRATUITY_EXPENSE, self::GRATUITY_LIABILITY,
+        // ⓘ WPPF-এর দুই খাতও — পুরনো কোম্পানিতে একই বসানোর কমান্ডে আসে (মেশানোর সময়, a6, ২১ অক্টোবর ২০২৬)
+        self::WPPF_EXPENSE, self::WPPF_PAYABLE,
+    ];
+
+    /**
+     * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — বাংলাদেশ শ্রম আইন ২০০৬, অধ্যায় ১৫, ধারা ২৩৪ (২০১৩-র সংশোধনী): নিট মুনাফার ৫%,
+     * ৮০:১০:১০ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])। ⓘ খরচ ৫২২৩-এ, তিন তহবিলের দেনা একসাথে ২১৩৩-এ — ভাগ কাগজে আর পর্দায়।
+     */
+    public const WPPF_EXPENSE = '5223';
+
+    public const WPPF_PAYABLE = '2133';
+
     public const EMPLOYEE_ADVANCE = '1131';
 
     /*
@@ -703,7 +759,13 @@ final class StandardChart implements ProvisionsCompany
         self::INVENTORY_SHORTAGE_SURPLUS,
         self::DISCOUNT_GIVEN,
         self::SALARY_EXPENSE, self::SALARY_PAYABLE,
-        self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE,
+        self::PROVIDENT_FUND_PAYABLE, self::EMPLOYEE_ADVANCE, self::PF_EMPLOYER_EXPENSE, self::TDS_PAYABLE, self::FESTIVAL_BONUS_EXPENSE,
+        self::GRATUITY_EXPENSE, self::GRATUITY_LIABILITY,
+        // ⭐ WPPF-এর খরচ আর দেনা — বাকি আইনি বেতনের খাতের মতো সিস্টেমের: নিষ্ক্রিয় বা ধরন বদল নয়, [[WppfService]] কোড ধরে খোঁজে
+        // (fe-র সিদ্ধান্ত ৪, ২১ অক্টোবর ২০২৬; পুরনো কোম্পানিতে চিহ্ন বসায় [[HrLawAccounts]]; [[TheWppfAccountsAreSystemAccountsTest]])
+        self::WPPF_EXPENSE, self::WPPF_PAYABLE,
+        // ⭐ IFRS 9 ভাতা আর ক্ষতির খরচ — [[ReceivableCreditLoss]] কোড ধরে খোঁজে
+        self::LOSS_ALLOWANCE, self::IMPAIRMENT_LOSS,
         self::COMMISSION_CLAIM, self::COMMISSION_WRITTEN_OFF,
         self::ASSET_DISPOSAL_GAIN, self::ASSET_DISPOSAL_LOSS, self::FREIGHT_INCOME,
     ];
@@ -711,8 +773,22 @@ final class StandardChart implements ProvisionsCompany
     public function __construct(private readonly AccountService $accounts) {}
 
     /**
+     * ⓘ এই কোডগুলোর কোনটা এই কোম্পানিতে নেই — শুকনো চালানোর (`--dry`) উত্তর; কিছুই বসায় না।
+     *
+     * @param  list<string>  $codes
+     * @return list<string>
+     */
+    public function missing(array $codes): array
+    {
+        $have = Account::query()->whereIn('code', $codes)->pluck('code')->map(fn ($c) => (string) $c)->all();
+
+        return array_values(array_diff($codes, $have));
+    }
+
+    /**
      * ছকটা বসানো। আগে বসানো থাকলে কিছুই হয় না।
      *
+     * @param  list<string>|null  $only  ⭐ কেবল এই কোডগুলো (HR-এর আইনি বেতনের খাত বসানোর কমান্ড; a6, ২১ অক্টোবর ২০২৬); `null` = পুরো ছক
      * @return int কতগুলো খাত তৈরি হল
      */
     /**
@@ -729,11 +805,11 @@ final class StandardChart implements ProvisionsCompany
             fn (string $code) => ! isset($have[$code])));
     }
 
-    public function install(): int
+    public function install(?array $only = null): int
     {
         $this->accounts->assertCompanyContext();
 
-        return DB::transaction(function () {
+        return DB::transaction(function () use ($only) {
             $created = 0;
 
             /*
@@ -756,7 +832,7 @@ final class StandardChart implements ProvisionsCompany
             foreach ($this->definition() as $row) {
                 [$code, $en, $bn, $type, $parentCode, $isGroup, $flags] = $row;
 
-                if (isset($byCode[$code])) {
+                if (isset($byCode[$code]) || ($only !== null && ! in_array($code, $only, true))) {
                     continue;
                 }
 
@@ -1087,6 +1163,8 @@ final class StandardChart implements ProvisionsCompany
 
             ['1104', 'Cheques in Hand', 'হাতে চেক', $A, '1100', false, []],
             ['1110', 'Accounts Receivable', 'প্রাপ্য হিসাব', $A, '1100', false, []],
+            // ⭐ IFRS 9 সম্ভাব্য ক্ষতির ভাতা — পাওনার বিপরীত খাত, ক্রেডিট প্রকৃতি ([[LOSS_ALLOWANCE]])
+            ['1119', 'Loss Allowance on Receivables', 'পাওনার সম্ভাব্য ক্ষতির ভাতা', $A, '1100', false, ['nature' => Account::CREDIT]],
 
             ['1120', 'Inventory', 'মজুদ পণ্য', $A, '1100', false, []],
             ['1130', 'Advance & Prepayments', 'অগ্রিম ও অগ্রিম পরিশোধ', $A, '1100', false, []],
@@ -1246,6 +1324,12 @@ final class StandardChart implements ProvisionsCompany
              * জমা দিতে হবে" দুইটা প্রশ্নের একটাই উত্তর থাকত।
              */
             ['2131', 'Provident Fund Payable', 'প্রদেয় ভবিষ্য তহবিল', $L, '2100', false, []],
+            // ⭐ বেতন থেকে উৎসে কাটা কর (a6, ২১ অক্টোবর ২০২৬; [[TDS_PAYABLE]])
+            ['2132', 'Tax Deducted at Source Payable — Salary', 'প্রদেয় উৎসে কর (বেতন)', $L, '2100', false, []],
+            // ⭐ গ্র্যাচুইটির দায় — কর্মীদের জমে ওঠা পাওনা (a6, ২১ অক্টোবর ২০২৬; [[GRATUITY_LIABILITY]])
+            ['2134', 'Gratuity Payable', 'প্রদেয় গ্র্যাচুইটি', $L, '2100', false, []],
+            // ⭐ WPPF ও কল্যাণ তহবিলের দেনা — শ্রম আইন ধারা ২৩৪ ([[WPPF_PAYABLE]]; a6, ২১ অক্টোবর ২০২৬)
+            ['2133', 'WPPF & Welfare Fund Payable', 'প্রদেয় মুনাফায় অংশগ্রহণ ও কল্যাণ তহবিল', $L, '2100', false, []],
             ['2140', 'Expenses Payable', 'প্রদেয় খরচ', $L, '2100', false, []],
             ['2145', 'Interest Payable', 'প্রদেয় সুদ', $L, '2100', false, []],
             ['2141', 'Rent Payable', 'প্রদেয় ভাড়া', $L, '2100', false, []],
@@ -1491,6 +1575,16 @@ final class StandardChart implements ProvisionsCompany
             ['5221', 'Insurance Premium', 'বীমা প্রিমিয়াম', $X, '5200', false, []],
             // ⭐ অফারের উপহার মাল — খরচের দামে (৪ অক্টোবর ২০২৬; [[PROMOTION_EXPENSE]])
             ['5222', 'Promotion Expense', 'প্রচারের খরচ', $X, '5200', false, []],
+            // ⭐ ভবিষ্য তহবিলে প্রতিষ্ঠানের চাঁদা (a6, ২১ অক্টোবর ২০২৬; [[PF_EMPLOYER_EXPENSE]])
+            ['5225', 'Provident Fund — Employer Contribution', 'ভবিষ্য তহবিলে প্রতিষ্ঠানের চাঁদা', $X, '5200', false, []],
+            // ⭐ উৎসব ভাতা (a6, ২১ অক্টোবর ২০২৬; [[FESTIVAL_BONUS_EXPENSE]])
+            ['5226', 'Festival Bonus', 'উৎসব ভাতা', $X, '5200', false, []],
+            // ⭐ গ্র্যাচুইটির খরচ (a6, ২১ অক্টোবর ২০২৬; [[GRATUITY_EXPENSE]])
+            ['5227', 'Gratuity Expense', 'গ্র্যাচুইটি খরচ', $X, '5200', false, []],
+            // ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিলের খরচ — নিট মুনাফার ৫% ([[WPPF_EXPENSE]]; a6, ২১ অক্টোবর ২০২৬)
+            ['5223', 'Workers Profit Participation Fund', 'শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল', $X, '5200', false, []],
+            // ⭐ পাওনার সম্ভাব্য ক্ষতির খরচ — IFRS 9 সংরক্ষণ আর অনাদায়ী বাদ ([[IMPAIRMENT_LOSS]])
+            ['5228', 'Impairment Loss on Receivables (ECL)', 'পাওনার সম্ভাব্য ক্ষতির খরচ (ECL)', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
 
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],

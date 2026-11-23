@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\OwnedSettings;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\SettingOptions;
 use App\Core\Services\SettingsService;
@@ -115,6 +116,11 @@ class SettingsController extends Controller implements HasMiddleware
          * @var array<string, mixed> $submitted
          */
         $submitted = (array) $request->input('settings', []);
+
+        // ⛔ নিজের পর্দায় বদলানো সেটিং (`owned_by`) এখানে এলে পুরো অনুরোধ ফেরে, কোথায় বদলায় তা লিখে — নীরবে বাদ নয় ([[OwnedSettings]])
+        if (($refusal = OwnedSettings::refusal($this->settings->definitions(), array_keys($submitted))) !== null) {
+            return back()->withInput()->withErrors(['settings' => $refusal]);
+        }
 
         $changed = 0;
         $signed = app(\App\Core\Services\SignedSettings::class);
@@ -294,7 +300,9 @@ class SettingsController extends Controller implements HasMiddleware
     {
         return array_filter(
             $this->settings->definitions(),
+            // ⓘ `owned_by` — ঘরটা নিজের পর্দায় বদলায় (যেমন HR-এর সাপ্তাহিক ছুটি, ছুটির দিনের পর্দা); এখানে দেখালে এক নিয়ম দুই জায়গায় (a6, ২১ অক্টোবর ২০২৬)
             fn (array $d) => ! ($d['menu'] ?? false)
+                && ! isset($d['owned_by'])
                 && ! in_array(
                     $d['group'] ?? 'general',
                     [self::OWNED_BY_CONTROL_PANEL, self::OWNED_BY_PRINT_SCREEN, InvoiceInfoController::GROUP],

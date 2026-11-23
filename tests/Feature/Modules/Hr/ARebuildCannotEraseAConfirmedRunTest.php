@@ -29,6 +29,7 @@ use Tests\TestCase;
 final class ARebuildCannotEraseAConfirmedRunTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     protected function setUp(): void
     {
@@ -50,7 +51,7 @@ final class ARebuildCannotEraseAConfirmedRunTest extends TestCase
         $stale = PayrollRun::query()->findOrFail($run->id);
         $slips = $run->payslips()->orderBy('id')->pluck('id')->all();
 
-        app(PayrollService::class)->confirm($run);
+        $this->confirmedPayroll($run);
         $this->assertSame(DocumentStatus::DRAFT, $stale->status, 'প্রস্তুতিটাই ভুল — হাতের কপি খসড়া থাকার কথা');
 
         $said = null;

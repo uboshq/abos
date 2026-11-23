@@ -142,4 +142,12 @@ return [
     'credit_limit_raised' => 'Supplier credit limit raised',
     // ⓘ Sales responsibility set on a dealer/area (23 Nov 2026; AssignSalesResponsible)
     'sales_resp_assigned' => 'Sales responsibility assigned',
+    // ⭐ সই পেয়েও বেতনের বদল বসেনি — মাসটা ততক্ষণে দেওয়া (Hr §৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬)
+    'salary_change_late' => 'Approved salary change not applied',
+    // ⭐ salary change signed · login closed on leaving (a6)
+    'salary_change_signed' => 'Salary change approved',
+    'leaver_login_closed' => 'Login closed on leaving',
+    // ⭐ the payroll signer role, for one company's Managers ([[GrantPayrollSigners]], owner, 21 Oct 2026)
+    'payroll_signer_made' => 'Payroll approver role made',
+    'payroll_signer_given' => 'Payroll approver role given',
 ];
