@@ -972,7 +972,8 @@ final class SalesInvoiceService
         $this->unpost($invoice, $date, $reason);
 
         // ⓘ কাউন্টারের খসড়ার চিহ্ন — পর্দার ছবি; কাউন্টার এটা দেখেই বিলটা "রাখা" বলে চেনে ([[DirectSaleService::parkedFor()]])
-        $invoice->update(['status' => DocumentStatus::DRAFT, 'counter_draft' => $invoice->counter_screen ?? []]);
+        // ⛔ দায়িত্বের ছাপও মোছা — সম্পাদনায় গ্রাহক বা তারিখ বদলাতে পারে, আবার নিশ্চিত করলে নতুন করে বসে ([[SalesResponsibility]], মালিক, 23 Nov 2026)
+        $invoice->update(['status' => DocumentStatus::DRAFT, 'counter_draft' => $invoice->counter_screen ?? [], 'sales_person_id' => null]);
     }
 
     /**
