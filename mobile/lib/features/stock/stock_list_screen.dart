@@ -10,6 +10,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 import '../reports/reports_screen.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
@@ -33,6 +34,13 @@ class StockListScreen extends StatefulWidget {
 class _StockListScreenState extends State<StockListScreen> {
   bool _refreshing = false;
   String _query = '';
+  late final _typed = SearchDebouncer(onSearch: (q) => setState(() => _query = q));
+
+  @override
+  void dispose() {
+    _typed.dispose();
+    super.dispose();
+  }
   // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত। শূন্য মজুদ শুরুতেই
   // লুকানো (মালিকের চাওয়া) — দেখুন StockListQuery.defaultFilters।
   String _sort = StockListQuery.defaultSort;
@@ -114,7 +122,8 @@ class _StockListScreenState extends State<StockListScreen> {
                 hintText: l.stockListSearchHint,
                 prefixIcon: const Icon(Icons.search),
               ),
-              onChanged: (value) => setState(() => _query = value),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
           ),
           ListControls(

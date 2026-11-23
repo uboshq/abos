@@ -35,7 +35,9 @@ import '../../core/router/profile_routes.dart';
 import '../../core/records/notice_bar.dart';
 import '../../core/records/notification_record.dart';
 import '../../core/records/today_record.dart';
+import '../../core/push/push_service.dart';
 import '../../core/sync_engine/auto_sync.dart';
+import '../../core/sync_engine/poll_gate.dart';
 import '../../core/sync_engine/sync_engine.dart';
 import '../../core/update/app_version_check.dart';
 import '../../core/workspace/workspace_switcher.dart';
@@ -174,7 +176,16 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   List<String> _favourites = const [];
   List<RecentEntry> _recents = const [];
 
-  Future<void> _loadUnread() async {
+  /// ⭐ Polling cut (23 Nov 2026): a return from a screen asks again only when the last answer is older than
+  /// 60 s — or a write, a notice push or a pull says it changed ([Freshness]).
+  final Freshness _unreadFresh = Freshness();
+  final Freshness _pendingFresh = Freshness();
+
+  /// On coming back to the app, the bell is asked only when older than this (or a notice push came meanwhile).
+  static const Duration _unreadOnResume = Duration(minutes: 5);
+
+  Future<void> _loadUnread({bool force = false}) async {
+    if (!_unreadFresh.claim(force: force)) return;
     try {
       final page = await (widget.fetchNotifications ?? NotificationApi.fetch)();
       if (mounted) {
@@ -195,9 +206,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   int? _pending;
   bool _pendingMore = false;
 
-  Future<void> _loadPending() async {
+  Future<void> _loadPending({bool force = false}) async {
+    if (!_pendingFresh.claim(force: force)) return;
     try {
-      final page = await (widget.fetchPending ?? () => ApprovalsApi.pending())();
+      final page = await (widget.fetchPending ?? () => ApprovalsApi.pendingShared(fresh: true))();
       if (mounted) {
         setState(() {
           _pending = page.rows.length;
@@ -224,8 +236,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
           () => AutoSync.current?.runNow() ?? AutoSync.fullRound())();
     } finally {
       if (mounted) {
-        _loadUnread();
-        _loadPending();
+        _loadUnread(force: true);
+        _loadPending(force: true);
       }
     }
   }
@@ -238,8 +250,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       if (mounted) _setPage(HomePage.home);
     });
     _load();
-    _loadUnread();
-    _loadPending();
+    _loadUnread(force: true);
+    _loadPending(force: true);
     _loadPrefs();
     // ⭐ ভাষা বদলের পরে মেনু আবার, সার্ভারে লেখা শেষ হলে — মেনুর নাম তৈরির সময় বাঁধা ([LocaleChoices.savedOnServer])
     LocaleChoices.savedOnServer.addListener(_reloadForLanguage);
@@ -251,7 +263,21 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     _messengerPush = MessengerPush.instance.events.listen((e) {
       if (e.type == 'chat') _loadMessagesUnread();
     });
-    _lifecycle = AppLifecycleListener(onResume: _loadMessagesUnread);
+    _lifecycle = AppLifecycleListener(onResume: _onResume);
+    // ⭐ a new notification ({abos: notice} push) — the bell is asked again at once
+    PushService.instance.notices.addListener(_onNoticePush);
+  }
+
+  void _onNoticePush() {
+    if (mounted) _loadUnread(force: true);
+  }
+
+  /// Back in front: the chat count as before; the bell only if a notice push came while away, or the last answer is
+  /// older than five minutes.
+  Future<void> _onResume() async {
+    _loadMessagesUnread();
+    final noticed = await NoticeMark.take();
+    if (mounted && (noticed || _unreadFresh.olderThan(_unreadOnResume))) _loadUnread(force: true);
   }
 
   StreamSubscription<MessengerEvent>? _messengerPush;
@@ -286,6 +312,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (identical(RecentPapers.active, _prefs)) RecentPapers.active = null;
     _messengerPush?.cancel();
     _lifecycle?.dispose();
+    PushService.instance.notices.removeListener(_onNoticePush);
     super.dispose();
   }
 
@@ -360,7 +387,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       // ⭐ The company's phone switches ([ModuleGate]) — `/me`'s menu is
       // already filtered, this catches this app's own tiles too.
       _items = ModuleGate.visible(home.items, modules);
-      _tree = NavTree.from(_items);
+      _tree = NavTree.from(_items, server: home.modules);
       _menuLoading = false;
       if (profile != null) _profile = profile;
       if (home.me != null) {
@@ -442,7 +469,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     setState(() => _generation++);
     await _load();
     // ⓘ অপেক্ষার সই কোম্পানি ধরে — নতুন কোম্পানিতে আবার গোনা
-    _loadPending();
+    _loadPending(force: true);
   }
 
   /// ⭐ ছবির মেনু খোলা — ছবির চারপাশে কমলা দাগ
@@ -834,9 +861,11 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   onOpen: _open,
                   onUnfavourite: _toggleFavourite,
                   // ⭐ মালিকের হোমের "সইয়ের অপেক্ষায়" — অনুমোদনের ঘরের একই সারি (০.৪.৪১)
-                  loadWaiting: widget.fetchPending ?? () => ApprovalsApi.pending(limit: 3),
+                  // ⓘ the home's own limit-50 answer, first three shown — no call of its own (polling cut, 23 Nov 2026)
+                  loadWaiting: widget.fetchPending ?? () => ApprovalsApi.pendingShared(),
                   // ⭐ নিট সম্পদ বিবরণী — টাকার কার্ডের নিচে, কেবল মালিক (সার্ভার অন্যকে ৪০৪ দেয়)
-                  netWorth: widget.netWorth ?? const ServerNetWorthApi(),
+                  // ⛔ only the company's owner role asks at all — nobody else costs the server a 404 ([mayAskNetWorth])
+                  netWorth: mayAskNetWorth(user) ? (widget.netWorth ?? const ServerNetWorthApi()) : null,
                 ),
                 _modulesArea(page, module, counts),
                 // ⭐ "আমি" — Facebook-ধাঁচের প্রোফাইল: মলাট, ছবি, এই মাসের কাজ, পরিচয়, সাম্প্রতিক কাজ, ফোন, নিরাপত্তা, চেহারা

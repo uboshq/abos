@@ -159,7 +159,8 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     // ⭐ সামনে খোলা অ্যাপের "নতুন কিছু আছে?" — ১৫–২০ সেকেন্ডে, নতুন কিছু থাকলে তবেই পুরো গোল ([LivePoll])
     _livePoll = LivePoll(
       signedIn: () => ref.read(authStateProvider).status == AuthStatus.signedIn,
-      onChanged: () => _autoSync.runNow(),
+      // ⛔ at least 60 s between rounds; changes in between ride the next one ([AutoSync.runSoon])
+      onChanged: () => _autoSync.runSoon(),
     )..start();
 
     final signedIn = ref.read(authStateProvider).status == AuthStatus.signedIn;
@@ -174,10 +175,10 @@ class _AbosAppState extends ConsumerState<AbosApp> {
     // সার্ভার আগের জনের সারি থেকে টোকেন সরায় — [[PushTokenController]])।
     PushService.instance.listenForTaps(_openFromPush);
     // ⭐ অফিসে কিছু লেখা হলে নীরব ডাক — খোলা অ্যাপ তখনই সিঙ্ক করে (রিয়েল-টাইম, মালিক, ১০ অক্টোবর ২০২৬)
-    // ⭐ নীরব ডাকে উইজেটও — গোল ব্যর্থ হলেও ([WidgetHub.refresh] চলতি গোলে জুড়ে যায়, দুবার নয়)
+    // ⛔ the same 60 s gap as the live poll — a burst of pushes is one round; the round itself refreshes the widgets
     PushService.instance.listenForSync(() =>
         ref.read(authStateProvider).status == AuthStatus.signedIn
-            ? _autoSync.runNow().whenComplete(WidgetHub.refresh)
+            ? _autoSync.runSoon()
             : Future<void>.value());
     ref.listenManual<AuthState>(authStateProvider, (previous, next) {
       if (previous?.status != AuthStatus.signedIn && next.status == AuthStatus.signedIn) {

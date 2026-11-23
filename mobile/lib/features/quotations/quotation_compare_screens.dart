@@ -9,6 +9,7 @@ import '../../core/records/money.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 import '../../core/navigation/top_bar/abos_screen_bar.dart';
 
@@ -296,6 +297,7 @@ class QuotationRevisionsScreen extends StatefulWidget {
 
 class _QuotationRevisionsScreenState extends State<QuotationRevisionsScreen> {
   final _search = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   final List<RevisionFamily> _rows = [];
   int? _next;
   bool _loaded = false;
@@ -311,6 +313,7 @@ class _QuotationRevisionsScreenState extends State<QuotationRevisionsScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -353,7 +356,8 @@ class _QuotationRevisionsScreenState extends State<QuotationRevisionsScreen> {
               controller: _search,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(prefixIcon: const Icon(Icons.search), hintText: context.l10n.quotationsRevisionsSearch, isDense: true),
-              onSubmitted: (_) => _load(),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
             const SizedBox(height: AppSpacing.sm),
             if (_busy && !_loaded) const LinearProgressIndicator(),

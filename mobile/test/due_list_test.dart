@@ -200,7 +200,7 @@ void main() {
     await tester.pump();
 
     await tester.enterText(find.byType(TextField), 'রহিম');
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.textContaining('রহিম স্টোর'), findsOneWidget);
     expect(find.textContaining('করিম'), findsNothing);

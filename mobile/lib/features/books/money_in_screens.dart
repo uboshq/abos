@@ -12,6 +12,7 @@ import '../../core/sync_engine/sync_engine.dart';
 import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../../core/widgets/shown_rows.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
@@ -66,6 +67,7 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
   late DateTime _from;
   String? _method;
   final _search = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
 
   final List<MoneyInRow> _rows = [];
   MoneyInPage? _page;
@@ -84,6 +86,7 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -161,7 +164,8 @@ class _MoneyInListScreenState extends State<MoneyInListScreen> {
               decoration: InputDecoration(
                   prefixIcon: const Icon(Icons.search),
                   hintText: context.l10n.booksMoneyInSearchHint),
-              onSubmitted: (_) => _load(),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
             const SizedBox(height: AppSpacing.xs),
             Wrap(spacing: AppSpacing.xs, children: [

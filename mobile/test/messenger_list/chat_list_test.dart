@@ -104,7 +104,7 @@ void main() {
       await tester.tap(key('msg-chip-all'));
       await tester.pumpAndSettle();
       await tester.enterText(key('msg-search'), 'নাসির');
-      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 600));
       await tester.pumpAndSettle();
       expect(api.calls.last, 'threads:all:নাসির');
       expect(find.text('রাকিব হাসান'), findsNothing);

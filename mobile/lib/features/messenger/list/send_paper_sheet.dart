@@ -7,7 +7,9 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/locale/l10n.dart';
 import '../../../core/messenger/messenger_api.dart';
+import '../../../core/widgets/search_debouncer.dart';
 import 'chat_list_look.dart';
+import 'narrow_now.dart';
 import 'people_picker.dart';
 
 /// ⭐ "বার্তায় পাঠান" — কাকে পাঠাবেন (মালিকের অনুমোদিত নমুনা 3nuwRUdn v5 "গ" ২, ২১ নভেম্বর ২০২৬)।
@@ -92,11 +94,14 @@ class _Pick {
 class _SendPaperSheetState extends ConsumerState<SendPaperSheet> {
   final TextEditingController _q = TextEditingController();
   final TextEditingController _note = TextEditingController();
-  Timer? _debounce;
+  late final _typed = SearchDebouncer(onSearch: (_) => _search());
 
   List<ChatThread>? _recent;
   Map<String, ChatPerson> _access = const {};
   List<ChatPerson>? _found;
+
+  /// [_found] কোন লেখার উত্তর
+  String _foundFor = '';
   final Set<String> _chosen = {};
   bool _sending = false;
   String? _error;
@@ -114,7 +119,7 @@ class _SendPaperSheetState extends ConsumerState<SendPaperSheet> {
 
   @override
   void dispose() {
-    _debounce?.cancel();
+    _typed.dispose();
     _q.dispose();
     _note.dispose();
     super.dispose();
@@ -137,13 +142,19 @@ class _SendPaperSheetState extends ConsumerState<SendPaperSheet> {
   Future<void> _search() async {
     final q = _q.text.trim();
     if (q.isEmpty) {
-      setState(() => _found = null);
+      setState(() {
+        _found = null;
+        _foundFor = '';
+      });
       return;
     }
     try {
       final people = await _api.people(query: q, paper: widget.paper);
       if (!mounted || q != _q.text.trim()) return;
-      setState(() => _found = people);
+      setState(() {
+        _found = people;
+        _foundFor = q;
+      });
     } catch (e) {
       if (mounted) setState(() => _error = _say(e, context.l10n.msgListLoadFailed));
     }
@@ -155,14 +166,25 @@ class _SendPaperSheetState extends ConsumerState<SendPaperSheet> {
         _ => fallback,
       };
 
+  /// ফোনে যা আছে (সাম্প্রতিক, বা আগের উত্তর) প্রতিটা চাপে সাথে সাথে ছাঁকা; সার্ভারের খোঁজা ৩ অক্ষর / ৬০০ ms-এ ([narrowNow])
   List<_Pick> get _rows {
     final found = _found;
-    if (found != null) {
-      return [
-        for (final p in found)
-          _Pick(to: 'person:${p.id}', name: p.name, sub: p.role, person: p, locked: widget.paper != null && !p.canOpenPaper),
-      ];
-    }
+    final recent = _recentPicks;
+    return narrowNow(
+      typed: _q.text,
+      answeredFor: found == null ? '' : _foundFor,
+      answered: found == null
+          ? recent
+          : [
+              for (final p in found)
+                _Pick(to: 'person:${p.id}', name: p.name, sub: p.role, person: p, locked: widget.paper != null && !p.canOpenPaper),
+            ],
+      everything: recent,
+      fields: (r) => [r.name, r.sub, r.person?.name, r.person?.designation, r.person?.branch],
+    );
+  }
+
+  List<_Pick> get _recentPicks {
     return [
       for (final t in _recent ?? const <ChatThread>[])
         if (t.isGroup)
@@ -224,7 +246,7 @@ class _SendPaperSheetState extends ConsumerState<SendPaperSheet> {
                   padding: const EdgeInsets.only(top: 10, bottom: 2),
                   child: Text(l.msgListRecent, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: s.label)),
                 ),
-              if (_found != null && rows.isEmpty)
+              if ((_found != null || _q.text.trim().isNotEmpty) && rows.isEmpty)
                 Padding(padding: const EdgeInsets.all(16), child: Center(child: Text(l.msgListNoMatch, style: TextStyle(color: s.muted)))),
               for (final (i, r) in rows.indexed)
                 PersonRow(
@@ -285,10 +307,11 @@ class _SendPaperSheetState extends ConsumerState<SendPaperSheet> {
                 controller: _q,
                 hint: l.msgListSendWho,
                 icon: Symbols.search,
-                onChanged: (_) {
-                  _debounce?.cancel();
-                  _debounce = Timer(const Duration(milliseconds: 300), _search);
+                onChanged: (text) {
+                  setState(() {});
+                  _typed.onChanged(text);
                 },
+                onSubmitted: _typed.onSubmitted,
               ),
               Flexible(child: list),
               const SizedBox(height: 8),

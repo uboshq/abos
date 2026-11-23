@@ -1,12 +1,14 @@
 import '../sync_engine/live_sync.dart';
 import '../sync_engine/background_sync.dart';
 import 'dart:async';
+import 'dart:io';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show WidgetsFlutterBinding;
 import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../messenger/messenger_alerts.dart';
 import '../messenger/messenger_api.dart';
@@ -176,10 +178,18 @@ class PushService {
           if (!messengerShowsItself(e)) unawaited(showInForeground(m, LocalAlerts.instance));
           return;
         }
+        if (isNoticePush(m.data)) noteNoticePush();
         unawaited(showInForeground(m, LocalAlerts.instance));
       });
     } catch (_) {}
   }
+
+  /// ⭐ Bumped on every `{abos: notice}` push — a new notification for this person; the home refreshes its bell
+  /// count on it instead of asking on every screen return (polling cut, 23 Nov 2026).
+  final ValueNotifier<int> notices = ValueNotifier<int>(0);
+
+  /// A notice push arrived (the open app).
+  void noteNoticePush() => notices.value++;
 
   /// ⭐ রিয়েল-টাইম সিঙ্ক — অফিসে কিছু লেখা হলে সার্ভারের নীরব ডাক ([isSyncNudge]); খোলা অ্যাপ তখনই
   /// [run] চালায় (মালিক, ১০ অক্টোবর ২০২৬)। ⓘ অ্যাপ বন্ধ থাকলে কিছু নয় — খুললেই নিজের গোল চলে।
@@ -272,6 +282,8 @@ Future<void> onBackgroundNudge(RemoteMessage message) async {
         api: messengerApiForPush());
     return;
   }
+  // ⭐ a new notification while the app is away — only a mark; the bell is asked when the app comes back ([NoticeMark])
+  if (isNoticePush(message.data)) return NoticeMark.set();
   if (!isSyncNudge(message.data)) return;
   try {
     await Firebase.initializeApp();
@@ -282,6 +294,35 @@ Future<void> onBackgroundNudge(RemoteMessage message) async {
 
 /// সার্ভারের নীরব "সিঙ্ক করো" ডাক — `{abos: sync}` ([[SyncNudge]]); ভেতরে আর কিছু নেই।
 bool isSyncNudge(Map<String, dynamic>? data) => data?['abos'] == 'sync';
+
+/// ⭐ A notice push came while the app was in the background — the bell count is asked on return.
+/// ⓘ A small file, like [NudgeMark]: the push handler runs in its own isolate.
+class NoticeMark {
+  const NoticeMark._();
+
+  static Future<File> _file() async => File('${(await getApplicationSupportDirectory()).path}/abos-notice-mark');
+
+  static Future<void> set() async {
+    try {
+      await (await _file()).writeAsString(DateTime.now().toIso8601String(), flush: true);
+    } catch (_) {}
+  }
+
+  /// Was there one — and the mark is gone once read.
+  static Future<bool> take() async {
+    try {
+      final file = await _file();
+      if (!await file.exists()) return false;
+      await file.delete();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+}
+
+/// ⭐ A new notification for this person — `{abos: notice}`; the bell count is asked again ([PushService.notices]).
+bool isNoticePush(Map<String, dynamic>? data) => data?['abos'] == 'notice';
 
 /// বার্তার `data` থেকে অ্যাপের ঠিকানা — সার্ভার পাঠায় `{open: tracking, kind, id}` ([[TrackingNotices]])।
 /// ⓘ অচেনা কিছু হলে null — অ্যাপ যেখানে ছিল সেখানেই খোলে।

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
 
 import '../../api_client/network_errors.dart';
+import '../../api_client/etag_cache.dart';
 import '../../auth/token_storage.dart';
 import '../../privacy/phone_privacy.dart';
 import '../../profile/face_cache.dart';
@@ -222,8 +223,10 @@ class WidgetHub {
     _generation++;
     _running = null;
     WidgetSummaryApi.forget();
+    // ⛔ the last person's stored ETag bodies and the short in-memory answers too ([EtagCache.forget])
+    final etags = EtagCache.forget();
     late final Future<void> wipe;
-    wipe = _wipe().whenComplete(() {
+    wipe = Future.wait([_wipe(), etags]).then((_) {}).whenComplete(() {
       if (identical(_clearing, wipe)) _clearing = null;
     });
     return _clearing = wipe;

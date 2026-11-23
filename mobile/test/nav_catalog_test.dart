@@ -75,8 +75,10 @@ void main() {
       _item('customers', 'গ্রাহক তালিকা'),
     ]);
 
-    expect(tree.modules.map((m) => m.code), ['sales', 'customer', 'reports'],
+    // ⭐ গ্রাহক বিক্রয়ের টাইলে (ওয়েবের মিলন, মালিক ২০ নভেম্বর ২০২৬; অ্যাপের নমুনা v2, ২৩ নভেম্বর ২০২৬)
+    expect(tree.modules.map((m) => m.code), ['sales', 'reports'],
         reason: 'reports holds the dashboards list everybody had on the home');
+    expect(tree.screen('customers')!.module, 'sales');
     expect(tree.module('hr'), isNull);
     expect(tree.screen('attendance'), isNull);
     // ⓘ সার্ভারের নামই থাকে

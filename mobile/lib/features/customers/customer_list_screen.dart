@@ -14,6 +14,7 @@ import '../../core/widgets/amount_text.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 import 'customer_detail_screen.dart';
 import '../printing/row_actions.dart';
@@ -48,6 +49,13 @@ class CustomerListScreen extends StatefulWidget {
 class _CustomerListScreenState extends State<CustomerListScreen> {
   bool _refreshing = false;
   String _query = '';
+  late final _typed = SearchDebouncer(onSearch: (q) => setState(() => _query = q));
+
+  @override
+  void dispose() {
+    _typed.dispose();
+    super.dispose();
+  }
   // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত (দেখুন ListControls)।
   String _sort = CustomerListQuery.defaultSort;
   ListFilters _filters = const {};
@@ -128,7 +136,8 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                 hintText: context.l10n.customersSearchHint,
                 prefixIcon: const Icon(Icons.search),
               ),
-              onChanged: (value) => setState(() => _query = value),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
           ),
           ListControls(

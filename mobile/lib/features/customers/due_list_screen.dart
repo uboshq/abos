@@ -9,6 +9,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/list_controls.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../../core/widgets/shown_rows.dart';
 import '../../core/widgets/state_views.dart';
 import '../../core/widgets/totals_bar.dart';
@@ -45,6 +46,13 @@ class DueListScreen extends StatefulWidget {
 class _DueListScreenState extends State<DueListScreen> {
   bool _refreshing = false;
   String _query = '';
+  late final _typed = SearchDebouncer(onSearch: (q) => setState(() => _query = q));
+
+  @override
+  void dispose() {
+    _typed.dispose();
+    super.dispose();
+  }
   // ফিল্টার আর সাজানো — শুধু স্ক্রিন খোলা থাকা পর্যন্ত (দেখুন ListControls)।
   String _sort = DueListQuery.defaultSort;
   ListFilters _filters = const {};
@@ -92,7 +100,8 @@ class _DueListScreenState extends State<DueListScreen> {
                 hintText: context.l10n.customersSearchHint,
                 prefixIcon: const Icon(Icons.search),
               ),
-              onChanged: (value) => setState(() => _query = value),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
           ),
           if (rows.isNotEmpty)

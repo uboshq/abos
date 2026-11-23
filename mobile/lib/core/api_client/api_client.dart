@@ -1,3 +1,4 @@
+import 'etag_cache.dart';
 import 'network_errors.dart';
 import 'once_key.dart';
 import 'pinned_trust.dart';
@@ -161,6 +162,10 @@ class ApiClient {
         },
       ),
     );
+
+    // ⭐ ETag for the busiest reads — after the auth interceptor, so a 304 is served from the stored body only
+    // once the token and firewall checks have had their say ([EtagInterceptor]; polling cut, 23 Nov 2026)
+    client.interceptors.add(EtagInterceptor());
 
     return client;
   }

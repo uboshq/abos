@@ -5,6 +5,7 @@ import '../api_client/network_errors.dart';
 import '../approvals/approvals_api.dart';
 import '../records/today_record.dart';
 import 'approvals_launcher_widget.dart';
+import 'placed_widgets.dart';
 import 'today_launcher_widget.dart';
 
 /// Fills both home-screen widgets, from anywhere.
@@ -25,8 +26,15 @@ class LauncherWidgetRefresh {
     DateTime Function()? now,
   }) async {
     final clock = now ?? DateTime.now;
-    await _today(fetchToday ?? TodayApi.fetch, clock);
-    await _approvals(loadApprovals ?? () => ApprovalsApi.pending(), clock);
+    // ⛔ a widget nobody placed costs no call (polling cut, 23 Nov 2026); unknown counts as placed ([PlacedWidgets])
+    final placed = await PlacedWidgets.providers();
+    // ⭐ the home's answers of the last 30 s are reused, not fetched again ([TodayApi.recent], [ApprovalsApi.pendingShared])
+    if (placed == null || placed.contains(TodayLauncherWidget.provider)) {
+      await _today(fetchToday ?? TodayApi.recent, clock);
+    }
+    if (placed == null || placed.contains(ApprovalsLauncherWidget.provider)) {
+      await _approvals(loadApprovals ?? () => ApprovalsApi.pendingShared(), clock);
+    }
   }
 
   /// Both widgets wiped. For sign-out and for a session the server ended.

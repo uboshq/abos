@@ -13,6 +13,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_status_pill.dart';
 import '../../core/widgets/customer_line.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../../core/widgets/list_controls.dart';
 import '../../core/widgets/state_views.dart';
 import '../delivery_orders/delivery_order_screens.dart' show PaperListRow;
@@ -33,6 +34,7 @@ class DeliveryTrackingScreen extends StatefulWidget {
 
 class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   final _search = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   String? _step;
   // ⭐ সাজান (মালিক, ২ অক্টোবর) — শুধু হাতে আসা সারির ক্রম, সার্ভারে যায় না।
   // ফিল্টারের কাজ ধাপের chip আর খোঁজ আগেই করে, তাই এখানে ফিল্টার বোতাম নেই।
@@ -50,6 +52,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -103,7 +106,8 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
             TextField(
               controller: _search,
               textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _load(),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
               decoration: InputDecoration(
                 hintText: context.l10n.ordersTrackingSearchHint,
                 prefixIcon: const Icon(Icons.search),

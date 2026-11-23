@@ -35,6 +35,10 @@ class SessionWatch with WidgetsBindingObserver {
 
   void start() {
     WidgetsBinding.instance.addObserver(this);
+    _startTimer();
+  }
+
+  void _startTimer() {
     _timer ??= Timer.periodic(interval, (_) {
       if (_inFront) unawaited(checkNow());
     });
@@ -49,7 +53,14 @@ class SessionWatch with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _inFront = state == AppLifecycleState.resumed;
-    if (_inFront) unawaited(checkNow());
+    if (_inFront) {
+      _startTimer();
+      unawaited(checkNow());
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      // ⛔ no timer while the app is in the background (polling cut, 23 Nov 2026) — back in front it checks at once
+      _timer?.cancel();
+      _timer = null;
+    }
   }
 
   /// একবার যাচাই — ঢোকা না থাকলে, বা এইমাত্র হয়ে থাকলে নয়; ফেরত দেয় যাচাই হলো কি না

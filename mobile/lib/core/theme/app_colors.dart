@@ -66,6 +66,9 @@ class AppColors {
     'promotion': Color(0xFFDB2777),
     'credit_control': Color(0xFF9F1239),
     'notification': Color(0xFF155E75),
+    // ⭐ সিস্টেম ও প্রশাসন, মাস্টার ডাটা — মালিকের অনুমোদিত নমুনা v2-এর স্লেট (২৩ নভেম্বর ২০২৬); সাদার সাথে ৩:১-এর বেশি
+    'system_admin': Color(0xFF475569),
+    'master_data': Color(0xFF475569),
   };
 
   static Color moduleColor(String code) => module[code] ?? primary;

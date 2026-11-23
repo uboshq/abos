@@ -8,8 +8,10 @@ import '../../../core/locale/l10n.dart';
 import '../../../core/messenger/messenger_api.dart';
 import '../../../core/messenger/messenger_push.dart';
 import '../../../core/messenger/messenger_unread.dart';
+import '../../../core/widgets/search_debouncer.dart';
 import '../chat/chat_screen.dart';
 import 'chat_list_look.dart';
+import 'narrow_now.dart';
 import 'people_picker.dart';
 
 /// ⭐ বার্তার তালিকা — মালিকের অনুমোদিত নমুনা 3nuwRUdn v5 "ক" (২১ নভেম্বর ২০২৬)। অ্যাপের নিজের উপরের আর নিচের বারের ভেতরে
@@ -38,13 +40,18 @@ enum _State { loading, ready, missing, notAllowed, failed }
 class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBindingObserver {
   ThreadFilter _filter = ThreadFilter.all;
   final TextEditingController _query = TextEditingController();
-  Timer? _debounce;
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   Timer? _poll;
   StreamSubscription<MessengerEvent>? _push;
 
   _State _state = _State.loading;
   String? _deniedMessage;
   List<ChatThread> _threads = const [];
+
+  /// সার্ভারের উত্তর কোন লেখার — আর খালি খোঁজায় আনা পুরো তালিকা (কোন চিপে), যা থেকে প্রতিটা চাপে ছাঁকা হয়
+  String _threadsFor = '';
+  List<ChatThread> _everything = const [];
+  ThreadFilter? _everythingFilter;
   int _unreadTotal = 0;
   bool _foreground = true;
 
@@ -74,7 +81,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
     WidgetsBinding.instance.removeObserver(this);
     _push?.cancel();
     _poll?.cancel();
-    _debounce?.cancel();
+    _typed.dispose();
     _query.dispose();
     super.dispose();
   }
@@ -87,6 +94,11 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
       if (!mounted || filter != _filter || query != _query.text.trim()) return;
       setState(() {
         _threads = page.threads;
+        _threadsFor = query;
+        if (query.isEmpty) {
+          _everything = page.threads;
+          _everythingFilter = filter;
+        }
         _unreadTotal = page.unreadTotal;
         _state = _State.ready;
       });
@@ -114,10 +126,20 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
     _load();
   }
 
-  void _onQuery(String _) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), _load);
+
+  /// ফোনে যা আছে তা প্রতিটা চাপে সাথে সাথে ছাঁকা; সার্ভারের খোঁজা ৩ অক্ষর / ৬০০ ms-এ ([narrowNow])
+  void _onQuery(String text) {
+    setState(() {});
+    _typed.onChanged(text);
   }
+
+  List<ChatThread> get _shown => narrowNow(
+        typed: _query.text,
+        answeredFor: _threadsFor,
+        answered: _threads,
+        everything: _everythingFilter == _filter ? _everything : _threads,
+        fields: (t) => [t.title, t.subtitle, t.person?.name, t.person?.designation, t.person?.branch, t.last?.text],
+      );
 
   Future<void> _open(ChatThread t) async {
     await openChat(context, t);
@@ -138,8 +160,9 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
     final bottom = MediaQuery.paddingOf(context).bottom;
     final now = (widget.now ?? DateTime.now)();
 
+    final shown = _shown;
     final head = <Widget>[
-      _SearchPill(t: t, controller: _query, hint: l.msgListSearch, onChanged: _onQuery),
+      _SearchPill(t: t, controller: _query, hint: l.msgListSearch, onChanged: _onQuery, onSubmitted: _typed.onSubmitted),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
         child: Wrap(spacing: 8, runSpacing: 6, children: [
@@ -168,7 +191,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
       case _State.failed:
         calm = _Calm(t: t, icon: Symbols.cloud_off, text: l.msgListLoadFailed, action: l.msgListRetry, onAction: _load);
       case _State.ready:
-        if (_threads.isEmpty) {
+        if (shown.isEmpty) {
           calm = _Calm(
               t: t,
               icon: Symbols.forum,
@@ -189,8 +212,8 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
           if (calm != null)
             calm
           else
-            for (final (i, th) in _threads.indexed)
-              _Row(t: t, thread: th, now: now, last: i == _threads.length - 1, onTap: () => _open(th)),
+            for (final (i, th) in shown.indexed)
+              _Row(t: t, thread: th, now: now, last: i == shown.length - 1, onTap: () => _open(th)),
         ],
       ),
     );
@@ -212,12 +235,13 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
 
 /// নমুনার `.srch` — ৪৪ উঁচু গোল ঘর, বাঁয়ে খোঁজার চিহ্ন
 class _SearchPill extends StatelessWidget {
-  const _SearchPill({required this.t, required this.controller, required this.hint, required this.onChanged});
+  const _SearchPill({required this.t, required this.controller, required this.hint, required this.onChanged, required this.onSubmitted});
 
   final ChatListLook t;
   final TextEditingController controller;
   final String hint;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String> onSubmitted;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -235,6 +259,7 @@ class _SearchPill extends StatelessWidget {
                   key: const ValueKey('msg-search'),
                   controller: controller,
                   onChanged: onChanged,
+                  onSubmitted: onSubmitted,
                   textInputAction: TextInputAction.search,
                   style: TextStyle(fontSize: 14.5, color: t.ink),
                   cursorColor: t.glass ? ChatListLook.onColour : ChatListLook.green,

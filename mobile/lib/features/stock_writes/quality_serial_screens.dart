@@ -9,6 +9,7 @@ import '../../core/theme/app_palette.dart';
 import '../../core/theme/app_spacing.dart';
 import '../home/nav_bottom_bar.dart' show ActionBottomBar, BarFab;
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/search_debouncer.dart';
 import '../books/books_widgets.dart';
 import 'stock_write_screens.dart';
 import '../../core/widgets/unsaved_guard.dart';
@@ -621,6 +622,7 @@ class SerialScreen extends StatefulWidget {
 
 class _SerialScreenState extends State<SerialScreen> {
   final _search = TextEditingController();
+  late final _typed = SearchDebouncer(onSearch: (_) => _load());
   final List<SerialRow> _rows = [];
   int? _next;
   int? _count;
@@ -637,6 +639,7 @@ class _SerialScreenState extends State<SerialScreen> {
   @override
   void dispose() {
     _search.dispose();
+    _typed.dispose();
     super.dispose();
   }
 
@@ -693,7 +696,8 @@ class _SerialScreenState extends State<SerialScreen> {
               controller: _search,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(prefixIcon: const Icon(Icons.qr_code_scanner), hintText: l.stockSerialSearchHint, isDense: true),
-              onSubmitted: (_) => _load(),
+              onChanged: _typed.onChanged,
+              onSubmitted: _typed.onSubmitted,
             ),
             const SizedBox(height: AppSpacing.sm),
             // ⭐ গোটা খোঁজের গোনা — সার্ভারের, সব পাতার; ⛔ পুরনো সার্ভারে পট্টি নেই (পূর্ণ নিরীক্ষা §৯ ⚠️৭, ১৮ অক্টোবর ২০২৬)

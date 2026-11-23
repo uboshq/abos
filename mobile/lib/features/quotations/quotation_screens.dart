@@ -519,7 +519,7 @@ class _PickSheetState<T> extends State<_PickSheet<T>> {
   @override
   Widget build(BuildContext context) {
     final q = _query.trim().toLowerCase();
-    final shown = q.isEmpty ? widget.items : widget.items.where((i) => widget.label(i).toLowerCase().contains(q)).toList();
+    final shown = q.isEmpty ? widget.items : widget.items.where((i) => i is CustomerRecord ? i.matches(q) : widget.label(i).toLowerCase().contains(q)).toList();
     return SafeArea(
       child: SizedBox(
         height: MediaQuery.of(context).size.height * 0.8,

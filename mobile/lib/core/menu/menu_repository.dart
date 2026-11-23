@@ -35,9 +35,12 @@ import '../web_inside/web_inside.dart';
 /// permission-filtered the identical way, so it degrades to "the same menu,
 /// no icons any fresher than the last sign-in" rather than to nothing.
 class HomeMenu {
-  const HomeMenu({required this.items, this.profile, this.me});
+  const HomeMenu({required this.items, this.profile, this.me, this.modules = const ServerModules()});
 
   final List<MenuItem> items;
+
+  /// ⭐ The server's merged modules and their names ([ServerModules]); empty offline and from an older server.
+  final ServerModules modules;
 
   /// `/me`-র মানুষটা — পদবি আর ছবিসহ; অফলাইনে null।
   final AuthUser? me;
@@ -120,6 +123,7 @@ class MenuRepository {
         items: [...native, ...webTiles(response.menu, native)],
         profile: response.profile,
         me: response.user,
+        modules: ServerModules.of(response.menu),
       );
     } catch (_) {
       return HomeMenu(items: ordered(_localFallback(user), user));
@@ -214,6 +218,7 @@ class MenuRepository {
             moduleLabel: module.label,
             group: group,
             webPath: web,
+            ownModule: entry.module == null || entry.module == module.code ? null : entry.module,
           ));
         }
       });

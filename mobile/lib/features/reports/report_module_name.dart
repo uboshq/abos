@@ -21,6 +21,8 @@ const Map<String, String Function(AppL10n l)> reportModuleNames = {
   'promotion': _promotion,
   'credit_control': _creditControl,
   'notification': _notification,
+  // ⭐ Copilot-এর নিজের টাইল (মালিক, ২৩ নভেম্বর ২০২৬) — টাইলের একই নাম
+  'assistant': _assistant,
   'backup': _backup,
   'fixed_assets': _fixedAssets,
   'governance': _governance,
@@ -46,6 +48,7 @@ String _executive(AppL10n l) => l.navModuleExecutive;
 String _promotion(AppL10n l) => l.navModulePromotion;
 String _creditControl(AppL10n l) => l.navModuleCreditControl;
 String _notification(AppL10n l) => l.navModuleNotification;
+String _assistant(AppL10n l) => l.lookTabCopilot;
 String _backup(AppL10n l) => l.reportModuleBackup;
 String _fixedAssets(AppL10n l) => l.reportModuleFixedAssets;
 String _governance(AppL10n l) => l.reportModuleGovernance;

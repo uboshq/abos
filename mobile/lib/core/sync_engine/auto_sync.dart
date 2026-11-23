@@ -27,8 +27,10 @@ class AutoSync with WidgetsBindingObserver {
     Future<void> Function()? round,
     DateTime Function()? clock,
     this.interval = const Duration(minutes: 10),
+    Timer Function(Duration, void Function())? timer,
   })  : _round = round ?? fullRound,
-        _clock = clock ?? DateTime.now;
+        _clock = clock ?? DateTime.now,
+        _timerFactory = timer ?? Timer.new;
 
   /// Nobody signed in — nothing to send and nothing this person may pull; a
   /// pull then would only answer 401 and leave a "token expired" line on
@@ -45,9 +47,29 @@ class AutoSync with WidgetsBindingObserver {
   /// permission dialog, a camera, a share sheet.
   static const minimumGap = Duration(minutes: 2);
 
+  /// ⛔ Never two rounds closer than this when the server says "something changed" ([runSoon]; polling cut,
+  /// 23 Nov 2026) — changes inside the gap are merged into one round at its end.
+  static const roundGap = Duration(seconds: 60);
+
+  final Timer Function(Duration, void Function()) _timerFactory;
+
   Timer? _timer;
   DateTime? _lastRun;
   Future<void>? _running;
+
+  /// The merged round waiting for [roundGap] to pass.
+  Timer? _soon;
+
+  /// A change arrived while the app was in the background — one round when it comes back.
+  bool _owed = false;
+  bool _foreground = true;
+  bool _afterRunning = false;
+
+  @visibleForTesting
+  bool get foreground => _foreground;
+
+  @visibleForTesting
+  bool get roundWaiting => _soon != null || _owed;
 
   /// The one the app runs ([start]) — the home's pull-to-refresh reaches it
   /// here, so a pull and the timer share one round.
@@ -66,23 +88,89 @@ class AutoSync with WidgetsBindingObserver {
   void start() {
     current = this;
     WidgetsBinding.instance.addObserver(this);
+    _startTimer();
+  }
+
+  /// ⛔ The ten-minute timer runs only while the app is in front — in the background the silent push and the
+  /// fifteen-minute task carry the load ([BackgroundSync]).
+  void _startTimer() {
     _timer ??= Timer.periodic(interval, (_) => unawaited(_quietly()));
+  }
+
+  void _stopTimers() {
+    _timer?.cancel();
+    _timer = null;
+    if (_soon != null) {
+      _soon!.cancel();
+      _soon = null;
+      _owed = true;
+    }
   }
 
   void stop() {
     WidgetsBinding.instance.removeObserver(this);
-    _timer?.cancel();
-    _timer = null;
+    _stopTimers();
+    _owed = false;
     if (identical(current, this)) current = null;
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) unawaited(_onResume());
+    if (state == AppLifecycleState.resumed) {
+      _foreground = true;
+      _startTimer();
+      unawaited(_onResume());
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _foreground = false;
+      _stopTimers();
+    }
+  }
+
+  /// ⭐ "Something changed" (the live poll, a silent push with the app open) — a round now, or, if one ran less than
+  /// [roundGap] ago, one round when the gap is over; every change in between rides that same round. In the
+  /// background nothing is scheduled: the round waits for the app to come back. Never throws.
+  Future<void> runSoon() async {
+    if (!signedIn()) return;
+    final running = _running;
+    if (running != null) {
+      // ⓘ the round under way may have started before this change — one more after it, within the gap rule
+      if (!_afterRunning) {
+        _afterRunning = true;
+        unawaited(running.then((_) {}, onError: (Object _) {}).whenComplete(() {
+          _afterRunning = false;
+          unawaited(runSoon());
+        }));
+      }
+      return;
+    }
+    final last = _lastRun;
+    final wait = last == null ? Duration.zero : roundGap - _clock().difference(last);
+    if (!_foreground) {
+      _owed = true;
+      return;
+    }
+    if (wait > Duration.zero && wait <= roundGap) {
+      _soon ??= _timerFactory(wait, () {
+        _soon = null;
+        unawaited(runSoon());
+      });
+      return;
+    }
+    _owed = false;
+    try {
+      await runNow();
+    } catch (error) {
+      debugPrint('ABOS auto sync: change round failed ($error)');
+    }
   }
 
   /// ⭐ পেছনে নীরব ডাক এসে থাকলে ([NudgeMark]) — দুই মিনিটের ফাঁক না মেনে এখনই টানা; নইলে আগের মতো
   Future<void> _onResume() async {
+    if (_owed) {
+      _owed = false;
+      await runSoon();
+      return;
+    }
     if (signedIn() && await _nudged()) {
       try {
         await runNow();

@@ -121,6 +121,7 @@ void main() {
     });
     await pump(tester, DueListScreen(refresh: () async {}));
     await tester.enterText(find.byType(TextField), 'আলিফ');
+    await tester.pump(const Duration(milliseconds: 600));
     await tester.pumpAndSettle();
     final page = textsIn(tester, find.byKey(const ValueKey('totals-page')));
     expect(page, contains('৳10,000.00'), reason: '⛔ বকেয়ার "এই পাতা" খোঁজার পরে দেখানো সারির যোগ নয়');
