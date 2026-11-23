@@ -509,6 +509,10 @@ return [
         'fiori' => 'Fiori blue',
         'netsuite' => 'Suite blue',
         'fluent' => 'Fluent blue',
+        /* The three frame colours (owner, 23 Nov 2026) */
+        'white' => 'White',
+        'redwood' => 'Redwood',
+        'navy' => 'Navy',
     ],
 
     /* The names stay in English in both languages — they are identities,
