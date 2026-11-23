@@ -77,36 +77,7 @@ final class CoreReports
             permission: 'accounts.report',
             title: 'accounts::menu.inflow',
             filters: ['date_range', 'branch'],
-            query: fn (array $f) => DB::table('ledger_entries')
-                ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
-                ->where('ledger_entries.company_id', $f['company_id'])
-                // টাকার যেকোনো খাত — নগদ, ব্যাংক, MFS ([[Account::scopeMoney]])।
-                // দল বাদ, কারণ পুরনো `is_cash`/`is_bank` পতাকাও দলে কখনো
-                // true হত না — অথচ `money_kind` দলেও বসে।
-                ->whereNotNull('accounts.money_kind')
-                ->where('accounts.is_group', false)
-                ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
-                ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
-                ->where('ledger_entries.debit', '>', 0)
-                /*
-                 * ⛔ আদায় মানে বাইরে থেকে টাকা আসা — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[TheInflowListIsMoneyFromOutsideTest]])।
-                 * ⓘ আগে টাকার খাতের প্রতিটা ডেবিট আসত: টিল থেকে ব্যাংকে জমা পুরো অঙ্কে "আদায়", বাতিল পরিশোধের উল্টো সারিও "আদায়", আর
-                 * বাতিল হওয়া রসিদ তবু তালিকায়। মাসিক নগদের পাতা ([[MonthlyCashReport]]) এগুলো বাদ দেয়, তাই দুই পাতার "আসা টাকা" আলাদা ছিল।
-                 * এখন: উল্টো দাখিলা বাদ, পরে উল্টানো কাগজ বাদ, আর একই কাগজে টাকা-নয় (পথের টাকা নয়) খাতে ক্রেডিট থাকতে হয়।
-                 */
-                ->where('ledger_entries.source_type', 'not like', '%:reversal%')
-                ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as rv')
-                    ->whereColumn('rv.company_id', 'ledger_entries.company_id')
-                    ->whereColumn('rv.source_id', 'ledger_entries.source_id')
-                    ->whereRaw("rv.source_type LIKE CONCAT(ledger_entries.source_type, ':reversal%')"))
-                ->whereExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as o')
-                    ->join('accounts as oa', 'oa.id', '=', 'o.account_id')
-                    ->whereColumn('o.company_id', 'ledger_entries.company_id')
-                    ->whereColumn('o.source_type', 'ledger_entries.source_type')
-                    ->whereColumn('o.source_id', 'ledger_entries.source_id')
-                    ->where('o.credit', '>', 0)
-                    ->whereNull('oa.money_kind')
-                    ->where('oa.code', '<>', StandardChart::CASH_IN_TRANSIT))
+            query: fn (array $f) => self::moneyIn($f)
                 ->orderBy('ledger_entries.trx_date')
                 ->orderBy('ledger_entries.id')
                 ->select([
@@ -136,6 +107,111 @@ final class CoreReports
                 ['key' => 'debit', 'label' => 'accounts::field.received', 'type' => ReportColumn::MONEY],
             ],
         );
+    }
+
+    /**
+     * ⭐ যে কাগজে আসল টাকা আসে — রসিদ ভাউচার (RCV), ২০ নভেম্বর ২০২৬-এর আগের আদায়ের কাগজ (COL), আর পাশ হওয়া চেক
+     * (মালিক, ২৩ নভেম্বর ২০২৬, সমন্বয়কের মারফত: "শুধু আসল টাকা"; বিক্রয়ের লক্ষ্যের "আসা টাকা"-র একই কাগজগুলো)।
+     *
+     * ⛔ এটা **অনুমতির তালিকা**, বাদের তালিকা নয়: জাবেদা, শুরুর জের, কন্ট্রা, ক্রেডিট নোট বা নতুন কোনো ধরনের কাগজ নগদ/ব্যাংকে ডেবিট
+     * করলেও এখানে ঢোকে না — নাম না লিখলে গোনা হয় না। আগে উল্টোটা ছিল (কয়েকটা বাদ, বাকি সব গোনা), তাই জাবেদা দিয়ে নগদে তোলা
+     * টাকা আর শুরুর জের "আদায়" হয়ে আসত ([[TheInflowListCountsOnlyReceiptPapersTest]])।
+     * ⓘ হাতে আসা চেক (`cheque`) এখানে নেই: টাকা ব্যাংকে ঢোকে পাশ হলে (`cheque:cleared`)।
+     *
+     * @var list<string>
+     */
+    public const MONEY_IN = ['receipt_voucher', 'collection', 'cheque:cleared'];
+
+    /**
+     * ⭐ আসল টাকা আসার সারি — টাকার খাতের (নগদ, ব্যাংক, MFS) ডেবিট, কেবল রসিদের কাগজে ([[MONEY_IN]])। হিসাবের "আদায়ের তালিকা" আর
+     * বিক্রয়ের "টাকা আসা"-র সব রূপ এই একটাই সারি পড়ে, তাই দুই মডিউলের মোট কখনো আলাদা হয় না।
+     *
+     * ⓘ `select` নেই — ডাকনেওয়ালা নিজের ঘর বাছে। টেবিলের নাম `ledger_entries` আর `accounts` (উপনাম ছাড়া)।
+     *
+     * @param  array<string, mixed>  $f
+     */
+    public static function moneyIn(array $f): Builder
+    {
+        return DB::table('ledger_entries')
+            ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->where('ledger_entries.company_id', $f['company_id'])
+            // টাকার যেকোনো খাত — নগদ, ব্যাংক, MFS ([[Account::scopeMoney]])।
+            // দল বাদ, কারণ পুরনো `is_cash`/`is_bank` পতাকাও দলে কখনো
+            // true হত না — অথচ `money_kind` দলেও বসে।
+            ->whereNotNull('accounts.money_kind')
+            ->where('accounts.is_group', false)
+            ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+            ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+            ->where('ledger_entries.debit', '>', 0)
+            // ⛔ কেবল রসিদের কাগজ — অনুমতির তালিকা ([[MONEY_IN]]); উল্টো দাখিলা (`…:reversal`) তাই নিজেই বাদ
+            ->whereIn('ledger_entries.source_type', self::MONEY_IN)
+            /*
+             * ⛔ আদায় মানে বাইরে থেকে টাকা আসা — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[TheInflowListIsMoneyFromOutsideTest]])।
+             * ⓘ আগে টাকার খাতের প্রতিটা ডেবিট আসত: টিল থেকে ব্যাংকে জমা পুরো অঙ্কে "আদায়", বাতিল পরিশোধের উল্টো সারিও "আদায়", আর
+             * বাতিল হওয়া রসিদ তবু তালিকায়। মাসিক নগদের পাতা ([[MonthlyCashReport]]) এগুলো বাদ দেয়, তাই দুই পাতার "আসা টাকা" আলাদা ছিল।
+             * এখন: পরে উল্টানো কাগজ বাদ, আর একই কাগজে টাকা-নয় (পথের টাকা নয়) খাতে ক্রেডিট থাকতে হয়।
+             */
+            ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as rv')
+                ->whereColumn('rv.company_id', 'ledger_entries.company_id')
+                ->whereColumn('rv.source_id', 'ledger_entries.source_id')
+                ->whereRaw("rv.source_type LIKE CONCAT(ledger_entries.source_type, ':reversal%')"))
+            ->whereExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as o')
+                ->join('accounts as oa', 'oa.id', '=', 'o.account_id')
+                ->whereColumn('o.company_id', 'ledger_entries.company_id')
+                ->whereColumn('o.source_type', 'ledger_entries.source_type')
+                ->whereColumn('o.source_id', 'ledger_entries.source_id')
+                ->where('o.credit', '>', 0)
+                ->whereNull('oa.money_kind')
+                ->where('oa.code', '<>', StandardChart::CASH_IN_TRANSIT));
+    }
+
+    /** কেন গোনা হয়নি — [[moneyKeptOut()]]-এর চার কারণ */
+    public const KEPT_OUT = ['reversal', 'other_paper', 'cancelled', 'transfer'];
+
+    /**
+     * ⭐ টাকার খাতের যে ডেবিটগুলো "আসা টাকা"য় **গোনা হয়নি** — [[moneyIn()]]-এর হুবহু উল্টো পিঠ, কারণসহ (মালিক, ২৩ নভেম্বর ২০২৬:
+     * পাতায় ইঙ্গিতের বাক্স নয়, আলাদা ট্যাব "বাদ গেছে")। ⓘ `select` নেই; কারণের ঘর [[keptOutReason()]]।
+     *
+     * ⛔ গোনা + বাদ = টাকার খাতের সব ডেবিট, একটা সারিও দুই পাশে নয়, একটাও হারানো নয় ([[TheInflowListCountsOnlyReceiptPapersTest]])।
+     *
+     * @param  array<string, mixed>  $f
+     */
+    public static function moneyKeptOut(array $f): Builder
+    {
+        return DB::table('ledger_entries')
+            ->leftJoin('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->where('ledger_entries.company_id', $f['company_id'])
+            ->whereNotNull('accounts.money_kind')
+            ->where('accounts.is_group', false)
+            ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+            ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+            ->where('ledger_entries.debit', '>', 0)
+            ->whereRaw(self::keptOutReason().' IS NOT NULL');
+    }
+
+    /**
+     * বাদ পড়ার কারণ SQL-এ — [[KEPT_OUT]]-এর একটা, গোনা সারিতে `NULL`। ক্রমটা [[moneyIn()]]-এর শর্তের ক্রম:
+     *   reversal     উল্টো দাখিলা (`…:reversal`)
+     *   other_paper  রসিদের কাগজ নয় — জাবেদা, শুরুর জের, ক্রেডিট নোট, কন্ট্রা … ([[MONEY_IN]]-এ নেই)
+     *   cancelled    রসিদ, কিন্তু পরে বাতিল বা উল্টানো
+     *   transfer     রসিদ, কিন্তু টাকা এসেছে আরেক টাকার খাত বা পথের টাকা থেকে — বাইরে থেকে নয়
+     */
+    public static function keptOutReason(): string
+    {
+        $pdo = DB::getPdo();
+        $papers = implode(', ', array_map(fn (string $s) => $pdo->quote($s), self::MONEY_IN));
+
+        return 'CASE'
+            ." WHEN ledger_entries.source_type LIKE '%:reversal%' THEN 'reversal'"
+            ." WHEN ledger_entries.source_type NOT IN ({$papers}) THEN 'other_paper'"
+            .' WHEN EXISTS (SELECT 1 FROM ledger_entries AS rv WHERE rv.company_id = ledger_entries.company_id'
+            .' AND rv.source_id = ledger_entries.source_id'
+            ." AND rv.source_type LIKE CONCAT(ledger_entries.source_type, ':reversal%')) THEN 'cancelled'"
+            .' WHEN NOT EXISTS (SELECT 1 FROM ledger_entries AS o JOIN accounts AS oa ON oa.id = o.account_id'
+            .' WHERE o.company_id = ledger_entries.company_id AND o.source_type = ledger_entries.source_type'
+            .' AND o.source_id = ledger_entries.source_id AND o.credit > 0 AND oa.money_kind IS NULL'
+            .' AND oa.code <> '.$pdo->quote(StandardChart::CASH_IN_TRANSIT).") THEN 'transfer'"
+            .' END';
     }
 
     /*

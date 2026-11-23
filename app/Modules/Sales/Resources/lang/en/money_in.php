@@ -1,0 +1,67 @@
+<?php
+
+declare(strict_types=1);
+
+/* Money in — [[MoneyInReports]] (owner, 23 November 2026) */
+return [
+    'menu' => 'Money in',
+    'title_day' => 'Money in — by day',
+    'title_branch' => 'Money in — by branch',
+    'title_area' => 'Money in — by area',
+    'title_territory' => 'Money in — by territory',
+    'title_point' => 'Money in — by point',
+    'title_customer' => 'Money in — by customer',
+    'title_person' => 'Money in — by salesperson',
+    'title_channel' => 'Money in — by channel',
+    'title_papers' => 'Money in — by receipt',
+    'title_excluded' => 'Money in — left out',
+    'title_excluded_papers' => 'Money in — papers left out',
+
+    'tab_day' => 'By day',
+    'tab_branch' => 'By branch',
+    'tab_area' => 'By area',
+    'tab_territory' => 'By territory',
+    'tab_point' => 'By point',
+    'tab_customer' => 'By customer',
+    'tab_person' => 'By salesperson',
+    'tab_channel' => 'By channel',
+    'tab_papers' => 'By receipt',
+    'tab_excluded' => 'Left out',
+
+    'branch' => 'Branch',
+    'level_area' => 'Area',
+    'level_territory' => 'Territory',
+    'level_point' => 'Point',
+    'level_customer' => 'Customer',
+    'parent_territory' => 'Area',
+    'parent_point' => 'Territory · Area',
+    'parent_customer' => 'Point',
+    'person' => 'Salesperson responsible',
+    'dealers' => 'Customers',
+    'channel' => 'Received into',
+    'kind' => 'Money channel',
+    'kind_cash' => 'Cash',
+    'kind_bank' => 'Bank',
+    'kind_mfs' => 'Mobile banking',
+    'receipts' => 'Receipts',
+    'total' => 'Total received',
+    'amount' => 'Amount',
+    'received_from' => 'Received from',
+    'reason' => 'Why it is not counted',
+    'papers' => 'Papers',
+
+    'no_branch' => 'No branch set',
+    'no_place' => 'No place set',
+    'no_territory' => 'No territory set',
+    'no_customer' => 'No customer',
+    'no_person' => 'Nobody responsible',
+
+    'reason_reversal' => 'Reversal entry',
+    'reason_other_paper' => 'Not a receipt (journal, opening balance, credit note, contra)',
+    'reason_cancelled' => 'Cancelled or reversed receipt',
+    'reason_transfer' => 'From one money account to another',
+
+    'drill_receipts' => ':amount — open these receipts',
+    'drill_down' => ':amount — open one level down',
+    'drill_papers' => ':amount — open these papers',
+];

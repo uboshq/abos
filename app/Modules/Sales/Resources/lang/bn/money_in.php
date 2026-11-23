@@ -1,0 +1,67 @@
+<?php
+
+declare(strict_types=1);
+
+/* ⭐ টাকা আসা — [[MoneyInReports]] (মালিক, ২৩ নভেম্বর ২০২৬) */
+return [
+    'menu' => 'টাকা আসা',
+    'title_day' => 'টাকা আসা — দিন ধরে',
+    'title_branch' => 'টাকা আসা — শাখা ধরে',
+    'title_area' => 'টাকা আসা — এরিয়া ধরে',
+    'title_territory' => 'টাকা আসা — টেরিটরি ধরে',
+    'title_point' => 'টাকা আসা — পয়েন্ট ধরে',
+    'title_customer' => 'টাকা আসা — গ্রাহক ধরে',
+    'title_person' => 'টাকা আসা — বিক্রয়কর্মী ধরে',
+    'title_channel' => 'টাকা আসা — মাধ্যম ধরে',
+    'title_papers' => 'টাকা আসা — রসিদ ধরে',
+    'title_excluded' => 'টাকা আসা — বাদ গেছে',
+    'title_excluded_papers' => 'টাকা আসা — বাদ যাওয়া কাগজ',
+
+    'tab_day' => 'দিন ধরে',
+    'tab_branch' => 'শাখা ধরে',
+    'tab_area' => 'এরিয়া ধরে',
+    'tab_territory' => 'টেরিটরি ধরে',
+    'tab_point' => 'পয়েন্ট ধরে',
+    'tab_customer' => 'গ্রাহক ধরে',
+    'tab_person' => 'বিক্রয়কর্মী ধরে',
+    'tab_channel' => 'মাধ্যম ধরে',
+    'tab_papers' => 'রসিদ ধরে',
+    'tab_excluded' => 'বাদ গেছে',
+
+    'branch' => 'শাখা',
+    'level_area' => 'এরিয়া',
+    'level_territory' => 'টেরিটরি',
+    'level_point' => 'পয়েন্ট',
+    'level_customer' => 'গ্রাহক',
+    'parent_territory' => 'এরিয়া',
+    'parent_point' => 'টেরিটরি · এরিয়া',
+    'parent_customer' => 'পয়েন্ট',
+    'person' => 'দায়িত্বে থাকা বিক্রয়কর্মী',
+    'dealers' => 'গ্রাহক',
+    'channel' => 'কোন খাতে ঢুকেছে',
+    'kind' => 'টাকার মাধ্যম',
+    'kind_cash' => 'নগদ',
+    'kind_bank' => 'ব্যাংক',
+    'kind_mfs' => 'মোবাইল ব্যাংকিং',
+    'receipts' => 'রসিদ',
+    'total' => 'মোট এসেছে',
+    'amount' => 'টাকা',
+    'received_from' => 'কার কাছ থেকে',
+    'reason' => 'কেন গোনা হয়নি',
+    'papers' => 'কাগজ',
+
+    'no_branch' => 'শাখা বসানো নেই',
+    'no_place' => 'জায়গা বসানো নেই',
+    'no_territory' => 'টেরিটরি বসানো নেই',
+    'no_customer' => 'গ্রাহক ছাড়া',
+    'no_person' => 'দায়িত্ব বসানো নেই',
+
+    'reason_reversal' => 'উল্টো দাখিলা',
+    'reason_other_paper' => 'রসিদ নয় (জাবেদা, শুরুর জের, ক্রেডিট নোট, কন্ট্রা)',
+    'reason_cancelled' => 'বাতিল বা উল্টানো রসিদ',
+    'reason_transfer' => 'এক টাকার খাত থেকে আরেক খাতে',
+
+    'drill_receipts' => ':amount — এই রসিদগুলো খুলুন',
+    'drill_down' => ':amount — এক স্তর নিচে খুলুন',
+    'drill_papers' => ':amount — এই কাগজগুলো খুলুন',
+];
