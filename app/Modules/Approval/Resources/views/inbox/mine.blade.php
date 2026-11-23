@@ -46,6 +46,15 @@
         foreach ($approvals as $row) {
             $last = $row->decisions->last();
 
+            // ⛔ দুই হাতের অনুরোধ, অথচ দ্বিতীয় সই দিতে পারেন এমন কেউ নেই — সারিতেই বলা (cb-র রিভিউ, ২১ অক্টোবর ২০২৬)
+            $nobody = app(\App\Core\Engines\Approval\ApprovalEngine::class)->noSecondSignerNote($row);
+
+            if ($nobody !== null) {
+                $why[$row->id] = $nobody;
+
+                continue;
+            }
+
             // ⭐ সংশোধনে ফেরত — সইকারীর নোটটাই কারণ (১৪ অক্টোবর ২০২৬)
             if ($last?->decision === \App\Models\ApprovalDecision::RETURNED) {
                 $why[$row->id] = trim((string) $last->remarks).' · '.__('approval::message.fix_and_resend');

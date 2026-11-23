@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Approval\Services;
 
 use App\Core\Contracts\ProvisionsCompany;
+use App\Core\Engines\Approval\ApprovalRules;
 use App\Core\Module\ModuleRegistry;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
@@ -189,6 +190,8 @@ final class MoneyFlowDefaults implements ProvisionsCompany
             'empty' => [],
             'wanting' => [],
             'switched_off' => [],
+            // ⓘ চাবির কাজ, অথচ মালিকের রোল বা চাবি থাকা কোনো রোল নেই — ছক বসেনি ([[keyHolders()]])
+            'no_signer' => [],
         ];
 
         foreach ($this->moneyActions() as $pair) {
@@ -263,6 +266,26 @@ final class MoneyFlowDefaults implements ProvisionsCompany
         foreach ($report['wanting'] as $key) {
             [$module, $action] = explode('.', $key, 2);
 
+            /*
+             * ⭐ যে কাজের সইকারীর চাবি লাগে (বেতনের রান: `hr.salary.view`) — হিসাবরক্ষক নন, মালিক বা চাবি থাকা রোল (fe, ২১ অক্টোবর
+             * ২০২৬, a6; [[ApprovalRules::signerKey()]])। ⓘ মালিক = কোম্পানির super admin রোল ([[Ownership::role()]]); সাথে এই
+             * কোম্পানির যে রোলের হাতে চাবিটা আছে (HR-এর প্রধান) — একই স্তরে, যেকোনো একজন। ⛔ কেউ না থাকলে ছক বসে না, রিপোর্ট
+             * `no_signer`-এ নাম ধরে বলে; আন্দাজে কাউকে বসানো হয় না। ⓘ বেতন পরিশোধের ভাউচার আগের মতোই হিসাবরক্ষকের।
+             */
+            $keyed = app(ApprovalRules::class)->signerKey($module, $action);
+            $steps = $keyed === null ? [[
+                'level' => 1,
+                'step_name' => (string) $role->name,
+                'approver_type' => ApprovalFlowStep::BY_ROLE,
+                'approver_id' => (int) $role->id,
+            ]] : $this->keyHolders((int) $company->id, $keyed);
+
+            if ($steps === []) {
+                $report['no_signer'][] = $key;
+
+                continue;
+            }
+
             $this->flows->create(
                 [
                     'module' => $module,
@@ -275,12 +298,7 @@ final class MoneyFlowDefaults implements ProvisionsCompany
                     ),
                     'is_active' => true,
                 ],
-                [[
-                    'level' => 1,
-                    'step_name' => (string) $role->name,
-                    'approver_type' => ApprovalFlowStep::BY_ROLE,
-                    'approver_id' => (int) $role->id,
-                ]],
+                $steps,
             );
 
             $report['created'][] = $key;
@@ -289,6 +307,31 @@ final class MoneyFlowDefaults implements ProvisionsCompany
         $report['wanting'] = [];
 
         return $report;
+    }
+
+    /**
+     * ⓘ চাবির কাজের সইকারী — super admin রোল (মালিক), আর এই কোম্পানির যে রোলের হাতে চাবিটা আছে; হিসাবরক্ষক কখনো নন।
+     *
+     * @return list<array{level: int, step_name: string, approver_type: string, approver_id: int}>
+     */
+    private function keyHolders(int $companyId, string $key): array
+    {
+        $roles = Role::query()
+            ->where('company_id', $companyId)
+            ->where('guard_name', self::GUARD)
+            ->with('permissions')
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (Role $role) => strcasecmp((string) $role->name, self::ROLE) !== 0 && (
+                $role->name === PermissionSyncer::SUPER_ADMIN_ROLE || $role->permissions->contains('name', $key)
+            ));
+
+        return $roles->map(fn (Role $role) => [
+            'level' => 1,
+            'step_name' => (string) $role->name,
+            'approver_type' => ApprovalFlowStep::BY_ROLE,
+            'approver_id' => (int) $role->id,
+        ])->values()->all();
     }
 
     /**

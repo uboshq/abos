@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace App\Modules\Approval\Services;
 
 use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Approval\ApprovalRules;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\PermissionSyncer;
 use App\Models\Approval;
 use App\Models\ApprovalCondition;
 use App\Models\ApprovalFlow;
 use App\Models\ApprovalFlowStep;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Exceptions\PermissionDoesNotExist;
+use Spatie\Permission\Models\Role;
 
 /**
  * অনুমোদনের ছক — কোন কাজে, কত টাকার উপরে, কে।
@@ -88,6 +93,9 @@ class ApprovalFlowService
     {
         $this->assertKnownAction((string) $data['module'], (string) $data['action']);
         $this->assertSteps($steps);
+        // ⓘ নিজে-বসানো ছকও ([[MoneyFlowDefaults]]) — কোনো ব্যতিক্রম নেই (fe, ২১ অক্টোবর ২০২৬)
+        $this->assertSignersHoldTheKey((string) $data['module'], (string) $data['action'], $steps);
+
         $this->assertNotDuplicated($data);
 
         return DB::transaction(function () use ($data, $steps, $conditions) {
@@ -117,6 +125,7 @@ class ApprovalFlowService
     {
         $this->assertKnownAction((string) $data['module'], (string) $data['action']);
         $this->assertSteps($steps);
+        $this->assertSignersHoldTheKey((string) $data['module'], (string) $data['action'], $steps);
         $this->assertNotDuplicated($data, $flow);
         $this->assertKeepsWaitingPapers($flow, $data, $steps);
 
@@ -450,6 +459,66 @@ class ApprovalFlowService
     {
         if ($flow->module === self::PAYROLL[0] && $flow->action === self::PAYROLL[1]) {
             throw ValidationException::withMessages(['flow' => __('approval::validation.payroll_stays_on')]);
+        }
+    }
+
+    /**
+     * ⛔ যে কাজের সইকারীর একটা চাবি লাগে, সেই চাবি ছাড়া কাউকে ধাপে বসানো নয় — a6, ২১ অক্টোবর ২০২৬ (Hr §৮ ⚠️৫, fe-র উত্তর ২;
+     * [[ApprovalRules::signerKey()]], [[ASalaryChangeNeedsASecondHandTest]])।
+     *
+     * ⓘ বেতনের কাঠামো বদল (`hr.salary.view`): চাবি ছাড়া সইকারী অঙ্কই দেখতেন না — না দেখে সই, আর খাতায় তাঁর নাম। মানুষ হলে তাঁর
+     * নিজের অনুমতি (রোল দিয়ে পাওয়াও), রোল হলে রোলের; সুপার অ্যাডমিনের রোল সব পারে। ⓘ চাবি পরে কেড়ে নিলে এই পাহারা দেখে না —
+     * ছক আবার সংরক্ষণের দিনে ধরা পড়ে।
+     *
+     * @param  list<array<string, mixed>>  $steps
+     */
+    private function assertSignersHoldTheKey(string $module, string $action, array $steps): void
+    {
+        $key = app(ApprovalRules::class)->signerKey($module, $action);
+
+        if ($key === null) {
+            return;
+        }
+
+        foreach ($steps as $step) {
+            $who = $this->lacksTheKey((string) $step['approver_type'], (int) $step['approver_id'], $key);
+
+            if ($who !== null) {
+                throw ValidationException::withMessages([
+                    'steps' => __('approval::validation.signer_lacks_key', ['who' => $who, 'key' => $key]),
+                ]);
+            }
+        }
+    }
+
+    /** ⓘ চাবি না থাকলে তাঁর (বা রোলের) নাম — বলার জন্য; থাকলে `null`। */
+    private function lacksTheKey(string $type, int $id, string $key): ?string
+    {
+        if ($type === ApprovalFlowStep::BY_ROLE) {
+            $role = Role::query()->find($id);
+
+            if ($role === null) {
+                return '#'.$id;
+            }
+
+            try {
+                return $role->name === PermissionSyncer::SUPER_ADMIN_ROLE || $role->hasPermissionTo($key) ? null : (string) $role->name;
+            } catch (PermissionDoesNotExist) {
+                // ⓘ চাবিটা কোথাও বসানোই হয়নি — তাহলে এই রোলের হাতেও নেই
+                return (string) $role->name;
+            }
+        }
+
+        $user = User::query()->find($id);
+
+        if ($user === null) {
+            return '#'.$id;
+        }
+
+        try {
+            return $user->can($key) ? null : (string) $user->name;
+        } catch (PermissionDoesNotExist) {
+            return (string) $user->name;
         }
     }
 

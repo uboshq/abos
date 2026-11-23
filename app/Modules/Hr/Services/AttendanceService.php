@@ -7,6 +7,8 @@ namespace App\Modules\Hr\Services;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Support\PaidMonth;
+use App\Modules\Hr\Support\WorkCalendar;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -145,7 +147,7 @@ final class AttendanceService
      *
      * ── কী কাটা যায়, কী নয় ─────────────────────────────────────────
      * অনুপস্থিতি কাটে। বিনা বেতনের ছুটিও কাটে — নাম আলাদা হলেও ফল এক।
-     * বেতনসহ ছুটি কাটে না, সাপ্তাহিক ছুটিও নয়।
+     * বেতনসহ ছুটি কাটে না, সাপ্তাহিক ছুটিও নয়; ছুটির দিনে লেখা "অনুপস্থিত"-ও নয় ([[WorkCalendar]])।
      *
      * ── কেন হাজিরা না বসালে কিছুই কাটে না ──────────────────────────
      * যে প্রতিষ্ঠান রোজ হাজিরা লেখে না তার খাতা খালি থাকে। খালি দিনকে
@@ -159,19 +161,31 @@ final class AttendanceService
         $rows = $this->rowsFor($employee, $month);
 
         $unpaid = '0';
+        // ⓘ এক মাসের জন্য একটা ক্যালেন্ডার — বছরের ছুটির তালিকা একবারই পড়া হয় ([[WorkCalendar]])
+        $calendar = app(WorkCalendar::class);
+        $companyId = (int) $employee->company_id;
+        $branchId = $employee->branch_id === null ? null : (int) $employee->branch_id;
 
         foreach ($rows as $row) {
+            /*
+             * ⛔ ছুটির দিনে কামাই নেই — মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬ (শ্রম আইন ধারা ১০৩ ও ১১৮; [[WorkCalendar]]; a6, ২১ অক্টোবর ২০২৬)।
+             * ⓘ সাপ্তাহিক ছুটি বা তালিকার ছুটির দিনে কেউ "অনুপস্থিত" লিখলে বেতন থেকে দিনটা কাটত — অথচ সেদিন কাজই ছিল না, আর
+             * বেতনের ভাগ মাসের সব দিন ধরে (ছুটির দিনও বেতনের দিন)। সারিটা খাতায় থাকে, কেবল কাটে না।
+             */
             if ($row->status === Attendance::ABSENT) {
-                $unpaid = bcadd($unpaid, '1', 1);
+                if (! $calendar->isOffDay($row->work_date, $companyId, $branchId)) {
+                    $unpaid = bcadd($unpaid, '1', 1);
+                }
 
                 continue;
             }
 
             // মঞ্জুর হওয়া ছুটি, কিন্তু বিনা বেতনের ধরনে
-            // ⓘ আধা দিনের ছুটি আধা দিনই কাটে ([[Attendance::leaveShare()]], পুনঃঅডিট ৯ অক্টোবর ২০২৬, HR ৮)
+            // ⓘ আধা দিনের ছুটি আধা দিনই কাটে ([[Attendance::leaveShare()]], পুনঃঅডিট ৯ অক্টোবর ২০২৬, HR ৮); ছুটির দিনের ভাগ শূন্য
             if ($row->status === Attendance::LEAVE
                 && $row->leaveApplication?->leaveType?->is_paid === false) {
-                $unpaid = bcadd($unpaid, $row->leaveShare(), 1);
+                $row->leaveApplication->setRelation('employee', $employee);
+                $unpaid = bcadd($unpaid, $row->leaveShare($calendar), 1);
             }
         }
 
@@ -198,17 +212,29 @@ final class AttendanceService
     }
 
     /**
+     * ⭐ একটা পরিসরের হাজিরার সারি — গোনার একমাত্র ভিত (a6, ২১ অক্টোবর ২০২৬; ঘাটতির তালিকা #১৬)।
+     *
+     * ⓘ [[monthlySummary()]] এখান থেকে একজনের এক মাস নেয়, আর হাজিরার সারাংশ রিপোর্ট ([[HrReports::attendanceSummary()]]) একই
+     * সারিগুলো কর্মী ধরে গোনে। ⛔ দুই জায়গায় আলাদা প্রশ্ন লিখলে একদিন প্রোফাইলের গোনা আর রিপোর্ট দুই সংখ্যা বলত।
+     *
+     * @return Builder<Attendance>
+     */
+    public static function rowsBetween(string $from, string $to): Builder
+    {
+        return Attendance::query()->forMonth($from, $to);
+    }
+
+    /**
      * @return Collection<int, Attendance>
      */
     private function rowsFor(Employee $employee, Carbon $month): Collection
     {
-        return Attendance::query()
+        return self::rowsBetween(
+            $month->copy()->startOfMonth()->toDateString(),
+            $month->copy()->endOfMonth()->toDateString(),
+        )
             ->with('leaveApplication.leaveType')
             ->where('employee_id', $employee->id)
-            ->forMonth(
-                $month->copy()->startOfMonth()->toDateString(),
-                $month->copy()->endOfMonth()->toDateString(),
-            )
             ->orderBy('work_date')
             ->get();
     }

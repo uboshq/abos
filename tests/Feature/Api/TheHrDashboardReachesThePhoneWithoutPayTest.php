@@ -34,6 +34,7 @@ use Tests\TestCase;
 final class TheHrDashboardReachesThePhoneWithoutPayTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     public function test_the_phone_gets_the_hr_dashboard_with_no_pay_figure_while_the_web_keeps_them(): void
     {
@@ -55,7 +56,7 @@ final class TheHrDashboardReachesThePhoneWithoutPayTest extends TestCase
         app(SalaryHeadService::class)->installDefaults();
         app(SalaryStructureService::class)->set($person, SalaryHead::query()->where('code', 'BASIC')->firstOrFail(), '2026-01-01', '73519');
         $payroll = app(PayrollService::class);
-        $run = $payroll->confirm($payroll->build(Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->toDateString()))->fresh();
+        $run = $this->confirmedPayroll($payroll->build(Carbon::today()->startOfMonth()->toDateString(), Carbon::today()->toDateString()))->fresh();
         $this->assertSame(1, bccomp((string) $run->gross_total, '0', 4), 'দাবির ভিত্তি নেই — রানে কোনো অঙ্ক নেই।');
 
         $pay = [__('hr::dashboard.salary_cost'), __('hr::dashboard.payroll_runs')];

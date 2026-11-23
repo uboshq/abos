@@ -8,6 +8,7 @@ use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasDocumentStatus;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\OpensInReach;
 use App\Core\Concerns\ScopedToUserBranch;
 use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Core\Contracts\Drillable;
@@ -34,6 +35,13 @@ class PayrollRun extends Model implements Drillable
     use HasFactory;
     use HasPublicId;
     use IsAudited;
+    /*
+     * ⭐ রান খোলে নাগাল ধরে, মাথার শাখা ধরে নয় — fe, ২১ অক্টোবর ২০২৬, a6 ([[OpensInReach]], ভাউচারের একই নিয়ম;
+     * [[APayrollRunOpensByReachTest]])। ⓘ তালিকা মাথার শাখা মানে (শাখা ছাড়া রান কেবল "সব শাখা"-য়); কিন্তু সরাসরি খোলা —
+     * পাতা, ছাপা, ব্যাংকের ফাইল, লিংক, খবর বা সইয়ের পাতা থেকে — মানুষের নাগালে: শাখা ছাড়া রান কোম্পানির নাগালের সবার জন্য,
+     * নাগালের বাইরে কেবল এই রানের সইকারী, আর কেবল পড়ায় (GET)। ⛔ আগে মাথায় একটা শাখা বাছা থাকলে শাখা ছাড়া রানের লিংক ৪০৪।
+     */
+    use OpensInReach;
     use ScopedToUserBranch;
     use SharedAcrossCompaniesWhenAsked;
     use SoftDeletes;
@@ -43,8 +51,19 @@ class PayrollRun extends Model implements Drillable
     /** পোস্টিং ইঞ্জিনে এই নামেই যায় — লেজার থেকে ফিরে আসার সুতো। */
     public const SOURCE_TYPE = 'payroll_run';
 
+    /**
+     * ⭐ রানের ধরন — মাসের বেতন, বা উৎসব ভাতা (শ্রম বিধিমালা ২০১৫ বিধি ১১১; a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])।
+     * ⓘ আগের সব রান `salary` (কলামের ডিফল্ট)। "এক মাসে একটা জীবিত রান" ধরন ধরে — একই মাসে বেতন আর উৎসব ভাতা দুটোই চলে।
+     */
+    public const SALARY = 'salary';
+
+    public const BONUS = 'bonus';
+
+    /** @var list<string> */
+    public const TYPES = [self::SALARY, self::BONUS];
+
     protected $fillable = [
-        'company_id', 'branch_id', 'financial_year_id', 'document_no',
+        'company_id', 'branch_id', 'financial_year_id', 'document_no', 'run_type',
         'month', 'trx_date',
         'gross_total', 'deduction_total', 'net_total', 'employee_count',
         'status', 'narration', 'created_by',
@@ -105,6 +124,18 @@ class PayrollRun extends Model implements Drillable
     public function scopeForMonth(Builder $query, string $month): Builder
     {
         return $query->whereDate('month', $month);
+    }
+
+    /** ⓘ এক ধরনের রান — `salary` বা `bonus` */
+    public function scopeOfType(Builder $query, string $type): Builder
+    {
+        return $query->where('hr_payroll_runs.run_type', $type);
+    }
+
+    /** ⓘ পুরনো সারিতে ঘরটা না পড়া থাকলে (null) — মাসের বেতন */
+    public function isBonus(): bool
+    {
+        return ($this->run_type ?? self::SALARY) === self::BONUS;
     }
 
     // ── Drillable — নিয়ম ১ ────────────────────────────────────────────

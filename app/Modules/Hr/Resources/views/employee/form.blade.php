@@ -46,8 +46,10 @@
                             :value="old('name_en', $employee->name_en)" required />
                 <x-ui.field name="name_bn" :label="__('hr::field.employee_name_bn')"
                             :value="old('name_bn', $employee->name_bn)" />
-                <x-ui.field name="father_name" :label="__('hr::field.father_name')"
-                            :value="old('father_name', $employee->father_name)" />
+                @if (\App\Core\Security\FieldSecurity::visible($employee, 'father_name'))
+                    <x-ui.field name="father_name" :label="__('hr::field.father_name')"
+                                :value="old('father_name', $employee->father_name)" />
+                @endif
                 <x-ui.field name="mobile" :label="__('hr::field.mobile')"
                             :value="old('mobile', $employee->mobile)" />
                 <x-ui.field name="email" type="email" :label="__('hr::field.email')"
@@ -63,6 +65,11 @@
                 @if (\App\Core\Security\FieldSecurity::visible($employee, 'national_id'))
                     <x-ui.field name="national_id" :label="__('hr::field.national_id')"
                                 :value="old('national_id', $employee->national_id)" />
+                @endif
+                {{-- ⭐ e-TIN — করদাতার শনাক্তকরণ নম্বর, পরিচয়ের চাবির পেছনে (আয়কর আইন ২০২৩; a6, ২১ অক্টোবর ২০২৬) --}}
+                @if (\App\Core\Security\FieldSecurity::visible($employee, 'e_tin'))
+                    <x-ui.field name="e_tin" :label="__('hr::field.e_tin')"
+                                :value="old('e_tin', $employee->e_tin)" />
                 @endif
             </div>
         </section>
@@ -95,23 +102,33 @@
             </div>
 
             <div class="grid gap-3 md:grid-cols-3">
-                <x-ui.field name="date_of_birth" type="date" :label="__('hr::field.date_of_birth')"
-                            :value="old('date_of_birth', $employee->date_of_birth?->toDateString())" />
-                <x-ui.field name="mother_name" :label="__('hr::field.mother_name')"
-                            :value="old('mother_name', $employee->mother_name)" />
-                <x-ui.select name="blood_group" :label="__('hr::field.blood_group')"
-                             :options="collect($bloodGroups)->mapWithKeys(fn ($g) => [$g => $g])"
-                             :selected="old('blood_group', $employee->blood_group)" placeholder="-" />
-                <x-ui.field name="present_address" :label="__('hr::field.present_address')"
-                            :value="old('present_address', $employee->present_address)" />
-                <x-ui.field name="permanent_address" :label="__('hr::field.permanent_address')"
-                            :value="old('permanent_address', $employee->permanent_address)" />
-                <x-ui.field name="emergency_name" :label="__('hr::field.emergency_name')"
-                            :value="old('emergency_name', $employee->emergency_name)" />
-                <x-ui.field name="emergency_relation" :label="__('hr::field.emergency_relation')"
-                            :value="old('emergency_relation', $employee->emergency_relation)" />
-                <x-ui.field name="emergency_mobile" :label="__('hr::field.emergency_mobile')"
-                            :value="old('emergency_mobile', $employee->emergency_mobile)" />
+                {{-- ⭐ ব্যক্তিগত তথ্য — পরিচয়ের চাবির পেছনে ([[Employee::GUARDED]]; ঘাটতির তালিকা #১৯) --}}
+                @if (\App\Core\Security\FieldSecurity::visible($employee, 'date_of_birth'))
+                    <x-ui.field name="date_of_birth" type="date" :label="__('hr::field.date_of_birth')"
+                                :value="old('date_of_birth', $employee->date_of_birth?->toDateString())" />
+                    <x-ui.field name="mother_name" :label="__('hr::field.mother_name')"
+                                :value="old('mother_name', $employee->mother_name)" />
+                    <x-ui.select name="blood_group" :label="__('hr::field.blood_group')"
+                                 :options="collect($bloodGroups)->mapWithKeys(fn ($g) => [$g => $g])"
+                                 :selected="old('blood_group', $employee->blood_group)" placeholder="-" />
+                    {{-- ⭐ লিঙ্গ — মাতৃত্বকালীন ছুটির যোগ্যতা (শ্রম আইন অধ্যায় ৪; a6, ২১ অক্টোবর ২০২৬) --}}
+                    <x-ui.select name="gender" :label="__('hr::field.gender')"
+                                 :options="collect($genders)->mapWithKeys(fn ($g) => [$g => __('hr::kind.gender_'.$g)])"
+                                 :selected="old('gender', $employee->gender)" placeholder="-" />
+                    {{-- ⭐ জীবিত সন্তান — মাতৃত্বকালীন সুবিধা (ধারা ৪৬(৩)); খালি = তথ্য নেই --}}
+                    <x-ui.field name="surviving_children" type="number" min="0" :label="__('hr::field.surviving_children')"
+                                :value="old('surviving_children', $employee->surviving_children)" />
+                    <x-ui.field name="present_address" :label="__('hr::field.present_address')"
+                                :value="old('present_address', $employee->present_address)" />
+                    <x-ui.field name="permanent_address" :label="__('hr::field.permanent_address')"
+                                :value="old('permanent_address', $employee->permanent_address)" />
+                    <x-ui.field name="emergency_name" :label="__('hr::field.emergency_name')"
+                                :value="old('emergency_name', $employee->emergency_name)" />
+                    <x-ui.field name="emergency_relation" :label="__('hr::field.emergency_relation')"
+                                :value="old('emergency_relation', $employee->emergency_relation)" />
+                    <x-ui.field name="emergency_mobile" :label="__('hr::field.emergency_mobile')"
+                                :value="old('emergency_mobile', $employee->emergency_mobile)" />
+                @endif
             </div>
         </section>
 
@@ -127,9 +144,13 @@
                 <x-ui.select name="designation_id" :label="__('hr::field.designation')"
                              :options="$designations->mapWithKeys(fn ($d) => [$d->id => $d->name()])"
                              :selected="old('designation_id', $employee->designation_id)" placeholder="-" />
-                <x-ui.select name="employment_type_id" :label="__('hr::field.employment_type')"
-                             :options="$employmentTypes->mapWithKeys(fn ($t) => [$t->id => $t->name()])"
-                             :selected="old('employment_type_id', $employee->employment_type_id)" placeholder="-" />
+                <div>
+                    <x-ui.select name="employment_type_id" :label="__('hr::field.employment_type')"
+                                 :options="$employmentTypes->mapWithKeys(fn ($t) => [$t->id => $t->name()])"
+                                 :selected="old('employment_type_id', $employee->employment_type_id)" placeholder="-" />
+                    {{-- ⭐ "শ্রমিক" কে — BLA ধারা 2(65); অধিকাল কেবল শ্রমিকের (a6, ২১ অক্টোবর ২০২৬) --}}
+                    <p class="mt-1 text-2xs text-(--color-ink-muted)" data-worker-note>{{ __('hr::message.worker_note') }}</p>
+                </div>
                 {{-- ⭐ রিপোর্টিং লাইন — নিজে তালিকায় নেই; চক্র কন্ট্রোলারে আটকায় --}}
                 <x-ui.select name="reports_to_employee_id" :label="__('hr::field.reports_to')"
                              :options="$managers->mapWithKeys(fn ($m) => [$m->id => $m->name().($m->designation ? ' · '.$m->designation->name() : '')])"

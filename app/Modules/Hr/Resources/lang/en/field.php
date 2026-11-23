@@ -83,4 +83,44 @@ return [
     'reports_to' => 'Reports To',
     'photo' => 'Photo',
     'photo_hint' => 'JPG, PNG or WebP — a large photo is made smaller. A new photo replaces the old one.',
+    // ⭐ public holidays (a6, 21 Oct 2026)
+    'holiday_date' => 'Date',
+    'holiday_name' => 'Holiday',
+    'all_branches' => 'All branches',
+    'year' => 'Year',
+    // ⭐ gender — maternity eligibility (labour law ch.4; a6, 21 Oct 2026)
+    'gender' => 'Gender',
+    // ⭐ maternity (s.46(3), s.47; a6, 21 Oct 2026)
+    'surviving_children' => 'Surviving children',
+    'expected_delivery_date' => 'Expected delivery date',
+    // ⭐ s.2(45) wages (a6, 21 Oct 2026)
+    'outside_wages' => 'Not wages under s.2(45)',
+    'outside_wages_hint' => 'Tick for bonus or festival allowance, the employer\'s provident fund contribution, travelling or special-expense allowance. These are left out of the daily rate for unused earned leave.',
+    'actual_delivery_date' => 'Actual delivery date',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'pf_member' => 'In the fund',
+    'pf_current_percent' => 'Current rate',
+    'pf_current' => 'Current deduction',
+    'pf_proposed_percent' => 'Proposed rate',
+    'pf_proposed' => 'Proposed deduction',
+    'pf_employer' => 'Employer share',
+    'pf_changes' => 'Change',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_days' => 'Days over',
+    'ot_hours' => 'Extra hours',
+    'ot_signed_by' => 'Signed by',
+    // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
+    'e_tin' => 'e-TIN',
+    'income_year' => 'Income year',
+    'tds_total' => 'Tax deducted at source',
+    'employer_signature' => 'Employer\'s signature and seal',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'bonus_date' => 'Bonus date',
+    'narration' => 'Narration (e.g. Eid-ul-Fitr)',
+    // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
+    'gratuity_years' => 'Years counted',
+    'gratuity_days' => 'Days',
+    'gratuity_basic' => 'Last basic',
+    'gratuity_obligation' => 'Obligation',
+    'as_of' => 'As of',
 ];

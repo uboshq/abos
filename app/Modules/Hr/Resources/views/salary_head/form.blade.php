@@ -68,6 +68,16 @@
                            @checked(old('prorated_by_attendance', $head->prorated_by_attendance)) class="size-4">
                     {{ __('hr::field.prorated_by_attendance') }}
                 </label>
+
+                {{-- ⭐ ধারা ২(৪৫) — মজুরির বাইরের খাত; না-নেওয়া ছুটির টাকার হারে ধরা হয় না ([[EarnedLeave::encashment()]]) --}}
+                <label class="flex items-start gap-2 text-sm">
+                    <input type="checkbox" name="outside_wages" value="1"
+                           @checked(old('outside_wages', $head->outside_wages)) class="mt-1 size-4">
+                    <span>
+                        {{ __('hr::field.outside_wages') }}
+                        <span class="block text-xs text-(--color-ink-muted)">{{ __('hr::field.outside_wages_hint') }}</span>
+                    </span>
+                </label>
             </div>
         </section>
 

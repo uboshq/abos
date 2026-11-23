@@ -60,4 +60,6 @@ return [
     'statement_loaded' => ':rows lines loaded, :matched matched on their own, :bad skipped',
     'only_at_the_bank' => 'The bank knows, our books do not',
     'only_at_the_bank_hint' => 'On the statement but not yet in our books — a charge, interest, or a bounced cheque. Enter the voucher and the line matches itself.',
+    // ⭐ a cancelled payroll run's bank-file lines — the way to them during reconciliation (fe decision 2, 21 Oct 2026)
+    'salary_lines_awaiting' => 'Salary bank lines — sent to bank, awaiting confirmation',
 ];

@@ -10,7 +10,9 @@ use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Support\LeaveSigner;
 use App\Modules\Hr\Support\PaidMonth;
+use App\Modules\Hr\Support\WorkCalendar;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -29,10 +31,17 @@ final class LeaveService
     /** এক আবেদনের তারিখ সবচেয়ে বেশি কত দিন জুড়ে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৫) */
     public const MAX_SPAN_DAYS = 366;
 
+    /** ধারা ৪৬(৩) — এতজন বা তার বেশি জীবিত সন্তানে মাতৃত্বকালীন সুবিধা নয় */
+    public const MATERNITY_CHILDREN_LIMIT = 2;
+
+    /** ধারা ৪৭ — প্রসবের আগে ও পরে, প্রতিপাশে এত সপ্তাহ */
+    public const MATERNITY_WEEKS_EACH_SIDE = 8;
+
     /**
      * আবেদন জমা।
      *
      * @param  string  $days  আধা দিনের জন্য দশমিক — "১.৫"
+     * @param  string|null  $expectedDelivery  ⭐ মাতৃত্বকালীন ছুটিতে প্রসবের সম্ভাব্য দিন (ধারা ৪৭; বাকি ধরনে উপেক্ষিত)
      */
     public function apply(
         Employee $employee,
@@ -41,14 +50,18 @@ final class LeaveService
         string $toDate,
         string $days,
         ?string $reason = null,
+        ?string $expectedDelivery = null,
     ): LeaveApplication {
         $from = Carbon::parse($fromDate);
         $to = Carbon::parse($toDate);
+        $expected = $type->isMaternity() && filled($expectedDelivery) ? Carbon::parse($expectedDelivery)->startOfDay() : null;
 
         $this->assertDatesMakeSense($from, $to, $days);
+        $this->assertWithinWorkingDays($employee, $type, $from, $to, $days);
         $this->assertEmployedThroughout($employee, $from, $to);
+        $this->assertEligible($employee, $type, $from, $to, $expected);
 
-        return DB::transaction(function () use ($employee, $type, $from, $to, $days, $reason) {
+        return DB::transaction(function () use ($employee, $type, $from, $to, $days, $reason, $expected) {
             /*
              * ⛔ কর্মীর সারিতে তালা, তারপর মেলা আর কোটা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৪)।
              * ⓘ লেনদেন বা তালা ছিল না: দুইবার চাপলে বা ফোন আবার পাঠালে দুইটা অনুরোধই "মেলে না" দেখে একই দিনের দুইটা আবেদন বসাত।
@@ -64,6 +77,7 @@ final class LeaveService
                 'leave_type_id' => $type->id,
                 'from_date' => $from->toDateString(),
                 'to_date' => $to->toDateString(),
+                'expected_delivery_date' => $expected?->toDateString(),
                 'days' => $days,
                 'reason' => $reason,
                 'status' => LeaveApplication::PENDING,
@@ -82,6 +96,10 @@ final class LeaveService
     {
         $this->assertPending($application);
         $this->assertNotOwn($application, $decider);
+        // ⛔ অন্যের নামে যিনি বসিয়েছেন তিনি সই দেন না — মালিক ছাড়া, আর তখন অডিটে চিহ্ন (SoD; fe, ২১ অক্টোবর ২০২৬; [[LeaveSigner]])
+        app(LeaveSigner::class)->assertNotEnteredBy($decider, $application);
+        // ⛔ কর্মীর নিজের ব্যবস্থাপক বা HR — চাবি থাকলেই যে কেউ নয় (ঘাটতির তালিকা #১৫; [[LeaveSigner]])
+        app(LeaveSigner::class)->assertMayDecide($decider, $application);
 
         return DB::transaction(function () use ($application, $decider, $remarks) {
             /*
@@ -100,6 +118,11 @@ final class LeaveService
 
             $employee = Employee::query()->withoutGlobalScopes()->findOrFail($application->employee_id);
             $type = LeaveType::query()->withoutGlobalScopes()->findOrFail($application->leave_type_id);
+            // ⛔ আবেদনের পরে তালিকায় ছুটির দিন বসলে কাজের দিন কমে — আবার মাপা, নইলে কোটা বেশি কাটত ([[assertWithinWorkingDays()]])
+            $this->assertWithinWorkingDays($employee, $type, $application->from_date->copy(), $application->to_date->copy(), (string) $application->days);
+            // ⛔ মাতৃত্বকালীন ছুটির যোগ্যতা মঞ্জুরের মুহূর্তেও — আবেদনের পরে লিঙ্গ বদলালে বা ফোনের পুরনো আবেদনে ([[assertEligible()]])
+            $this->assertEligible($employee, $type, $application->from_date->copy(), $application->to_date->copy(),
+                $application->expected_delivery_date?->copy());
             $this->assertWithinYearlyLimit($employee, $type, $application->from_date->copy(), (string) $application->days);
 
             /*
@@ -118,6 +141,7 @@ final class LeaveService
             ])->save();
 
             $this->stampAttendance($application->fresh());
+            app(LeaveSigner::class)->markOwnerSelfSigned($decider, $application);
 
             return $application->fresh();
         });
@@ -126,6 +150,14 @@ final class LeaveService
     public function reject(LeaveApplication $application, User $decider, string $remarks): LeaveApplication
     {
         $this->assertPending($application);
+        /*
+         * ⛔ ফেরানোও সই — নিজের আবেদনে নয়, আর কেবল কর্মীর নিজের ব্যবস্থাপক বা HR (ঘাটতির তালিকা #১৫; a6, ২১ অক্টোবর ২০২৬)।
+         * ⓘ আগে ফেরানোয় কোনো প্রশ্নই ছিল না: চাবি হাতে যে কেউ অন্য দলের ছুটি ফেরাতেন। নিজের অপেক্ষমাণ আবেদন তুলে নেওয়ার পথ
+         * আলাদা আর আগের মতোই খোলা ([[cancel()]])।
+         */
+        $this->assertNotOwn($application, $decider);
+        app(LeaveSigner::class)->assertNotEnteredBy($decider, $application);
+        app(LeaveSigner::class)->assertMayDecide($decider, $application);
 
         return DB::transaction(function () use ($application, $decider, $remarks) {
             /*
@@ -143,6 +175,7 @@ final class LeaveService
                 'decided_at' => now(),
                 'decision_remarks' => $remarks,
             ])->save();
+            app(LeaveSigner::class)->markOwnerSelfSigned($decider, $application);
 
             return $application->fresh();
         });
@@ -213,28 +246,73 @@ final class LeaveService
      * ভুললে সংখ্যাটা চিরকাল ভুল থেকে যেত, আর কেউ ধরতে পারত না —
      * কারণ ভুলটা দেখতে একদম স্বাভাবিক।
      *
-     * @return array{allowed: string, taken: string, left: string|null}
+     * ⭐ অর্জিত ছুটিতে পাওনা = এ বছরের পাওনা (এক বছর চাকরির পরে, আগের বছরের কাজ থেকে) + আগের বছরের জের — বাঁধা কোটা নয় (শ্রম আইন ধারা ১১৭;
+     * [[EarnedLeave]]; a6, ২১ অক্টোবর ২০২৬)। বাকি ধরনে `accrued`/`carried` খালি।
+     *
+     * @return array{allowed: string, taken: string, left: string|null, accrued: string|null, carried: string|null}
      */
     public function balance(Employee $employee, LeaveType $type, ?Carbon $on = null): array
     {
-        $on = $on ?? now();
-        $yearStart = $on->copy()->startOfYear();
-        $yearEnd = $on->copy()->endOfYear();
+        $on ??= now();
 
-        $taken = LeaveApplication::query()
-            ->approved()
+        $taken = self::takenInYear($on)
             ->where('employee_id', $employee->id)
             ->where('leave_type_id', $type->id)
-            ->whereBetween('from_date', [$yearStart->toDateString(), $yearEnd->toDateString()])
             ->get()
             ->reduce(fn (string $carry, LeaveApplication $a) => bcadd($carry, (string) $a->days, 1), '0');
+
+        if ($type->isEarned()) {
+            $earned = app(EarnedLeave::class);
+            $accrued = $earned->accrued($employee, $on);
+            $carried = $earned->carriedInto($employee, $type, $on->year);
+            $allowed = bcadd($accrued, $carried, 1);
+
+            return ['allowed' => $allowed, 'taken' => $taken, 'left' => bcsub($allowed, $taken, 1),
+                'accrued' => $accrued, 'carried' => $carried];
+        }
 
         return [
             'allowed' => (string) $type->days_per_year,
             'taken' => $taken,
             // সীমাহীন ছুটিতে "কত বাকি" প্রশ্নটারই মানে নেই
             'left' => $type->hasNoYearlyLimit() ? null : bcsub((string) $type->days_per_year, $taken, 1),
+            'accrued' => null,
+            'carried' => null,
         ];
+    }
+
+    /**
+     * ⭐ চাকরি ছাড়ার দিনে না-নেওয়া অর্জিত ছুটির দিন — চূড়ান্ত পাওনার কাজ এটা ডাকে (শ্রম আইন ধারা ১১ ও ১১৭; fe, ২১ অক্টোবর ২০২৬;
+     * [[EarnedLeave::encashableDays()]])। ⓘ কেবল পড়ে; যোগ্যতার (১ বছর) আগে শূন্য।
+     */
+    public function encashableEarnedDays(Employee $employee, Carbon $on): string
+    {
+        return app(EarnedLeave::class)->encashableDays($employee, $on);
+    }
+
+    /**
+     * ⭐ সেই দিনগুলোর টাকা — দিন × (মাসিক মজুরি ÷ ৩০), পয়সায় গোল ([[EarnedLeave::encashment()]])।
+     *
+     * @return array{days: string, monthly_wage: string, daily_rate: string, amount: string}
+     */
+    public function earnedLeaveEncashment(Employee $employee, Carbon $on): array
+    {
+        return app(EarnedLeave::class)->encashment($employee, $on);
+    }
+
+    /**
+     * ⭐ একটা বছরে নেওয়া ছুটি — মঞ্জুর হওয়া আবেদন, শুরুর দিন সেই বছরে (a6, ২১ অক্টোবর ২০২৬; ঘাটতির তালিকা #১৬)।
+     *
+     * ⓘ [[balance()]] এখান থেকে একজনের এক ধরন নেয়, আর ছুটির জের রিপোর্ট ([[HrReports::leaveBalance()]]) একই আবেদনগুলো কর্মী × ধরন
+     * ধরে যোগ করে। ⛔ দুই জায়গায় দুই প্রশ্ন হলে ফোনের "কত বাকি" আর রিপোর্টের "বাকি" একদিন আলাদা হত।
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<LeaveApplication>
+     */
+    public static function takenInYear(Carbon $on): \Illuminate\Database\Eloquent\Builder
+    {
+        return LeaveApplication::query()
+            ->approved()
+            ->whereBetween('from_date', [$on->copy()->startOfYear()->toDateString(), $on->copy()->endOfYear()->toDateString()]);
     }
 
     /**
@@ -246,13 +324,29 @@ final class LeaveService
     private function stampAttendance(LeaveApplication $application): void
     {
         $day = $application->from_date->copy();
+        $calendar = app(WorkCalendar::class);
+        $employee = Employee::query()->withoutGlobalScopes()->find($application->employee_id);
+        $application->setRelation('employee', $employee);
+        $branchId = $employee?->branch_id === null ? null : (int) $employee->branch_id;
+        // ⓘ মাতৃত্বকালীন ছুটি ক্যালেন্ডারের দিনে — ছুটির দিনেও "ছুটি"-র সারি ([[LeaveType::countsCalendarDays()]])
+        $everyDay = (bool) LeaveType::query()->withoutGlobalScopes()->find($application->leave_type_id)?->countsCalendarDays();
 
         while ($day->lte($application->to_date)) {
+            /*
+             * ⭐ ছুটির দিনে "ছুটি"-র সারি বসে না — মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬ (শ্রম আইন ধারা ১১৮; [[WorkCalendar]]; a6)।
+             * ⓘ শুক্রবার বা তালিকার ছুটির দিন আবেদনের দিন নয়; সেদিনের সারি (থাকলে) যেমন আছে তেমন থাকে, না থাকলে খালি — "লেখা হয়নি"।
+             */
+            if (! $everyDay && $calendar->isOffDay($day, (int) $application->company_id, $branchId)) {
+                $day->addDay();
+
+                continue;
+            }
+
             /*
              * ⛔ আধা দিন লেখা থাকে — একই পুনঃঅডিট (HR ৮)। ⓘ "১.৫ দিন" দুই তারিখে বসত দুইটা পুরো দিনের সারি হয়ে, আর বিনা বেতনের
              * ছুটিতে বেতন থেকে দুই দিন কাটত। দিনের ভাগটা [[Attendance::leaveShare()]] গোনে; এখানে কেবল পর্দার জন্য মন্তব্য।
              */
-            $share = Attendance::shareOf($application, $day);
+            $share = Attendance::shareOf($application, $day, $calendar);
 
             // ⓘ কর্মীর সারিতে তালা [[approve()]]-এ আগেই; একসাথে অফিসের পাতা বা ফোন একই দিন লিখলে ৫০০ নয় (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬, ⓘ১২)
             Attendance::writeDay((int) $application->employee_id, $day->toDateString(), [
@@ -337,10 +431,98 @@ final class LeaveService
         }
 
         /*
-         * ⓘ তারিখের চেয়ে কম দিন এখনো চলে — মালিকের সিদ্ধান্তের অপেক্ষায় (ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬)। ⚠️ হাজিরায়
-         * দিনগুলো প্রথম তারিখ থেকে ভরে ([[Attendance::shareOf()]]), তাই "৬ তারিখে ২ দিন"-এ প্রথম দুইটা পুরো আর বাকিগুলো শূন্য দিনের
-         * "ছুটি" — অথচ আজ লোকে এভাবেই ছুটির মধ্যের শুক্রবার বাদ দেন। শুক্রবার আর ছুটির দিন গোনা হবে কি না, সেই উত্তরের পরে।
+         * ⓘ তারিখের চেয়ে কম দিন চলে — আধা দিন বা ছুটির শেষে আগে ফেরা। শুক্রবার আর ছুটির দিনের প্রশ্নের উত্তর মালিক দিয়েছেন
+         * (২১ অক্টোবর ২০২৬): গোনা হয় না — [[assertWithinWorkingDays()]]। হাজিরায় দিনগুলো প্রথম কাজের দিন থেকে ভরে
+         * ([[Attendance::shareOf()]]), ছুটির দিন বাদ দিয়ে।
          */
+    }
+
+    /**
+     * ⭐ ছুটির দিন কেবল কাজের দিন — সাপ্তাহিক ছুটি আর তালিকার ছুটি বাদ (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; বাংলাদেশ শ্রম আইন ২০০৬
+     * ধারা ১১৫–১১৮; [[WorkCalendar]]; a6, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ আগে সীমা ছিল ক্যালেন্ডারের দিন: শনি–বৃহস্পতি "৭ দিন" চাওয়া যেত, আর মাঝের শুক্রবারও কোটা থেকে কাটত; বিজয় দিবস পড়লে সেটাও।
+     * এখন চাওয়া দিন পরিসরের কাজের দিনের বেশি নয় — কর্মীর শাখার ছুটি ধরে। ⛔ পুরো পরিসর ছুটির দিন হলে (কেবল একটা শুক্রবার) কাজের
+     * দিন শূন্য, তাই কোনো দিনই চাওয়া যায় না — ছুটির দিনে ছুটির আবেদন অর্থহীন।
+     */
+    private function assertWithinWorkingDays(Employee $employee, LeaveType $type, Carbon $from, Carbon $to, string $days): void
+    {
+        // ⓘ মাতৃত্বকালীন ছুটি সপ্তাহে, ক্যালেন্ডারের দিনে — পরিসরের সীমা উপরে [[assertDatesMakeSense()]]-এ ([[LeaveType::countsCalendarDays()]])
+        if ($type->countsCalendarDays()) {
+            return;
+        }
+
+        $working = (string) app(WorkCalendar::class)->workingDays(
+            $from, $to, (int) $employee->company_id, $employee->branch_id === null ? null : (int) $employee->branch_id);
+
+        if (bccomp($days, $working, 1) > 0) {
+            throw ValidationException::withMessages([
+                'days' => __('hr::validation.days_exceed_working', ['working' => $working]),
+            ]);
+        }
+    }
+
+    /**
+     * ⭐ মাতৃত্বকালীন ছুটি কার — কেবল নারী কর্মী, আর ছুটির প্রথম দিনে চাকরি অন্তত ৬ মাস (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; বাংলাদেশ
+     * শ্রম আইন ২০০৬ অধ্যায় ৪, ধারা ৪৬; a6, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ লিঙ্গ কর্মীর পাতার ঘর (`gender`, পরিচয়ের চাবির পেছনে); খালি থাকলে "নারী" নয় — তাই আগে পাতায় লিখতে হয়। ৬ মাস = যোগদানের
+     * তারিখ + ৬ ক্যালেন্ডার মাস (মাসের শেষ পেরোয় না: ৩১ আগস্ট + ৬ = ২৮ ফেব্রুয়ারি), সেদিন বা তার পরে শুরু হলে চলে। যোগদানের তারিখ
+     * না থাকলে চাকরির বয়স মাপা যায় না, তাই ফেরে। ⓘ বেতনসহ — ধরনের `is_paid`; টাকা আগের তিন মাসের গড় দৈনিক মজুরিতে
+     * ([[MaternityBenefit]], ধারা ৪৮)।
+     *
+     * ⭐ fe-র উত্তর ২ (২১ অক্টোবর ২০২৬) — আরও দুই শর্ত:
+     *  · **ধারা ৪৬(৩):** জীবিত সন্তান দুই বা তার বেশি হলে মাতৃত্বকালীন সুবিধা নয় (অন্য পাওনা ছুটি চলে)। ঘর খালি = "তথ্য নেই" —
+     *    আটকায় না, সইকারীকে সতর্ক করে ([[LeaveApplication::signerWarning()]])।
+     *  · **ধারা ৪৭ — ৮ + ৮ সপ্তাহ:** প্রসবের সম্ভাব্য দিন লাগে; ছুটি শুরু সেদিনের বড়জোর ৫৬ দিন আগে, শেষ সেদিনসহ বড়জোর ৫৬ দিনে
+     *    (সম্ভাব্য দিন + ৫৫)। মোট ১১২ দিনের সীমা ধরনের কোটায়।
+     */
+    private function assertEligible(Employee $employee, LeaveType $type, Carbon $from, ?Carbon $to = null, ?Carbon $expected = null): void
+    {
+        if (! $type->isMaternity()) {
+            return;
+        }
+
+        if ($employee->gender !== Employee::FEMALE) {
+            throw ValidationException::withMessages([
+                'leave_type_id' => __('hr::validation.maternity_women_only'),
+            ]);
+        }
+
+        $eligibleFrom = $employee->joining_date?->copy()->startOfDay()->addMonthsNoOverflow(LeaveType::MATERNITY_SERVICE_MONTHS);
+
+        if ($eligibleFrom === null || $from->copy()->startOfDay()->lt($eligibleFrom)) {
+            throw ValidationException::withMessages([
+                'from_date' => __('hr::validation.maternity_six_months', ['date' => $eligibleFrom?->toDateString() ?? '—']),
+            ]);
+        }
+
+        if ($employee->surviving_children !== null && (int) $employee->surviving_children >= self::MATERNITY_CHILDREN_LIMIT) {
+            throw ValidationException::withMessages([
+                'leave_type_id' => __('hr::validation.maternity_two_children', ['count' => (int) $employee->surviving_children]),
+            ]);
+        }
+
+        if ($expected === null) {
+            throw ValidationException::withMessages([
+                'expected_delivery_date' => __('hr::validation.maternity_expected_required'),
+            ]);
+        }
+
+        $earliest = $expected->copy()->subDays(self::MATERNITY_WEEKS_EACH_SIDE * 7);
+        $latest = $expected->copy()->addDays(self::MATERNITY_WEEKS_EACH_SIDE * 7 - 1);
+
+        if ($from->copy()->startOfDay()->lt($earliest)) {
+            throw ValidationException::withMessages([
+                'from_date' => __('hr::validation.maternity_too_early', ['date' => $earliest->toDateString()]),
+            ]);
+        }
+
+        if ($to !== null && $to->copy()->startOfDay()->gt($latest)) {
+            throw ValidationException::withMessages([
+                'to_date' => __('hr::validation.maternity_too_late', ['date' => $latest->toDateString()]),
+            ]);
+        }
     }
 
     private function assertEmployedThroughout(Employee $employee, Carbon $from, Carbon $to): void

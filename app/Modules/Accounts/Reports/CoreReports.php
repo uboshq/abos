@@ -567,7 +567,7 @@ final class CoreReports
              * তাই সে নিজে থেকেই আয় কমায় — আলাদা করে বাদ দেওয়ার কিছু
              * নেই। ⛔ আলাদা করে বাদ দিলে **দুইবার** বাদ যেত।
              */
-            summary: function (array $totals): array {
+            summary: function (array $totals, array $f = []): array {
                 $income = (string) ($totals['credit'] ?? '0');
                 $spent = (string) ($totals['debit'] ?? '0');
                 $net = bcsub($income ?: '0', $spent ?: '0', 4);
@@ -578,11 +578,25 @@ final class CoreReports
                 $gross = (string) ($totals['gross'] ?? '0') ?: '0';
                 $grossGood = bccomp($gross, '0', 4) >= 0;
 
+                $lines = [[
+                    'label' => $grossGood ? __('accounts::message.gross_profit') : __('accounts::message.gross_loss'),
+                    'value' => $grossGood ? $gross : bcmul($gross, '-1', 4),
+                ]];
+
+                /*
+                 * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল নিজের লাইনে, "কর-পূর্ব মুনাফা"-র ঠিক উপরে — IAS 19 কর্মীর সুবিধা, করের আগের খরচ (fe,
+                 * ২১ অক্টোবর ২০২৬; a6; [[WppfService]])। ⓘ তহবিলের খরচ খাতায় না থাকলে (সুইচ বন্ধ, বা জাবেদা হয়নি) লাইন দুটোই নেই — পর্দা
+                 * আগের মতো। নিট লাভ এক পয়সাও বদলায় না: ৫২২৩ আগে থেকেই খরচের মোটে আছে, এখানে কেবল আলাদা করে দেখানো।
+                 */
+                $wppf = self::wppfIn($f);
+
+                if (bccomp($wppf, '0', 4) !== 0) {
+                    $lines[] = ['label' => __('accounts::message.pl_wppf_line'), 'value' => $wppf];
+                    $lines[] = ['label' => __('accounts::message.profit_before_tax'), 'value' => $net];
+                }
+
                 return [
-                    'lines' => [[
-                        'label' => $grossGood ? __('accounts::message.gross_profit') : __('accounts::message.gross_loss'),
-                        'value' => $grossGood ? $gross : bcmul($gross, '-1', 4),
-                    ]],
+                    'lines' => $lines,
                     'label' => $profit
                         ? __('accounts::message.net_profit')
                         : __('accounts::message.net_loss'),
@@ -879,17 +893,47 @@ final class CoreReports
         // ⓘ ৪১২০ আদায়ে ছাড়ও — বিক্রয়ের বিপরীত, তাই বিক্রয় ভাগেই ([[StandardChart::NET_SALES]], fe-র D3)
         $revenue = $in(StandardChart::NET_SALES);
         $cost = $in([StandardChart::COST_OF_GOODS_SOLD, StandardChart::PURCHASE_PRICE_VARIANCE]);
+        // ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (৫২২৩) — নিজের ভাগে, খরচের পরে, কর-পূর্ব মুনাফার ঠিক আগে (IAS 19; fe, ২১ অক্টোবর ২০২৬)
+        $wppf = $in([StandardChart::WPPF_EXPENSE]);
         $income = "accounts.type = '".Account::INCOME."'";
 
         return [
-            'label' => "CASE WHEN {$revenue} THEN ? WHEN {$cost} THEN ? WHEN {$income} THEN ? ELSE ? END",
+            'label' => "CASE WHEN {$revenue} THEN ? WHEN {$cost} THEN ? WHEN {$wppf} THEN ? WHEN {$income} THEN ? ELSE ? END",
             'bindings' => [
-                __('accounts::message.pl_revenue'), __('accounts::message.pl_cost_of_sales'),
+                __('accounts::message.pl_revenue'), __('accounts::message.pl_cost_of_sales'), __('accounts::message.pl_wppf'),
                 __('accounts::message.pl_other_income'), __('accounts::message.pl_expenses'),
             ],
             'gross' => "CASE WHEN {$revenue} OR {$cost} THEN SUM(ledger_entries.credit) - SUM(ledger_entries.debit) END",
-            'rank' => "CASE WHEN {$revenue} THEN 1 WHEN {$cost} THEN 2 WHEN {$income} THEN 3 ELSE 4 END",
+            'rank' => "CASE WHEN {$revenue} THEN 1 WHEN {$cost} THEN 2 WHEN {$wppf} THEN 5 WHEN {$income} THEN 3 ELSE 4 END",
         ];
+    }
+
+    /**
+     * ⓘ লাভ-ক্ষতির ছাঁকনিতে (কোম্পানি, তারিখ, শাখার দেয়াল, বছর বন্ধের সারি বাদ) ৫২২৩ আর তার নিচের খাতের নিট খরচ — রিপোর্টের নিজের
+     * কোয়েরির হুবহু শর্ত; ছাঁকনি না পেলে (পুরনো ডাক) শূন্য।
+     *
+     * @param  array<string, mixed>  $f
+     */
+    private static function wppfIn(array $f): string
+    {
+        if (! isset($f['company_id'], $f['from'], $f['to'])) {
+            return '0';
+        }
+
+        $ids = self::subtreeIds((int) $f['company_id'], [StandardChart::WPPF_EXPENSE]);
+
+        if ($ids === []) {
+            return '0';
+        }
+
+        return bcadd((string) (DB::table('ledger_entries')
+            ->where('ledger_entries.company_id', $f['company_id'])
+            ->whereIn('ledger_entries.account_id', $ids)
+            ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
+            ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
+            ->whereNotIn('ledger_entries.source_type', YearEndService::closingSources())
+            ->selectRaw('COALESCE(SUM(ledger_entries.debit) - SUM(ledger_entries.credit), 0) as net')
+            ->value('net') ?? '0'), '0', 4);
     }
 
     /**

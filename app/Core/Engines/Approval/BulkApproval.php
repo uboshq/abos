@@ -38,6 +38,7 @@ final class BulkApproval
      * নিয়ম, ক্রমে — প্রতিটা বাদের একটা কারণ, পর্দায় লেখা থাকে:
      *   not_pending  — আগেই মীমাংসিত;
      *   money        — টাকা নড়ার কাজ (বেতন, পরিশোধ, ব্যাংক — মডিউলের `moves_money`): একটা একটা করে;
+     *   one_by_one   — মডিউল বলেছে একটা একটা করে দেখে সই (`approval_rules.{কাজ}.no_bulk`);
      *   own          — নিজের কাগজ;
      *   multi_step   — এক ধাপের বেশি: একসাথে সই কেবল এক-ধাপের কাগজে;
      *   not_allowed  — এই ধাপে আপনার পালা নয় ([[ApprovalEngine::canDecide()]]);
@@ -60,6 +61,8 @@ final class BulkApproval
             $why = match (true) {
                 $approval->status !== Approval::PENDING => 'not_pending',
                 $this->movesMoney($approval) => 'money',
+                // ⛔ মডিউল বলেছে একটা একটা করে (`no_bulk`) — কখনো একসাথে সই নয়, কারণসহ বাদ ([[oneByOne()]])
+                $this->oneByOne($approval) => 'one_by_one',
                 (int) $approval->requested_by === (int) $user->id => 'own',
                 ($this->engine->standingOf($approval)['levels'] ?? 1) > 1 => 'multi_step',
                 ! $unbounded && $this->limitReason($approval, $user) !== null => $this->limitReason($approval, $user),
@@ -119,6 +122,16 @@ final class BulkApproval
         }
 
         return $approval->amount !== null && bccomp((string) $approval->amount, $limit, 4) > 0 ? 'over_limit' : null;
+    }
+
+    /**
+     * ⛔ এই কাজটা একটা একটা করে দেখে সই দিতে হয় — মডিউলের `approval_rules.{কাজ}.no_bulk` (fe, ২১ অক্টোবর ২০২৬; a6;
+     * [[ApprovalRules::noBulk()]])। ⓘ যেমন "ব্যাংক এই লাইন দেয়নি": মজুরি আবার বেরোনোর পথ, প্রতিটার কারণ আর ব্যাংকের প্রমাণ দেখে সই।
+     * ইনবক্সের টিক-বাক্সও এই প্রশ্নেই লুকায় ([[ApprovalInboxController]]), আর সরাসরি POST এলে উপরে বাদ পড়ে।
+     */
+    public function oneByOne(Approval $approval): bool
+    {
+        return app(ApprovalRules::class)->noBulk((string) $approval->module, (string) $approval->action);
     }
 
     /**

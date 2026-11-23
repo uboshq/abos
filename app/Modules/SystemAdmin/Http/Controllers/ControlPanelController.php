@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\OwnedSettings;
 use App\Core\Services\MenuBuilder;
 use App\Core\Services\MenuSwitches;
 use App\Core\Services\SettingOptions;
@@ -313,6 +314,11 @@ class ControlPanelController extends Controller implements HasMiddleware
          */
         $scope = array_fill_keys(array_map('strval', (array) $request->input('scope', [])), true);
 
+        // ⛔ নিজের পর্দায় বদলানো সেটিং (`owned_by`) — `scope[]` বা `settings[]`-এ এলে পুরো অনুরোধ ফেরে, কোথায় বদলায় তা লিখে ([[OwnedSettings]])
+        if (($refusal = OwnedSettings::refusal($this->settings->definitions(), [...array_keys($scope), ...array_keys($submitted)])) !== null) {
+            return back()->withInput()->withErrors(['settings' => $refusal]);
+        }
+
         $changed = 0;
         $refused = [];
         $superAdminOnly = [];
@@ -375,6 +381,11 @@ class ControlPanelController extends Controller implements HasMiddleware
              * চেয়ে টেক্সট পেয়ে ভাঙত। ঘরগুলো কেবল ছাপার পর্দার ([[PrintControlController]])।
              */
             if (self::ownedByThePrintScreen($definition)) {
+                continue;
+            }
+
+            // ⓘ নিজের পর্দায় বদলায় (`owned_by`) — হাতে বানানো `scope[]`-এও এখানে নয় (a6, ২১ অক্টোবর ২০২৬)
+            if (isset($definition['owned_by'])) {
                 continue;
             }
 
@@ -675,6 +686,11 @@ class ControlPanelController extends Controller implements HasMiddleware
 
                 // ⛔ ছাপার পর্দার ঘর এখানে নয় ([[ownedByThePrintScreen()]]) — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬
                 if (self::ownedByThePrintScreen($definition)) {
+                    continue;
+                }
+
+                // ⓘ নিজের পর্দায় বদলায় (`owned_by`) — যেমন সাপ্তাহিক ছুটি, ছুটির দিনের পর্দায় (a6, ২১ অক্টোবর ২০২৬)
+                if (isset($definition['owned_by'])) {
                     continue;
                 }
 

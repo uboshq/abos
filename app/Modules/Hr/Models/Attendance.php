@@ -9,6 +9,7 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Models\User;
+use App\Modules\Hr\Support\WorkCalendar;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -77,20 +78,53 @@ class Attendance extends Model
      * ⓘ আবেদনের দিনগুলো তারিখের ক্রমে ভরে: "১.৫ দিন" দুই তারিখে মানে প্রথমটা পুরো, দ্বিতীয়টা আধা; "০.৫ দিন" এক তারিখে আধা।
      * আবেদনে যত দিন লেখা, বেতনে ঠিক ততই — তারিখের সংখ্যা নয়।
      */
-    public static function shareOf(LeaveApplication $application, Carbon $day): string
+    public static function shareOf(LeaveApplication $application, Carbon $day, ?WorkCalendar $calendar = null): string
     {
-        $before = (string) $application->from_date->copy()->startOfDay()->diffInDays($day->copy()->startOfDay());
+        /*
+         * ⭐ কেবল কাজের দিন ভরে — সাপ্তাহিক ছুটি আর তালিকার ছুটির দিন শূন্য (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; শ্রম আইন ধারা ১১৮;
+         * [[WorkCalendar]]; a6, ২১ অক্টোবর ২০২৬)। ⓘ আগে প্রথম তারিখ থেকে ক্যালেন্ডারের দিন ধরে ভরত: "বৃহস্পতি–শনি, ২ দিন"-এ
+         * বৃহস্পতি আর শুক্র পুরো, শনি শূন্য — বিনা বেতনের ছুটিতে শনিবার কাজে এলেও শুক্রবারের দিনটা কাটত।
+         */
+        // ⓘ ক্যালেন্ডারের দিনে গোনা ধরন (মাতৃত্বকালীন) — আগের নিয়মে, প্রতিটা দিন ([[LeaveType::countsCalendarDays()]])
+        if ($application->leaveType?->countsCalendarDays()) {
+            $before = (string) $application->from_date->copy()->startOfDay()->diffInDays($day->copy()->startOfDay());
+            $left = bcsub((string) $application->days, $before, 1);
+
+            return bccomp($left, '1', 1) >= 0 ? '1' : (bccomp($left, '0', 1) > 0 ? $left : '0');
+        }
+
+        $calendar ??= app(WorkCalendar::class);
+        $companyId = $application->company_id === null ? null : (int) $application->company_id;
+        $branchId = self::branchOf($application);
+
+        if ($calendar->isOffDay($day, $companyId, $branchId)) {
+            return '0';
+        }
+
+        $before = $day->copy()->startOfDay()->lte($application->from_date->copy()->startOfDay())
+            ? '0'
+            : (string) $calendar->workingDays($application->from_date, $day->copy()->subDay(), $companyId, $branchId);
         $left = bcsub((string) $application->days, $before, 1);
 
         return bccomp($left, '1', 1) >= 0 ? '1' : (bccomp($left, '0', 1) > 0 ? $left : '0');
     }
 
     /** এই সারিটা ছুটির কত ভাগ — ছুটির সারি না হলে বা আবেদন না থাকলে পুরো দিন */
-    public function leaveShare(): string
+    public function leaveShare(?WorkCalendar $calendar = null): string
     {
         return $this->status === self::LEAVE && $this->leaveApplication !== null
-            ? self::shareOf($this->leaveApplication, $this->work_date)
+            ? self::shareOf($this->leaveApplication, $this->work_date, $calendar)
             : '1';
+    }
+
+    /** ⓘ আবেদনের কর্মীর শাখা — ছুটির তালিকা শাখা ধরে ([[WorkCalendar]]); কর্মী মুছে গেলেও খুঁজে পায় */
+    private static function branchOf(LeaveApplication $application): ?int
+    {
+        $branch = $application->relationLoaded('employee')
+            ? $application->employee?->branch_id
+            : Employee::query()->withoutGlobalScopes()->whereKey($application->employee_id)->value('branch_id');
+
+        return $branch === null ? null : (int) $branch;
     }
 
     /**

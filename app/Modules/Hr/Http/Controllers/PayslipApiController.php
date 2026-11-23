@@ -8,6 +8,7 @@ use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Services\ExpenseClaimService;
@@ -75,9 +76,15 @@ final class PayslipApiController extends Controller implements HasMiddleware
             'code' => (string) $employee->code,
             'payment_method' => (string) ($slip->payment_method ?? ''),
             // ⓘ আয় আগে, কর্তন পরে — সারির নিজের ক্রমে ([[Payslip::lines()]])
-            'lines' => $slip->lines->map(fn (PayslipLine $line) => [
+            // ⛔ প্রতিষ্ঠানের অংশ এখানে নয় — ফোন আয় আর কর্তন ছাড়া তৃতীয় কিছু চেনে না, আর এটা নিটে ঢোকে না ([[PayslipLine::EMPLOYER]])
+            'lines' => $slip->lines->reject(fn (PayslipLine $line) => $line->isEmployerShare())->map(fn (PayslipLine $line) => [
                 'name' => $line->headName('bn'),
                 'earning' => $line->isEarning(),
+                'amount' => Money::round((string) $line->amount, 2),
+            ])->values(),
+            // ⭐ ভবিষ্য তহবিলে প্রতিষ্ঠানের ভাগ — আলাদা ঘরে (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+            'employer_lines' => $slip->lines->filter(fn (PayslipLine $line) => $line->isEmployerShare())->map(fn (PayslipLine $line) => [
+                'name' => $line->headName('bn'),
                 'amount' => Money::round((string) $line->amount, 2),
             ])->values(),
         ]);
@@ -107,6 +114,11 @@ final class PayslipApiController extends Controller implements HasMiddleware
             'gross' => Money::round((string) $slip->gross, 2),
             'deductions' => Money::round((string) $slip->deductions, 2),
             'net' => Money::round((string) $slip->net, 2),
+            /*
+             * ⭐ নতুন ঘর, কেবল যোগ — বেতনের স্লিপ না উৎসব ভাতার (`salary` | `bonus`; fe-র সিদ্ধান্ত ৩, ২১ অক্টোবর ২০২৬)। ⛔ আগের কোনো ঘরের
+             * নাম বা মান বদলায় না — অ্যাপ 0.4.42 যা পড়ে তা অবিকল ([[APayslipSaysWhetherItIsSalaryOrBonusTest]])। ⓘ পুরনো রানে ঘর খালি হলে বেতন।
+             */
+            'run_type' => (string) ($slip->run?->run_type ?: PayrollRun::SALARY),
         ];
     }
 }

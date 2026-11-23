@@ -138,4 +138,6 @@ return [
     'change_not_pending' => 'This change is no longer waiting.',
     'change_maker_cannot_sign' => 'The person who asked for the change cannot approve it.',
     'change_no_key' => 'Approving needs the settings key.',
+    // ⓘ a setting with its own screen (owned_by) — a6, 21 Oct 2026
+    'owned_elsewhere' => 'This setting is changed on its own screen, not here.',
 ];

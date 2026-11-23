@@ -72,4 +72,9 @@ return [
     'viz_other_heads' => 'Others',
     'viz_heads_sub' => ':month · heads into gross earnings and deductions · net pay :net',
     'viz_heads_none' => 'Heads of confirmed payslips',
+
+    // ⭐ my own signatures and HR's whole count (fe, 21 Oct 2026)
+    'my_pending_leave' => 'Awaiting my signature',
+    'my_pending_leave_hint' => 'Leave you can sign now',
+    'all_pending_leave' => 'All pending leave',
 ];

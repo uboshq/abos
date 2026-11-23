@@ -100,7 +100,10 @@ final class AuthorityService
 
     public function allows(User $user, Approval $approval, ?int $branchId = null): bool
     {
-        if ($approval->amount === null) {
+        // ⓘ চাবির পেছনের অঙ্কও সীমায় মাপা — খোলা ঘর খালি, তবু অঙ্ক জানা ([[Approval::signedAmount()]], a6, ২১ অক্টোবর ২০২৬)
+        $signed = $approval->signedAmount();
+
+        if ($signed === null) {
             return true;
         }
 
@@ -119,7 +122,7 @@ final class AuthorityService
             return true;
         }
 
-        return bccomp((string) $approval->amount, $limit, 4) <= 0;
+        return bccomp($signed, $limit, 4) <= 0;
     }
 
     /**

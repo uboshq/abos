@@ -47,12 +47,31 @@ class Employee extends Model implements Drillable
 
     protected $table = 'hr_employees';
 
+    /**
+     * ⭐ পরিচয়ের চাবির (`hr.identity.view`) পেছনের ঘর — এক তালিকা: মডিউলের `sensitive_fields`, লেখার দুই পাহারা
+     * ([[EmployeeController]]) আর পর্দা এখান থেকেই পড়ে।
+     * ⛔ আগে কেবল NID আর ব্যাংক/MFS — জন্মতারিখ, বাবা-মায়ের নাম, রক্তের গ্রুপ, ঠিকানা আর জরুরি যোগাযোগ `hr.employee.view`
+     * থাকলেই সবাই দেখতেন (ঘাটতির তালিকা #১৯; GDPR ন্যূনতম তথ্য, ISO 27001 A.5.34; a6, ২০ অক্টোবর ২০২৬)।
+     *
+     * @var list<string>
+     */
+    public const GUARDED = [
+        'national_id', 'bank_account_no', 'bank_routing_no', 'mfs_number',
+        'father_name', 'mother_name', 'date_of_birth', 'blood_group', 'present_address', 'permanent_address', 'emergency_name', 'emergency_relation', 'emergency_mobile',
+        // ⭐ লিঙ্গ — মাতৃত্বকালীন ছুটির যোগ্যতা (শ্রম আইন অধ্যায় ৪; a6, ২১ অক্টোবর ২০২৬)
+        'gender',
+        // ⭐ জীবিত সন্তান — মাতৃত্বকালীন সুবিধা (ধারা ৪৬(৩); fe, ২১ অক্টোবর ২০২৬)
+        'surviving_children',
+        // ⭐ e-TIN — করদাতার নম্বর; NID-এর মতোই পরিচয় (আয়কর আইন ২০২৩; a6, ২১ অক্টোবর ২০২৬, [[SalaryTax]])
+        'e_tin',
+    ];
+
     protected $fillable = [
         'company_id', 'branch_id', 'code', 'name_en', 'name_bn',
-        'father_name', 'mobile', 'email', 'national_id',
+        'father_name', 'mobile', 'email', 'national_id', 'e_tin',
         // ⭐ প্রোফাইলের মানুষটা ও রিপোর্টিং লাইন — মালিকের অনুমোদিত নকশা, ২ অক্টোবর ২০২৬
         'date_of_birth', 'mother_name', 'blood_group', 'present_address', 'permanent_address',
-        'emergency_name', 'emergency_relation', 'emergency_mobile', 'reports_to_employee_id',
+        'emergency_name', 'emergency_relation', 'emergency_mobile', 'reports_to_employee_id', 'gender', 'surviving_children',
         'user_id', 'department_id', 'designation_id', 'employment_type_id',
         'joining_date', 'leaving_date',
         'payment_method', 'bank_name', 'bank_branch',
@@ -67,6 +86,7 @@ class Employee extends Model implements Drillable
             'date_of_birth' => 'date',
             'leaving_date' => 'date',
             'is_active' => 'boolean',
+            'surviving_children' => 'integer',
 
             /*
              * পরিচয় ও টাকা পাঠানোর তথ্য — ডাটাবেজেও ঢাকা।
@@ -83,6 +103,8 @@ class Employee extends Model implements Drillable
              * মানগুলোও হারায় — **চাবিটা এখন ব্যাকআপের অংশ**।
              */
             'national_id' => 'encrypted',
+            // ⭐ e-TIN — NID-এর মতোই ডাটাবেজেও ঢাকা (a6, ২১ অক্টোবর ২০২৬)
+            'e_tin' => 'encrypted',
             'bank_account_no' => 'encrypted',
             'bank_routing_no' => 'encrypted',
             'mfs_number' => 'encrypted',
@@ -102,6 +124,12 @@ class Employee extends Model implements Drillable
 
     /** ⓘ রক্তের আটটা গ্রুপ — বাছাই থেকে, হাতে লেখা নয়, যাতে "B +ve" আর "B+" দুই রকম না হয় */
     public const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
+    /** ⭐ লিঙ্গ — বাছাই থেকে; মাতৃত্বকালীন ছুটি কেবল `female` ([[LeaveService::assertEligible()]]; a6, ২১ অক্টোবর ২০২৬) */
+    public const FEMALE = 'female';
+
+    /** @var list<string> */
+    public const GENDERS = [self::FEMALE, 'male', 'other'];
 
     public function creator(): BelongsTo
     {

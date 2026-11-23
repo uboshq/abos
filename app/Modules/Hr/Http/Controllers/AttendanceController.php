@@ -67,7 +67,8 @@ class AttendanceController extends Controller implements HasMiddleware
         $date = $this->chosenDate($request);
 
         // ⭐ শাখার দেয়াল — কেবল নাগালের কর্মী (চূড়ান্ত অডিট ⛔১৭, [[BranchReach]])
-        $employees = $this->reach()->employees(Employee::query(), $request->user())
+        // ⭐ আর হেডারের বাছা শাখা ([[BranchReach::viewing()]], fe, ২১ অক্টোবর ২০২৬)
+        $employees = $this->reach()->employeesInView(Employee::query(), $request->user())
             ->onPayrollFor($date)
             ->with(['department', 'designation'])
             ->orderBy('code')
@@ -80,7 +81,7 @@ class AttendanceController extends Controller implements HasMiddleware
          * উনিশটা আবার বাছতে হয় না — আর ভুল করে খালি রেখে সংরক্ষণ করলেও
          * আগেরগুলো মুছে যায় না।
          */
-        $existing = $this->reach()->throughEmployee(Attendance::query(), $request->user())
+        $existing = $this->reach()->throughEmployeeInView(Attendance::query(), $request->user())
             ->whereDate('work_date', $date->toDateString())
             ->get()
             ->keyBy('employee_id');
@@ -140,7 +141,7 @@ class AttendanceController extends Controller implements HasMiddleware
          * লেখা থাকলে ফল হত একটা সাধারণ Collection, আর পেজার কিছুই
          * দেখাতে পারত না।
          */
-        $rows = $this->reach()->employees(Employee::query(), $request->user())
+        $rows = $this->reach()->employeesInView(Employee::query(), $request->user())
             ->onPayrollFor($month->copy()->endOfMonth())
             ->orderBy('code')
             ->paginate(\App\Core\Support\PerPage::of())

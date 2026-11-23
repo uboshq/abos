@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Security;
 
+use App\Core\Contracts\GuardsFieldsPerRow;
 use App\Core\Module\ModuleRegistry;
 use Illuminate\Database\Eloquent\Model;
 
@@ -72,11 +73,26 @@ final class FieldSecurity
      *
      * @param  class-string|Model  $model
      */
-    public static function permissionFor(string|Model $model, string $field): ?string
+    public static function permissionFor(string|Model $model, string $field, int|string|null $id = null): ?string
     {
         $class = $model instanceof Model ? $model::class : $model;
 
-        return self::all()[$class][$field] ?? self::sectionGuarded()[$class][$field] ?? null;
+        $declared = self::all()[$class][$field] ?? self::sectionGuarded()[$class][$field] ?? null;
+
+        if ($declared !== null) {
+            return $declared;
+        }
+
+        /*
+         * ⭐ সারি ধরে ঢাকা — একই ঘর কোনো সারিতে গোপন, কোনোটায় নয় (a6, ২১ অক্টোবর ২০২৬; fe-র উত্তর খ, [[GuardsFieldsPerRow]])।
+         * ⓘ অনুমোদনের অনুরোধের `amount`: বেতনের রানে `hr.salary.view`, বিক্রির ছাড়ে খোলা। অডিটের পর্দা সারির আইডি দেয়, তাই পুরনো
+         * অডিট-সারিও পড়ার মুহূর্তে ঢাকা পড়ে।
+         */
+        if ($id !== null && is_string($class) && is_subclass_of($class, GuardsFieldsPerRow::class)) {
+            return $class::fieldPermissionFor((int) $id, $field);
+        }
+
+        return null;
     }
 
     /**
@@ -122,9 +138,9 @@ final class FieldSecurity
      *
      * @param  class-string|Model  $model
      */
-    public static function visible(string|Model $model, string $field): bool
+    public static function visible(string|Model $model, string $field, int|string|null $id = null): bool
     {
-        $permission = self::permissionFor($model, $field);
+        $permission = self::permissionFor($model, $field, $id);
 
         if ($permission === null) {
             return true;
@@ -152,9 +168,9 @@ final class FieldSecurity
      *
      * @param  class-string|Model  $model
      */
-    public static function show(string|Model $model, string $field, mixed $value): mixed
+    public static function show(string|Model $model, string $field, mixed $value, int|string|null $id = null): mixed
     {
-        return self::visible($model, $field) ? $value : self::mask();
+        return self::visible($model, $field, $id) ? $value : self::mask();
     }
 
     /** টেস্টের জন্য — মডিউলের তালিকা বদলালে ক্যাশটা বাসি হয়ে যায়। */

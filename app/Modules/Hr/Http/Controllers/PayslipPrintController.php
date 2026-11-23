@@ -71,10 +71,12 @@ class PayslipPrintController extends Controller implements HasMiddleware
          * ফোনের দরজার ([[PayslipApiController]]) একই নিয়ম।
          */
         $payslip->load(['employee.department', 'employee.designation', 'lines', 'run' => fn ($q) => $q->withoutGlobalScope('user-branch')]);
+        // ⭐ অন্যের বেতনশিট ছাপা — নিরীক্ষায়, অঙ্ক ছাড়া; নিজেরটা নয় (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
+        app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($payslip, 'payslip_viewed', (int) $payslip->employee_id);
 
         return $this->pdf(
             $request,
-            [[$this->documentFor($payslip), (string) $payslip->net]],
+            [$this->paired($request, $payslip)],
             $payslip->run->document_no.'-'.$payslip->employee?->code,
             'hr_payslip',
             (int) $payslip->id,
@@ -83,20 +85,37 @@ class PayslipPrintController extends Controller implements HasMiddleware
 
     public function all(Request $request, PayrollRun $run): Response
     {
-        // ⛔ কেবল নাগালের কর্মীদের স্লিপ (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ HR ⛔২; [[BranchReach]])
+        // ⛔ কেবল নাগালের কর্মীদের স্লিপ (পুরো-ERP অডিট, ৬ অক্টোবর ২০২৬ HR ⛔২; [[BranchReach]]) — আর হেডারের বাছা শাখা, রানের পাতার মতো
         $run->setRelation('payslips', app(BranchReach::class)
-            ->throughEmployee($run->payslips()->getQuery(), $request->user())
+            ->throughEmployeeInView($run->payslips()->getQuery(), $request->user())
             ->with(['employee.department', 'employee.designation', 'lines'])->get());
 
         $documents = $run->payslips
             ->sortBy(fn (Payslip $slip) => $slip->employee?->code)
-            ->map(fn (Payslip $slip) => [$this->documentFor($slip), (string) $slip->net])
+            ->map(fn (Payslip $slip) => $this->paired($request, $slip))
             ->values()
             ->all();
 
         abort_if($documents === [], 404);
+        // ⭐ রানের সব শিট ছাপা — নিরীক্ষায়, অঙ্ক ছাড়া (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
+        app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($run, 'payroll_viewed');
 
         return $this->pdf($request, $documents, $run->document_no, 'hr_payroll_run', (int) $run->id);
+    }
+
+    /**
+     * ⛔ অন্যের বেতনের অঙ্ক কেবল `hr.salary.view`-এ — কাগজেও (fe, ২১ অক্টোবর ২০২৬)। ⓘ নিজের স্লিপ নিজের চোখে খোলা; চাবি ছাড়া অন্যের
+     * স্লিপে মানুষ, মাস আর খাতগুলো থাকে, অঙ্কের ঘরে [[FieldSecurity::mask()]], কথায় অঙ্কও নেই (কথাও অঙ্ক বলে দিত)।
+     *
+     * @return array{0: PrintableDocument, 1: ?string} কাগজ, আর কথায় বসানোর কাঁচা নিট (ঢাকা হলে null)
+     */
+    private function paired(Request $request, Payslip $slip): array
+    {
+        $own = $slip->employee !== null && $slip->employee->user_id !== null
+            && (int) $slip->employee->user_id === (int) $request->user()?->id;
+        $pay = $own || (bool) $request->user()?->can('hr.salary.view');
+
+        return [$this->documentFor($slip, $pay), $pay ? (string) $slip->net : null];
     }
 
     /**
@@ -105,20 +124,22 @@ class PayslipPrintController extends Controller implements HasMiddleware
      * অঙ্কগুলো শিট থেকেই আসে, কাঠামো থেকে নয়: কাগজটা যা দেওয়া হয়েছিল
      * তা-ই দেখাবে, আজ কাঠামো যা বলছে তা নয়।
      */
-    private function documentFor(Payslip $slip): PrintableDocument
+    private function documentFor(Payslip $slip, bool $pay): PrintableDocument
     {
         $employee = $slip->employee;
+        $money = fn ($value): string => $pay ? Money::format($value) : FieldSecurity::mask();
         $run = $slip->run;
 
         $lines = [];
 
         foreach ($slip->lines as $line) {
             $lines[] = [
-                'name' => $line->headName().($line->isEarning() ? '' : ' ('.__('hr::kind.deduction').')'),
+                // ⓘ প্রতিষ্ঠানের অংশ নিজের নামে — "কর্তন" নয়, কারণ কর্মীর হাত থেকে যায়নি ([[PayslipLine::EMPLOYER]])
+                'name' => $line->headName().($line->isEarning() ? '' : ' ('.__($line->isEmployerShare() ? 'hr::kind.employer_share' : 'hr::kind.deduction').')'),
                 'qty' => '',
                 'unit' => '',
                 'rate' => '',
-                'amount' => Money::format($line->amount),
+                'amount' => $money($line->amount),
             ];
         }
 
@@ -137,9 +158,9 @@ class PayslipPrintController extends Controller implements HasMiddleware
                     ? '' : (string) FieldSecurity::show($slip, 'bank_account_no', (string) $slip->bank_account_no),
             ], fn (string $value) => $value !== ''),
             totals: [
-                __('hr::field.gross') => Money::format($slip->gross),
-                __('hr::field.deductions') => Money::format($slip->deductions),
-                __('hr::field.net') => Money::format($slip->net),
+                __('hr::field.gross') => $money($slip->gross),
+                __('hr::field.deductions') => $money($slip->deductions),
+                __('hr::field.net') => $money($slip->net),
             ],
 
             /*
@@ -159,7 +180,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
     }
 
     /**
-     * @param  list<array{0: PrintableDocument, 1: string}>  $documents  কাগজ ও তার কাঁচা নিট অঙ্ক
+     * @param  list<array{0: PrintableDocument, 1: ?string}>  $documents  কাগজ ও তার কাঁচা নিট অঙ্ক (ঢাকা হলে null)
      */
     /**
      * ⛔ `$kind` আর `$documentId` ডাকার জন বলে — ২৭ সেপ্টেম্বর ২০২৬।
@@ -189,7 +210,7 @@ class PayslipPrintController extends Controller implements HasMiddleware
                  * কাগজটা ৫০০ দিত।
                  */
                 'documents' => array_map(
-                    fn (array $pair) => $pair[0]->withWordsFor($pair[1], $locale),
+                    fn (array $pair) => $pair[1] === null ? $pair[0] : $pair[0]->withWordsFor($pair[1], $locale),
                     $documents,
                 ),
                 'title' => __('hr::doc.payslip').' '.$documentNo,

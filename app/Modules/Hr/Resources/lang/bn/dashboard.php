@@ -72,4 +72,9 @@ return [
     'viz_other_heads' => 'অন্যান্য',
     'viz_heads_sub' => ':month · খাত থেকে মোট আয় আর কর্তন · হাতে পাবেন :net',
     'viz_heads_none' => 'নিশ্চিত বেতনশিটের খাত',
+
+    // ⭐ নিজের সইয়ের গোনা আর HR-এর গোটা গোনা (fe, ২১ অক্টোবর ২০২৬; [[LeaveSigner::countSignable()]])
+    'my_pending_leave' => 'আমার সইয়ের অপেক্ষায়',
+    'my_pending_leave_hint' => 'যে ছুটিতে আপনি এখনই সই দিতে পারেন',
+    'all_pending_leave' => 'সব অপেক্ষার ছুটি',
 ];

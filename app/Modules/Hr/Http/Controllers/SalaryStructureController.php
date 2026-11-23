@@ -42,6 +42,8 @@ class SalaryStructureController extends Controller implements HasMiddleware
     {
         // ⓘ অনুমতির সাথে কর্মীর শাখাও — [[EmployeePolicy]]
         $this->authorize('viewSalary', $employee);
+        // ⭐ দেখা নিরীক্ষায়, অঙ্ক ছাড়া (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
+        app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($employee, 'salary_viewed', $employee);
 
         $on = $this->asOf($request);
 
@@ -54,6 +56,8 @@ class SalaryStructureController extends Controller implements HasMiddleware
             'totals' => $this->salaries->totalsOn($employee, $on),
             'history' => $employee->structures()->with('salaryHead', 'creator')->get(),
             'on' => $on,
+            // ⭐ সইয়ের অপেক্ষায় থাকা বদল — এই পাতা বেতনের চাবিতেই খোলে, তাই অঙ্কসহ (§৮ ⚠️৫)
+            'waiting' => $this->waitingOf($employee),
         ]);
     }
 
@@ -75,23 +79,46 @@ class SalaryStructureController extends Controller implements HasMiddleware
             'amounts.*.max' => __('hr::validation.salary_amount_shape'),
         ]);
 
-        $heads = SalaryHead::query()->active()->get()->keyBy('id');
-
-        foreach ($data['amounts'] as $headId => $amount) {
-            $head = $heads->get((int) $headId);
-
-            // খালি ঘর মানে "এই খাতে কিছু নয়" — শূন্য বসানো নয়, কারণ
-            // শূন্য বসালে পরের মাসেও ওই খাতটা শূন্য হয়ে টিকে থাকত
-            if ($head === null || blank($amount)) {
-                continue;
-            }
-
-            $this->salaries->set($employee, $head, $data['effective_from'], (string) $amount);
-        }
+        /*
+         * ⭐ এক দরজা — বেতন হয়ে যাওয়া মাস থামে, ছক চালু থাকলে দ্বিতীয় সইয়ের অপেক্ষা (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬;
+         * [[SalaryStructureService::change()]])। ⓘ আগে এখানে খাত ধরে সরাসরি `set()` — একজনই বসাতেন, দেওয়া মাসের অঙ্কও নীরবে
+         * বদলাত, আর দ্বিতীয় খাতের ভুলে প্রথম খাত বসে থেকে যেত; এখন সব খাত আগে যাচাই, তারপর এক লেনদেনে।
+         */
+        $waiting = $this->salaries->change($employee, (string) $data['effective_from'], $data['amounts']);
 
         return redirect()
             ->route('hr.employee.salary', $employee)
-            ->with('saved', __('hr::message.salary_saved'));
+            ->with('saved', $waiting === null ? __('hr::message.salary_saved') : __('hr::message.salary_change_waiting'));
+    }
+
+    /**
+     * ⓘ সইয়ের অপেক্ষায় থাকা বদল — অনুরোধ, তারিখ আর খাত ধরে অঙ্ক; না থাকলে `null`।
+     *
+     * ⓘ সইকারী ইনবক্স থেকে কর্মীর পাতা হয়ে এখানে আসেন — অনুরোধের পাতায় অঙ্ক নেই, কারণ সেটা নিরীক্ষকও খোলেন
+     * ([[SalaryStructureService::change()]])।
+     *
+     * @return array{approval: \App\Models\Approval, effective_from: string, lines: list<array{head: ?SalaryHead, amount: string}>}|null
+     */
+    private function waitingOf(Employee $employee): ?array
+    {
+        $approval = $this->salaries->waitingChange($employee);
+        $proposal = $approval === null ? null : $this->salaries->proposalOf($approval);
+
+        if ($proposal === null) {
+            return null;
+        }
+
+        $heads = SalaryHead::query()->whereKey(array_keys($proposal['lines']))->get()->keyBy('id');
+
+        return [
+            'approval' => $approval,
+            'effective_from' => $proposal['effective_from'],
+            'lines' => array_map(
+                fn (int $headId, string $amount) => ['head' => $heads->get($headId), 'amount' => $amount],
+                array_keys($proposal['lines']),
+                array_values($proposal['lines']),
+            ),
+        ];
     }
 
     /**

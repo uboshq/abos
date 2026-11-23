@@ -22,6 +22,19 @@ class ApprovalFlowStep extends Model
 
     public const BY_USER = 'user';
 
+    /**
+     * ⭐ চাবি ধরে — কেবল যন্ত্রের নিজের "দ্বিতীয় সই" ধাপে, কখনো ডাটাবেসে নয় (মালিকের ব্যতিক্রম, a6, ২১ অক্টোবর ২০২৬;
+     * [[ApprovalEngine::flows()]], [[secondHand()]])। ⓘ ছকের পর্দা এটা বসাতে দেয় না ([[ApprovalFlowRequest]]: কেবল role/user)।
+     */
+    public const BY_KEY = 'key';
+
+    /**
+     * ⓘ "দ্বিতীয় সই" ধাপের চাবিগুলো — সবগুলো থাকলে তবে সইকারী। ⛔ ঘর (attribute) নয়, তাই কোনোদিন সারি হয়ে বসে না।
+     *
+     * @var list<string>
+     */
+    private array $keys = [];
+
     protected $fillable = [
         'approval_flow_id', 'level', 'step_name', 'approver_type', 'approver_id', 'requires_all',
         'sla_hours', 'warn_hours', 'escalate_hours', 'escalate_to_type', 'escalate_to_id',
@@ -103,8 +116,65 @@ class ApprovalFlowStep extends Model
         return $this->belongsTo(ApprovalFlow::class, 'approval_flow_id');
     }
 
+    /**
+     * ⭐ যন্ত্রের "দ্বিতীয় সই" ধাপ — এক স্তর, চাবি থাকা যেকোনো একজন (মালিকের ব্যতিক্রম, a6, ২১ অক্টোবর ২০২৬)।
+     *
+     * ⓘ সারি নয় (`exists` মিথ্যা), সংরক্ষণও হয় না — ছকের পর্দায় দেখা যায় না, বদলানো যায় না। ⛔ যিনি চাইলেন তিনি সই দেন না —
+     * সেটা ইঞ্জিনের সাধারণ নিয়ম ([[ApprovalEngine::canDecide()]]); মালিক দিলে অডিটে `owner_self_signed`।
+     *
+     * @param  list<string>  $keys
+     */
+    public static function secondHand(array $keys, string $name): self
+    {
+        $step = new self;
+        $step->forceFill([
+            'level' => 1,
+            'step_name' => $name,
+            'approver_type' => self::BY_KEY,
+            'approver_id' => 0,
+            'requires_all' => false,
+            'min_approvals' => 1,
+        ]);
+        $step->keys = array_values($keys);
+
+        return $step;
+    }
+
+    /** @return list<string> */
+    public function keys(): array
+    {
+        return $this->keys;
+    }
+
+    /**
+     * ⓘ চাবি ধরে ধাপে ইনি আছেন কি না — মালিক (super admin) সবসময়, নাহলে প্রতিটা চাবি চলতি কোম্পানিতে
+     * ([[MoneyFlowDefaults::keyHolders()]]-এর একই মানুষ, রোলের বদলে মানুষ ধরে — নিজের নামে দেওয়া চাবিও গোনে)।
+     */
+    public function heldBy(User $user): bool
+    {
+        if ($this->keys === []) {
+            return false;
+        }
+
+        if ($user->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE)) {
+            return true;
+        }
+
+        foreach ($this->keys as $key) {
+            if (! $user->can($key)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public function allows(User $user): bool
     {
+        if ($this->approver_type === self::BY_KEY) {
+            return $this->heldBy($user);
+        }
+
         if ($this->approver_type === self::BY_USER) {
             return $user->id === (int) $this->approver_id;
         }
