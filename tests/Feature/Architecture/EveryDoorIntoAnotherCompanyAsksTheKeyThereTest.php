@@ -36,6 +36,9 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
         'app/Core/Services/PartyMessageDispatcher.php' => 'Meta-র webhook (onCloudStatus) — মানুষ নেই; ঠিকানার কোম্পানির app secret-এ সই মিললে (WhatsAppWebhookController) কেবল '
             .'সেই কোম্পানিতে ঢোকে, আর কেবল সেই কোম্পানির নিজের পাঠানো বার্তার (provider_ref) অবস্থা বদলায়; কারও চাবিতে কিছু খোলে না',
         'app/Modules/Notification/Http/Controllers/WhatsAppWebhookController.php' => 'Meta-র webhook-এর দরজা — মানুষ নেই, লগইন নেই; ঠিকানার কোম্পানিতে ঢুকে কেবল সেই কোম্পানির verify token (GET) বা app secret-এর HMAC সই (POST) মেলায়, না মিললে ৪০৩ — কিছু পড়ে না, কিছু ফেরায় না',
+        // ⭐ বিক্রির দায়িত্ব (মালিক, ২৩ নভেম্বর ২০২৬)
+        'app/Modules/Sales/Services/SalesResponsibility.php' => 'কাগজের নিজের কোম্পানির একটা সেটিং পড়া (sales.default_sales_person) — চলতি কোম্পানি আলাদা হলে (কনসোলের sales:assign-responsible, যা প্রতিটা কোম্পানি ধরে চলে) কেবল পড়তে সেখানে বসে; '
+            .'কিছু লেখে না, আর মানুষটা সেই কোম্পানির সদস্য না হলে বসায় না (isMember)',
         'app/Core/Services/WhatsAppCloud.php' => 'Meta-র webhook-এর দেহ (receive) — মানুষ নেই; সই আগেই ঠিকানার কোম্পানির app secret-এ মেলানো (WhatsAppWebhookController), '
             .'তারপর কেবল সেই কোম্পানিতে ঢুকে তার নিজের নম্বর/অ্যাকাউন্টের ঘটনা নেয় (phone_number_id, waba_id মিলিয়ে); বার্তার অবস্থা আর লেখার অনুমোদন ছাড়া কিছু বদলায় না',
         'app/Modules/Accounts/Http/Controllers/InterCompanyController.php' => null,
