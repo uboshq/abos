@@ -62,6 +62,8 @@ final class AllBranchesView
         'promotion.withdraw',
         'purchase.requisition.approve',
         'purchase.payment_schedule.sign_all',
+        'purchase.bulk.approve',                // তালিকার একসাথে অনুমোদন — একটা একটা অনুমোদনের একই দরজা ([[BulkRun::approve()]])
+        'sales.bulk.approve',
         'sales.quotation.approve',
         'sales.quotation.reject',
         'supplier.bank.sign',

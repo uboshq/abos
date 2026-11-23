@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { bulkBars, pickColumns } from './bulk-bar.js'
+import { bulkBars, exportUrl, pickColumns } from './bulk-bar.js'
 
 /* ⭐ তালিকার একসাথে কাজের বার — কেবল "ABOS"-এ, কিছু বাছলে তবেই (মালিক, ১৯ নভেম্বর ২০২৬, নমুনা Q2W6mM3S v3) */
 function vouchers (ui) {
@@ -126,5 +126,62 @@ describe('pickColumns', () => {
             expect(pickColumns(document)).toBe(0)
             expect(document.querySelector('[data-pick]')).toBeNull()
         }
+    })
+})
+
+/* ⭐ ধাপ ২ — সার্ভারের কাজের বার (`data-bulk-kind="papers"`): তিন ABOS রূপেই; ছাপা/Excel বাছা সারি নিয়ে তালিকার নিজের ঠিকানায় */
+function papers (ui) {
+    document.documentElement.dataset.ui = ui
+    document.body.innerHTML = `
+        <form id="sales-order-bulk" data-bulk-form data-bulk-kind="papers" data-count-label=":n selected" data-all-label="Select all">
+            <button type="submit" formaction="/sales/bulk/order/cancel" data-bulk-do="cancel">Cancel drafts</button>
+            <input type="text" name="reason" data-bulk-reason>
+            <button type="button" data-bulk-export="xlsx">Excel</button>
+        </form>
+        <table>
+            <thead><tr><th>Pick</th><th>No</th></tr></thead>
+            <tbody>
+                <tr><td><input type="checkbox" form="sales-order-bulk" name="ids[]" value="7" data-bulk-pick></td><td>SO-7</td></tr>
+                <tr><td><input type="checkbox" form="sales-order-bulk" name="ids[]" value="9" data-bulk-pick></td><td>SO-9</td></tr>
+            </tbody>
+        </table>`
+}
+
+describe('paper bars (phase 2)', () => {
+    it('wires in all three ABOS looks and never in SAP or Dynamic', () => {
+        for (const ui of ['rose', 'navy', 'blue']) {
+            papers(ui)
+            expect(bulkBars(document)).toBe(1)
+            expect(document.getElementById('sales-order-bulk').hidden).toBe(true)
+        }
+
+        for (const ui of ['tiles', 'dynamic']) {
+            papers(ui)
+            expect(bulkBars(document)).toBe(0)
+        }
+    })
+
+    it('builds the export address on the list\'s own URL with only the picked ids, dropping the page and old picks', () => {
+        const url = new URL(exportUrl('https://erp.test/sales/orders?q=rahim&page=3&ids[]=1&export=csv', 'xlsx', ['7', '9']))
+
+        expect(url.pathname).toBe('/sales/orders')
+        expect(url.searchParams.get('q')).toBe('rahim')
+        expect(url.searchParams.get('page')).toBeNull()
+        expect(url.searchParams.get('export')).toBe('xlsx')
+        expect(url.searchParams.get('picked')).toBe('1')
+        expect(url.searchParams.getAll('ids[]')).toEqual(['7', '9'])
+    })
+
+    it('does not send a cancel without a reason; it moves to the reason box instead', () => {
+        papers('navy')
+        bulkBars(document)
+        tick(document.querySelector('input[value="7"]'))
+
+        const reason = document.querySelector('[data-bulk-reason]')
+        const click = new MouseEvent('click', { bubbles: true, cancelable: true })
+        document.querySelector('[data-bulk-do="cancel"]').dispatchEvent(click)
+
+        expect(click.defaultPrevented).toBe(true)
+        expect(document.activeElement).toBe(reason)
     })
 })

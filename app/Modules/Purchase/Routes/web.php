@@ -6,6 +6,7 @@ use App\Modules\Purchase\Http\Controllers\DirectPurchaseController;
 use App\Modules\Purchase\Http\Controllers\PaymentController;
 use App\Modules\Purchase\Http\Controllers\PaymentScheduleController;
 use App\Modules\Purchase\Http\Controllers\PurchaseBillController;
+use App\Modules\Purchase\Http\Controllers\PurchaseBulkController;
 use App\Modules\Purchase\Http\Controllers\PurchaseOrderController;
 use App\Modules\Purchase\Http\Controllers\PurchasePrintController;
 use App\Modules\Purchase\Http\Controllers\PurchaseReceiptController;
@@ -145,6 +146,20 @@ Route::middleware('auth')->prefix('purchase')->group(function () {
         Route::post('/{rfq}/quote', [RfqController::class, 'storeQuote'])
             ->whereNumber('rfq')->name('quote.store');
     });
+
+    /*
+     * ⭐ তালিকার একসাথে কাজ — বিল আর আদেশ: নিশ্চিত/অনুমোদনে পাঠানো, খসড়া বাতিল, অনুমোদন দেওয়া (মালিক, ১৯ নভেম্বর ২০২৬; [[BulkRun]])।
+     * ⓘ চাবি নিয়ামকে — তালিকা দেখার চাবি ($this->authorize('viewAny')) আর একক দরজার নিজের চাবি ([[PurchaseBulkController::PAPERS]])।
+     */
+    Route::post('/bulk/{paper}/{action}', [PurchaseBulkController::class, 'run'])
+        ->whereIn('paper', ['bill', 'order'])
+        ->whereIn('action', ['submit', 'cancel'])
+        ->name('bulk');
+    // ⓘ অনুমোদন নিজের নামে — "সব শাখা" দেখাতেও খোলা ([[AllBranchesView::ALLOWED]]); কেবল আদেশ (বিল টাকার কাগজ, একটা একটা)
+    Route::post('/bulk/{paper}/approve', [PurchaseBulkController::class, 'run'])
+        ->whereIn('paper', ['order'])
+        ->defaults('action', 'approve')
+        ->name('bulk.approve');
 
     Route::prefix('orders')->name('order.')->group(function () {
         Route::get('/', [PurchaseOrderController::class, 'index'])->name('index');

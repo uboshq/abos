@@ -631,6 +631,46 @@ return [
     'bulk' => [
         'count' => ':n selected',
         'all' => 'Select all on this page',
+        // phase 2 — server-side bulk actions ([[BulkRun]], [[x-ui.bulk-form]])
+        'pick' => 'Pick',
+        'reason' => 'Reason for cancelling',
+        'action' => [
+            'submit' => 'Send for approval',
+            'cancel' => 'Cancel drafts',
+            'approve' => 'Approve',
+            'print' => 'Print',
+            'export' => 'Excel',
+        ],
+        'confirm' => [
+            'submit' => 'Send the picked drafts for approval?',
+            'cancel' => 'Cancel the picked drafts?',
+            'approve' => 'Approve the picked papers?',
+        ],
+        'done' => [
+            'submit' => 'sent',
+            'cancel' => 'cancelled',
+            'approve' => 'approved',
+            'activate' => 'switched on',
+            'deactivate' => 'switched off',
+        ],
+        'result' => ':done :action · :skipped skipped',
+        'skipped_why' => 'Skipped:',
+        'why' => [
+            'not_found' => 'not found — another branch or company, or gone',
+            'not_allowed' => 'you have no permission for this',
+            'not_draft' => 'not a draft',
+            'not_waiting' => 'not waiting for approval',
+            'already_waiting' => 'already waiting for approval',
+            'own_paper' => 'your own paper — another person approves it',
+            'all_branches' => 'all-branches view is read-only — pick one branch',
+            'refused' => 'could not be done — open it and try one by one',
+            'no_reason' => 'a reason is needed to cancel',
+            'unchanged' => 'already in that state',
+            'money' => 'money moves — approve it on its own',
+            'multi_step' => 'more than one approval step — approve it on its own',
+            'no_limit' => 'no approval limit is set for you',
+            'over_limit' => 'over your approval limit',
+        ],
     ],
     // the chart board ([[dashboard/viz-board]]; owner, 20 Nov 2026)
     'viz' => [

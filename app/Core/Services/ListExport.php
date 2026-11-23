@@ -207,12 +207,13 @@ class ListExport
         /*
          * ⛔ অ্যাকশনের কলাম ফাইলে নয় — ১৬ নভেম্বর ২০২৬ কাগজের প্রথম ছবিতে ধরা: ঐ কলামে সারির মেনুর সব লেখা ("দেখা প্রিভিউ — পাশে খুলবে
          *   … সম্পাদনা") প্রতিটা সারিতে, CSV আর Excel-এও — অনেকদিন ধরে। ⓘ কলামটা কাজের বোতাম, তথ্য নয়।
+         * ⓘ টিক-বাক্সের কলামও (`pick`, [[BulkRun::pickColumn()]]) — বাছাইয়ের ঘর, তথ্য নয়।
          */
         // ⓘ অনুবাদক না থাকলে (খালি ইউনিট পরীক্ষা) কেবল চাবির নামে চেনা — নাহলে `__()` ভেঙে পড়ত
         $words = function_exists('app') && app()->bound('translator');
         $actionLabels = $words ? [(string) __('core.table.action_menu'), (string) __('core.table.actions')] : [];
         $serialLabel = $words ? (string) __('core.table.serial') : null;
-        $keep = array_filter($columns, fn (array $column): bool => ! in_array($column['key'], ['actions', 'action', 'do', 'menu'], true)
+        $keep = array_filter($columns, fn (array $column): bool => ! in_array($column['key'], ['actions', 'action', 'do', 'menu', 'pick'], true)
             && ! in_array((string) $column['label'], $actionLabels, true));
         // ⓘ সর্বমোটের সারিও একই ঘরগুলো বাদ দেয় ([[footer()]]) — নাহলে মোট এক ঘর সরে বসত
         $this->droppedAt = array_values(array_diff(array_keys($columns), array_keys($keep)));
@@ -240,7 +241,14 @@ class ListExport
         $values = [];
         $kinds = [];
 
+        $picked = $this->picked();
+
         foreach ($rows as $row) {
+            // ⭐ বাছা সারি কেবল — তালিকার একসাথে কাজের "ছাপুন · Excel" ([[BulkRun]]); সারিগুলো তালিকার নিজের প্রশ্নেরই, তাই দেয়াল আর চাবি অটুট
+            if ($picked !== null && ! in_array(self::rowKey($row), $picked, true)) {
+                continue;
+            }
+
             $line = [];
 
             foreach ($columns as $column) {
@@ -295,6 +303,35 @@ class ListExport
     }
 
     /**
+     * ⭐ বাছা সারির id — রপ্তানি চাওয়া হলে আর `picked=1` সহ `ids[]` এলে; নইলে null (সব সারি, আগের মতো)।
+     *
+     * @return list<int>|null
+     */
+    public function picked(): ?array
+    {
+        $request = request();
+
+        if (! $request->boolean('picked') || ! is_array($ids = $request->query('ids'))) {
+            return null;
+        }
+
+        return array_values(array_unique(array_map('intval', array_filter($ids, 'is_numeric'))));
+    }
+
+    /** সারির id — মডেল হলে তার চাবি, অ্যারে বা বস্তু হলে `id` */
+    private static function rowKey(mixed $row): ?int
+    {
+        $key = match (true) {
+            $row instanceof \Illuminate\Database\Eloquent\Model => $row->getKey(),
+            is_array($row) => $row['id'] ?? null,
+            is_object($row) => $row->id ?? null,
+            default => null,
+        };
+
+        return is_numeric($key) ? (int) $key : null;
+    }
+
+    /**
      * আগের অনুরোধের টেবিলটা ফেলে দেওয়া।
      *
      * ── কেন এটা দরকার ───────────────────────────────────────────────
@@ -342,6 +379,11 @@ class ListExport
      */
     public function footer(array $values): void
     {
+        // ⓘ বাছা সারির কাগজে গোটা তালিকার সর্বমোট মিথ্যা — তাই নেই
+        if ($this->picked() !== null) {
+            return;
+        }
+
         foreach ($this->droppedAt as $i) {
             unset($values[$i]);
         }

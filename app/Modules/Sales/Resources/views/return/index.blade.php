@@ -23,6 +23,25 @@
         ['key' => 'status', 'label' => __('sales::field.state'), 'width' => '8rem',
          'render' => fn ($r) => view('sales::components.status-badge', ['document' => $r])],
     ];
+
+    /*
+     * ⭐ একসাথে কাজ — সারির টিক-বাক্স আর বার (তালিকার একসাথে কাজ, ধাপ ২; মালিক, ১৯ নভেম্বর ২০২৬; [[SalesBulkController]])।
+     * ⛔ কেবল তিন ABOS রূপে ([[BulkRun::showsHere()]]) — SAP আর Dynamic-এ একটা পিক্সেলও বদলায় না।
+     */
+    $bulkActions = null;
+
+    if (\App\Core\Bulk\BulkRun::showsHere() && (auth()->user()?->can('sales.return.view') ?? false)) {
+        $bulkActions = \App\Modules\Sales\Http\Controllers\SalesBulkController::actionsFor('return', auth()->user());
+    }
+
+    // ⛔ কোনো কাজ খোলা নেই (চাবি নেই, রপ্তানিও নয়) — বারও নেই, টিক-বাক্সও নয় ([[BulkRun::barOpen()]])
+    if ($bulkActions !== null && ! \App\Core\Bulk\BulkRun::barOpen($bulkActions)) {
+        $bulkActions = null;
+    }
+
+    if ($bulkActions !== null) {
+        array_unshift($columns, \App\Core\Bulk\BulkRun::pickColumn('sales-return-bulk', fn ($d) => (string) $d->document_no));
+    }
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -56,6 +75,10 @@
                 </label>
             </x-ui.toolbar>
         </form>
+
+        @if ($bulkActions !== null)
+            <x-ui.bulk-form id="sales-return-bulk" :actions="$bulkActions" />
+        @endif
 
         <x-ui.table
             :grand="$grand ?? []"

@@ -153,8 +153,60 @@ export function pickColumns (root = document) {
     return added
 }
 
+/*
+ * ⭐ ধাপ ২ — সার্ভারের কাজের বার ([[x-ui.bulk-form]], `data-bulk-kind="papers"`): তিন ABOS রূপেই (সার্ভার কেবল ওখানেই আঁকে)।
+ *   ⓘ "ছাপুন"/"Excel" তালিকার নিজের ঠিকানায় (একই ছাঁকনি) `export` + `picked=1` + বাছা `ids[]` — নতুন ট্যাবে; সার্ভার তালিকার প্রশ্নেই সারি তোলে।
+ *   ⓘ পাঠানোর আগে একবার জিজ্ঞাসা (`data-bulk-confirm`); বাতিলে কারণের ঘর খালি হলে পাঠায় না, ঘরে নিয়ে যায় — সার্ভারও আবার চায়।
+ */
+export const BULK_LOOKS = ['rose', 'navy', 'blue']
+
+export function exportUrl (href, format, ids) {
+    const url = new URL(href)
+    for (const key of [...url.searchParams.keys()]) {
+        if (key === 'export' || key === 'picked' || key === 'ids[]' || key === 'page') {
+            url.searchParams.delete(key)
+        }
+    }
+    url.searchParams.set('export', format)
+    url.searchParams.set('picked', '1')
+    ids.forEach(id => url.searchParams.append('ids[]', id))
+    return url.toString()
+}
+
+function wirePapers (form, root, picks) {
+    form.addEventListener('click', e => {
+        const exp = e.target.closest?.('[data-bulk-export]')
+        if (exp) {
+            e.preventDefault()
+            const ids = picks().filter(b => b.checked).map(b => b.value)
+            if (ids.length > 0) {
+                window.open(exportUrl(root.defaultView?.location?.href ?? window.location.href, exp.dataset.bulkExport, ids), '_blank', 'noopener')
+            }
+            return
+        }
+
+        const act = e.target.closest?.('[data-bulk-do]')
+        if (! act) {
+            return
+        }
+
+        const reason = form.querySelector('[data-bulk-reason]')
+        if (act.dataset.bulkDo === 'cancel' && reason && reason.value.trim() === '') {
+            e.preventDefault()
+            reason.focus()
+            return
+        }
+
+        if (act.dataset.bulkConfirm && ! window.confirm(act.dataset.bulkConfirm)) {
+            e.preventDefault()
+        }
+    })
+}
+
 export function bulkBars (root = document) {
-    if (root.documentElement?.dataset.ui !== 'rose') {
+    const look = root.documentElement?.dataset.ui
+
+    if (! BULK_LOOKS.includes(look)) {
         return 0
     }
 
@@ -162,6 +214,13 @@ export function bulkBars (root = document) {
 
     for (const form of root.querySelectorAll('form[data-bulk-form][id]')) {
         if (form.hasAttribute('data-bulk-wired')) {
+            continue
+        }
+
+        const papers = form.dataset.bulkKind === 'papers'
+
+        // ⓘ ভাউচারের পুরনো বার (ধাপ ১) কেবল "ABOS" (rose)-এ, আগের মতো
+        if (! papers && look !== 'rose') {
             continue
         }
 
@@ -173,6 +232,10 @@ export function bulkBars (root = document) {
         }
 
         form.setAttribute('data-bulk-wired', '')
+
+        if (papers) {
+            wirePapers(form, root, picks)
+        }
 
         const count = root.createElement('span')
         count.setAttribute('data-bulk-count', '')
