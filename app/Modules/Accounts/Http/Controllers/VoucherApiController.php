@@ -101,6 +101,8 @@ final class VoucherApiController extends Controller implements HasMiddleware
                 'label' => $g['label'],
                 'options' => collect($g['options'])->map(fn (array $p) => [
                     'id' => $p['id'], 'label' => $p['label'], 'hint' => $p['hint'] ?? null,
+                    // ⭐ খোঁজার লেখা (নাম, কোড, মোবাইল, পয়েন্ট …, [[PartyRegistry::pickerFind()]]) — ফোন অফলাইনেও মোবাইল/পয়েন্টে মেলায়
+                    'find' => $p['find'] ?? null,
                 ])->values(),
             ])->values(),
         ]);
