@@ -442,21 +442,11 @@
                  ⓘ পাশে-নিচে অপরিবর্তিত; কেবল উপরের ফাঁকটাই মার্ক করা
                  হয়েছিল, আর যেটা চাওয়া হয়নি সেটা বদলানো হয়নি। --}}
             {{-- ⭐ the open module's own colour, for the coloured page title in the ABOS looks (owner "ok", 24 Nov 2026, sample
-                 9VVoe6uQ v2) — the same rule the rail uses to find the open module ([[sidebar]]); only a variable, so no other
-                 look changes a pixel. --}}
-            @php
-                $hereCode = (function () use ($menu): ?string {
-                    $route = (string) (request()->route()?->getName() ?? '');
-                    $found = collect($menu ?? [])->first(fn ($m) => collect($m['groups'] ?? [])->flatten(1)->contains('active', true))
-                        ?? collect($menu ?? [])->first(fn ($m) => collect($m['codes'] ?? [])->contains(fn ($c) => str_starts_with($route, $c.'.')));
-
-                    return is_array($found) && preg_match('/^[a-z0-9_-]+$/', (string) ($found['code'] ?? '')) ? (string) $found['code'] : null;
-                })();
-            @endphp
+                 9VVoe6uQ v2) — [[PageAccent]]; only a variable, so no other look changes a pixel. --}}
             <main id="main"
                   class="min-w-0 flex-1 px-3 pt-2 pb-[calc(var(--spacing-bottom-nav)+1.5rem)]
                          md:px-5 md:pb-[calc(var(--spacing-status-bar)+1.5rem)] lg:px-6"
-                  @if ($hereCode) style="--page-module-colour: var(--color-module-{{ $hereCode }}, var(--color-brand-600))" @endif
+                  @if ($pageAccent = \App\Core\Support\PageAccent::style($menu ?? null)) style="{{ $pageAccent }}" @endif
                   tabindex="-1">
                 {{-- কনটেন্টের সর্বোচ্চ প্রস্থ — সেকশন ২০.১। বড় স্ক্রিনে
                      টেনে লম্বা নয়; জায়গা বাড়লে কলাম বাড়ে, লাইন নয়। --}}
