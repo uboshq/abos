@@ -30,4 +30,5 @@ return [
     'discount_share' => 'ছাড়ের হার',
     'after_discount' => 'ছাড়ের পরে',
     'drill_bills' => ':amount — অফার খাটা বিলগুলো খুলুন',
+    'chart' => 'খরচ আর বাড়তি বিক্রি',
 ];

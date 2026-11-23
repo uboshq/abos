@@ -73,6 +73,13 @@ final class ReportExport
             'period' => self::period($result->filters),
         ]);
 
+        // ⭐ পাশ ফেরানো রিপোর্ট — ফাইল আর কাগজও পর্দার মতো পাশ ফেরানো ([[ReportDefinition::$transpose]])
+        if ($result->report->transpose) {
+            self::transposedInto($export, $result, $columns);
+
+            return;
+        }
+
         // ⭐ টাকা, পরিমাণ আর শতাংশ ফাইলে খালি সংখ্যা — CSV-তে কমা ছাড়া, xlsx-এ সংখ্যার ঘর (ec, রিপোর্ট লাইন-নিরীক্ষা ⚠️৬, ১৪ অক্টোবর ২০২৬)
         $export->numeric(array_values(array_map(
             fn (ReportColumn $column): string => $column->key,
@@ -217,6 +224,65 @@ final class ReportExport
         return (string) __('core.listing.range', ['from' => DateFormat::format($from), 'to' => DateFormat::format($to)]);
     }
 
+    /**
+     * ⭐ পাশ ফেরানো টেবিল — পর্দার একই সারি আর ঘর ([[transposed()]]); প্রথম কলাম হিসাবের নাম, তারপর প্রতিটা সারি এক কলাম, শেষে মোট।
+     *
+     * @param  list<ReportColumn>  $columns
+     */
+    private static function transposedInto(ListExport $export, ReportResult $result, array $columns): void
+    {
+        $table = self::transposed($result, $columns);
+        $keys = array_map(fn (int $i): string => 'c'.$i, array_keys($table['head']));
+
+        // ⓘ প্রথম কলাম (হিসাবের নাম) বাদে সব সংখ্যা
+        $export->numeric(array_slice($keys, 1));
+        $export->capture(
+            array_map(fn (string $key, int $i): array => ['key' => $key, 'label' => $table['head'][$i], 'render' => null], $keys, array_keys($keys)),
+            $table['rows'],
+            function (mixed $row, array $column): string {
+                $i = (int) substr($column['key'], 1);
+
+                return self::text($row['__column'], $row['__cells'][$i] ?? null, $i === 0);
+            },
+        );
+    }
+
+    /**
+     * পাশ ফেরানো টেবিল — পর্দা ([[accounts::report.partials.transposed]]) আর ফাইল একই জিনিস পড়ে।
+     *
+     * ⓘ মাথা: প্রথম কলামের নাম ("শাখা" নয়, "হিসাব"), প্রতিটা সারির প্রথম ঘর, শেষে "সব"। সারি: প্রথম কলাম বাদে প্রতিটা কলাম এক সারি —
+     *   প্রথম ঘরে তার নাম, তারপর প্রতিটা সারির মান, শেষে মোট (যোগ হয় না এমন ঘরে খালি)।
+     *
+     * @param  list<ReportColumn>  $columns
+     * @return array{head: list<string>, rows: list<array{__column: ReportColumn, __cells: list<mixed>, __rows: list<array<string, mixed>>}>}
+     */
+    public static function transposed(ReportResult $result, array $columns): array
+    {
+        $first = $columns[0];
+        $rows = $result->rows;
+        $head = [(string) __('core.report.figure')];
+
+        foreach ($rows as $row) {
+            $head[] = (string) ($row[$first->key] ?? '');
+        }
+
+        $head[] = (string) __('core.report.all');
+        $out = [];
+
+        foreach (array_slice($columns, 1) as $column) {
+            $cells = [(string) __($column->label)];
+
+            foreach ($rows as $row) {
+                $cells[] = $row[$column->key] ?? null;
+            }
+
+            $cells[] = $column->total ? ($result->totals[$column->key] ?? null) : null;
+            $out[] = ['__column' => $column, '__cells' => $cells, '__rows' => $rows];
+        }
+
+        return ['head' => $head, 'rows' => $out];
+    }
+
     private static function indexOf(array $columns, string $key): int
     {
         foreach ($columns as $i => $column) {
@@ -237,10 +303,15 @@ final class ReportExport
      * জিনিস নয় — খালি ঘর যোগ হয় না, আর কেউ বুঝতেও পারে না কেন যোগফল
      * মিলছে না। ফাইলটা মানুষ পড়ে না, সূত্র পড়ে।
      */
-    private static function text(ReportColumn $column, mixed $value): string
+    private static function text(ReportColumn $column, mixed $value, bool $asLabel = false): string
     {
         if ($value === null) {
             return '';
+        }
+
+        // ⓘ পাশ ফেরানো টেবিলের প্রথম ঘর — হিসাবের নাম, সংখ্যা নয় ([[transposedInto()]])
+        if ($asLabel) {
+            return (string) $value;
         }
 
         return match ($column->type) {

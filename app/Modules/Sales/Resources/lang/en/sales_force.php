@@ -12,4 +12,5 @@ return [
     'avg_bill' => 'Average bill',
     'new_customers' => 'New customers',
     'idle_customers' => 'Sleeping customers',
+    'chart' => 'Target, net sales and collected',
 ];

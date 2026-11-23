@@ -114,6 +114,7 @@ final class DueAgeingReports
                 $money('over_60'),
                 ['key' => 'over_60_share', 'label' => 'sales::due_ageing.over_60_share', 'type' => ReportColumn::PERCENT, 'ratio' => ['over_60', 'outstanding'], 'width' => '7rem'],
             ],
+            chart: ['type' => 'pair', 'label' => 'place', 'series' => ['bucket_current', 'bucket_30', 'bucket_60', 'bucket_90'], 'title' => 'sales::due_ageing.chart'],
         );
     }
 }

@@ -166,7 +166,7 @@ final class CoreReports
         $kinds = implode(', ', array_map(
             fn (string $k) => "SUM(CASE WHEN accounts.money_kind = '{$k}' THEN ledger_entries.debit ELSE 0 END) as {$k}", self::MONEY_KINDS));
         $sums = "COUNT(DISTINCT CONCAT(ledger_entries.source_type, ':', ledger_entries.source_id)) as receipts, {$kinds}, SUM(ledger_entries.debit) as total";
-        $define = fn (string $key, string $title, \Closure $query, array $columns, ?string $groupBy = null): ReportDefinition => new ReportDefinition(
+        $define = fn (string $key, string $title, \Closure $query, array $columns, ?string $groupBy = null, ?array $chart = null): ReportDefinition => new ReportDefinition(
             key: $key,
             permission: 'accounts.report',
             title: $title,
@@ -178,6 +178,7 @@ final class CoreReports
             rankBy: $groupBy === null ? null : 'total',
             // ⓘ শাখা খাতার সারির — নিজেই ছাঁকে; শাখা ধরে ভাগ নিজেই একটা রূপ
             splitByBranch: false,
+            chart: $chart,
         );
         $bn = app()->getLocale() === 'bn';
 
@@ -186,7 +187,8 @@ final class CoreReports
                 fn (array $f) => self::moneyIn($f)->groupBy('ledger_entries.trx_date')
                     ->selectRaw('ledger_entries.trx_date as trx_date, '.$sums)->orderBy('ledger_entries.trx_date'),
                 [['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '8rem'],
-                    ...$figures(['from' => 'trx_date', 'to' => 'trx_date'])]),
+                    ...$figures(['from' => 'trx_date', 'to' => 'trx_date'])], null,
+                ['type' => 'pair', 'label' => 'trx_date', 'series' => self::MONEY_KINDS, 'title' => 'accounts::inflow.tab_day']),
             $define(self::INFLOW_BRANCH, 'accounts::inflow.title_branch',
                 fn (array $f) => self::moneyIn($f)->leftJoin('branches', 'branches.id', '=', 'ledger_entries.branch_id')
                     ->groupBy('ledger_entries.branch_id', 'branches.name_bn', 'branches.name_en')
@@ -194,14 +196,16 @@ final class CoreReports
                         .($bn ? "COALESCE(NULLIF(branches.name_bn, ''), branches.name_en)" : "COALESCE(NULLIF(branches.name_en, ''), branches.name_bn)")
                         .', '.DB::getPdo()->quote((string) __('accounts::inflow.no_branch')).') as branch, '.$sums)
                     ->orderByRaw('SUM(ledger_entries.debit) DESC')->orderBy('ledger_entries.branch_id'),
-                [['key' => 'branch', 'label' => 'accounts::inflow.branch'], ...$figures(['branch_id' => 'branch_id'])], 'branch_id'),
+                [['key' => 'branch', 'label' => 'accounts::inflow.branch'], ...$figures(['branch_id' => 'branch_id'])], 'branch_id',
+                ['type' => 'donut', 'label' => 'branch', 'series' => ['total'], 'title' => 'accounts::inflow.total']),
             $define(self::INFLOW_CHANNEL, 'accounts::inflow.title_channel',
                 fn (array $f) => self::moneyIn($f)
                     ->groupBy('ledger_entries.account_id', 'accounts.code', 'accounts.name_bn', 'accounts.name_en', 'accounts.money_kind')
                     ->selectRaw("ledger_entries.account_id as account_id, CONCAT(accounts.code, ' — ', "
                         .($bn ? "COALESCE(NULLIF(accounts.name_bn, ''), accounts.name_en)" : 'accounts.name_en').') as channel, '.$sums)
                     ->orderByRaw("FIELD(accounts.money_kind, 'cash', 'bank', 'mfs')")->orderByRaw('SUM(ledger_entries.debit) DESC')->orderBy('ledger_entries.account_id'),
-                [['key' => 'channel', 'label' => 'accounts::field.received_into'], ...$figures(['account_id' => 'account_id'])], 'account_id'),
+                [['key' => 'channel', 'label' => 'accounts::field.received_into'], ...$figures(['account_id' => 'account_id'])], 'account_id',
+                ['type' => 'donut', 'label' => 'channel', 'series' => ['total'], 'title' => 'accounts::inflow.total']),
         ];
     }
 

@@ -16,4 +16,5 @@ return [
     'outstanding' => 'Total due',
     'over_60' => 'Over 60 days',
     'over_60_share' => 'Over 60 days, share of total',
+    'chart' => 'Due by age',
 ];

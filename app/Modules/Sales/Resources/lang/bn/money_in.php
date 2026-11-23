@@ -64,4 +64,6 @@ return [
     'drill_receipts' => ':amount — এই রসিদগুলো খুলুন',
     'drill_down' => ':amount — এক স্তর নিচে খুলুন',
     'drill_papers' => ':amount — এই কাগজগুলো খুলুন',
+    'summary' => 'মোট টাকা এসেছে · :receiptsটা রসিদ',
+    'per_day' => 'দিনে গড় (:days দিন)',
 ];

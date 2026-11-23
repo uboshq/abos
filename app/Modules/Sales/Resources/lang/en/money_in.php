@@ -64,4 +64,6 @@ return [
     'drill_receipts' => ':amount — open these receipts',
     'drill_down' => ':amount — open one level down',
     'drill_papers' => ':amount — open these papers',
+    'summary' => 'Total money in · :receipts receipts',
+    'per_day' => 'Per day (:days days)',
 ];

@@ -261,9 +261,27 @@
             </p>
         @endif
 
+        {{--
+            ⭐ গ্রাফ — যে রিপোর্ট চায় ([[ReportDefinition::$chart]]), টেবিলের একই সারি থেকে (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportChart]])।
+            ⛔ কেবল "ABOS" রূপে (হোমের বোর্ডের একই ছাঁচ, যার নকশা ওই রূপেই) আর কেবল পর্দায় — Excel, কাগজ আর অন্য রূপ হুবহু আগের মতো।
+        --}}
+        @php
+            $reportChart = ! app(\App\Core\Services\ListExport::class)->wanted()
+                && \App\Core\Support\Ui::home(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui))) === 'board'
+                ? \App\Core\Engines\Report\ReportChart::for($result, $columns) : null;
+        @endphp
+        @if ($reportChart !== null)
+            <div class="border-b border-(--color-border) p-3" data-report-chart>
+                <x-dashboard.board-chart :chart="$reportChart" />
+            </div>
+        @endif
+
         {{-- ⭐ যে রিপোর্ট নিজের বিবরণী-টেবিল পাঠায় (রেওয়ামিল: দল, উপমোট, অবস্থার সারি; ১৭ নভেম্বর ২০২৬) — সব সারি এক পাতায়; বাকিরা আগের মতো --}}
         @if (isset($statementTable) && $result->rows !== [])
             @include($statementTable)
+        @elseif ($report->transpose && $result->rows !== [])
+            {{-- ⭐ পাশ ফেরানো রিপোর্ট — সারিগুলো কলাম ("শাখা ধরে বিক্রয়"; [[ReportDefinition::$transpose]]); বাকিরা আগের মতো --}}
+            @include('accounts::report.partials.transposed')
         @elseif ($result->rows === [])
             {{-- ⓘ খালি হলে কোন সময়টা খালি আর কী করতে হবে, বার্তাতেই (১২ অক্টোবর ২০২৬, পাতা-সাজানো ধাপ ০) --}}
             <x-ui.empty-state :message="$period !== null ? __('accounts::message.nothing_in_period', ['period' => $period]) : __($report->hasFilter('date_range') ? 'accounts::message.nothing_in_range' : 'accounts::message.nothing_to_show')" />

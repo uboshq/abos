@@ -181,7 +181,39 @@ final class MoneyInReports
         return $columns;
     }
 
-    private static function define(string $key, string $title, \Closure $query, array $columns, ?string $groupBy = null, ?\Closure $sections = null): ReportDefinition
+    /**
+     * ⭐ মাথার সারাংশ — নমুনার পাঁচ ঘর: মোট টাকা এসেছে (বড় করে), পাশে নগদ, ব্যাংক, মোবাইল ব্যাংকিং, রসিদ আর দিনে গড় (মালিকের অনুমোদিত
+     * নমুনা, ২৩ নভেম্বর ২০২৬)। ⓘ রিপোর্টের নিজের মোট থেকে — সারির যোগ নয়; দিনের গড় বাছা সময়ের দিন ধরে।
+     *
+     * @param  array<string, string>  $totals
+     * @param  array<string, mixed>  $filters
+     * @return array<string, mixed>
+     */
+    public static function summaryOf(array $totals, array $filters = []): array
+    {
+        $total = (string) ($totals['total'] ?? '0');
+        $days = isset($filters['from'], $filters['to']) && empty($filters['all_time'])
+            ? (int) \Illuminate\Support\Carbon::parse((string) $filters['from'])->diffInDays(\Illuminate\Support\Carbon::parse((string) $filters['to'])) + 1
+            : 0;
+        $lines = [];
+
+        foreach (self::KINDS as $kind) {
+            $lines[] = ['label' => (string) __('sales::money_in.kind_'.$kind), 'value' => (string) ($totals[$kind] ?? '0')];
+        }
+
+        if ($days > 0) {
+            $lines[] = ['label' => (string) __('sales::money_in.per_day', ['days' => $days]), 'value' => bcdiv($total, (string) $days, 2)];
+        }
+
+        return [
+            'label' => (string) __('sales::money_in.summary', ['receipts' => \App\Core\Support\Money::quantity((string) ($totals['receipts'] ?? '0'))]),
+            'value' => $total,
+            'good' => true,
+            'lines' => $lines,
+        ];
+    }
+
+    private static function define(string $key, string $title, \Closure $query, array $columns, ?string $groupBy = null, ?\Closure $sections = null, ?array $chart = null): ReportDefinition
     {
         return new ReportDefinition(
             key: $key,
@@ -196,7 +228,16 @@ final class MoneyInReports
             // ⓘ শাখা খাতার সারির — নিজেই ছাঁকে; "সব শাখা"-তে শাখার ভাগ আলাদা রিপোর্ট ([[BRANCH]]), প্রতিটা রূপে আবার নয়
             splitByBranch: false,
             sections: $sections,
+            chart: $chart,
+            // ⭐ প্রতিটা রূপের মাথায় একই সারাংশ — মোট আর তিন মাধ্যম (রসিদ ধরে রূপে মাধ্যমের ঘর নেই, তাই কেবল সেখানে নয়)
+            summary: $key === self::PAPERS ? null : fn (array $totals, array $filters = []): array => self::summaryOf($totals, $filters),
         );
+    }
+
+    /** ⭐ মোট এসেছে — ভাগের গ্রাফ (কম সারি) বা শীর্ষ দশ (অনেক সারি); নমুনার "শাখা/এরিয়া/বিক্রয়কর্মী ধরে" ঘর */
+    private static function totalChart(string $label, string $type = 'bars'): array
+    {
+        return ['type' => $type, 'label' => $label, 'series' => ['total'], 'title' => 'sales::money_in.total'];
     }
 
     private static function byDay(): ReportDefinition
@@ -207,7 +248,9 @@ final class MoneyInReports
             [
                 ['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '8rem'],
                 ...self::figures(['from' => 'trx_date', 'to' => 'trx_date']),
-            ]);
+            ],
+            // ⭐ নমুনার "দিন ধরে" গ্রাফ — প্রতিদিন নগদ, ব্যাংক, মোবাইল ব্যাংকিং
+            chart: ['type' => 'pair', 'label' => 'trx_date', 'series' => self::KINDS, 'title' => 'sales::money_in.tab_day']);
     }
 
     private static function byBranch(): ReportDefinition
@@ -224,7 +267,7 @@ final class MoneyInReports
             [
                 ['key' => 'branch', 'label' => 'sales::money_in.branch'],
                 ...self::figures(['branch_id' => 'branch_id']),
-            ], 'branch_id');
+            ], 'branch_id', chart: self::totalChart('branch', 'donut'));
     }
 
     /** এলাকার এক স্তর — এরিয়া, টেরিটরি, পয়েন্ট বা গ্রাহক ধরে; "মোট" এক স্তর নিচে নামে, গ্রাহকে রসিদ */
@@ -266,7 +309,7 @@ final class MoneyInReports
                 ['key' => 'place', 'label' => 'sales::money_in.level_'.$level],
                 ...($level === Location::AREA ? [] : [['key' => 'parent', 'label' => 'sales::money_in.parent_'.$level]]),
                 ...self::figures($row, $below === null ? null : ['slug' => self::levelSlug($below), 'params' => $row]),
-            ], 'place_id');
+            ], 'place_id', chart: self::totalChart('place'));
     }
 
     private static function byPerson(): ReportDefinition
@@ -286,7 +329,7 @@ final class MoneyInReports
                 ...self::figures(['salesman_id' => 'person_id']),
             ], 'person_id',
             // ⭐ দলের মোট — উপরওয়ালার গাছ ধরে, বিক্রয়কর্মী ধরে বিক্রির একই ভাগ; সর্বমোট মানুষ ধরে একবার
-            fn (array $f): array => SalespersonReports::teamsFor($f));
+            fn (array $f): array => SalespersonReports::teamsFor($f), self::totalChart('person'));
     }
 
     private static function byChannel(): ReportDefinition
@@ -299,7 +342,7 @@ final class MoneyInReports
                 ['key' => 'channel', 'label' => 'sales::money_in.channel'],
                 ['key' => 'kind_label', 'label' => 'sales::money_in.kind', 'width' => '9rem'],
                 ...self::figures(['account_id' => 'account_id']),
-            ], 'account_id');
+            ], 'account_id', chart: self::totalChart('channel', 'donut'));
     }
 
     /** রসিদ ধরে — প্রতিটা আসা টাকার সারি; অঙ্কে চাপলে কাগজটা */
@@ -355,6 +398,7 @@ final class MoneyInReports
                     'label' => 'sales::money_in.drill_papers',
                 ]],
             ],
+            chart: ['type' => 'donut', 'label' => 'reason_label', 'series' => ['amount'], 'title' => 'sales::money_in.tab_excluded'],
         );
     }
 

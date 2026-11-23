@@ -87,6 +87,7 @@ final class ProductInsightReports
                 ['key' => 'achieved', 'label' => 'sales::product_target.amount_achieved', 'type' => ReportColumn::PERCENT, 'ratio' => ['net_sales', 'target'], 'width' => '7rem'],
                 $money('gap', 'sales::customer_insight.gap'),
             ],
+            chart: ['type' => 'pair', 'label' => 'product', 'series' => ['target', 'net_sales'], 'title' => 'sales::customer_insight.chart_target'],
         );
     }
 
@@ -148,6 +149,7 @@ final class ProductInsightReports
                 $money('realised'),
                 $money('lost'),
             ],
+            chart: ['type' => 'bars', 'label' => 'product', 'series' => ['lost'], 'title' => 'sales::product_insight.lost'],
         );
     }
 
@@ -213,6 +215,7 @@ final class ProductInsightReports
                 ['key' => 'cumulative', 'label' => 'sales::customer_insight.cumulative', 'type' => ReportColumn::PERCENT, 'width' => '7rem'],
                 ['key' => 'class', 'label' => 'sales::customer_insight.class', 'width' => '5rem'],
             ],
+            chart: ['type' => 'bars', 'label' => 'product', 'series' => ['net_sales'], 'title' => 'sales::customer_insight.chart_abc'],
         );
     }
 }

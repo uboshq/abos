@@ -386,7 +386,7 @@ class ReportController extends Controller implements HasMiddleware
                 Facets::pick('status', __('accounts::cheque.status'),
                     collect(['pdc', 'due', 'pending', 'deposited', 'cleared', 'bounced', 'cancelled'])->mapWithKeys(fn (string $c) => [$c => __('accounts::cheque.state_'.$c)])->all(),
                     __('accounts::cheque.status_all'))->look('amber', '●'),
-            ] : [],
+            ] : (isset(self::INFLOW_TABS[$slug]) ? \App\Core\Engines\Report\ReportChoices::facets($definition) : []),
         ] + ($key === 'accounts.trial_balance' ? [
             // ⭐ রেওয়ামিল বিবরণী আকারে — দল, উপমোট, অবস্থার সারি; একই ইঞ্জিনের সারি থেকে (মালিক, ১৭ নভেম্বর ২০২৬)
             'statement' => app(TrialBalanceStatement::class)->build($request->only($definition->requestKeys())),

@@ -114,6 +114,7 @@ final class SalesTrendReports
                 ['key' => 'money_share', 'label' => 'sales::sales_trend.money_share', 'type' => ReportColumn::PERCENT,
                     'ratio' => ['money_in', 'net_sales'], 'width' => '8rem'],
             ],
+            chart: ['type' => 'pair', 'label' => 'period', 'series' => ['net_sales', 'ly_net', 'money_in'], 'title' => 'sales::sales_trend.chart'],
         );
     }
 }

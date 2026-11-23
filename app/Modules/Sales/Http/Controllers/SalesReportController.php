@@ -274,7 +274,10 @@ class SalesReportController extends Controller implements HasMiddleware
                 : collect(),
             // ⭐ ফলটা এক লাইনে — যে রিপোর্ট সারাংশ ঘোষণা করে (OTIF %, ৬ অক্টোবর ২০২৬); ⓘ আগে এই দরজা পাঠাতই না, তাই কোনো
             // বিক্রয় রিপোর্টের ফল পাতায় দেখাত না, অথচ হিসাবের রিপোর্টে দেখাত ([[ReportController]])
-            'summary' => $definition->summary === null ? null : ($definition->summary)($result->totals),
+            // ⓘ ছাঁকনিও যায় (হিসাবের দরজার মতো) — টাকা আসার "দিনে গড়" সময়ের দিন গোনে; বাকিরা দ্বিতীয়টা নেয় না
+            'summary' => $definition->summary === null ? null : ($definition->summary)($result->totals, $result->filters),
+            // ⭐ রিপোর্টের নিজের বাছাই (টাকার মাধ্যম, বাদ পড়ার কারণ…) — ডান পাশের প্যানেলে, ঘোষণা থেকেই ([[ReportChoices]])
+            'extraFacets' => \App\Core\Engines\Report\ReportChoices::facets($definition),
         ]);
     }
 

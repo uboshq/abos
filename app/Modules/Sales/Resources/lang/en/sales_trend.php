@@ -14,4 +14,5 @@ return [
     'money_in' => 'Money in',
     'money_share' => 'Share of net sales',
     'drill' => ':amount — open the report for this period',
+    'chart' => 'Net sales, last year and money in',
 ];

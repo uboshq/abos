@@ -30,4 +30,5 @@ return [
     'discount_share' => 'Discount rate',
     'after_discount' => 'After discount',
     'drill_bills' => ':amount — open the bills with this offer',
+    'chart' => 'Cost and extra sales',
 ];

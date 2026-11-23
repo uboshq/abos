@@ -164,6 +164,7 @@ final class SchemeCostReports
                 // ⓘ হারের ঘর — যোগ হয় না; মোটের সারিতে খালি
                 ['key' => 'extra_per_taka', 'label' => 'sales::scheme_cost.extra_per_taka', 'type' => ReportColumn::QUANTITY, 'total' => false, 'width' => '7rem'],
             ],
+            chart: ['type' => 'pair', 'label' => 'scheme', 'series' => ['cost', 'extra_sales'], 'title' => 'sales::scheme_cost.chart'],
         );
     }
 
@@ -250,6 +251,7 @@ final class SchemeCostReports
                 ['key' => 'discount_share', 'label' => 'sales::scheme_cost.discount_share', 'type' => ReportColumn::PERCENT, 'ratio' => ['discount_total', 'gross'], 'width' => '6rem'],
                 $money('after_discount'),
             ],
+            chart: ['type' => 'bars', 'label' => 'person', 'series' => ['discount_total'], 'title' => 'sales::scheme_cost.discount_total'],
         );
     }
 }

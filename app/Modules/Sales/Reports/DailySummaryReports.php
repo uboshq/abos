@@ -125,6 +125,7 @@ final class DailySummaryReports
                 $money('month_money', $door($papers, 'month_from')),
                 $money('due', $day($sales)),
             ],
+            chart: ['type' => 'pair', 'label' => 'branch', 'series' => ['net_sales', 'money_in'], 'title' => 'sales::daily_summary.chart'],
         );
     }
 }

@@ -96,6 +96,7 @@ final class ReturnRateReports
                 ...self::figures(ProductInsightReports::door()),
                 ['key' => 'reason', 'label' => 'sales::return_rate.reason'],
             ],
+            chart: ['type' => 'bars', 'label' => 'product', 'series' => ['returned'], 'title' => 'sales::area_sales.returns'],
         );
     }
 
@@ -137,6 +138,7 @@ final class ReturnRateReports
                 ...self::figures($door),
                 ...($level === SalesPlace::CUSTOMER ? [['key' => 'reason', 'label' => 'sales::return_rate.reason']] : []),
             ],
+            chart: ['type' => 'bars', 'label' => 'place', 'series' => ['returned'], 'title' => 'sales::area_sales.returns'],
         );
     }
 }

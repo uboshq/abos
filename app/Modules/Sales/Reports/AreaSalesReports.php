@@ -195,7 +195,7 @@ final class AreaSalesReports
         ];
     }
 
-    private static function define(string $key, string $title, \Closure $query, array $columns): ReportDefinition
+    private static function define(string $key, string $title, \Closure $query, array $columns, bool $transpose = false, array $series = ['net_sales', 'collected', 'due']): ReportDefinition
     {
         return new ReportDefinition(
             key: $key,
@@ -208,6 +208,9 @@ final class AreaSalesReports
             rankBy: 'net_sales',
             // ⓘ শাখা গ্রাহকের নিজের — নিজেই ছাঁকে; শাখা ধরে ভাগ আলাদা রিপোর্ট ([[BRANCH]])
             splitByBranch: false,
+            transpose: $transpose,
+            // ⭐ নমুনার গ্রাফ — নিট বিক্রি, আদায় আর বাকি (শাখার রিপোর্টে গত মাসের নিটও) পাশাপাশি
+            chart: ['type' => 'pair', 'label' => 'place', 'series' => $series, 'title' => 'sales::area_sales.chart'],
         );
     }
 
@@ -254,7 +257,10 @@ final class AreaSalesReports
             ]);
     }
 
-    /** ⭐ শাখা ধরে বিক্রয় — সব শাখা এক পাতায়, একই ঘরে; অঙ্কে চাপলে সেই শাখার এরিয়াগুলো */
+    /**
+     * ⭐ শাখা ধরে বিক্রয় — শাখাগুলো পাশাপাশি কলামে, প্রতিটা হিসাব এক সারিতে, শেষে "সব" (অনুমোদিত নমুনা, ২৩ নভেম্বর ২০২৬;
+     * [[ReportDefinition::$transpose]]); অঙ্কে চাপলে সেই শাখার এরিয়াগুলো।
+     */
     private static function byBranch(): ReportDefinition
     {
         return self::define(self::BRANCH, 'sales::area_sales.title_branch',
@@ -269,6 +275,6 @@ final class AreaSalesReports
             [
                 ['key' => 'place', 'label' => 'sales::area_sales.branch'],
                 ...self::figures(self::down(self::levelSlug(Location::AREA), ['branch_id' => 'place_id'])),
-            ]);
+            ], transpose: true, series: ['net_sales', 'collected', 'due', 'prev_net']);
     }
 }

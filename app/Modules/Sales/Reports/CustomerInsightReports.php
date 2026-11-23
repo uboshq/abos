@@ -180,6 +180,7 @@ final class CustomerInsightReports
                 ['key' => 'customers', 'label' => 'sales::area_sales.customers', 'type' => ReportColumn::QUANTITY, 'width' => '5rem'],
                 ...self::targetColumns(self::door($below === null ? null : self::targetSlug($below))),
             ],
+            chart: ['type' => 'pair', 'label' => 'place', 'series' => ['target', 'net_sales'], 'title' => 'sales::customer_insight.chart_target'],
         );
     }
 
@@ -248,6 +249,7 @@ final class CustomerInsightReports
                 ['key' => 'person', 'label' => 'sales::money_in.person'],
                 ...array_values(array_filter(self::targetColumns($door), fn (array $c) => $c['key'] !== 'prev_net')),
             ],
+            chart: ['type' => 'pair', 'label' => 'person', 'series' => ['target', 'net_sales'], 'title' => 'sales::customer_insight.chart_target'],
         );
     }
 
@@ -301,6 +303,7 @@ final class CustomerInsightReports
                 ...self::placeColumns($level),
                 ...self::efficiencyColumns(self::door($below === null ? null : self::efficiencySlug($below))),
             ],
+            chart: ['type' => 'pair', 'label' => 'place', 'series' => ['collectible', 'collected'], 'title' => 'sales::customer_insight.chart_efficiency'],
         );
     }
 
@@ -326,6 +329,7 @@ final class CustomerInsightReports
                 ['key' => 'place', 'label' => 'sales::area_sales.branch'],
                 ...self::efficiencyColumns(self::door(self::efficiencySlug(Location::AREA), ['branch_id' => 'place_id'])),
             ],
+            chart: ['type' => 'pair', 'label' => 'place', 'series' => ['collectible', 'collected'], 'title' => 'sales::customer_insight.chart_efficiency'],
         );
     }
 
@@ -370,6 +374,7 @@ final class CustomerInsightReports
                 ['key' => 'class', 'label' => 'sales::customer_insight.class', 'width' => '5rem'],
                 ['key' => 'due', 'label' => 'sales::area_sales.due', 'type' => ReportColumn::MONEY, 'drill' => $door],
             ],
+            chart: ['type' => 'bars', 'label' => 'customer', 'series' => ['net_sales'], 'title' => 'sales::customer_insight.chart_abc'],
         );
     }
 

@@ -14,4 +14,5 @@ return [
     'month_money' => 'Money in, month to date',
     'due' => 'Due at day end',
     'drill' => ':amount — open the report for this period',
+    'chart' => 'Net sales and money in',
 ];

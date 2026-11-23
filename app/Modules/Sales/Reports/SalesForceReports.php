@@ -142,6 +142,7 @@ final class SalesForceReports
                 $count('new_customers'),
                 $count('idle_customers'),
             ],
+            chart: ['type' => 'pair', 'label' => 'person', 'series' => ['target', 'net_sales', 'collected'], 'title' => 'sales::sales_force.chart'],
         );
     }
 }

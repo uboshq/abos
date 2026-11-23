@@ -43,4 +43,5 @@ return [
     'no_territory' => 'No territory set',
 
     'drill_down' => ':amount — open one level down',
+    'chart' => 'Net sales, collected and due',
 ];

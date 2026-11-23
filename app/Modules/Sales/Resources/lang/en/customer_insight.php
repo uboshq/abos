@@ -51,4 +51,7 @@ return [
     'idle_days' => 'Days without a purchase',
 
     'drill_person' => ':amount — open sales by salesperson',
+    'chart_target' => 'Target and net sales',
+    'chart_efficiency' => 'Collectible and collected',
+    'chart_abc' => 'Net sales — the top ten',
 ];
