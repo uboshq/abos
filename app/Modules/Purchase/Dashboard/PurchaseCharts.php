@@ -106,7 +106,13 @@ final class PurchaseCharts
             return [];
         }
 
-        return [self::awaitingList(), self::priceChanges()];
+        /*
+         * ⛔ দামের ওঠানামায় কেনা দর — কেবল `inventory.cost.view`-এ, ক্রয়ের API আর ফোনের কাগজের একই নিয়মে ([[FieldSecurity]], পণ্যের
+         *   purchase_price; ড্যাশবোর্ড নিরীক্ষা, 23 Nov 2026: আগে কেবল `purchase.bill.view` দেখা হত)।
+         */
+        return auth()->user()?->can('inventory.cost.view') === true
+            ? [self::awaitingList(), self::priceChanges()]
+            : [self::awaitingList()];
     }
 
     /**
