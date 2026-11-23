@@ -139,12 +139,22 @@
             $ownBoard = $dashboard->stats === [] && $dashboard->panels === [] && $dashboard->sections !== [];
         @endphp
         @php
+            /*
+             * ⭐ মালিক, ২০ নভেম্বর ২০২৬: গ্রাফের বোর্ড ([[Card::board()]]) আছে এমন ড্যাশবোর্ড খোলে ছয় গ্রাফে, বাকি সব নিচে, আর "নজরে রাখুন"
+             *   (সমস্যা কেন্দ্র) একদম শেষে — অর্থ/মজুদ/বিক্রয়ের মতো ([[board-arrange.js]])। তখন প্রথম চার্ট বাকি চার্টের সারিতে নিজের জায়গায়।
+             * ⛔ SAP আর Dynamic রূপ হুবহু আগের মতো — সেখানে এই সরানো নেই।
+             */
+            $watchLast = ! $ownBoard
+                && ! \App\Core\Support\FioriLaunchpad::on()
+                && ! \App\Core\Support\DynamicLook::on()
+                && collect($dashboard->sections)->contains(fn (array $s) => ($s['view'] ?? null) === 'dashboard.viz-board');
+
             // ⭐ নমুনার সারি: বাঁয়ে প্রথম চার্ট (মাথার প্রথম রঙের দাগ), ডানে "নজরে রাখুন" (দ্বিতীয় রঙের দাগ) — পাশাপাশি
             $panels = array_values($dashboard->panels);
-            $firstPanel = $panels[0] ?? null;
-            $panels = array_slice($panels, 1);
+            $firstPanel = $watchLast ? null : ($panels[0] ?? null);
+            $panels = $watchLast ? $panels : array_slice($panels, 1);
         @endphp
-        @unless ($ownBoard)
+        @unless ($ownBoard || $watchLast)
         <div data-dashboard-pair @class(['grid gap-4', 'lg:grid-cols-2' => $firstPanel !== null])>
             @if ($firstPanel !== null)
                 <section data-boxed data-panel data-span="1" class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)"
@@ -156,33 +166,7 @@
                     @endif
                 </section>
             @endif
-            <section data-dashboard-exceptions data-boxed class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4 pb-3 pt-2"
-                     style="border-top: 4px solid {{ $head[1] }}">
-                <h2 class="mb-2 flex items-baseline justify-between gap-2 text-sm font-semibold text-(--color-ink)">
-                    {{ __('home.watch_title') }}
-                    <small class="font-normal text-(--color-ink-muted)">{{ __('home.watch_hint') }}</small>
-                </h2>
-                <div class="grid gap-1.5">
-                    @forelse ($waiting as $item)
-                        @php $c = \App\Core\Engines\Dashboard\CardColours::watch($item->tone); @endphp
-                        <a href="{{ $item->href }}" data-watch-row="{{ $item->tone }}"
-                           class="grid min-w-0 grid-cols-[auto_1fr_auto] items-center gap-2 rounded-(--radius-field) px-2.5 py-1.5 hover:brightness-95"
-                           style="background: color-mix(in srgb, {{ $c }} 12%, transparent)">
-                            <i class="size-2.5 rounded-full" style="background: {{ $c }}" aria-hidden="true"></i>
-                            <span class="min-w-0 text-sm font-semibold">{{ $item->label }}</span>
-                            <b class="tabular shrink-0 text-sm font-semibold">{{ $item->value }}</b>
-                        </a>
-                    @empty
-                        {{-- ⓘ কিছু বাকি নেই — নমুনার সবুজ সারি ("সব ঠিক"), খালি বাক্স নয় --}}
-                        @php $c = \App\Core\Engines\Dashboard\CardColours::watch(\App\Core\Engines\Dashboard\Stat::GOOD); @endphp
-                        <div data-watch-row="good" class="grid min-w-0 grid-cols-[auto_1fr] items-center gap-2 rounded-(--radius-field) px-2.5 py-1.5"
-                             style="background: color-mix(in srgb, {{ $c }} 12%, transparent)">
-                            <i class="size-2.5 rounded-full" style="background: {{ $c }}" aria-hidden="true"></i>
-                            <span class="min-w-0 text-sm font-semibold">{{ __('home.watch_all_clear') }}</span>
-                        </div>
-                    @endforelse
-                </div>
-            </section>
+            @include('dashboard.watch-box', ['waiting' => $waiting, 'edge' => $head[1]])
         </div>
         @endunless
 
@@ -318,6 +302,13 @@
                 @include($section['view'], value($section['data']))
             @endif
         @endforeach
+
+        {{-- ⭐ গ্রাফের বোর্ডের পাতায় "নজরে রাখুন" সবার শেষে, পুরো চওড়ায় (মালিক, ২০ নভেম্বর ২০২৬) --}}
+        @if ($watchLast)
+            <div data-watch-last>
+                @include('dashboard.watch-box', ['waiting' => $waiting, 'edge' => $head[1]])
+            </div>
+        @endif
 
     </div>
 </x-layouts.app>
