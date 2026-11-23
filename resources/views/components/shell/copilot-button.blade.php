@@ -23,9 +23,16 @@
             $say = fn (string $key): string => e(str_replace("'", '', (string) __($key)));
             // ⭐ the living "Ai" mark — ABOS looks only (owner, 21 Nov 2026); SAP, Dynamic and the rest keep the brain
             $aiMark = \App\Core\Support\AiMark::shows();
+            // ⭐ ABOS looks (owner's web sample copilot-web-sample, tab গ): the chips about THIS page come first — the questions of
+            //   this module's tools ([[CopilotAnswer::chips()]]); Ctrl+J pressed again opens the full Copilot page
+            if ($aiMark) {
+                $examples = collect(app(\App\Modules\Assistant\Support\CopilotAnswer::class)->chips(auth()->user(), $moduleCode))
+                    ->pluck('text')->take(4)->values();
+            }
+            $chatUrl = $aiMark && \Illuminate\Support\Facades\Route::has('assistant.chat') ? route('assistant.chat') : '';
         @endphp
         <div class="hidden sm:flex ms-1 me-2" data-copilot-quick
-             x-data="copilotQuick({ url: '{{ route('assistant.quick') }}', feedbackUrl: '{{ str_replace('999999999', '__ID__', route('assistant.feedback', ['event' => 999999999])) }}', csrf: '{{ csrf_token() }}', locale: '{{ app()->getLocale() }}', page: '{{ $routeName }}', failed: '{{ $say('assistant::quick.failed') }}', noKey: '{{ $say('assistant::quick.no_key') }}', ask: '{{ $say('assistant::quick.placeholder') }}', reply: '{{ $say('assistant::quick.reply') }}', micOn: '{{ $say('assistant::quick.mic') }}', micOff: '{{ $say('assistant::quick.mic_off') }}' })">
+             x-data="copilotQuick({ url: '{{ route('assistant.quick') }}', feedbackUrl: '{{ str_replace('999999999', '__ID__', route('assistant.feedback', ['event' => 999999999])) }}', csrf: '{{ csrf_token() }}', locale: '{{ app()->getLocale() }}', page: '{{ $routeName }}', failed: '{{ $say('assistant::quick.failed') }}', noKey: '{{ $say('assistant::quick.no_key') }}', ask: '{{ $say('assistant::quick.placeholder') }}', reply: '{{ $say('assistant::quick.reply') }}', micOn: '{{ $say('assistant::quick.mic') }}', micOff: '{{ $say('assistant::quick.mic_off') }}', chatUrl: '{{ $chatUrl }}' })">
             <button type="button" @class(['cq-btn', 'cq-btn-ai' => $aiMark]) data-copilot-button @click="show()"
                     title="{{ __('assistant::quick.open', ['name' => $copilot]) }}" aria-label="{{ __('assistant::quick.open', ['name' => $copilot]) }}">
                 @if ($aiMark)
@@ -60,7 +67,7 @@
                             @endif
                             <span class="cq-name">{{ $copilot }}</span>
                             @if ($here !== '')
-                                <span class="cq-ctx">{{ __('assistant::quick.here', ['page' => $here]) }}</span>
+                                <span class="cq-ctx">{{ __($aiMark ? 'assistant::quick.here_page' : 'assistant::quick.here', ['page' => $here]) }}</span>
                             @endif
                             <span class="cq-close"><span class="hidden sm:inline"><span class="cq-kbd">Esc</span> {{ __('assistant::quick.esc') }}</span>
                                 <button type="button" class="cq-round" @click="close()" aria-label="{{ __('assistant::quick.close') }}">
@@ -77,6 +84,9 @@
                         {{-- ২ · শুনছে — আলোর গোলা, বলা কথা সাথে সাথে লেখা; মানুষ না থামানো পর্যন্ত শোনে (১৩ নভেম্বর ২০২৬) --}}
                         <div x-show="listening" x-cloak style="display:flex;flex-direction:column;gap:1rem" data-copilot-listening>
                             <div class="cq-orb" aria-hidden="true"></div>
+                            @if ($aiMark)
+                                <p class="cq-lis" data-copilot-lis><i aria-hidden="true"></i>{{ __('assistant::quick.listening_now') }}</p>
+                            @endif
                             <p class="cq-heard" aria-live="polite" x-text="heard"></p>
                             <div class="cq-wave" aria-hidden="true"><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b></div>
                             <div class="cq-center">
@@ -148,8 +158,13 @@
 
                         <div class="cq-foot" x-show="! listening">
                             <span class="hidden sm:inline"><span class="cq-kbd">Enter</span> {{ __('assistant::quick.hint_enter') }}</span>
-                            <span class="hidden sm:inline"><span class="cq-kbd">Ctrl + J</span> {{ __('assistant::quick.hint_toggle') }}</span>
-                            <span class="cq-safe">{{ __('assistant::quick.safe') }}</span>
+                            @if ($aiMark)
+                                <span class="hidden sm:inline"><span class="cq-kbd">Esc</span> {{ __('assistant::quick.esc') }}</span>
+                                <span class="hidden sm:inline"><span class="cq-kbd">Ctrl + J</span> {{ __('assistant::quick.hint_page') }}</span>
+                            @else
+                                <span class="hidden sm:inline"><span class="cq-kbd">Ctrl + J</span> {{ __('assistant::quick.hint_toggle') }}</span>
+                                <span class="cq-safe">{{ __('assistant::quick.safe') }}</span>
+                            @endif
                         </div>
                     </div>
                 </div>

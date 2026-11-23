@@ -124,6 +124,9 @@
 @keyframes cq-spin { to { transform: rotate(360deg); } }
 @keyframes cq-pulse { 50% { scale: 1.08; } }
 .cq-heard { font-size: clamp(1.25rem, 3.6vw, 1.875rem); font-weight: 600; text-align: center; line-height: 1.35; min-height: 2.6rem; }
+/* ⭐ ABOS looks: "শুনছি… বলুন" with the red dot above the wave (owner's web sample copilot-web-sample, tab গ) */
+.cq-lis { margin: 0; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 1.15rem; font-weight: 600; color: #dbe6ff; }
+.cq-lis i { width: 10px; height: 10px; border-radius: 50%; background: #f43f5e; box-shadow: 0 0 0 5px rgb(244 63 94 / .25); }
 .cq-wave { display: flex; gap: 5px; justify-content: center; align-items: center; height: 2.5rem; }
 .cq-wave b { display: block; width: 5px; border-radius: 3px; background: linear-gradient(#c084fc, #38bdf8); animation: cq-w 1s ease-in-out infinite; }
 .cq-wave b:nth-child(2n) { animation-delay: .15s; } .cq-wave b:nth-child(3n) { animation-delay: .3s; } .cq-wave b:nth-child(5n) { animation-delay: .45s; }

@@ -5,6 +5,8 @@
 @import './copilot-quick.css';
 /* ⭐ the living "Ai" mark of Copilot — ABOS looks only (owner, 21 Nov 2026) */
 @import './ai-mark.css';
+/* ⭐ the full-screen Copilot page — only `.cpp…` classes (owner's web sample copilot-web-sample, 21 Nov 2026) */
+@import './copilot-page.css';
 @import './field-force.css';
 @import './list-filter.css';
 /* ⭐ রোল ও অনুমতির পাতা — মালিকের অনুমোদিত নমুনা (২০ নভেম্বর ২০২৬); কেবল `role-…` ক্লাস, অন্য পাতা ছোঁয় না */

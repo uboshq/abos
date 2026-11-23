@@ -5,6 +5,9 @@
  *  · "কাকে পাঠাবেন? নাম খুঁজুন" — আর "সাম্প্রতিক": কথোপকথনের ক্রমে মানুষ ও গ্রুপ, তারপর বাকি মানুষ
  *  · যাঁর কাগজটা খোলার অনুমতি নেই, তাঁর সারিতে "এই কাগজ খোলার অনুমতি নেই — শুধু নম্বর দেখবেন" (সারির নিজের অবস্থা)
  *  · কয়েকজন বাছা, ইচ্ছা হলে একটা কথা, "পাঠান · N জন" → POST messaging.x.papers
+ *  · ⭐ লেখা পাঠানো (Copilot-এর উত্তর, ২১ নভেম্বর ২০২৬): `{ text, title, party }` — কাগজ নেই, তাই প্রত্যেকের কথোপকথনে একটা সাধারণ
+ *    বার্তা (মানুষ হলে আগে তাঁর সাথে কথোপকথন খোলা — messaging.x.direct, তারপর messaging.x.send)। ⓘ লেখাটা পাঠানো মানুষ নিজেই
+ *    পর্দায় দেখছেন, তাই এর বাইরে কিছু যায় না।
  *
  * ⓘ মেনুর সারি [[x-ui.row-actions]] আঁকে (`data-msgr-share` = { type, id, title, no, amount, party }); শোনা এখানে, document-এ —
  *   তাই পাতার জীবন্ত বদল (morph) বা পিকের ভেতরের মেনুও কাজ করে।
@@ -146,10 +149,14 @@ function draw () {
     paintSend()
 }
 
+/** ⓘ লেখা পাঠানোয় কাগজ নেই — তখন মানুষের তালিকায় "খোলার অনুমতি" দেখা হয় না */
+function paperQuery () {
+    return paper && paper.type && paper.id ? { paper_type: paper.type, paper_id: paper.id } : {}
+}
+
 async function load () {
-    const paperQuery = { paper_type: paper.type, paper_id: paper.id }
     const [people, threads] = await Promise.all([
-        api(urlFor('people'), { query: paperQuery }),
+        api(urlFor('people'), { query: paperQuery() }),
         api(urlFor('threads'), { query: { filter: 'all' } }),
     ])
     if (!dialog || dialog.hidden) return
@@ -164,7 +171,7 @@ function search () {
     const text = q('[data-msgr-share-q]').value.trim()
     if (text.length < 2) return
     searchTimer = setTimeout(async () => {
-        const res = await api(urlFor('people'), { query: { q: text, paper_type: paper.type, paper_id: paper.id } })
+        const res = await api(urlFor('people'), { query: { q: text, ...paperQuery() } })
         if (!res.ok || !dialog || dialog.hidden) return
         const have = new Set(rows.map((r) => r.key))
         for (const p of res.data?.data || []) {
@@ -180,11 +187,50 @@ function clientId () {
     return 'web-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10)
 }
 
+/**
+ * ⭐ লেখা পাঠানো — প্রতিটা বাছাই: গ্রুপ হলে সেই কথোপকথন, মানুষ হলে তাঁর সাথের কথোপকথন (না থাকলে খোলে); তারপর একটা সাধারণ বার্তা।
+ * ⓘ একজনে ব্যর্থ হলে বাকিরা তবু পান; ফল = কতজন পেলেন।
+ */
+export async function sendText (to, text, call = api) {
+    let sent = 0
+    let last = null
+    for (const target of to) {
+        const [kind, id] = String(target).split(':')
+        let thread = kind === 'thread' ? id : null
+        if (kind === 'person') {
+            const d = await call(urlFor('direct'), { method: 'POST', body: { person: Number(id) } })
+            thread = d.ok ? d.data?.data?.id || null : null
+            if (!d.ok) last = d
+        }
+        if (!thread) continue
+        const res = await call(String(urlFor('send')).replace('__THREAD__', encodeURIComponent(thread)), {
+            method: 'POST',
+            body: { kind: 'text', text, client_id: clientId() },
+        })
+        if (res.ok) sent++
+        else last = res
+    }
+    return { sent, last }
+}
+
 async function send () {
     if (sending || chosen.size === 0) return
     sending = true
     paintSend()
     const to = Array.from(chosen)
+    if (paper.text) {
+        const note = q('[data-msgr-share-note]').value.trim()
+        const { sent, last } = await sendText(to, [note, paper.text].filter(Boolean).join('\n\n').slice(0, 4000))
+        sending = false
+        if (sent > 0) {
+            close()
+            toast(word('share.sent', { count: sent }))
+            return
+        }
+        paintSend()
+        toast(refusal(last, 'share.failed'))
+        return
+    }
     const res = await api(urlFor('papers'), {
         method: 'POST',
         body: {
@@ -207,7 +253,7 @@ async function send () {
 
 /** পপআপ খোলা — একটা কাগজের জন্য */
 export function open (info) {
-    if (!dialog || !info?.type || !info?.id) return
+    if (!dialog || !(info?.text || (info?.type && info?.id))) return
     paper = info
     rows = []
     chosen.clear()

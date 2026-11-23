@@ -31,5 +31,9 @@ return [
     'no_key' => 'এই প্রশ্নের উত্তর দেখার চাবি আপনার নেই।',
     'hint_enter' => 'পাঠান',
     'hint_toggle' => 'খোলা / বন্ধ',
+    // ⭐ ABOS looks (owner's web sample copilot-web-sample, tab গ, 21 Nov 2026)
+    'hint_page' => 'আবার চাপলে পুরো Copilot পাতা',
+    'here_page' => 'এই পাতা নিয়ে: :page',
+    'listening_now' => 'শুনছি… বলুন',
     'safe' => 'কোপাইলট টাকা খাতায় তোলে না, কিছু পাঠায় না — আপনার চাবির তথ্যটুকুই দেখায়। কথার অডিও জমা থাকে না।',
 ];
