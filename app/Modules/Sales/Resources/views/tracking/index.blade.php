@@ -83,6 +83,16 @@
             },
         ];
     }
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        // ⭐ দোকান — লিখে খোঁজা (নাম, কোড, মোবাইল, ঠিকানা, পয়েন্ট), একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬)
+        \App\Core\ListFilter\Facets::search('customer', __('sales::field.customer'),
+            \App\Core\ListFilter\Facets::partyRows('customer', $customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])->all())),
+        \App\Core\ListFilter\Facets::pick('branch', __('sales::tracking.branch'),
+            $branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])->all()),
+    ]);
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::tracking.title') }}</x-slot:title>
@@ -105,21 +115,14 @@
         @endforeach
     </div>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             @if ($step)
                 <input type="hidden" name="step" value="{{ $step }}">
             @endif
             <x-ui.toolbar :title="__('sales::tracking.title')" :columns="$columns"
-                          :search-placeholder="__('sales::tracking.search')" :sort="$sortOptions" :quiet="['step']">
-                <x-ui.date-range :dates="$dates" />
-                <x-ui.select name="customer" :label="__('sales::field.customer')"
-                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])"
-                             :selected="request('customer')" placeholder="—" />
-                <x-ui.select name="branch" :label="__('sales::tracking.branch')"
-                             :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])"
-                             :selected="request('branch')" placeholder="—" />
-            </x-ui.toolbar>
+                          :search-placeholder="__('sales::tracking.search')" :sort="$sortOptions" :quiet="['step']" :facets="$facetPanel" />
         </form>
 
         {{-- ⭐ প্রতি ৩০ সেকেন্ডে নিজে নতুন — কেবল এই ঘরটা ([[screens.js::liveRefresh]]) --}}
@@ -136,4 +139,5 @@
             <x-ui.list-totals :rows="$rows" :grand="$grand ?? []" :columns="$columns" />
         </div>
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

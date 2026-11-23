@@ -3,28 +3,22 @@
     ⛔ হাতে আবার চেষ্টা আর বাতিল কেবল `notification.retry` চাবিতে; বাতিলে কারণ লাগে, আর দুইটাই নিরীক্ষায় যায়।
     ⚠️ সারির ফর্মগুলো টেবিলের বাইরে, `form="…"` দিয়ে জোড়া — বাতিলের কারণের ঘরটাও তাই।
 --}}
-<x-ui.toolbar :title="$title" :search="false" :export="false" :share="false">
-    <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-        {{ __('notification::delivery.channel') }}
-        <select name="channel" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-            <option value="">{{ __('core.notify.any') }}</option>
-            @foreach (\App\Models\NotificationChannel::ALL as $channel)
-                <option value="{{ $channel }}" @selected(($filters['channel'] ?? '') === $channel)>{{ __('notification::channel.names.'.$channel) }}</option>
-            @endforeach
-        </select>
-    </label>
-    @if (count($statuses) > 1)
-        <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-            {{ __('notification::delivery.status') }}
-            <select name="status" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                <option value="">{{ __('core.notify.any') }}</option>
-                @foreach ($statuses as $status)
-                    <option value="{{ $status }}" @selected(($filters['status'] ?? '') === $status)>{{ __('notification::delivery.statuses.'.$status) }}</option>
-                @endforeach
-            </select>
-        </label>
-    @endif
+@php
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]]); কিউ আর ব্যর্থ — দুই পাতাই এখান থেকে
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('channel', __('notification::delivery.channel'),
+            collect(\App\Models\NotificationChannel::ALL)->mapWithKeys(fn ($c) => [$c => __('notification::channel.names.'.$c)])->all(), __('core.notify.any')),
+        count($statuses) > 1
+            ? \App\Core\ListFilter\Facets::pick('status', __('notification::delivery.status'),
+                collect($statuses)->mapWithKeys(fn ($s) => [$s => __('notification::delivery.statuses.'.$s)])->all(), __('core.notify.any'))
+            : null,
+    ]);
+@endphp
+<x-ui.filter-layout :filters="$facetPanel" form="list-form">
+<form id="list-form" method="GET" class="contents">
+<x-ui.toolbar :title="$title" :search="false" :export="false" :share="false" :facets="$facetPanel">
 </x-ui.toolbar>
+</form>
 
 <p class="text-sm text-(--color-ink-muted)">{{ $note }}</p>
 
@@ -100,3 +94,4 @@
 
 <x-ui.pager :rows="$rows" />
 <x-ui.list-totals :rows="$rows" />
+</x-ui.filter-layout>

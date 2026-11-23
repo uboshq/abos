@@ -54,6 +54,12 @@
             'render' => fn ($d) => view('sales::components.status-badge', ['document' => $d]),
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        \App\Core\ListFilter\Facets::flag('cancelled', __('sales::action.show_cancelled')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu" :process-band="$processBand ?? []">
@@ -67,11 +73,12 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::menu.collections')" :count="__('sales::message.collection_note')"
                 :columns="$columns" :search-placeholder="__('sales::message.collection_search')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
         {{-- ⛔ "নতুন আদায়" নেই — টাকা ঢোকার কাগজ একটাই, হিসাবের রসিদ ভাউচার (মালিক, ২০ নভেম্বর ২০২৬); এই তালিকা কেবল আগের কাগজ খোঁজার --}}
         <x-slot:actions>
             @can('accounts.voucher.create')
@@ -80,12 +87,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <x-ui.date-range :dates="$dates" />
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('sales::action.show_cancelled') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -109,4 +110,5 @@
             ['label' => __('sales::collection_form.list_waiting'), 'value' => __('sales::collection_form.list_count_money', ['count' => number_format($totals['waiting']['count']), 'money' => \App\Core\Support\Money::format($totals['waiting']['money'])])],
         ]" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

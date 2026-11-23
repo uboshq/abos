@@ -105,6 +105,15 @@
         পর্দায় ঢাকা একটা সংখ্যা ফাইলে বেরিয়ে যেত।
     */
     \App\Core\Engines\Report\ReportExport::capture($result, $columns);
+
+    /*
+        ⭐ ডান পাশের ছাঁকনির প্যানেল — রিপোর্ট যা ঘোষণা করে আর পাতা আগে যা আঁকত, ঠিক সেগুলোই ([[ReportPanel]])।
+        ⓘ শাখার তালিকা উপরে নাগালে ছাঁটা — তার পরে, তাই প্যানেলেও কেবল নাগালের শাখা।
+    */
+    $panel = \App\Core\Engines\Report\ReportPanel::build(
+        $report, $filters, $accounts, $centres, $branches,
+        $partyFilter ?? null, $parties ?? [], $partyTypes, $ownFilters ?? [], request(), $extraFacets ?? [],
+    );
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -195,8 +204,10 @@
         </section>
     @endisset
 
+    {{-- ⭐ ডান পাশের ছাঁকনি — সব তালিকার একই ছাঁচ ([[filter-layout]]); রিপোর্টে "দেখান" চাপলে চলে --}}
+    <x-ui.filter-layout :filters="$panel" form="list-form" :report="true">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents" data-report>
+        <form id="list-form" method="GET" class="contents" data-report>
             {{-- ⛔ নাগালের বাইরের শাখা চাইলে ইঞ্জিন ফেরায় — কারণটা এখানে দেখা যায়, নীরব ফেরত নয় (অডিট ২৭ সেপ্টেম্বর, §৩)। --}}
             <x-ui.errors />
 
@@ -220,205 +231,13 @@
                           :search="$report->searchableColumns() !== []"
                           :print-href="\App\Modules\Accounts\Reports\PartyLedgerReports::statementHref($report->key, $result->filters)
                               ?? ($result->totalRows > $result->perPage ? request()->fullUrlWithQuery(['print' => 1, 'page' => null]) : null)"
-                          :columns="$menuColumns">
-                @if ($report->hasFilter('date_range'))
-                    {{--
-                        জেরের রিপোর্টে "কবে থেকে" বলে কিছু নেই।
-
-                        রেওয়ামিল আর ব্যালেন্স শিট একটা তারিখ **পর্যন্ত** জের
-                        দেখায় — শুরুর তারিখ ওখানে অর্থহীন। তবু ঘরটা দেখানো
-                        হত, আর ডিফল্টে চলতি মাসের ১ তারিখ বসানো থাকত।
-
-                        রেওয়ামিলে সেটা একসময় সত্যিই ব্যালেন্স কেটে দিত (৮.৪
-                        লাখের খোলা মজুদ ৩,৪০০ দেখাত); ওই অঙ্কের ভুলটা সারানো
-                        হয়েছে। কিন্তু ঘরটা রয়ে গিয়েছিল, আর একটা নিষ্ক্রিয়
-                        ঘর তারিখ দেখিয়ে বসে থাকা মানে ব্যবহারকারী ভাববেন
-                        সংখ্যাটা ওই তারিখ থেকে গোনা — অর্থাৎ পর্দা একটা
-                        মিথ্যা বলছে, নীরবে।
-                    --}}
-                    @unless ($report->isAsOfDate())
-                        {{-- ⭐ "শুরু থেকে আজ পর্যন্ত" — শুরুর তারিখ লাগে না (মালিক, ৩ অক্টোবর ২০২৬; [[ReportEngine::ALL_TIME]]) --}}
-                        @if (! empty($filters['all_time']))
-                            <input type="hidden" name="from" value="{{ \App\Core\Engines\Report\ReportEngine::ALL_TIME }}">
-                            <a href="{{ request()->fullUrlWithQuery(['from' => null, 'page' => null]) }}" data-all-time
-                               class="rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1 text-sm font-semibold">
-                                {{ __('core.report.all_time') }} ✕
-                            </a>
-                        @else
-                        <label class="flex items-center gap-2 text-sm">
-                            <span class="sr-only">{{ __('accounts::field.from_date') }}</span>
-                            <x-ui.date name="from"
-                                       value="{{ $filters['from'] ?? '' }}"
-                                       class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-                                       </label>
-                            <a href="{{ request()->fullUrlWithQuery(['from' => \App\Core\Engines\Report\ReportEngine::ALL_TIME, 'to' => now()->toDateString(), 'page' => null]) }}" data-all-time
-                               class="text-sm text-(--color-ink-muted) hover:text-(--color-ink)">
-                                {{ __('core.report.all_time') }}
-                            </a>
-                        @endif
-                                       @endunless
-
-                    <label class="flex items-center gap-2 text-sm">
-                        @if ($report->isAsOfDate())
-                            <span class="text-(--color-ink-muted)">{{ __('accounts::field.as_on') }}</span>
-                        @endif
-                        <span class="sr-only">{{ __('accounts::field.to_date') }}</span>
-                        <x-ui.date name="to"
-                                   value="{{ $filters['to'] ?? '' }}"
-                                   class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-                                   </label>
-                                   @endif
-
-                @if ($accounts->isNotEmpty())
-                    <label class="min-w-0 flex-1 sm:max-w-xs">
-                        <span class="sr-only">{{ __('core.print.account') }}</span>
-                        <select name="account_id"
-                                class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 text-sm">
-                            <option value="">{{ __('core.print.account') }} — {{ __('core.action.more') }}</option>
-                            @foreach ($accounts as $account)
-                                <option value="{{ $account->id }}"
-                                        @selected(($filters['account_id'] ?? null) == $account->id)>
-                                    {{ $account->label() }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-                @endif
-
-                {{-- ⭐ প্রকল্প বাছা — মানচিত্র §১৮, ২০ সেপ্টেম্বর ২০২৬।
-
-                     ⚠️ না বাছলে পর্দা খালি, আর সেটাই ঠিক: "প্রকল্পভিত্তিক
-                     খতিয়ান" মানেই একটা প্রকল্পের খতিয়ান। ⓘ ছাঁকনি ছাড়া
-                     দেখালে ওটা গোটা খতিয়ান হয়ে যেত, আর নামের সাথে পর্দার
-                     কোনো সম্পর্ক থাকত না। --}}
-                @if ($centres->isNotEmpty())
-                    <label class="min-w-0 flex-1 sm:max-w-xs">
-                        <span class="sr-only">{{ __('accounts::field.cost_center') }}</span>
-                        <select name="cost_center_id"
-                                class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 text-sm">
-                            <option value="">{{ __('accounts::field.pick_a_project') }}</option>
-                            @foreach ($centres as $centre)
-                                <option value="{{ $centre->id }}"
-                                        @selected(($filters['cost_center_id'] ?? null) == $centre->id)>
-                                    {{ $centre->code }} — {{ $centre->name() }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-                @endif
-
-                {{-- একটা রিপোর্টের নিজের ছাঁকনি (যেমন কারণ ধরে ফেরতের গ্রাহক/পণ্য) — না পাঠালে কিছুই আঁকা হয় না --}}
+                          :columns="$menuColumns" :facets="$panel">
+                {{--
+                    ⭐ ঘরগুলো এখন ডান পাশের ছাঁকনির প্যানেলে (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPanel]]) — তারিখ, হিসাব, প্রকল্প,
+                    রিপোর্টের সাধারণ ছাঁকনি, শাখা, পক্ষ, পক্ষের ধরন, তুলনা, উপরের কয়টা; একই চাবিতে, তাই পুরোনো লিংক অটুট।
+                    ⓘ এখানে কেবল রিপোর্টের নিজের বাড়তি অংশ (ট্যাব, মাস) — যে রিপোর্ট পাঠায়।
+                --}}
                 @isset($extraFilters) @include($extraFilters) @endisset
-
-                {{-- ⭐ রিপোর্টের সাধারণ ছাঁকনি — গুদাম, পণ্য, ব্র্যান্ড… যা রিপোর্ট ঘোষণা করে (রিপোর্ট সেন্টার ধাপ ১) --}}
-                @include('accounts::report.partials.shared-filters')
-
-                @if ($branches->isNotEmpty())
-                    <label>
-                        <span class="sr-only">{{ __('core.company.branch') }}</span>
-                        <select name="branch_id"
-                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 text-sm">
-                            <option value="">{{ __('core.company.branch') }}</option>
-                            @foreach ($branches as $branch)
-                                <option value="{{ $branch->id }}"
-                                        @selected(($filters['branch_id'] ?? null) == $branch->id)>
-                                    {{ $branch->name() }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-                @endif
-
-                {{--
-                    পক্ষের ধরন — "ট্রান্সপোর্টারদের কত দিতে হবে"।
-
-                    ── কেন ছয়টা আলাদা খতিয়ান নয় ─────────────────────
-                    পরিকল্পনায় লেখা ছিল ডিপোর ছয়টা বিশেষ খতিয়ান — ভাড়া
-                    গাড়ি, ট্রান্সপোর্ট ভেন্ডর, শ্রমিক ঠিকাদার, দালাল…
-                    কিন্তু ওরা সবাই **পক্ষ**, আর পক্ষের ধরন আগে থেকেই
-                    একটা খোলা তালিকা।
-
-                    ছয়টা আলাদা পর্দা বানালে সপ্তম ধরনটার দিন আবার কোড
-                    লিখতে হত। ছাঁকনি হলে কোম্পানি নিজে একটা ধরন যোগ
-                    করলেই তার খতিয়ান পেয়ে যায় — কোড ছোঁয়া ছাড়াই।
-                --}}
-                {{-- ⭐ কোন পক্ষের লেজার — মালিক, ৫ অক্টোবর ২০২৬ ([[ReportController]] `parties`) --}}
-                @if (! empty($partyFilter))
-                    <label>
-                        <span class="sr-only">{{ __('accounts::party_ledger.pick_party') }}</span>
-                        <select name="{{ $partyFilter }}" data-party-picker
-                                class="h-(--spacing-field-compact) max-w-64 rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 text-sm">
-                            <option value="">{{ __('accounts::party_ledger.pick_party') }}</option>
-                            @foreach ($parties as $party)
-                                <option value="{{ $party->id }}" @selected((int) ($filters[$partyFilter] ?? 0) === $party->id)>{{ $party->name }}</option>
-                            @endforeach
-                        </select>
-                    </label>
-                @endif
-
-                @if ($partyTypes->isNotEmpty())
-                    <label>
-                        <span class="sr-only">{{ __('master_data::menu.party_types') }}</span>
-                        <select name="party_type_id"
-                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 text-sm">
-                            <option value="">{{ __('master_data::menu.party_types') }}</option>
-                            @foreach ($partyTypes as $type)
-                                <option value="{{ $type->id }}"
-                                        @selected(($filters['party_type_id'] ?? null) == $type->id)>
-                                    {{ $type->name() }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-                @endif
-
-                {{--
-                    তুলনা ও "উপরের কয়টা" — কেবল যেসব রিপোর্টে প্রশ্নটার
-                    মানে আছে।
-
-                    দুইটাই `rankBy` থাকলে তবেই: "সবচেয়ে বড়" বলে কিছু না
-                    থাকলে উপরের দশটা মানে কিছুই নয়, আর জোড়া বাঁধার চাবি
-                    ছাড়া তুলনাও হয় না। ডে বুকে ঘর দুইটা তাই দেখাই যায় না।
-                --}}
-                @if ($report->rankBy !== null)
-                    <label>
-                        <span class="sr-only">{{ __('core.report.compare') }}</span>
-                        <select name="compare"
-                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 text-sm">
-                            <option value="">{{ __('core.report.compare_none') }}</option>
-                            @foreach ([$previous, $lastYear] as $option)
-                                <option value="{{ $option }}"
-                                        @selected(($filters['compare'] ?? null) === $option)>
-                                    {{ __('core.report.compare_'.$option) }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-
-                    <label>
-                        <span class="sr-only">{{ __('core.report.top') }}</span>
-                        <select name="top"
-                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                       bg-(--color-surface-app) px-2 text-sm">
-                            <option value="">{{ __('core.report.top_all') }}</option>
-                            @foreach ([5, 10, 20, 50] as $n)
-                                <option value="{{ $n }}" @selected((int) ($filters['top'] ?? 0) === $n)>
-                                    {{ __('core.report.top_n', ['count' => $n]) }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </label>
-                @endif
-
-                {{-- জমা দেওয়ার বোতামটা এখানে ছিল, এখন টুলবারের ফিল্টার
-                     প্যানেলের নিজেরই একটা আছে — দুইটা থাকলে একই সারিতে
-                     দুইবার "খুঁজুন" দেখাত --}}
             </x-ui.toolbar>
         </form>
 
@@ -609,6 +428,7 @@
             @endif
         @endif
     </div>
+    </x-ui.filter-layout>
     @isset($pageKind)
         </div>
     @endisset

@@ -55,19 +55,20 @@
          "কবে থেকে" ঘরটা নেই, ইচ্ছাকৃতভাবে: স্থিতিপত্র একটা মুহূর্তের
          ছবি, পরিসরের হিসাব নয়। ঘরটা থাকলে ব্যবহারকারী ধরে নিতেন
          সংখ্যাগুলো ওই তারিখ থেকে গোনা। --}}
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-report>
-        <x-ui.field name="as_of" type="date" :label="__('accounts::field.as_of')"
-                    :value="$sheet['as_of']" />
-
-        @if ($branches->count() > 1)
-            <x-ui.select name="branch_id" :label="__('core.company.branch')"
-                         :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])"
-                         :placeholder="__('accounts::field.all_branches')"
-                         :selected="$branchId" />
-        @endif
-
-        <x-ui.button type="submit" tone="secondary" data-report-show>{{ __('core.action.show') }}</x-ui.button>
-    </form>
+    {{-- ⭐ ঘরগুলো ডান পাশের ছাঁকনির প্যানেলে, একই চাবিতে (মালিক, ২৩ নভেম্বর ২০২৬; [[filter-bar]]); চলে "দেখান" বা Enter-এ --}}
+    @php
+        $panel = \App\Core\ListFilter\Facets::panel([
+            \App\Core\ListFilter\Facets::day('as_of', __('accounts::field.as_of'), (string) $sheet['as_of']),
+            $branches->count() > 1
+                ? \App\Core\ListFilter\Facets::pick('branch_id', __('core.company.branch'), $branches->mapWithKeys(fn ($b) => [(string) $b->id => $b->name()])->all(), __('accounts::field.all_branches'))->look('blue', '🏬')
+                : null,
+        ]);
+    @endphp
+    <x-ui.filter-layout :filters="$panel" form="list-form" :report="true">
+        <form id="list-form" method="GET" class="contents" data-report>
+            <x-ui.filter-bar :facets="$panel" />
+        </form>
+    </x-ui.filter-layout>
 
     @if ($branchId !== null)
         {{-- এক শাখার স্থিতিপত্র সচরাচর মেলে না, আর সেটা লুকানো অসৎ হত --}}

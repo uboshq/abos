@@ -54,6 +54,11 @@
                  .e(__('governance::message.seen_by', ['name' => $r->acknowledger?->name ?? '—'])).'</span>')
              : view('governance::error.seen-button', ['row' => $r])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের টিক, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('only', __('governance::action.show_seen_too'), 'all'),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -87,17 +92,13 @@
         </form>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             {{-- খাতাটা রপ্তানি হয় না — ভিতরের পথ ও ট্রেস বাইরে যাওয়ার জিনিস নয় --}}
             <x-ui.toolbar :title="__('governance::menu.error_log')"
                           :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])"
-                          :export="false" :search="false">
-                <label class="flex items-center gap-1.5 text-sm">
-                    <input type="checkbox" name="only" value="all" @checked(request('only') === 'all')
-                           data-action="submit-form">
-                    {{ __('governance::action.show_seen_too') }}
-                </label>
+                          :export="false" :search="false" :facets="$facetPanel">
             </x-ui.toolbar>
         </form>
 
@@ -110,4 +111,5 @@
 
     <x-ui.pager :rows="$rows" />
     <x-ui.list-totals :rows="$rows" />
+    </x-ui.filter-layout>
 </x-layouts.app>

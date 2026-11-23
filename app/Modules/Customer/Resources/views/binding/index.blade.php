@@ -184,22 +184,19 @@
     <section data-boxed class="{{ $card }}">
         <h2 class="mb-2 font-semibold">{{ __('customer::binding.list') }}</h2>
 
-        <form method="GET" class="mb-3 space-y-2">
-            <label class="block">
-                <span class="{{ $label }}">{{ __('customer::binding.staff') }}</span>
-                <select name="user_id" class="{{ $field }}">
-                    <option value="">{{ __('customer::binding.everyone') }}</option>
-                    @foreach ($staff as $person)
-                        <option value="{{ $person->id }}" @selected($filterUser === $person->id)>{{ $person->name }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="ended" value="1" @checked(request()->boolean('ended'))>
-                {{ __('customer::binding.with_ended') }}
-            </label>
-            <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
-        </form>
+        {{-- ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]]) --}}
+        @php
+            $facetPanel = \App\Core\ListFilter\Facets::panel([
+                \App\Core\ListFilter\Facets::pick('user_id', __('customer::binding.staff'),
+                    $staff->mapWithKeys(fn ($person) => [(string) $person->id => $person->name])->all(), __('customer::binding.everyone')),
+                \App\Core\ListFilter\Facets::flag('ended', __('customer::binding.with_ended')),
+            ]);
+        @endphp
+        <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.filter-bar :facets="$facetPanel" />
+            </form>
+        </x-ui.filter-layout>
 
         @if ($rows->isEmpty())
             <p class="text-sm text-(--color-ink-muted)">{{ __('customer::binding.none') }}</p>

@@ -1960,6 +1960,7 @@ return [
         'pick_none' => 'Clear this',
         'more' => '+ :n more',
         'clear_chips' => 'Clear all filters',
+        'any' => 'All',
         'date' => 'Date',
         'custom' => 'Pick dates…',
         'preset' => [

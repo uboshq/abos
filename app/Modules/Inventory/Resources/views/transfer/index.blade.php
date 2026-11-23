@@ -20,6 +20,12 @@
         ['key' => 'status', 'label' => __('inventory::field.state'), 'width' => '9rem',
          'render' => fn ($t) => view('inventory::transfer.partials.status', ['transfer' => $t])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        \App\Core\ListFilter\Facets::flag('cancelled', __('inventory::action.show_cancelled')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -33,11 +39,12 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.transfers')" :count="trans_choice('core.count.records', $transfers->total(), ['count' => $transfers->total()])"
                 :columns="$columns" :search-placeholder="__('inventory::message.transfer_search')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
         <x-slot:actions>
             @can('inventory.transfer.create')
                     <x-ui.button tone="primary" icon="plus" :href="route('inventory.transfer.create')">
@@ -45,12 +52,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <x-ui.date-range :dates="$dates" />
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('inventory::action.show_cancelled') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -64,4 +65,5 @@
         <x-ui.pager :rows="$transfers" />
         <x-ui.list-totals :rows="$transfers" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

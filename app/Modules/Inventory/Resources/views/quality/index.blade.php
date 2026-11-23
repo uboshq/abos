@@ -24,6 +24,11 @@
         ['key' => 'status', 'label' => __('inventory::field.state'), 'width' => '9rem',
          'render' => fn ($i) => view('inventory::quality.partials.status', ['inspection' => $i])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -37,13 +42,14 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed
          class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.quality')"
                           :count="trans_choice('core.count.records', $inspections->total(), ['count' => $inspections->total()])"
                           :columns="$columns"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
                 <x-slot:actions>
                     @can('create', \App\Modules\Inventory\Models\QualityInspection::class)
                         <x-ui.button tone="primary" icon="plus" :href="route('inventory.qc.create')">
@@ -51,8 +57,6 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
-
-                <x-ui.date-range :dates="$dates" />
             </x-ui.toolbar>
         </form>
 
@@ -65,4 +69,5 @@
         <x-ui.pager :rows="$inspections" />
         <x-ui.list-totals :rows="$inspections" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

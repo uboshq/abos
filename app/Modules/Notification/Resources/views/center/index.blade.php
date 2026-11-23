@@ -3,54 +3,31 @@
     ⓘ প্রতিটা সারি একটা ঘটনা: কতজন পেলেন, কতজন পড়লেন। শিরোনামে চাপলে কে কে পেলেন আর পড়লেন।
     ⛔ নাগালের শাখার খবরই ([[NotificationCenterController]])। আর্কাইভের বোতাম কেবল যাঁর `notification.manage` আছে।
 --}}
+@php
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('module', __('core.notify.module_label'),
+            collect($modules)->mapWithKeys(fn ($m) => [$m => \App\Core\Support\NotificationKinds::sourceLabel($m)])->all(), __('core.notify.any')),
+        \App\Core\ListFilter\Facets::pick('category', __('core.notify.category_label'),
+            collect(\App\Core\Support\NotificationKinds::CATEGORIES)->mapWithKeys(fn ($c) => [$c => __('core.notify.category.'.$c)])->all(), __('core.notify.any')),
+        \App\Core\ListFilter\Facets::pick('priority', __('core.notify.priority_label'),
+            collect(\App\Core\Support\NotificationKinds::PRIORITIES)->mapWithKeys(fn ($p) => [$p => __('core.notify.priority.'.$p)])->all(), __('core.notify.any')),
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        \App\Core\ListFilter\Facets::flag('archived', __('notification::center.archived_only')),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::center.title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
+        <form id="list-form" method="GET" class="contents">
         <x-ui.toolbar :title="__('notification::center.title')"
                       :search-placeholder="__('notification::center.search')"
                       :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest'), 'priority' => __('core.notify.sort.priority'), 'recipients' => __('notification::center.sort_recipients')]"
-                      :export="false" :share="false">
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('core.notify.module_label') }}
-                <select name="module" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach ($modules as $module)
-                        <option value="{{ $module }}" @selected(($filters['module'] ?? '') === $module)>{{ \App\Core\Support\NotificationKinds::sourceLabel($module) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('core.notify.category_label') }}
-                <select name="category" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach (\App\Core\Support\NotificationKinds::CATEGORIES as $category)
-                        <option value="{{ $category }}" @selected(($filters['category'] ?? '') === $category)>{{ __('core.notify.category.'.$category) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('core.notify.priority_label') }}
-                <select name="priority" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach (\App\Core\Support\NotificationKinds::PRIORITIES as $priority)
-                        <option value="{{ $priority }}" @selected(($filters['priority'] ?? '') === $priority)>{{ __('core.notify.priority.'.$priority) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::center.from') }}
-                <x-ui.date name="from" :value="$filters['from'] ?? ''" />
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::center.to') }}
-                <x-ui.date name="to" :value="$filters['to'] ?? ''" />
-            </label>
-            <label class="flex items-center gap-2 text-2xs text-(--color-ink-muted)">
-                <input type="checkbox" name="archived" value="1" @checked(! empty($filters['archived']))>
-                {{ __('notification::center.archived_only') }}
-            </label>
+                      :export="false" :share="false" :facets="$facetPanel">
         </x-ui.toolbar>
+        </form>
 
         <p class="text-sm text-(--color-ink-muted)">{{ __('notification::center.note') }}</p>
 
@@ -117,4 +94,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

@@ -124,6 +124,14 @@
             'render' => fn ($s) => view('supplier::partials.row-actions', ['supplier' => $s]),
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('inactive', __('supplier::action.show_inactive')),
+        \App\Core\ListFilter\Facets::pick('credit', __('supplier::credit_request.filter'),
+            collect(['over_or_near', 'over', 'near'])->mapWithKeys(fn ($v) => [$v => __('supplier::credit_request.filter_'.$v)])->all(),
+            __('supplier::credit_request.filter_all')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -140,12 +148,14 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="$heading" :count="trans_choice('supplier::message.count', $suppliers->total(), ['count' => $suppliers->total()])"
                 :columns="$columns"
                 :search-placeholder="__('supplier::message.search_placeholder')"
                 :sort="$sortOptions"
+                :facets="$facetPanel"
                 view>
         <x-slot:actions>
             @can('create', \App\Modules\Supplier\Models\Supplier::class)
@@ -161,21 +171,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                {{-- নিষ্ক্রিয়রাও দেখা যাবে, কিন্তু ডিফল্টে নয়: তালিকাটা
-                     রোজকার কাজের, আর নিষ্ক্রিয়রা সেখানে শুধু ভিড় বাড়ায়। --}}
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
-                    {{ __('supplier::action.show_inactive') }}
-                </label>
-                {{-- ⭐ বাকির দেয়ালের ছাঁকনি — সীমা পেরোনো / সীমার কাছে (মালিক, ১৮ নভেম্বর ২০২৬) --}}
-                <select name="credit" aria-label="{{ __('supplier::credit_request.filter') }}" data-credit-filter
-                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2 text-sm">
-                    <option value="">{{ __('supplier::credit_request.filter_all') }}</option>
-                    @foreach (['over_or_near', 'over', 'near'] as $value)
-                        <option value="{{ $value }}" @selected($credit === $value)>{{ __('supplier::credit_request.filter_'.$value) }}</option>
-                    @endforeach
-                </select>
             </x-ui.toolbar>
         </form>
 
@@ -203,4 +198,5 @@
         <x-ui.pager :rows="$suppliers" />
         <x-ui.list-totals :rows="$suppliers" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

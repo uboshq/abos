@@ -11,6 +11,19 @@
         'blocked' => 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)',
     ];
     $field = 'h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm';
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        \App\Core\ListFilter\Facets::pick('kind', __('assistant::audit.kind'),
+            collect($kinds)->mapWithKeys(fn ($kind) => [$kind => __('assistant::audit.kinds.'.$kind)])->all(),
+            __('assistant::audit.any')),
+        \App\Core\ListFilter\Facets::pick('user_id', __('assistant::audit.who'),
+            collect($people)->mapWithKeys(fn ($person) => [(string) $person->id => $person->name])->all(),
+            __('assistant::audit.anyone')),
+        \App\Core\ListFilter\Facets::text('q', __('assistant::audit.search')),
+        \App\Core\ListFilter\Facets::text('ip', 'IP'),
+    ]);
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('assistant::audit.title', ['name' => $name]) }}</x-slot:title>
@@ -21,37 +34,11 @@
         {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
         <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('assistant::audit.note') }}</p>
 
-        <form method="GET" class="flex flex-wrap items-end gap-3 text-2xs text-(--color-ink-muted)">
-            <label class="grid gap-1">{{ __('assistant::audit.from') }}
-                <x-ui.date name="from" :value="$filters['from'] ?? null" />
-            </label>
-            <label class="grid gap-1">{{ __('assistant::audit.to') }}
-                <x-ui.date name="to" :value="$filters['to'] ?? null" />
-            </label>
-            <label class="grid gap-1">{{ __('assistant::audit.kind') }}
-                <select name="kind" class="{{ $field }}">
-                    <option value="">{{ __('assistant::audit.any') }}</option>
-                    @foreach ($kinds as $kind)
-                        <option value="{{ $kind }}" @selected(($filters['kind'] ?? '') === $kind)>{{ __('assistant::audit.kinds.'.$kind) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1">{{ __('assistant::audit.who') }}
-                <select name="user_id" class="{{ $field }}">
-                    <option value="">{{ __('assistant::audit.anyone') }}</option>
-                    @foreach ($people as $person)
-                        <option value="{{ $person->id }}" @selected((string) ($filters['user_id'] ?? '') === (string) $person->id)>{{ $person->name }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1">{{ __('assistant::audit.search') }}
-                <input type="search" name="q" maxlength="60" value="{{ $filters['q'] ?? '' }}" class="{{ $field }}">
-            </label>
-            <label class="grid gap-1">IP
-                <input type="search" name="ip" maxlength="45" value="{{ $filters['ip'] ?? '' }}" class="{{ $field }} w-36">
-            </label>
-            <button type="submit" class="h-(--spacing-field) rounded-(--radius-field) bg-(--color-brand-500) px-3 text-sm text-white">{{ __('assistant::audit.filter') }}</button>
-        </form>
+        <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.filter-bar :facets="$facetPanel" />
+            </form>
+        </x-ui.filter-layout>
 
         @if ($rows->isEmpty())
             <p class="text-sm text-(--color-ink-muted)">{{ __('assistant::audit.empty') }}</p>

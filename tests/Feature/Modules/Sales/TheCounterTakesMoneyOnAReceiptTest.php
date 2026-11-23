@@ -345,12 +345,12 @@ final class TheCounterTakesMoneyOnAReceiptTest extends TestCase
     public function test_the_origin_filter_is_drawn_only_on_the_receipt_list(): void
     {
         $this->get(route('accounts.voucher.index', [Voucher::RECEIPT]))->assertOk()
-            ->assertSee('data-filter="origin"', false)
+            ->assertSee('data-filter-section="origin"', false)
             ->assertSee(__('accounts::voucher.filter.origin_counter'))
             ->assertSee(__('accounts::voucher.filter.origin_office'));
 
         $this->get(route('accounts.voucher.index', [Voucher::PAYMENT]))->assertOk()
-            ->assertDontSee('data-filter="origin"', false);
+            ->assertDontSee('data-filter-section="origin"', false);
     }
 
     // ── ৭ · ছাপা — বিলের কাগজে টাকার সারি রসিদ থেকে ──────────────────────

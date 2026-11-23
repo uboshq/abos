@@ -28,6 +28,14 @@
         $columns[] = ['key' => 'edit', 'label' => '', 'width' => '6rem',
                       'render' => fn ($r) => view('finance::budget.partials.edit-link', ['row' => $r, 'year' => $year])];
     }
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই ঘর ([[budget/partials/filters]]), একই চাবি; বছরটা পাতা যা ধরে চলেছে তাই দেখায়
+    //   (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::number('year', __('finance::budget.year'), 2000, 2100, shown: (string) $year),
+        \App\Core\ListFilter\Facets::pick('center', __('finance::budget.center'),
+            $centers->mapWithKeys(fn ($c) => [(string) $c->id => $c->code.' — '.$c->name()])->all(), __('finance::budget.all_centers')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -43,7 +51,11 @@
     @endif
 
     @include('finance::budget.partials.tabs')
-    @include('finance::budget.partials.filters')
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.filter-bar :facets="$facetPanel" />
+        </form>
+    </x-ui.filter-layout>
 
     <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">

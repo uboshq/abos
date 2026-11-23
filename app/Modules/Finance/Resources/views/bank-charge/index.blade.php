@@ -22,6 +22,11 @@
         'from' => request()->query('from'),
         'to' => request()->query('to'),
     ], fn ($v) => filled($v));
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই তারিখের ঘর, একই চাবি; পাতা যে পরিসর ধরে চলেছে সেটাই দেখায় (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ], shown: ['from' => $from, 'to' => $to]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -46,22 +51,15 @@
                 {{ $label }}
             </a>
         @endforeach
-
-        {{-- ⓘ তারিখ বেছে — ট্যাবের পাশে, আলাদা পাতায় নয় --}}
-        <form method="GET" action="{{ route('finance.bank_charge.index') }}"
-              class="ms-auto flex flex-wrap items-end gap-2 pb-1 {{ $period === 'custom' ? 'font-semibold' : '' }}">
-            <input type="hidden" name="period" value="custom">
-            <label class="text-2xs text-(--color-ink-muted)">
-                {{ __('finance::bank_charge.from') }}
-                <x-ui.date name="from" :value="$from" />
-            </label>
-            <label class="text-2xs text-(--color-ink-muted)">
-                {{ __('finance::bank_charge.to') }}
-                <x-ui.date name="to" :value="$to" />
-            </label>
-            <x-ui.button type="submit" tone="secondary">{{ __('finance::bank_charge.show') }}</x-ui.button>
-        </form>
     </nav>
+
+    {{-- ⓘ তারিখ বেছে — ডান পাশের ছাঁকনির প্যানেলে, একই চাবি (from, to, period=custom); চলে "দেখান" বা Enter-এ --}}
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form" :report="true">
+        <form id="list-form" method="GET" action="{{ route('finance.bank_charge.index') }}" class="contents">
+            <input type="hidden" name="period" value="custom">
+            <x-ui.filter-bar :facets="$facetPanel" />
+        </form>
+    </x-ui.filter-layout>
 
     <section data-boxed
              class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">

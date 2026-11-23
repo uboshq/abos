@@ -1,30 +1,24 @@
 {{--
     ⭐ নিয়মের তালিকা — কোন ঘটনায়, কোন শর্তে, কার কাছে; চালু কি না, কোন সংস্করণ (মালিকের স্পেক §৪ "Rules", §৮; ধাপ ৩)।
 --}}
+@php
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('module', __('notification::rule.module'),
+            collect($modules)->mapWithKeys(fn ($m) => [$m => \App\Core\Support\NotificationKinds::sourceLabel($m)])->all(), __('core.notify.any')),
+        \App\Core\ListFilter\Facets::pick('state', __('notification::rule.state'),
+            collect(['active', 'inactive'])->mapWithKeys(fn ($s) => [$s => __('notification::rule.states.'.$s)])->all(), __('core.notify.any')),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::rule.title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::rule.title')" :search-placeholder="__('notification::rule.search')" :export="false" :share="false">
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::rule.module') }}
-                <select name="module" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach ($modules as $module)
-                        <option value="{{ $module }}" @selected(($filters['module'] ?? '') === $module)>{{ \App\Core\Support\NotificationKinds::sourceLabel($module) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::rule.state') }}
-                <select name="state" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach (['active', 'inactive'] as $state)
-                        <option value="{{ $state }}" @selected(($filters['state'] ?? '') === $state)>{{ __('notification::rule.states.'.$state) }}</option>
-                    @endforeach
-                </select>
-            </label>
+        <form id="list-form" method="GET" class="contents">
+        <x-ui.toolbar :title="__('notification::rule.title')" :search-placeholder="__('notification::rule.search')" :export="false" :share="false" :facets="$facetPanel">
         </x-ui.toolbar>
+        </form>
 
         <div class="flex items-center justify-between gap-2">
             <p class="text-sm text-(--color-ink-muted)">{{ __('notification::rule.note') }}</p>
@@ -72,4 +66,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

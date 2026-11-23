@@ -2,38 +2,25 @@
     ⭐ বিজ্ঞপ্তির আর্কাইভ — খোঁজা, ছাঁকা, আর চাবি থাকলে নামানো (মালিকের স্পেক §৪ "Archive"; ধাপ ৪)।
     ⓘ রাখার মেয়াদ পর্দায় লেখা; প্রতিটা সারি কেন্দ্রের বিস্তারিত পাতায় খোলে।
 --}}
+@php
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('module', __('core.notify.module_label'),
+            collect($modules)->mapWithKeys(fn ($m) => [$m => \App\Core\Support\NotificationKinds::sourceLabel($m)])->all(), __('core.notify.any')),
+        \App\Core\ListFilter\Facets::pick('priority', __('core.notify.priority_label'),
+            collect(\App\Core\Support\NotificationKinds::PRIORITIES)->mapWithKeys(fn ($p) => [$p => __('core.notify.priority.'.$p)])->all(), __('core.notify.any')),
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::archive.title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::archive.title')" :search-placeholder="__('notification::archive.search')" :export="$canExport" :share="false">
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('core.notify.module_label') }}
-                <select name="module" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach ($modules as $module)
-                        <option value="{{ $module }}" @selected(($filters['module'] ?? '') === $module)>{{ \App\Core\Support\NotificationKinds::sourceLabel($module) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('core.notify.priority_label') }}
-                <select name="priority" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach (\App\Core\Support\NotificationKinds::PRIORITIES as $priority)
-                        <option value="{{ $priority }}" @selected(($filters['priority'] ?? '') === $priority)>{{ __('core.notify.priority.'.$priority) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::delivery.from') }}
-                <x-ui.date name="from" :value="$filters['from'] ?? ''" />
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::delivery.to') }}
-                <x-ui.date name="to" :value="$filters['to'] ?? ''" />
-            </label>
+        <form id="list-form" method="GET" class="contents">
+        <x-ui.toolbar :title="__('notification::archive.title')" :search-placeholder="__('notification::archive.search')" :export="$canExport" :share="false" :facets="$facetPanel">
         </x-ui.toolbar>
+        </form>
 
         <p class="text-sm text-(--color-ink-muted)" data-archive-policy>
             {{ $archiveDays > 0 ? __('notification::archive.policy_archive', ['days' => $archiveDays]) : __('notification::archive.policy_no_archive') }}
@@ -60,4 +47,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

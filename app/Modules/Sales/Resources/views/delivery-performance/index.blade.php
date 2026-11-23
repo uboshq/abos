@@ -74,6 +74,11 @@
             'render' => fn ($d) => $d->stage ? DeliveryStage::label((string) $d->stage) : '—',
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ], null, ['from' => $dates['from'] ?? null, 'to' => $dates['to'] ?? null]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -89,22 +94,12 @@
         @endforeach
     </section>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form" :report="true">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents" data-report>
+        <form id="list-form" method="GET" class="contents" data-report>
             <x-ui.toolbar :title="__('sales::delivery_performance.late_list')" :search="false" :report="true"
                           :count="__('sales::delivery_performance.range', ['from' => DateFormat::format($dates['from']), 'to' => DateFormat::format($dates['to'])])"
-                          :columns="$columns">
-                {{-- ⭐ রিপোর্ট: তারিখ বসালেই চলে না, "দেখান" বা Enter (মালিক, ২৩ নভেম্বর ২০২৬) — তাই `x-ui.date-range` নয়, একই দুই ঘর জমা ছাড়া --}}
-                <x-ui.date name="from"
-                           value="{{ $dates['from'] ?? '' }}"
-                           aria-label="{{ __('core.table.from_date') }}"
-                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-
-                <x-ui.date name="to"
-                           value="{{ $dates['to'] ?? '' }}"
-                           aria-label="{{ __('core.table.to_date') }}"
-                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-            </x-ui.toolbar>
+                          :columns="$columns" :facets="$facetPanel" />
         </form>
 
         <x-ui.table
@@ -118,4 +113,5 @@
         <x-ui.pager :rows="$late" />
         <x-ui.list-totals :rows="$late" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
