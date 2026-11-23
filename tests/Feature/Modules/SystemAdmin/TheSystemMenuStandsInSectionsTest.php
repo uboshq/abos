@@ -56,14 +56,16 @@ final class TheSystemMenuStandsInSectionsTest extends TestCase
         $html = (string) $this->actingAs($owner)->get(route('system_admin.control-panel'))->assertOk()->getContent();
         $dom = new DOMDocument;
         @$dom->loadHTML('<?xml encoding="utf-8"?>'.$html);
-        $nav = (new DOMXPath($dom))->query('//nav[.//p[@data-panel-section]]')->item(0);
+        // ⓘ শিরোনাম `<p>`, আর ভাঁজ-করা মেনুর রূপে (ABOS-এর রূপগুলো, fe/hotfix-msg ২৩ নভেম্বর ২০২৬) ভাঁজের `<button>` — দুটোই
+        //   একই `data-panel-section` বহন করে; সারিগুলো ভাঁজের ভিতরেও DOM-এ থাকে
+        $nav = (new DOMXPath($dom))->query('//nav[.//*[@data-panel-section]]')->item(0);
         $this->assertNotNull($nav, '⛔ বাঁয়ের মেনুতে কোনো ভাগের শিরোনাম নেই।');
 
         $headings = [];
         $under = [];
         $current = null;
-        foreach ((new DOMXPath($dom))->query('.//p[@data-panel-section] | .//a', $nav) as $node) {
-            if ($node->nodeName === 'p') {
+        foreach ((new DOMXPath($dom))->query('.//*[@data-panel-section] | .//a', $nav) as $node) {
+            if ($node instanceof \DOMElement && $node->hasAttribute('data-panel-section')) {
                 $current = $node->getAttribute('data-panel-section');
                 $headings[] = $current;
                 $this->assertSame(__('system_admin::menu.section_'.$current), trim($node->textContent), "⛔ \"{$current}\" ভাগের নাম লেখা নেই।");
