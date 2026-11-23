@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { registerComponents } from './index.js'
 import { wireActions } from './actions.js'
+import { COMMAND_WAIT } from './shell.js'
 
 /*
  * খোঁজার প্যালেট — Ctrl+K (A-06) আর তীর/↵ (A-07), ২৭ সেপ্টেম্বর ২০২৬।
@@ -97,8 +98,8 @@ async function search (q, hits) {
     box().value = q
     box().dispatchEvent(new Event('input', { bubbles: true }))
 
-    // ⓘ কম্পোনেন্ট ২০০ms থামে (shell.js-এর `ask()`)
-    await new Promise(r => setTimeout(r, 260))
+    // ⓘ কম্পোনেন্ট [[COMMAND_WAIT]] থামে (shell.js-এর `ask()`; ২৩ নভেম্বর থেকে ৩০০ms) — সেই সংখ্যাই পড়ে, হাতে লেখা নয়
+    await new Promise(r => setTimeout(r, COMMAND_WAIT + 60))
     await tick()
 }
 

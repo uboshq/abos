@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 // ⭐ The full-screen Copilot page (owner's web sample copilot-web-sample, 21 Nov 2026) — the shaping of answers, the talk,
 //   stop / regenerate, and that a "বার্তায় পাঠান" carries only what is on the screen.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
