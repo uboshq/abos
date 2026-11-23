@@ -149,7 +149,21 @@ class ContentSecurityPolicy
             return '';
         }
 
-        return $parts['scheme'].'://'.$parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
+        $hostPort = $parts['host'].(isset($parts['port']) ? ':'.$parts['port'] : '');
+
+        /*
+         * ⭐ The call server's https twin too (24 Nov 2026, demo call test): when the signal socket fails, livekit-client
+         * asks `https://<host>/rtc/validate` why — with only `wss:` allowed that fetch was refused, the reason was lost
+         * ("server unreachable"), and the client never fell back to the server's older path. The call was then ended
+         * as missed two seconds after it started, and the other side never rang.
+         */
+        $twin = match ($parts['scheme']) {
+            'wss' => ' https://'.$hostPort,
+            'ws' => ' http://'.$hostPort,
+            default => '',
+        };
+
+        return $parts['scheme'].'://'.$hostPort.$twin;
     }
 
     public function handle(Request $request, Closure $next): Response
