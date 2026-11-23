@@ -200,7 +200,21 @@ final class AllBranchesView
             return true;
         }
 
-        return in_array((string) $request->route()?->getName(), self::ALLOWED, true);
+        return self::opens((string) $request->route()?->getName());
+    }
+
+    /**
+     * ⭐ নামটা "সব শাখা"-তে খোলা কি না — হাতে দেখা [[ALLOWED]], আর গোটা কোম্পানির প্রশাসন: ব্যবহারকারী, ভূমিকা, সেটিংস,
+     * শাখা-কোম্পানি, নোটিশ, রূপ — কোনো শাখার কাগজ বা হিসাব নয় (মালিক, ২৩ নভেম্বর ২০২৬, "ok")।
+     * ⛔ পুরনো খাতা থেকে আনা (`system_admin.import.*`) বাদ — সেটা শাখার কাগজ লেখে।
+     */
+    public static function opens(string $name): bool
+    {
+        if (in_array($name, self::ALLOWED, true)) {
+            return true;
+        }
+
+        return str_starts_with($name, 'system_admin.') && ! str_starts_with($name, 'system_admin.import');
     }
 
     /**
@@ -215,7 +229,15 @@ final class AllBranchesView
         $routes = app('router')->getRoutes();
         $patterns = [];
 
-        foreach (self::ALLOWED as $name) {
+        $names = self::ALLOWED;
+        foreach ($routes as $any) {
+            $anyName = (string) $any->getName();
+            if ($anyName !== '' && ! in_array($anyName, self::ALLOWED, true) && self::opens($anyName)) {
+                $names[] = $anyName;
+            }
+        }
+
+        foreach ($names as $name) {
             $route = $routes->getByName($name);
 
             if (! $route instanceof Route) {

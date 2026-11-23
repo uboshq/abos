@@ -54,14 +54,24 @@ export function blocksForm (form, allow, base = 'http://localhost/') {
 }
 
 /** নতুন কাগজ বা সম্পাদনার পাতার লিংক। */
-export function blocksLink (a, base = 'http://localhost/') {
+export function blocksLink (a, base = 'http://localhost/', allow = []) {
     const href = a.getAttribute('href')
 
     if (!href || href.startsWith('#') || a.closest('[data-allow-all-branches]')) {
         return false
     }
 
-    return WRITE_LINK.test(pathOf(href, base))
+    const path = pathOf(href, base)
+
+    if (!WRITE_LINK.test(path)) {
+        return false
+    }
+
+    // ⭐ খোলা দরজার নতুন/সম্পাদনার পাতা খোলা — `/system/users/create` জমা হয় `/system/users`-এ, `/x/5/edit` জমা হয় `/x/5`-এ
+    // (গোটা কোম্পানির প্রশাসন "সব শাখা"-তেও; মালিক, ২৩ নভেম্বর ২০২৬)
+    const target = path.replace(WRITE_LINK, '') || '/'
+
+    return !allow.some(re => re.test(target))
 }
 
 function turnOff (el, hint) {
@@ -80,7 +90,7 @@ function turnOff (el, hint) {
 /** এক অংশের ভিতরের সব লেখার নিয়ন্ত্রণ ধূসর — বারবার ডাকা নিরাপদ। */
 export function markWrites (scope, { allow, hint, base }) {
     scope.querySelectorAll('a[href]').forEach(a => {
-        if (blocksLink(a, base)) {
+        if (blocksLink(a, base, allow)) {
             turnOff(a, hint)
         }
     })

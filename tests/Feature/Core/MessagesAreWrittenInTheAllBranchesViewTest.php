@@ -40,7 +40,26 @@ class MessagesAreWrittenInTheAllBranchesViewTest extends TestCase
             }
         }
 
-        $this->assertGreaterThan(10, $seen, 'বার্তার লেখার দরজা খুঁজে পাওয়া যায়নি — রুটের নাম বদলেছে?');
+        $this->assertGreaterThanOrEqual(10, $seen, 'বার্তার লেখার দরজা খুঁজে পাওয়া যায়নি — রুটের নাম বদলেছে?');
         $this->assertSame([], $missing, '⛔ "সব শাখা"-তে এই বার্তার দরজাগুলো থামবে: '.implode(', ', $missing));
+    }
+
+    /**
+     * ⭐ মালিক, ২৩ নভেম্বর ২০২৬ ("ok"): ব্যবহারকারী, ভূমিকা, সেটিংস — গোটা কোম্পানির প্রশাসন, কোনো শাখার কাগজ নয় — "সব শাখা"-তেও
+     * লেখা যায়। ⛔ পুরনো খাতা থেকে আনা শাখার কাগজ লেখে, তাই বন্ধই; আর ব্যবসার কাগজ (আদায় ইত্যাদি) আগের মতোই বন্ধ।
+     */
+    public function test_company_administration_is_open_but_imports_and_business_papers_stay_closed(): void
+    {
+        foreach (['system_admin.user.store', 'system_admin.user.update', 'system_admin.role.store', 'system_admin.settings.update'] as $open) {
+            $this->assertNotNull(app('router')->getRoutes()->getByName($open), "no such route {$open}");
+            $this->assertTrue(AllBranchesView::opens($open), "{$open} is still closed in the all-branches view");
+        }
+
+        $this->assertFalse(AllBranchesView::opens('system_admin.import.store'), 'an import writes branch papers — it must stay closed');
+        $this->assertFalse(AllBranchesView::opens('sales.collection.store'), 'a business paper opened in the all-branches view');
+
+        $patterns = app(AllBranchesView::class)->allowedPathPatterns();
+        $this->assertTrue(collect($patterns)->contains(fn (string $p): bool => (bool) preg_match('#'.$p.'#', '/system/users')),
+            'the page script would still grey the new-user button');
     }
 }

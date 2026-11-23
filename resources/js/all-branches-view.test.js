@@ -67,6 +67,19 @@ describe('blocksForm / blocksLink', () => {
         expect(blocksLink(document.getElementById('s'), BASE)).toBe(false)
         expect(blocksLink(document.getElementById('h'), BASE)).toBe(false)
     })
+
+    it('lets the create and edit pages of an open door through (company admin, owner 23 Nov)', () => {
+        page(`
+            <a id="uc" href="/system/users/create">New user</a>
+            <a id="ue" href="/system/users/abc/edit">Edit user</a>
+            <a id="sc" href="/sales/collection/create">New collection</a>
+        `)
+        const open = parseAllow(JSON.stringify(['^/system/users/?$', '^/system/users/[^/]+/?$']))
+
+        expect(blocksLink(document.getElementById('uc'), BASE, open)).toBe(false)
+        expect(blocksLink(document.getElementById('ue'), BASE, open)).toBe(false)
+        expect(blocksLink(document.getElementById('sc'), BASE, open)).toBe(true)
+    })
 })
 
 describe('guardAllBranchesView', () => {
