@@ -52,7 +52,8 @@ final class TheDashboardListsGoodsNotYetInTest extends TestCase
         }
 
         config(['abos.dashboards_v2' => true]);
-        $listing = collect(PurchaseDashboard::dashboard()->listings)->firstWhere('label', __('purchase::dashboard.goods_not_in'));
+        // ⓘ তালিকার নিজের নাম — গ্রাফের "মাল আসেনি" কার্ডের নাম নয় (ড্যাশবোর্ড যাচাই, ২৩ নভেম্বর ২০২৬)
+        $listing = collect(PurchaseDashboard::dashboard()->listings)->firstWhere('label', __('purchase::dashboard.open_orders_list'));
         $this->assertNotNull($listing, 'খোলা ক্রয়াদেশের তালিকা নেই।');
 
         $this->assertSame(['ZPO-LATE', 'ZPO-SOON', 'ZPO-NODATE'], $listing->rows->pluck('document_no')->all(),
@@ -63,7 +64,7 @@ final class TheDashboardListsGoodsNotYetInTest extends TestCase
             'দেরির আদেশে "৪ দিন দেরি" লেখা নেই।');
 
         config(['abos.dashboards_v2' => false]);
-        $this->assertNull(collect(PurchaseDashboard::dashboard()->listings)->firstWhere('label', __('purchase::dashboard.goods_not_in')),
+        $this->assertNull(collect(PurchaseDashboard::dashboard()->listings)->firstWhere('label', __('purchase::dashboard.open_orders_list')),
             '⛔ সুইচ বন্ধ, তবু তালিকা — পুরনো ড্যাশবোর্ড বদলে গেছে।');
     }
 }

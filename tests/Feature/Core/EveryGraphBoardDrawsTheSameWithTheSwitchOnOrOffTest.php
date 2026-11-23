@@ -88,7 +88,8 @@ final class EveryGraphBoardDrawsTheSameWithTheSwitchOnOrOffTest extends TestCase
             ->update(['status' => DocumentStatus::CONFIRMED, 'trx_date' => '2026-11-10', 'total' => '3040000', 'deleted_at' => null]);
 
         $cards = $this->cards('purchase', $v2);
-        $title = __('purchase::dashboard.top_suppliers', ['year' => 2026]);
+        // ⓘ কার্ডের শিরোনাম নমুনার হুবহু, বছর নিচের লাইনে (ড্যাশবোর্ড যাচাই, ২৩ নভেম্বর ২০২৬)
+        $title = __('purchase::dashboard.viz_top_suppliers');
 
         $this->assertArrayHasKey($title, $cards ?? [], 'দাবির ভিত্তি নেই — "সবচেয়ে বেশি কেনা" কার্ড পাতায় নেই।');
         $this->assertFalse($cards[$title], '⛔ এ বছরের নিশ্চিত বিল থাকতেও "সবচেয়ে বেশি কেনা" ফাঁকা (সুইচ '.($v2 ? 'চালু' : 'বন্ধ').')।');

@@ -90,6 +90,8 @@ return [
     'tax_no_rate' => 'No rate set — not calculated',
     'tax_done' => 'Tax depreciation calculated for :count assets (year ending :year).',
     // ⭐ গ্রাফের বোর্ড (মালিক, ২০ নভেম্বর ২০২৬; নমুনা boards15 "fa")
+    'full_list' => 'The full asset list',
+    'full_list_empty' => 'No assets in the books.',
     'viz_value' => 'Cost → book value',
     'viz_value_sub' => 'Total cost − accumulated depreciation = book value · :count assets in the books',
     'viz_depreciation' => 'Depreciation — 12 months',

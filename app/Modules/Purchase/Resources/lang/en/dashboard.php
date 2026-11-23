@@ -75,4 +75,11 @@ return [
     'viz_last_month' => 'Last month',
     'viz_no_group' => 'No group',
     'viz_others' => 'Others',
+    'viz_top_suppliers' => 'Bought the most — suppliers',
+    'viz_top_suppliers_sub' => ':year · confirmed bills, top five',
+    'viz_payable' => 'Total payable — by days',
+    'open_orders_list' => 'All open purchase orders',
+    'months_before_chart' => ':year bought and paid — :from to :to',
+    'months_before_chart_empty' => 'No months this year before the chart.',
+    'month' => 'Month',
 ];

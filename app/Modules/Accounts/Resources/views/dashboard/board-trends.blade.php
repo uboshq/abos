@@ -13,7 +13,8 @@
 
     $pts = $ie;
     $hi = max(1.0, ...array_map(fn ($m) => max((float) $m['income'], (float) $m['expense']), $pts));
-    $mx = fn (int $i) => round(20 + $i * 29.1, 1);
+    // ⓘ যত মাস, তত ভাগে 20–340 জুড়ে — এখন গ্রাফের বোর্ডের আগের ছয় মাস ([[AccountsBoard::incomeVsExpense()]])
+    $mx = fn (int $i) => round(20 + $i * 320 / max(1, count($pts) - 1), 1);
     $my = fn (float $v) => round(196 - max(0, $v) / $hi * 180, 1);
     $incomeLine = implode(' ', array_map(fn ($m, $i) => $mx($i).','.$my((float) $m['income']), $pts, array_keys($pts)));
     $expenseLine = implode(' ', array_map(fn ($m, $i) => $mx($i).','.$my((float) $m['expense']), $pts, array_keys($pts)));
