@@ -29,12 +29,12 @@ return [
     'funnel' => 'Notified → seen → read',
     // ⓘ with the names of the three number boxes the chart replaced
     'funnel_hint' => 'Total notifications :total · :unread unread now · :range',
-    'funnel_bell' => 'In the bell',
-    'funnel_seen' => 'Seen',
+    'funnel_bell' => 'Sent',
+    'funnel_seen' => 'Delivered (seen)',
     'funnel_read' => 'Read',
     'deliveries' => 'deliveries',
     'daily' => 'Notifications per day — 30 days',
-    'daily_hint' => 'Delivered outside :delivered · :range',
+    'daily_hint' => 'Delivered outside :delivered · :range · daily total on top',
     'today' => 'Today',
     'health_chart_hint' => 'Last 7 days, by channel · black mark = 95% goal',
     'by_module' => 'Notifications by kind of work',
@@ -44,4 +44,7 @@ return [
     'when_read_hint' => ':range · weekday × time of day',
     'weekdays' => [0 => 'Sun', 1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat'],
     'bands' => ['Morning', 'Midday', 'Afternoon', 'Evening', 'Night'],
+    'viz_funnel' => 'Sent → delivered → read',
+    'viz_by_channel' => 'By channel',
+    'viz_health' => 'Channel health',
 ];

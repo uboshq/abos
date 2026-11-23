@@ -22,7 +22,7 @@ return [
     'newest' => 'Recently added',
     'none' => 'No customers yet.',
 
-    'growth' => 'Customer growth — last six months',
+    'growth' => 'New customers by month — how many still active',
     'growth_added' => 'Added',
     'growth_still_on' => 'Still active',
     'ageing' => 'Receivable ageing — customers',
@@ -52,10 +52,10 @@ return [
     'viz_people' => ':n',
     'viz_other' => 'Others',
     'viz_growth' => 'Customer growth — 6 months',
-    'viz_growth_sub' => 'Total customers at month end · :n new this month',
+    'viz_growth_sub' => 'Customers at month end · the last bar is this month',
     'viz_state' => 'Customer status',
     'viz_state_sub' => 'Active · inactive · credit blocked — adds up to all customers',
-    'viz_blocked' => 'Credit blocked',
+    'viz_blocked' => 'Active, credit blocked',
     'viz_ageing' => 'Receivable ageing',
     'viz_ageing_sub' => 'Outstanding by age — same figures as the ageing report',
     'viz_outstanding' => 'outstanding',
@@ -71,4 +71,6 @@ return [
     'viz_returning' => 'Returning customers',
     'viz_returning_sub' => 'Bought last month and again this month',
     'viz_returning_of' => ':n of :of',
+    'viz_active_open' => 'Active, credit open',
+    'viz_active_n' => ':n active',
 ];

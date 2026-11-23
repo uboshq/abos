@@ -192,23 +192,25 @@ final class NotificationDashboard implements ProvidesDashboard
         $wd = (array) __('notification::dashboard.weekdays');
 
         return [
-            Card::make(__('notification::dashboard.funnel'), 'funnel', ['p' => [
+            Card::make(__('notification::dashboard.viz_funnel'), 'funnel', ['p' => [
                 [__('notification::dashboard.funnel_bell'), $total, number_format($total)],
                 [__('notification::dashboard.funnel_seen'), $seen, number_format($seen)],
                 [__('notification::dashboard.funnel_read'), $read, number_format($read)],
             ]], value: (string) $total, sub: __('notification::dashboard.funnel_hint', ['total' => number_format($total), 'range' => $range, 'unread' => $unread]),
                 href: route('notification.report.show', ['slug' => 'read-unread']), colour: '#2160d8'),
-            Card::make(__('notification::dashboard.by_channel'), 'donut', [
+            Card::make(__('notification::dashboard.viz_by_channel'), 'donut', [
                 'c' => (string) $jobsTotal, 'cs' => __('notification::dashboard.deliveries'),
                 'p' => array_map(fn (array $p) => [$p['label'], (int) $p['value'], null, $p['value']], $channels),
             ], sub: __('notification::dashboard.by_channel_hint'), href: route('notification.report.show', ['slug' => 'channel-delivery']), colour: '#16a34a'),
+            // ⓘ প্রতিটা দিনের মাথায় সেদিনের মোট — আগের 14 দিনের কলামের মতো সংখ্যা পড়া যায় (নিরীক্ষা, ২৩ নভেম্বর ২০২৬)
             Card::make(__('notification::dashboard.daily'), 'stackedArea', [
                 'series' => $deliveries ? [$inBell, $out, $dead] : [$inBell, $out],
                 'colors' => ['#7c3aed', '#0ea5e9', '#e11d48'], 'l' => $labels,
+                'top' => array_map(fn (int $i) => (string) ($inBell[$i] + $out[$i] + ($deliveries ? $dead[$i] : 0) ?: ''), array_keys($inBell)),
             ], value: (string) $delivered, sub: __('notification::dashboard.daily_hint', ['delivered' => number_format($delivered), 'range' => $range]), legend: array_slice([
                 [__('notification::dashboard.trend_bell'), '#7c3aed'], [__('notification::dashboard.trend_out'), '#0ea5e9'], [__('notification::dashboard.failed'), '#e11d48'],
             ], 0, $deliveries ? 3 : 2), colour: '#7c3aed'),
-            ...($deliveries ? [Card::make(__('notification::dashboard.health'), 'bullet', ['p' => $health],
+            ...($deliveries ? [Card::make(__('notification::dashboard.viz_health'), 'bullet', ['p' => $health],
                 value: $healthValue, sub: __('notification::dashboard.health_chart_hint'), href: route('notification.deliveries.health'), colour: '#0ea5e9')] : []),
             Card::make(__('notification::dashboard.by_module'), 'hbars', [
                 'v' => array_map(fn (array $m) => $m[1], $topModules), 'l' => array_map(fn (array $m) => $m[0], $topModules),

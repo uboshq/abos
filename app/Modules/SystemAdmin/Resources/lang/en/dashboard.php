@@ -33,7 +33,7 @@ return [
     'two_step_hint' => 'Every user of this company; on means a code is set up and confirmed',
     'two_step_on' => 'On',
     'two_step_off' => 'Not on',
-    'access_changes' => 'User and permission changes — this week',
+    'access_changes' => 'What kind of change — this week',
     'access_changes_hint' => ':count changes this week — roles, companies, scopes, passwords, second step',
     'errors_week' => 'System errors — this week',
     'errors_week_hint' => 'The same error counted once however often it happened; the full log is on the audit error screen',
@@ -55,4 +55,8 @@ return [
     'this_week' => 'This week',
     'last_week' => 'Last week',
     'backup_board_hint' => 'Daily backup files — five weeks',
+    'users_locked' => 'Locked out',
+    'jobs_in_queue' => ':n in queue',
+    'hours_ago' => ':hours hours ago',
+    'viz_access_changes' => 'User and permission changes — this week',
 ];

@@ -38,6 +38,9 @@ use Illuminate\Support\Facades\DB;
  */
 final class DocumentsDashboard implements ProvidesDashboard
 {
+    /** "শিগগির মেয়াদ শেষ" — আজ থেকে কত দিন (নমুনা: 60; আগে 30 — নিরীক্ষা, ২৩ নভেম্বর ২০২৬); সংখ্যা আর গ্রাফ একই শর্তে */
+    private const SOON_DAYS = 60;
+
     public static function dashboard(): DashboardDefinition
     {
         $today = Carbon::today();
@@ -96,9 +99,10 @@ final class DocumentsDashboard implements ProvidesDashboard
             // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 'doc'); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
             sections: [Card::board(fn (): array => self::charts($today), covers: [
                 __('documents::dashboard.doc_total'), __('documents::dashboard.doc_active'),
+                // ⓘ অনুমোদনের ধাপ ধরে ভাগ আর ফাইলের ধরনের গোনা ঢাকা নয় — গ্রাফে অন্য ভাগ আর কেবল %, তাই নিচে থাকে (নিরীক্ষা, ২৩ নভেম্বর ২০২৬)
                 __('documents::dashboard.doc_pending_approval'), __('documents::dashboard.doc_pending_signature'),
-                __('documents::dashboard.doc_archived'), __('documents::dashboard.doc_status'),
-                __('documents::dashboard.doc_activity'), __('documents::dashboard.by_kind'),
+                __('documents::dashboard.doc_archived'),
+                __('documents::dashboard.doc_activity'),
                 // ⓘ জায়গার ঘর কেবল যাঁর বোর্ডে জায়গার কাঁটা-মিটার আছে — বাকিদের পাতায় আগের "জায়গা নিয়েছে" সংখ্যাটা থাকে, হারায় না
                 ...(auth()->user()?->can('system_admin.settings.manage') ? [__('documents::dashboard.storage')] : []),
                 __('documents::dashboard.doc_expiring'),
@@ -132,7 +136,7 @@ final class DocumentsDashboard implements ProvidesDashboard
         $expired = (clone $base)->notArchived()->where('dms_documents.status', DocumentCatalog::EXPIRED)
             ->whereNotIn('dms_documents.id', $signing)->count();
         $active = max(0, $total - $archived - $inReview - $toSign - $expired);
-        $cards[] = Card::make(__('documents::dashboard.doc_status'), 'waffle', ['p' => [
+        $cards[] = Card::make(__('documents::dashboard.viz_status'), 'waffle', ['p' => [
             [__('documents::dashboard.doc_active'), $active, number_format($active)],
             [__('documents::dashboard.doc_archived'), $archived, number_format($archived)],
             [__('documents::dashboard.doc_in_review'), $inReview, number_format($inReview)],
@@ -161,7 +165,7 @@ final class DocumentsDashboard implements ProvidesDashboard
             $kinds[$k][1] = bcadd($kinds[$k][1], (string) ($r->b ?? '0'), 0);
         }
         $kindColours = array_slice(Svg::PALETTE, 0, 5);
-        $cards[] = Card::make(__('documents::dashboard.by_kind'), 'stack100', [
+        $cards[] = Card::make(__('documents::dashboard.viz_kinds'), 'stack100', [
             'rows' => [
                 [__('documents::dashboard.by_count'), array_column($kinds, 0)],
                 [__('documents::dashboard.by_space'), array_column($kinds, 1)],
@@ -172,6 +176,8 @@ final class DocumentsDashboard implements ProvidesDashboard
         ), colour: '#0ea5e9');
 
         // জায়গা — সব জোড়া নথির মাপ, সার্ভারের ডিস্কে বাকি খালি জায়গার তুলনায় (bcmath-এ; float কেবল আঁকার মাপে)
+        // ⓘ নমুনা বলে "বরাদ্দ 50 GB" — কিন্তু ব্যবস্থায় নথির জন্য কোনো বরাদ্দ (quota) বসানোর জায়গা নেই (২৩ নভেম্বর ২০২৬ খুঁজে দেখা); তাই ডিস্কের
+        //   খালি জায়গার তুলনাই থাকে, আর কার্ডের লাইনে সেটাই বলা ("বরাদ্দ বসানো নেই")। বরাদ্দ এলে এখানে সেটার তুলনা বসবে।
         $bytes = (string) (Attachment::query()->sum('size_bytes') ?: '0');
         // ⛔ সার্ভারের ডিস্কের খবর কেবল যাঁর সিস্টেমের সেটিংসের চাবি আছে — ডকুমেন্ট খুলতে পারা সবাই সার্ভারের ভেতরের তথ্য দেখবেন না
         //   (fe-র পর্যালোচনা, ২০ নভেম্বর ২০২৬); বাকিরা কার্ডের মাথায় কেবল মোট জায়গা দেখেন
@@ -191,19 +197,19 @@ final class DocumentsDashboard implements ProvidesDashboard
                 sub: __('documents::dashboard.storage_board_hint'), colour: '#14b8a6');
         }
 
-        // শিগগির মেয়াদ শেষ — আজ থেকে 30 দিন (নিচের "শিগগির মেয়াদ শেষ" সংখ্যার একই শর্ত), সবচেয়ে কাছের ছয়টা
+        // শিগগির মেয়াদ শেষ — আজ থেকে 60 দিন, নমুনার মতো (নিচের "শিগগির মেয়াদ শেষ" সংখ্যার একই শর্ত, [[self::SOON_DAYS]]), সবচেয়ে কাছের ছয়টা
         $soon = (clone $base)->notArchived()->whereNotNull('dms_documents.expiry_date')
             ->whereDate('dms_documents.expiry_date', '>=', $today->toDateString())
-            ->whereDate('dms_documents.expiry_date', '<=', $today->copy()->addDays(30)->toDateString());
+            ->whereDate('dms_documents.expiry_date', '<=', $today->copy()->addDays(self::SOON_DAYS)->toDateString());
         $expiring = (clone $soon)->count();
         $bars = (clone $soon)->orderBy('dms_documents.expiry_date')->limit(6)->get(['dms_documents.id', 'dms_documents.name', 'dms_documents.expiry_date']);
         $cards[] = Card::make(__('documents::dashboard.expiry_soon'), 'gantt', $bars->isEmpty() ? [] : [
-            'ticks' => [__('documents::dashboard.today'), '+10', '+20', '+30'],
+            'ticks' => [__('documents::dashboard.today'), '+15', '+30', '+45', '+60'],
             'today' => 0,
             'p' => $bars->map(function (Document $d) use ($today) {
                 $days = (int) $today->diffInDays(Carbon::parse($d->expiry_date)->startOfDay());
 
-                return [mb_strimwidth((string) $d->name, 0, 16, '…'), 0, max(1, $days) / 30,
+                return [mb_strimwidth((string) $d->name, 0, 16, '…'), 0, max(1, $days) / self::SOON_DAYS,
                     $days <= 7 ? '#e11d48' : ($days <= 15 ? '#f97316' : null)];
             })->all(),
         ], value: number_format($expiring), sub: __('documents::dashboard.doc_expiring_hint'),
@@ -236,7 +242,7 @@ final class DocumentsDashboard implements ProvidesDashboard
     {
         $base = self::shelfBase();
         $userId = (int) auth()->id();
-        $soon = $today->copy()->addDays(30)->toDateString();
+        $soon = $today->copy()->addDays(self::SOON_DAYS)->toDateString();
 
         $count = fn (callable $narrow) => (string) $narrow(clone $base)->count();
 

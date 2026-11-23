@@ -76,7 +76,8 @@ final class CreditDashboard implements ProvidesDashboard
             // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 "ok"); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
             sections: [Card::board(fn (): array => self::charts($figures), covers: [
                 __('credit_control::dashboard.limits'), __('credit_control::dashboard.exposure'), __('credit_control::dashboard.used'),
-                __('credit_control::dashboard.overdue'), __('credit_control::dashboard.ageing'), __('credit_control::dashboard.by_branch'),
+                // ⓘ শাখা ধরে টাকার ভাগ ঢাকা নয় — বুলেট কেবল ভাগ দেখায়, টাকা আর সীমাহীন শাখা নিচের কলামে (নিরীক্ষা, ২৩ নভেম্বর ২০২৬)
+                __('credit_control::dashboard.overdue'), __('credit_control::dashboard.ageing'),
                 __('credit_control::dashboard.by_salesperson'), __('credit_control::dashboard.over_limit'),
                 __('credit_control::dashboard.overdue_stopped'), __('credit_control::dashboard.blocked'),
             ], permission: 'credit_control.view')],
@@ -125,11 +126,12 @@ final class CreditDashboard implements ProvidesDashboard
             $byBranch[$branch]['exposure'] = bcadd($byBranch[$branch]['exposure'] ?? '0', $positive($p['exposure']), 4);
             $byBranch[$branch]['limit'] = bcadd($byBranch[$branch]['limit'] ?? '0', (string) $p['limit'], 4);
         }
+        // ⓘ বুলেটে ভাগ, তাই কেবল সীমা আছে এমন শাখা, বড় ছয়টা — সীমাহীন শাখা আর প্রতিটা শাখার টাকা নিচের "টাকায়" কলামে ([[byBranch()]])
         $byBranch = array_filter($byBranch, fn (array $b) => bccomp($b['limit'], '0', 4) > 0);
         uasort($byBranch, fn (array $a, array $b) => bccomp($b['exposure'], $a['exposure'], 4));
         $byBranch = array_slice($byBranch, 0, 6, true);
         $branchNames = Branch::query()->whereIn('id', array_keys($byBranch))->get()->keyBy('id');
-        $bullet = Card::make(__('credit_control::dashboard.by_branch'), 'bullet', $byBranch === [] ? [] : [
+        $bullet = Card::make(__('credit_control::dashboard.viz_by_branch'), 'bullet', $byBranch === [] ? [] : [
             'p' => array_map(fn (int $branch, array $b) => [
                 Str::limit($branch === 0 ? __('credit_control::dashboard.no_branch') : ($branchNames[$branch]?->name() ?? '#'.$branch), 14),
                 bcdiv($b['exposure'], $b['limit'], 4), '1',

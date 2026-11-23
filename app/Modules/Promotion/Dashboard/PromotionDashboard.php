@@ -110,8 +110,9 @@ final class PromotionDashboard implements ProvidesDashboard
 
             // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 "ok"); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
             sections: [Card::board(fn (): array => self::charts($today), covers: [
+                // ⓘ "শেষ হতে যাচ্ছে" (7/15/30 দিনের গোনা) আর বাজেটের টাকা গ্রাফে নেই — নিচে থাকে (নিরীক্ষা, ২৩ নভেম্বর ২০২৬: কিছু হারায় না)
                 __('promotion::dashboard.active'), __('promotion::dashboard.upcoming'), __('promotion::dashboard.lapsed'),
-                __('promotion::dashboard.ending_soon'), __('promotion::dashboard.budget_used'), __('promotion::dashboard.coupons'),
+                __('promotion::dashboard.coupons'),
                 __('promotion::dashboard.discount_this_month'), __('promotion::dashboard.used_this_month'),
             ])],
         );
@@ -158,7 +159,8 @@ final class PromotionDashboard implements ProvidesDashboard
 
         // ── বাজেট বনাম খরচ — বাজেটের পাহারার নিজের হিসাব ([[BudgetGuard::usage()]]) ─────────────────
         $budgets = array_slice(self::budgetRows(), 0, 6);
-        $cards[] = Card::make(__('promotion::dashboard.budget_used'), 'bullet', $budgets === [] ? [] : [
+        // ⓘ শিরোনাম নমুনার; টাকার অঙ্ক (বাজেট আর খরচ) নিচের "বাজেট ও খরচ — টাকায়" কলামে ([[budgets()]])
+        $cards[] = Card::make(__('promotion::dashboard.viz_budget'), 'bullet', $budgets === [] ? [] : [
             'p' => array_map(fn (array $r) => [Str::limit($r['label'], 14), $r['percent'] / 100, 1], $budgets),
         ], sub: __('promotion::dashboard.viz_budget_sub'), href: route('promotion.index'), colour: '#f97316');
 
@@ -175,31 +177,40 @@ final class PromotionDashboard implements ProvidesDashboard
             ], value: $issued > 0 ? round($redeemed * 100 / $issued).'%' : '', sub: __('promotion::dashboard.viz_coupons_sub'), colour: '#0ea5e9');
         }
 
-        // ── ছাড় — ছয় মাস, শতকরা আর টাকার ছাড় (উপরের "এ মাসে ছাড়"-এর একই নিয়ম, দেখার শাখায়) ─────────────
+        // ── ছাড় ও উপহার — ছয় মাস: শতকরা ছাড়, টাকার ছাড়, আর উপহারের মাল (উপরের "এ মাসে ছাড়"-এর একই নিয়ম, দেখার শাখায়) ────
+        // ⛔ উপহারের `worth` মানে মালের কেনা দাম — কেবল খরচের চাবিতে (`inventory.cost.view`); চাবি না থাকলে উপহারের দাগ নেই,
+        //   উপহারের গোনা ("এ মাসে উপহার বেরিয়েছে") নিচে আগের মতো
+        $gifts = (bool) auth()->user()?->can('inventory.cost.view');
         $start = $today->copy()->startOfMonth()->subMonths(5);
         $expr = "DATE_FORMAT(created_at, '%Y-%m')";
+        $kinds = [BenefitKind::PERCENT->value, BenefitKind::AMOUNT->value, ...($gifts ? [BenefitKind::GOODS->value] : [])];
         $given = self::applicationsSeen()
             ->whereNull('reversed_at')
-            ->whereIn('benefit_kind', [BenefitKind::PERCENT->value, BenefitKind::AMOUNT->value])
+            ->whereIn('benefit_kind', $kinds)
             ->where('created_at', '>=', $start)
             ->selectRaw("{$expr} as ym, benefit_kind as k, COALESCE(SUM(worth), 0) as total")
             ->groupByRaw("{$expr}, benefit_kind")
             ->toBase()->get();
-        $percent = [];
-        $amount = [];
+        $series = array_fill_keys($kinds, []);
         $months = [];
         for ($month = $start->copy(); $month->lessThanOrEqualTo($today); $month->addMonth()) {
             $ym = $month->format('Y-m');
-            $percent[] = (string) ($given->first(fn ($r) => $r->ym === $ym && $r->k === BenefitKind::PERCENT->value)?->total ?? '0');
-            $amount[] = (string) ($given->first(fn ($r) => $r->ym === $ym && $r->k === BenefitKind::AMOUNT->value)?->total ?? '0');
+            foreach ($kinds as $k) {
+                $series[$k][] = (string) ($given->first(fn ($r) => $r->ym === $ym && $r->k === $k)?->total ?? '0');
+            }
             $months[] = $month->translatedFormat('M');
         }
+        $percent = $series[BenefitKind::PERCENT->value];
+        $amount = $series[BenefitKind::AMOUNT->value];
         $thisMonth = bcadd((string) end($percent), (string) end($amount), 4);
+        $legend = [[__('promotion::dashboard.viz_percent'), Svg::STATUS[0]], [__('promotion::dashboard.viz_amount'), '#f59e0b']];
+        if ($gifts) {
+            $legend[] = [__('promotion::dashboard.viz_gifts'), '#7c3aed'];
+        }
         $cards[] = Card::make(__('promotion::dashboard.viz_discount'), 'stackedArea', [
-            'series' => [$percent, $amount], 'colors' => [Svg::STATUS[0], '#f59e0b'], 'l' => $months,
-        ], value: bccomp($thisMonth, '0', 4) === 0 ? '' : self::short($thisMonth), sub: __('promotion::dashboard.viz_discount_sub'), legend: [
-            [__('promotion::dashboard.viz_percent'), Svg::STATUS[0]], [__('promotion::dashboard.viz_amount'), '#f59e0b'],
-        ], colour: '#16a34a');
+            'series' => array_values($series), 'colors' => [Svg::STATUS[0], '#f59e0b', '#7c3aed'], 'l' => $months,
+        ], value: bccomp($thisMonth, '0', 4) === 0 ? '' : self::short($thisMonth),
+            sub: __($gifts ? 'promotion::dashboard.viz_discount_sub' : 'promotion::dashboard.viz_discount_sub_no_cost'), legend: $legend, colour: '#16a34a');
 
         // ── ক্যাম্পেইনের ফল — এ মাসে কোন অফার কতবার লাগল ───────────────────────────────
         $used = self::usedRows();
