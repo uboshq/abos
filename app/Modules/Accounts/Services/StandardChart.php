@@ -146,6 +146,22 @@ final class StandardChart implements ProvisionsCompany
 
     public const RECEIVABLE = '1110';
 
+    /**
+     * ⭐ পাওনার সম্ভাব্য ক্ষতির ভাতা (loss allowance) — IFRS 9.5.5.15, সরল পদ্ধতি (মালিক, ২১ অক্টোবর ২০২৬: "plan onujayi koro")।
+     * ⓘ সম্পদের পক্ষে ক্রেডিট-প্রকৃতির বিপরীত খাত (সঞ্চিত অবচয় ১২৯০-এর মতো): স্থিতিপত্রে পাওনার পাশে ঋণাত্মক।
+     * বাড়ে সংরক্ষণের ভাউচারে, কমে অনাদায়ী বাদের ভাউচারে ([[ReceivableCreditLoss]])।
+     */
+    public const LOSS_ALLOWANCE = '1119';
+
+    /**
+     * ⭐ পাওনার সম্ভাব্য ক্ষতির খরচ (impairment loss, ECL) — সংরক্ষণ বাড়লে, আর ভাতার চেয়ে বেশি বাদ দিলে।
+     * ⛔ ৫২২৩ নয় — সেটা WPPF-এর ([[WPPF_EXPENSE]]); তাই ৫২২৮।
+     */
+    public const IMPAIRMENT_LOSS = '5228';
+
+    /** ⭐ IFRS 9 সম্ভাব্য ক্ষতির দুই খাত — পুরনো কোম্পানিতে মাইগ্রেশন এই তালিকাই বসায় */
+    public const ECL_CODES = [self::LOSS_ALLOWANCE, self::IMPAIRMENT_LOSS];
+
     public const INVENTORY = '1120';
 
     /**
@@ -748,6 +764,8 @@ final class StandardChart implements ProvisionsCompany
         // ⭐ WPPF-এর খরচ আর দেনা — বাকি আইনি বেতনের খাতের মতো সিস্টেমের: নিষ্ক্রিয় বা ধরন বদল নয়, [[WppfService]] কোড ধরে খোঁজে
         // (fe-র সিদ্ধান্ত ৪, ২১ অক্টোবর ২০২৬; পুরনো কোম্পানিতে চিহ্ন বসায় [[HrLawAccounts]]; [[TheWppfAccountsAreSystemAccountsTest]])
         self::WPPF_EXPENSE, self::WPPF_PAYABLE,
+        // ⭐ IFRS 9 ভাতা আর ক্ষতির খরচ — [[ReceivableCreditLoss]] কোড ধরে খোঁজে
+        self::LOSS_ALLOWANCE, self::IMPAIRMENT_LOSS,
         self::COMMISSION_CLAIM, self::COMMISSION_WRITTEN_OFF,
         self::ASSET_DISPOSAL_GAIN, self::ASSET_DISPOSAL_LOSS, self::FREIGHT_INCOME,
     ];
@@ -1142,6 +1160,8 @@ final class StandardChart implements ProvisionsCompany
 
             ['1104', 'Cheques in Hand', 'হাতে চেক', $A, '1100', false, []],
             ['1110', 'Accounts Receivable', 'প্রাপ্য হিসাব', $A, '1100', false, []],
+            // ⭐ IFRS 9 সম্ভাব্য ক্ষতির ভাতা — পাওনার বিপরীত খাত, ক্রেডিট প্রকৃতি ([[LOSS_ALLOWANCE]])
+            ['1119', 'Loss Allowance on Receivables', 'পাওনার সম্ভাব্য ক্ষতির ভাতা', $A, '1100', false, ['nature' => Account::CREDIT]],
 
             ['1120', 'Inventory', 'মজুদ পণ্য', $A, '1100', false, []],
             ['1130', 'Advance & Prepayments', 'অগ্রিম ও অগ্রিম পরিশোধ', $A, '1100', false, []],
@@ -1560,6 +1580,8 @@ final class StandardChart implements ProvisionsCompany
             ['5227', 'Gratuity Expense', 'গ্র্যাচুইটি খরচ', $X, '5200', false, []],
             // ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিলের খরচ — নিট মুনাফার ৫% ([[WPPF_EXPENSE]]; a6, ২১ অক্টোবর ২০২৬)
             ['5223', 'Workers Profit Participation Fund', 'শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল', $X, '5200', false, []],
+            // ⭐ পাওনার সম্ভাব্য ক্ষতির খরচ — IFRS 9 সংরক্ষণ আর অনাদায়ী বাদ ([[IMPAIRMENT_LOSS]])
+            ['5228', 'Impairment Loss on Receivables (ECL)', 'পাওনার সম্ভাব্য ক্ষতির খরচ (ECL)', $X, '5200', false, []],
             ['5210', 'Bank Charges', 'ব্যাংক চার্জ', $X, '5200', false, []],
 
             ['5211', 'Mobile Banking Charges', 'মোবাইল ব্যাংকিং চার্জ', $X, '5200', false, []],

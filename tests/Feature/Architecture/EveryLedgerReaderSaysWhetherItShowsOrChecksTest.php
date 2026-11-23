@@ -100,6 +100,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
     private const CHECKS = [
         'app/Modules/Accounts/Services/NetWorthStatement.php' => 'মালিকের নিট সম্পদ — প্রতিটা কোম্পানির গোটা খাতা, সব শাখা মিলিয়ে; মালিকের প্রশ্ন "সব বিক্রি-আদায় করে সব দেনা শোধ করলে কী থাকে", শাখার ভাগ নয় (ড্যা-৮, ২৫ অক্টোবর ২০২৬)',
         'app/Core/Services/SourceParties.php' => 'পর্দায় আগে থেকে থাকা কাগজের পক্ষ কে — খাতার সারি থেকে কেবল party_type/party_id, কোনো অঙ্ক নয়; কাগজটা তালিকার নিজের শাখা-ছাঁকনিতে আগেই বাছা, তাই খোঁজ গোটা কোম্পানি ধরে (নম্বরের পাশে পক্ষ, a5, ১৯ অক্টোবর ২০২৬)',
+        'app/Modules/CreditControl/Services/ReceivableCreditLoss.php' => 'IFRS 9 ভাতার খাতের জের আর গ্রাহকের বকেয়া — গোটা কোম্পানি ধরে; ভাতা কোম্পানির, এক শাখার বকেয়া দেখে বসালে ভুল অঙ্ক পাকা হত (হিসাবের ফাঁক #১৮)',
         'app/Core/Concerns/PickableWhileOwing.php' => 'টাকার কাগজের বাছাইয়ে নিষ্ক্রিয় পক্ষের এখনো জের আছে কি না — গোটা কোম্পানি ধরে; জের শাখায় ভাগ হয় না (Customer/Supplier নিরীক্ষা, ১৩ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Services/AccountService.php' => 'খাতের দিক বা মা বদলের আগে নিচে দাখিলা আছে কি না — গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার দাখিলা বাদ পড়ে বদল ভুল করে চলত (a6, ১৩ অক্টোবর ২০২৬)',
         'app/Modules/Accounts/Database/Migrations/2027_02_18_100000_an_account_says_which_parties_it_holds.php' => 'কোন খাতে আজ পক্ষসহ সারি আছে — খাত কোন পক্ষ রাখে তা আজকের খাতা থেকে; গোটা কোম্পানি, শাখা নয় (অডিট হিসাব ⚠️১২, ৭ অক্টোবর ২০২৬)',
