@@ -178,4 +178,7 @@ return [
     'delegation_stopped_at' => 'থামানো হয়েছে :date',
     'delegation_changed' => 'দায়িত্ব বদলানো হলো — আগেরটা নিরীক্ষার খাতায় আছে।',
     'delegation_changing' => 'বদলাচ্ছেন: :name-এর দায়িত্ব',
+    // ⭐ the inbox board — a re-asked paper (it changed after the first ask)
+    'changed_short' => 'বদলেছে',
+    'changed_since_asked_short' => 'অনুমোদন চাওয়ার পরে বদলেছে',
 ];

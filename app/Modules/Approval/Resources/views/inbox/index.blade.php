@@ -47,7 +47,8 @@
         <x-slot:actions>
                 {{-- ⭐ একসাথে অনুমোদন — মালিকের সিদ্ধান্ত ৫; ⛔ টাকা নড়ে এমন কাগজে চেকবক্সই আঁকা হয় না। ⓘ আগে দেখার পাতা (দফা ১৩)
                      সংখ্যা, মোট আর বাদ পড়ার কারণ দেখায় — সেখান থেকেই আসল অনুমোদন। --}}
-                @if ($bulkable !== [])
+                {{-- ⓘ on the board the button sits in the list's own pick bar ([[board-list]]) — one button, never two --}}
+                @if ($bulkable !== [] && ! ($board ?? false))
                     <x-ui.button type="submit" tone="secondary" form="bulk-form" data-bulk-button
                                  data-label="{{ __('approval::action.bulk_picked', ['count' => '__N__']) }}">
                         {{ __('approval::action.bulk_picked', ['count' => 0]) }}
@@ -163,16 +164,25 @@
         </x-ui.toolbar>
     </form>
 
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start">
+    {{-- ⭐ the board (rose, navy, blue — [[ApprovalInboxController::BOARD_LOOKS]]): kinds in coloured boxes on the left, the
+         paper on the right, each side scrolling on its own (owner "ok", 23 Nov 2026, sample YRFmwfF7 v5). Every other look
+         keeps the cards exactly as before. --}}
+    <div @class([
+            'grid gap-4',
+            'lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start' => ! ($board ?? false),
+            'inbox-board lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)]' => $board ?? false,
+        ]) @if ($board ?? false) data-inbox-board @endif>
 
         {{-- ── বাঁয়ে: কার্ড, মোট ────────────────────────────────── --}}
-        <div @class(['min-w-0', 'max-lg:hidden' => $picked]) data-inbox-list>
+        <div @class(['min-w-0', 'max-lg:hidden' => $picked, 'inbox-board-left' => $board ?? false]) data-inbox-list>
 
             <form method="GET" action="{{ route('approval.inbox.bulk_review') }}" id="bulk-form">
                 @if ($rows->isEmpty())
                     <p class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 text-sm text-(--color-ink-muted)">
                         {{ $tab === 'waiting' ? __('approval::message.nothing_waiting') : __('approval::message.nothing_in_tab') }}
                     </p>
+                @elseif ($board ?? false)
+                    @include('approval::inbox.partials.board-list')
                 @else
                     <ul class="space-y-2" aria-label="{{ __('approval::field.papers_list') }}">
                         @foreach ($rows as $approval)
@@ -226,7 +236,7 @@
         </div>
 
         {{-- ── ডানে: বেছে নেওয়া কাগজ ─────────────────────────────────────────── --}}
-        <div @class(['min-w-0', 'max-lg:hidden' => ! $picked]) data-inbox-detail>
+        <div @class(['min-w-0', 'max-lg:hidden' => ! $picked, 'inbox-board-right' => $board ?? false]) data-inbox-detail>
             @if ($picked)
                 <a href="{{ $backUrl }}" data-inbox-back
                    class="mb-2 inline-flex min-h-(--spacing-touch) items-center gap-1 text-sm text-(--color-link) lg:hidden">
@@ -234,7 +244,7 @@
                 </a>
             @endif
             @if ($detail !== null)
-                @include('approval::inbox.partials.detail', $detail + [
+                @include(($board ?? false) ? 'approval::inbox.partials.board-detail' : 'approval::inbox.partials.detail', $detail + [
                     'nextId' => $nextId,
                     'from' => $from,
                     'prevUrl' => $prevUrl,

@@ -7,6 +7,7 @@ import { abosDate } from './date.js'
 import { followTheDevice } from './theme.js'
 import { listKeys } from './list-keys.js'
 import { approvalKeys } from './approval-keys.js'
+import { inboxBoard } from './inbox-board.js'
 import { searchAsYouType, searched } from './search-as-you-type.js'
 import { listSwap } from './list-swap.js'
 import { guardOneSubmit } from './one-submit.js'
@@ -156,6 +157,9 @@ listKeys()
 
 // ⭐ অনুমোদনের ← → A S R আর পপ-আপের ফোকাস — দফা ২০ ([[approval-keys.js]])
 approvalKeys()
+
+// ⭐ the approval inbox board — rose, navy, blue only; no board on the page = nothing wired ([[inbox-board.js]])
+inboxBoard()
 
 // তালিকার খোঁজ — টাইপ করতেই, Enter ছাড়া; নিয়ম `search-as-you-type.js`-এ
 searchAsYouType()
