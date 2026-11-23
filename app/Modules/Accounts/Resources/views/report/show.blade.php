@@ -213,13 +213,15 @@
                 খোঁজা ফলেরই হয়। পাতায় ছাঁকলে দশটা সারির পাশে চারশোর
                 যোগফল বসত।
             --}}
+            {{-- ⭐ ২৩ নভেম্বর ২০২৬ থেকে "প্রিন্ট ভিউ" = কেন্দ্রীয় কাগজ (`?export=print`, [[ListPaper]]) নতুন ট্যাবে, সব পাতা — পর্দার পাতা
+                 নয়; লেজারে লেজারের কাগজ। ⓘ নিচের পুরনো `?print=1` পথ ইঞ্জিনে থাকল (ঠিকানা জানা কেউ এলে সব সারি আঁকে)। --}}
             {{-- ⭐ ছাপা গোটা পরিসর — পর্দায় এক পাতার বেশি সারি থাকলে "ছাপুন" `?print=1`-এ যায়, যেখানে ইঞ্জিন সব সারি আঁকে
                  আর পাতাটা নিজেই ছাপা শুরু করে (মালিক, ৩ অক্টোবর ২০২৬: কাস্টমার লেজার পাতা ধরে ধরে ছাপতে হত;
                  [[ReportEngine::wholeDocumentWanted()]])। ⓘ পুরো পরিসর এক পাতায় থাকলে আগের মতো পর্দাটাই ছাপে। --}}
             <x-ui.toolbar :title="__($report->title)" :report="true" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows]).($period !== null ? ' · '.$period : '')"
                           :search="$report->searchableColumns() !== []"
-                          :print-href="\App\Modules\Accounts\Reports\PartyLedgerReports::statementHref($report->key, $result->filters)
-                              ?? ($result->totalRows > $result->perPage ? request()->fullUrlWithQuery(['print' => 1, 'page' => null]) : null)"
+                          :print-href="\App\Modules\Accounts\Reports\PartyLedgerReports::statementHref($report->key, $result->filters)"
+                          :print-view="true"
                           :columns="$menuColumns">
                 @if ($report->hasFilter('date_range'))
                     {{--

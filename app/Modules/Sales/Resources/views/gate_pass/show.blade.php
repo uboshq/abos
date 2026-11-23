@@ -87,7 +87,7 @@
         </table>
 
         <div class="flex flex-wrap gap-2">
-            <x-ui.button tone="primary" icon="printer" :href="route('sales.print.gate_pass', $pass)">
+            <x-ui.button tone="primary" icon="printer" :href="route('sales.print.gate_pass', $pass)" target="_blank" rel="noopener">
                 {{ __('sales::gate_pass.print') }}
             </x-ui.button>
         </div>

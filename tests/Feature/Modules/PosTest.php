@@ -370,11 +370,12 @@ class PosTest extends TestCase
 
         $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
 
-        // সোজা ৮০mm রসিদে — কাউন্টারে বিক্রির পরের কাজটা ছাপা
-        $response->assertRedirect(route('sales.print.invoice', [
-            'invoice' => $invoice->id,
-            'paper' => '80mm',
-        ]));
+        // ⭐ ৮০mm রসিদ নতুন ট্যাবে, POS খালি হয়ে পরের ক্রেতার জন্য (মালিক, ২৩ নভেম্বর ২০২৬)
+        $response->assertRedirect(route('sales.pos.index'))
+            ->assertSessionHas('print_url', route('sales.print.invoice', [
+                'invoice' => $invoice->id,
+                'paper' => '80mm',
+            ]));
     }
 
     public function test_the_barcode_lookup_finds_a_product(): void

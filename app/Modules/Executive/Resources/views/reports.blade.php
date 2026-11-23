@@ -32,7 +32,7 @@
                             <a data-export="{{ $format }}" href="{{ route('executive.report.show', ['slug' => 'profit-by-customer', 'export' => $format]) }}"
                                class="font-semibold text-(--color-brand-700) hover:underline">{{ strtoupper($format === 'xlsx' ? 'Excel' : $format) }}</a>
                         @endforeach
-                        <a href="{{ route('executive.report.show', ['slug' => 'profit-by-customer', 'print' => 1]) }}"
+                        <a href="{{ route('executive.report.show', ['slug' => 'profit-by-customer', 'export' => 'print']) }}" target="_blank" rel="noopener"
                            class="font-semibold text-(--color-brand-700) hover:underline">PDF</a>
                     </p>
                     <p class="mt-2 text-2xs text-(--color-ink-muted)">{{ __('executive::reports.export_note') }}</p>

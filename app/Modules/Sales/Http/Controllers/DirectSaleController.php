@@ -762,9 +762,15 @@ class DirectSaleController extends Controller implements HasMiddleware
             $done .= ' '.__('sales::message.direct_extra_kept', ['amount' => Money::format($extra)]);
         }
 
+        /*
+         * ⭐ ছাপা নতুন ট্যাবে, কাউন্টার যেখানে ছিল সেখানেই — মালিক, ২৩ নভেম্বর ২০২৬: *"নিশ্চিতের পরে চালান বা বিলের ছাপা একই
+         * ট্যাবে খোলে — ভুল"*। ⓘ পর্দা খালি হয়ে ফেরে পরের ক্রেতার জন্য, আর ছাপার ঠিকানা `print_url`-এ: "নিশ্চিত করুন" চাপার
+         * মুহূর্তে খোলা ট্যাবে বসে ([[print-tab.js]]), নয়তো বার্তার পাশের লিংকে ([[x-ui.print-ready]])। ⛔ আগে এখানে সোজা ছাপায় যেত।
+         */
         return redirect()
-            ->route('sales.print.invoice', ['invoice' => $result['invoice']->id, 'paper' => '80mm'])
-            ->with('saved', $done);
+            ->route('sales.direct.create')
+            ->with('saved', $done)
+            ->with('print_url', route('sales.print.invoice', ['invoice' => $result['invoice']->id, 'paper' => '80mm']));
     }
 
     /**

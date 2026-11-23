@@ -18,8 +18,18 @@
     <x-slot:title>{{ __('finance::account_analysis.title') }}</x-slot:title>
 
     <x-slot:header>
+        {{-- ⭐ প্রিন্ট ভিউ — মাস ধরে টেবিলটা কেন্দ্রীয় কাগজে, নতুন ট্যাবে (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) --}}
+        @php \App\Core\Support\ReportPaper::describe((string) __('finance::account_analysis.title'),
+            \App\Core\Support\DateFormat::format($from).' – '.\App\Core\Support\DateFormat::format($to),
+            $account ? [__('finance::account_analysis.account').': '.$account->label()] : []); @endphp
         <x-ui.page-header :title="__('finance::account_analysis.title')"
-                          :subtitle="__('finance::account_analysis.subtitle')" />
+                          :subtitle="__('finance::account_analysis.subtitle')">
+            @if ($account)
+                <x-slot:actions>
+                    <x-ui.print-view-button />
+                </x-slot:actions>
+            @endif
+        </x-ui.page-header>
     </x-slot:header>
 
     <form method="GET" action="{{ route('finance.account_analysis.index') }}" data-report

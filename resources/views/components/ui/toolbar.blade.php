@@ -103,6 +103,13 @@
     'printHref' => null,
 
     /*
+     * ⭐ "প্রিন্ট ভিউ" বোতাম, বারেই চোখে — রিপোর্টের পাতায় (মালিক, ২৩ নভেম্বর ২০২৬: *"প্রতিটা রিপোর্টের আলাদা ছাপার ছাঁচ আর একটা
+     * প্রিন্ট ভিউ বোতাম, নতুন ট্যাবে"*)। ⓘ কাগজটা কেন্দ্রীয় ছাঁচ ([[ListPaper]] → `print.listing`): A4, কোম্পানির প্যাড, সময়কাল ও
+     * ছাঁকনি, যোগফল, সইয়ের রেখা, ইংরেজি অঙ্ক। `printHref` থাকলে (লেজার) সেটাই। ⛔ নামানোর চাবি ছাড়া দেখায় না — দরজা একই ([[ExportListing]])।
+     */
+    'printView' => false,
+
+    /*
      * ⭐ ছাঁকনি ইঞ্জিনের তালিকা — [[Panel::of()]]-এর তথ্য (মালিক, ১৪ নভেম্বর ২০২৬: *"সেন্ট্রালি নিয়ন্ত্রিত"*)।
      * ⓘ দিলে "+ Filter" বোতামটা বাঁ পাশের প্যানেল খোলে/ভাঁজ করে ([[filter-layout]]), পাশে চালু ছাঁকনির সংখ্যা; চিপ আসে ইঞ্জিন
      *   থেকে (নামসহ, একাধিক টিক আলাদা চিপ)। না দিলে আগের মতো — পর্দার নিজের ঘর টুলবারের নিচে।
@@ -739,6 +746,18 @@
                  ⛔ নতুন চাবি "তালিকা নামানো" (`system_admin.list.export`): যার নেই তার কাছে মেনুই দেখায় না, আর ঠিকানায় `?export=`
                  লিখলেও ৪০৩ ([[ExportListing]]); কে কখন কী নামাল তা নিরীক্ষার খাতায় ([[ExportJournal]])। --}}
             @php $canDownload = auth()->user()?->can('system_admin.list.export') ?? false; @endphp
+            @if ($canDownload && $print && $printView)
+                <a href="{{ $printHref ?? url()->current().'?'.http_build_query(request()->query() + ['export' => 'print']) }}"
+                   target="_blank" rel="noopener" data-no-prefetch data-print-view aria-label="{{ __('core.action.print_view') }}"
+                   class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field) px-2
+                          text-sm text-(--color-ink-muted) transition-colors
+                          hover:bg-(--color-surface-hover) hover:text-(--color-ink)">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
+                        <path d="M7 3h10v4H7V3ZM5 9h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2Zm4 8h6v4H9v-4Z"/>
+                    </svg>
+                    <span class="hidden xl:inline">{{ __('core.action.print_view') }}</span>
+                </a>
+            @endif
             {{-- ⛔ শেয়ারও নামানোর চাবির পেছনে — চাবি নেই তো মেনুই নেই ([[TheListBarFollowsThePlanTest]]; Mac রান, ১৮ নভেম্বর ২০২৬) --}}
             @if ($canDownload && ($export || $print || $share))
                 <div x-data="{ open: false }" class="relative" data-list-download>
@@ -775,7 +794,7 @@
                             </a>
                             {{-- ⭐ PDF — লেজারের ছাঁচের কাগজ, সব পাতা, ফাইল হয়ে নামে ([[ListPaper]]; আগে ছিল "ছাপুন, তারপর PDF হিসেবে সেভ") --}}
                             <a href="{{ url()->current().'?'.http_build_query(request()->query() + ['export' => 'pdf']) }}"
-                               data-no-prefetch data-download="pdf" aria-label="{{ __('core.toolbar.export_pdf') }}"
+                               target="_blank" rel="noopener" data-no-prefetch data-download="pdf" aria-label="{{ __('core.toolbar.export_pdf') }}"
                                class="block px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
                                 {{ __('core.toolbar.export_pdf') }}
                                 <span class="block text-2xs text-(--color-ink-muted)">{{ __('core.toolbar.export_pdf_note') }}</span>
@@ -783,7 +802,7 @@
                         @endif
                         @if ($canDownload && $print && $printHref)
                             {{-- ⓘ ছাপার নিজের ঠিকানা (যেমন লেজার, পুরো পরিসর) — `<a>`, ফর্ম জমা নয় --}}
-                            <a href="{{ $printHref }}" data-download="print" aria-label="{{ __('core.action.print') }}"
+                            <a href="{{ $printHref }}" target="_blank" rel="noopener" data-download="print" aria-label="{{ __('core.action.print') }}"
                                class="block border-t border-(--color-border) px-3 py-2 text-sm hover:bg-(--color-surface-hover)">
                                 {{ __('core.action.print') }}
                             </a>

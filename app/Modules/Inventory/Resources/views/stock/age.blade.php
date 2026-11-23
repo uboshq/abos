@@ -10,13 +10,40 @@
     [[StockFacts::agingValue()]] `null` দেয়; তখন ভাগের টাকা আর "আটকে থাকা টাকা" কলাম দুটোই সরে, বয়স আর পরিমাণ থাকে।
     ⛔ আগে চাবি ছাড়াও স্তরের টাকা দেখা যেত — টাকা ÷ পরিমাণ = কেনা দর।
 --}}
-@php $showsCost = \App\Core\Security\FieldSecurity::visible(\App\Modules\Inventory\Models\StockMovement::class, 'unit_cost'); @endphp
+@php
+    $showsCost = \App\Core\Security\FieldSecurity::visible(\App\Modules\Inventory\Models\StockMovement::class, 'unit_cost');
+
+    /* ⭐ ছাপার কাগজ — পর্দার একই স্তর, একই চাবির নিয়মে টাকা (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) */
+    \App\Core\Support\ReportPaper::capture(
+        (string) __('inventory::analysis.age_title'),
+        trans_choice('inventory::analysis.days', 2, ['count' => $bucket]),
+        [],
+        array_values(array_filter([
+            [__('inventory::analysis.product'), false],
+            [__('inventory::analysis.received'), false],
+            [__('inventory::analysis.age_days_col'), true],
+            [__('inventory::analysis.quantity'), true],
+            $showsCost ? [__('inventory::analysis.value_stuck'), true] : null,
+        ])),
+        $layers->map(fn ($l) => ['cells' => array_values(array_filter([
+            (app()->getLocale() === 'bn' && $l->name_bn ? $l->name_bn : $l->name_en).' · '.$l->product_code,
+            (string) $l->trx_date,
+            (string) (int) $l->age_days,
+            rtrim(rtrim((string) $l->qty_remaining, '0'), '.'),
+            $showsCost ? \App\Core\Support\Money::format($l->value_stuck) : null,
+        ], fn ($v) => $v !== null))])->values()->all(),
+        $showsCost && ($totals[$bucket] ?? null) !== null
+            ? [__('core.print.total'), '', '', '', \App\Core\Support\Money::format($totals[$bucket])]
+            : null,
+    );
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('inventory::analysis.age_title') }}</x-slot:title>
 
     <div class="py-6">
         {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
         <h1 class="text-xl font-bold text-(--color-ink)">{{ __('inventory::analysis.age_title') }}<x-ui.page-info :text="__('inventory::analysis.age_note')" /></h1>
+        <div class="mt-2 print-hide"><x-ui.print-view-button /></div>
         <p data-page-subtitle class="mt-1 text-sm text-(--color-ink-muted)">{{ __('inventory::analysis.age_note') }}</p>
 
         {{-- বয়স-ভাগ: প্রতিটায় আটকে থাকা টাকা --}}

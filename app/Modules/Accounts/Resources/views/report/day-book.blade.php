@@ -21,7 +21,7 @@
                                  :href="url()->current().'?'.http_build_query(request()->query() + ['date' => $book['date'], 'export' => 'print'])">
                         {{ __('core.action.print') }}
                     </x-ui.button>
-                    <x-ui.button tone="secondary" data-paper="pdf"
+                    <x-ui.button tone="secondary" data-paper="pdf" target="_blank" rel="noopener"
                                  :href="url()->current().'?'.http_build_query(request()->query() + ['date' => $book['date'], 'export' => 'pdf'])">
                         {{ __('core.toolbar.export_pdf') }}
                     </x-ui.button>

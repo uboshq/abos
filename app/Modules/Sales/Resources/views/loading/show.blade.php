@@ -85,7 +85,7 @@
         </section>
 
         <div class="flex flex-wrap items-center gap-2">
-            <x-ui.button icon="printer" :href="route('sales.print.loading_sheet', $trip)">
+            <x-ui.button icon="printer" :href="route('sales.print.loading_sheet', $trip)" target="_blank" rel="noopener">
                 {{ __('sales::loading.print') }}
             </x-ui.button>
 
