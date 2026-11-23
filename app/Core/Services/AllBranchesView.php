@@ -119,9 +119,7 @@ final class AllBranchesView
 
         // ── বার্তা ও কল — সহকর্মীর সাথে কথা, কোনো শাখার কাগজ বা হিসাব নয় (মালিক, ২৩ নভেম্বর ২০২৬: "ওয়েবে বার্তা লেখা যায় না" —
         //    "সব শাখা"-তে পাঠানো 409 পাচ্ছিল, তাই কথোপকথন খুলত না আর লেখার ঘর দেখাত না)। ওয়েবের দুই রাস্তা আর ফোনের API একসাথে।
-        'messaging.send', 'messaging.direct', 'messaging.groups', 'messaging.members.add', 'messaging.forward', 'messaging.papers',
-        'messaging.read', 'messaging.delivered', 'messaging.typing', 'messaging.mute', 'messaging.message.delete', 'messaging.audit.open',
-        'messaging.calls.start', 'messaging.calls.answer', 'messaging.calls.decline', 'messaging.calls.end',
+        'messaging.audit.open',
         'messaging.x.send', 'messaging.x.direct', 'messaging.x.groups', 'messaging.x.members.add', 'messaging.x.forward', 'messaging.x.papers',
         'messaging.x.read', 'messaging.x.typing', 'messaging.x.mute', 'messaging.x.message.delete',
         'messaging.x.calls.start', 'messaging.x.calls.answer', 'messaging.x.calls.decline', 'messaging.x.calls.end',
