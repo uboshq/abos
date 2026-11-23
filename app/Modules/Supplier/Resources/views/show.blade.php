@@ -311,12 +311,24 @@
             ['key' => 'balance', 'label' => __('core.table.balance'), 'numeric' => true, 'width' => '9rem',
              'render' => fn ($e) => \App\Core\Support\Money::drCr($e->net_balance)],
         ];
+
+        // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের চার ঘর ([[party-ledger-filters]]), একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+        $facetPanel = \App\Core\ListFilter\Facets::panel([
+            \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+            \App\Core\ListFilter\Facets::pick('kind', __('party_ledger.kind'),
+                collect(array_keys(\App\Core\Support\PartyLedger::KINDS))->mapWithKeys(fn ($k) => [
+                    $k => in_array($k, ['bill', 'money'], true) ? __('party_ledger.kind_supplier.'.$k) : __('party_ledger.kind_'.$k),
+                ])->all(), __('party_ledger.any_kind')),
+            \App\Core\ListFilter\Facets::pick('side', __('party_ledger.side'),
+                ['debit' => __('party_ledger.debit_only'), 'credit' => __('party_ledger.credit_only')], __('party_ledger.any_side')),
+        ]);
     @endphp
 
     </div>
     </div>
     </div>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form" :report="true">
     <section id="transactions" data-boxed class="scroll-mt-24 mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         {{--
@@ -335,8 +347,8 @@
             ⓘ তাই ছাপার আগে `?ledger=asc` ঠিকানায় যাওয়া হয়, আর সেখানে
             পৌঁছেই ছাপা শুরু হয়।
         --}}
-        <form method="GET" class="contents" data-report>
-            <x-ui.toolbar :title="__('supplier::section.transactions')" :report="true"
+        <form id="list-form" method="GET" class="contents" data-report>
+            <x-ui.toolbar :title="__('supplier::section.transactions')" :report="true" :facets="$facetPanel"
                           :search-placeholder="__('party_ledger.search')"
                           :columns="$ledgerColumns"
                           {{-- ℹ এই দুইটা ছাঁকনি নয়, দৃশ্যের অবস্থা — না বললে টুলবার
@@ -345,8 +357,6 @@
                           :quiet="['ledger', 'print', 'part']"
                           {{-- ⭐ ছাপা = হিসাব বিবরণী, সব পাতা, পর্দার একই তারিখে (মালিক, ১৫ নভেম্বর ২০২৬) — আগে পর্দার ৫০ সারিই ছাপত --}}
                           :print-href="route('accounts.statement', array_filter(['type' => \App\Modules\Supplier\Models\Supplier::drillSourceType(), 'id' => $supplier->id, 'from' => request('from'), 'to' => request('to')], fn ($v) => is_string($v) ? $v !== '' : $v !== null))">
-                {{-- ⭐ খোঁজা আর ছাঁকনি — মালিক, ৩ অক্টোবর ২০২৬; কন্ট্রোলার পড়ে [[PartyLedger::filter()]], জের খাতার সব লেনদেন থেকে --}}
-                <x-ui.party-ledger-filters party="supplier" />
             </x-ui.toolbar>
         </form>
 
@@ -370,6 +380,7 @@
         <x-ui.pager :rows="$entries" />
         <x-ui.list-totals :rows="$entries" />
     </section>
+    </x-ui.filter-layout>
 
     {{-- ⭐ জোড়া ডকুমেন্ট (ডকুমেন্ট পরিকল্পনা §১৫, ৯ অক্টোবর ২০২৬) — কোরের উপাদান; কিছু না থাকলে কিছুই বসে না --}}
     <x-ui.linked-documents :record="$supplier" />

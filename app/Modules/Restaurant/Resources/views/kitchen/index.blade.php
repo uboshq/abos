@@ -34,15 +34,20 @@
              url: @js(route('restaurant.kitchen.refresh', request()->query())),
          })">
 
-        <div class="mb-3 flex flex-wrap items-center gap-3">
-            <form method="GET" class="flex items-center gap-2">
-                <x-ui.select name="warehouse" :label="__('inventory::field.warehouse')"
-                             :options="$warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])"
-                             :selected="$warehouse?->id"
-                             x-data
-                             @change="$el.form.requestSubmit()" />
+        {{-- ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের গুদামের ঘর ("সব" ছাড়া), একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]]) --}}
+        @php
+            $facetPanel = \App\Core\ListFilter\Facets::panel([
+                \App\Core\ListFilter\Facets::one('warehouse', __('inventory::field.warehouse'),
+                    $warehouses->mapWithKeys(fn ($w) => [(string) $w->id => $w->name()])->all(), (string) $warehouse?->id),
+            ]);
+        @endphp
+        <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.filter-bar :facets="$facetPanel" />
             </form>
+        </x-ui.filter-layout>
 
+        <div class="mb-3 flex flex-wrap items-center gap-3">
             <span class="flex-1"></span>
 
             <span class="text-2xs text-(--color-ink-muted)">

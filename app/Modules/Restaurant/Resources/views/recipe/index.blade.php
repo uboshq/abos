@@ -40,6 +40,15 @@
         ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($r) => view('restaurant::partials.recipe-actions', ['recipe' => $r])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('kind', __('inventory::field.recipe_kind'), [
+            'to_order' => __('inventory::field.recipe_to_order'),
+            'batch' => __('inventory::field.recipe_batch'),
+        ], __('inventory::field.any_kind')),
+        \App\Core\ListFilter\Facets::flag('inactive', __('inventory::action.show_inactive')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -53,14 +62,15 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed
          class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.recipes')"
                           :count="trans_choice('inventory::message.recipe_count', $recipes->total(), ['count' => $recipes->total()])"
                           :columns="$columns"
                           :search-placeholder="__('inventory::field.recipe_search')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
                 <x-slot:actions>
                     @can('create', \App\Modules\Restaurant\Models\Recipe::class)
                         <x-ui.button tone="primary" icon="plus" :href="route('restaurant.recipe.create')">
@@ -68,26 +78,6 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <span>{{ __('inventory::field.recipe_kind') }}</span>
-                    <select name="kind"
-                            class="min-h-(--spacing-field) rounded-(--radius-field)
-                                   border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
-                        <option value="">{{ __('inventory::field.any_kind') }}</option>
-                        <option value="to_order" @selected($kind === 'to_order')>
-                            {{ __('inventory::field.recipe_to_order') }}
-                        </option>
-                        <option value="batch" @selected($kind === 'batch')>
-                            {{ __('inventory::field.recipe_batch') }}
-                        </option>
-                    </select>
-                </label>
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
-                    {{ __('inventory::action.show_inactive') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -100,4 +90,5 @@
         <x-ui.pager :rows="$recipes" />
         <x-ui.list-totals :rows="$recipes" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
