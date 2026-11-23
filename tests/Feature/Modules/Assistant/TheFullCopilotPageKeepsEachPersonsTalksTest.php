@@ -249,7 +249,7 @@ final class TheFullCopilotPageKeepsEachPersonsTalksTest extends TestCase
     /** @return array<string, mixed> the page's state, as the browser reads it */
     private function stateOf(string $html): array
     {
-        $this->assertSame(1, preg_match('/<script type="application\/json" data-cpp-state>(.*?)<\/script>/s', $html, $m), '⛔ no page state.');
+        $this->assertSame(1, preg_match('/<script type="application\/json"[^>]*data-cpp-state>(.*?)<\/script>/s', $html, $m), '⛔ no page state.');
 
         return (array) json_decode($m[1], true, 512, JSON_THROW_ON_ERROR);
     }

@@ -140,6 +140,9 @@ return [
         'customer.binding' => 'গ্রাহকের বাঁধন',
         'documents' => 'পুরো ডকুমেন্ট মডিউল',
         'notification' => 'পুরো বিজ্ঞপ্তি মডিউল',
+        // ⓘ বার্তা ও কল (মালিক "ok", ২১ নভেম্বর ২০২৬)
+        'messaging' => 'বার্তা ও কল',
+        'messaging.group' => 'বার্তার দল',
         'notification.templates' => 'বিজ্ঞপ্তির ছাঁচ',
         'notification.archive' => 'বিজ্ঞপ্তির আর্কাইভ',
         'notification.reports' => 'বিজ্ঞপ্তির রিপোর্ট',

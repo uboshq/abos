@@ -44,6 +44,7 @@ return [
         'hr' => 'Staff, attendance, leave and payroll',
         'inventory' => 'Warehouses, stock, transfers and counts',
         'master_data' => 'Products, units, prices and number series',
+        'messaging' => 'Messages, groups and calls with colleagues',
         'notification' => 'SMS, email and app messages',
         'promotion' => 'Offers, free goods and commission',
         'purchase' => 'Purchase orders, goods received and supplier bills',

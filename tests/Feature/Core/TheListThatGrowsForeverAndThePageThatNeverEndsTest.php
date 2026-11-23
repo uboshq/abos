@@ -74,7 +74,6 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         'App\Modules\SystemAdmin\Http\Controllers\CustomFieldController' => 'নিজের বানানো ঘর — ডজনখানেক।',
         'App\Modules\SystemAdmin\Http\Controllers\LookController' => 'রূপের তালিকা কোডে লেখা, স্থির।',
         'App\Modules\SystemAdmin\Http\Controllers\RoleController' => 'ভূমিকা হাতে বানানো হয় — ডজনখানেক।',
-        'App\Modules\SystemAdmin\Http\Controllers\ReportScheduleController' => 'নির্ধারিত রিপোর্ট হাতে বসানো — ডজনখানেক।',
         'App\Modules\Backup\Http\Controllers\DestinationController' => 'ব্যাকআপের গন্তব্য দুই-তিনটা; বেশি হলে সেটাই ভুল।',
 
         // ── ফাইল বা কাগজের সংখ্যা যেখানে নীতিই বেঁধে দেয় ────────────────

@@ -133,10 +133,11 @@ final class SalesResponsibility
         $companyId = CompanyContext::id();
 
         if ($companyId === null) {
-            return ['' => '—'];
+            return ['0' => '—'];
         }
 
-        return ['' => '—'] + User::query()
+        // ⓘ the blank row is '0' — the setting's own default — so the panel shows the stored value chosen and saving unchanged writes nothing
+        return ['0' => '—'] + User::query()
             ->where('is_active', true)
             ->whereHas('companies', fn ($q) => $q->whereKey($companyId))
             ->orderBy('name')
