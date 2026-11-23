@@ -64,23 +64,23 @@ final class TheSalesControlReportsAgreeWithTheirSourcesTest extends TestCase
 
     public function test_return_rate_and_price_realisation_stand_on_the_product_and_area_rows(): void
     {
-        $byProduct = $this->run('sales.by_product')->totals;
-        $rate = $this->run(ReturnRateReports::PRODUCT)->totals;
+        $byProduct = $this->report('sales.by_product')->totals;
+        $rate = $this->report(ReturnRateReports::PRODUCT)->totals;
 
         $this->assertSame($this->money($byProduct['revenue']), $this->money($rate['net_sales']), '⛔ পণ্য ধরে ফেরতের হারের নিট বিক্রি পণ্যভিত্তিক মুনাফার নিট বিক্রির সমান নয়।');
         $this->assertSame($this->money($byProduct['returned']), $this->money($rate['returned']), '⛔ পণ্য ধরে ফেরতের অঙ্ক পণ্যভিত্তিক মুনাফার ফেরতের সমান নয়।');
         $this->assertRate($rate, 'return_rate', 'returned', 'sales', 'পণ্য ধরে ফেরতের হার');
 
-        $area = $this->run(AreaSalesReports::levelKey(Location::AREA))->totals;
+        $area = $this->report(AreaSalesReports::levelKey(Location::AREA))->totals;
 
         foreach (SalesPlace::LEVELS as $level) {
-            $totals = $this->run(ReturnRateReports::levelKey($level))->totals;
+            $totals = $this->report(ReturnRateReports::levelKey($level))->totals;
             $this->assertSame($this->money($area['sales']), $this->money($totals['sales']), "⛔ {$level} ধরে ফেরতের হারের বিক্রি এলাকা ধরে বিক্রয়ের বিক্রির সমান নয়।");
             $this->assertSame($this->money($area['returns']), $this->money($totals['returned']), "⛔ {$level} ধরে ফেরত এলাকা ধরে বিক্রয়ের ফেরতের সমান নয়।");
             $this->assertRate($totals, 'return_rate', 'returned', 'sales', "{$level} ধরে ফেরতের হার");
         }
 
-        $price = $this->run(ProductInsightReports::PRICE);
+        $price = $this->report(ProductInsightReports::PRICE);
         $this->assertNotEmpty($price->rows, '⛔ বিক্রি হয়েছে, অথচ দামের প্রাপ্তিতে কোনো পণ্য নেই।');
         $this->assertRate($price->totals, 'realisation', 'realised', 'at_list', 'দামের প্রাপ্তি');
         $this->assertSame($this->money(bcsub((string) $price->totals['at_list'], (string) $price->totals['realised'], 4)), $this->money($price->totals['lost']), '⛔ "কম এসেছে" তালিকার দাম − আসল দাম নয়।');
@@ -88,11 +88,11 @@ final class TheSalesControlReportsAgreeWithTheirSourcesTest extends TestCase
 
     public function test_salesperson_productivity_carries_the_sales_and_the_money_of_its_sources(): void
     {
-        $work = $this->run(SalesForceReports::KEY)->totals;
+        $work = $this->report(SalesForceReports::KEY)->totals;
 
-        $this->assertSame($this->money($this->run(SalespersonReports::KEY)->totals['net_sales']), $this->money($work['net_sales']),
+        $this->assertSame($this->money($this->report(SalespersonReports::KEY)->totals['net_sales']), $this->money($work['net_sales']),
             '⛔ কর্মীর কাজের হিসাবের নিট বিক্রি বিক্রয়কর্মী ধরে বিক্রির সর্বমোটের সমান নয়।');
-        $this->assertSame($this->money($this->run(MoneyInReports::PERSON)->totals['total']), $this->money($work['collected']),
+        $this->assertSame($this->money($this->report(MoneyInReports::PERSON)->totals['total']), $this->money($work['collected']),
             '⛔ কর্মীর কাজের হিসাবের আদায় টাকা আসার (বিক্রয়কর্মী ধরে) মোটের সমান নয়।');
         $this->assertSame(
             Customer::query()->where('is_active', true)->count(), (int) $work['held'],
@@ -102,10 +102,10 @@ final class TheSalesControlReportsAgreeWithTheirSourcesTest extends TestCase
 
     public function test_due_ageing_by_area_is_the_customer_ageing_report_added_up(): void
     {
-        $source = $this->run('customer.ageing')->totals;
+        $source = $this->report('customer.ageing')->totals;
 
         foreach (SalesPlace::LEVELS as $level) {
-            $totals = $this->run(DueAgeingReports::levelKey($level))->totals;
+            $totals = $this->report(DueAgeingReports::levelKey($level))->totals;
 
             $this->assertSame($this->money($source['outstanding']), $this->money($totals['outstanding']), "⛔ {$level} ধরে বাকির মোট গ্রাহকের বকেয়ার বয়সের রিপোর্টের মোটের সমান নয়।");
             $this->assertSame(
@@ -119,9 +119,9 @@ final class TheSalesControlReportsAgreeWithTheirSourcesTest extends TestCase
 
     public function test_the_daily_summary_is_that_days_row_of_sales_and_money_in(): void
     {
-        $day = $this->run(DailySummaryReports::KEY)->totals;
-        $area = $this->run(AreaSalesReports::levelKey(Location::AREA))->totals;
-        $money = $this->run(MoneyInReports::DAY)->totals;
+        $day = $this->report(DailySummaryReports::KEY)->totals;
+        $area = $this->report(AreaSalesReports::levelKey(Location::AREA))->totals;
+        $money = $this->report(MoneyInReports::DAY)->totals;
 
         $this->assertSame($this->money($area['net_sales']), $this->money($day['net_sales']), '⛔ দৈনিক সারাংশের নিট বিক্রি সেই দিনের এলাকা ধরে বিক্রয়ের সমান নয়।');
         $this->assertSame($this->money($money['total']), $this->money($day['money_in']), '⛔ দৈনিক সারাংশের আসা টাকা সেই দিনের "টাকা আসা"র সমান নয়।');
@@ -132,16 +132,16 @@ final class TheSalesControlReportsAgreeWithTheirSourcesTest extends TestCase
 
     public function test_scheme_and_discount_cost_add_up(): void
     {
-        $schemes = $this->run(SchemeCostReports::SCHEMES)->totals;
+        $schemes = $this->report(SchemeCostReports::SCHEMES)->totals;
         $parts = (float) ($schemes['price_cut'] ?? 0) + (float) ($schemes['free_goods'] ?? 0) + (float) ($schemes['other_benefit'] ?? 0);
 
         $this->assertSame($this->money($schemes['cost'] ?? 0), $this->money($parts), '⛔ স্কিমের মোট খরচ তিন রকম সুবিধার যোগ নয়।');
-        $this->assertSame($this->money($schemes['cost'] ?? 0), $this->money($this->run(SchemeCostReports::BILLS)->totals['worth'] ?? 0), '⛔ স্কিমের মোট খরচ অফার খাটা বিলের তালিকার যোগের সমান নয়।');
+        $this->assertSame($this->money($schemes['cost'] ?? 0), $this->money($this->report(SchemeCostReports::BILLS)->totals['worth'] ?? 0), '⛔ স্কিমের মোট খরচ অফার খাটা বিলের তালিকার যোগের সমান নয়।');
 
-        $discounts = $this->run(SchemeCostReports::DISCOUNTS)->totals;
+        $discounts = $this->report(SchemeCostReports::DISCOUNTS)->totals;
         $this->assertSame($this->money((float) $discounts['line_discount'] + (float) $discounts['bill_discount']), $this->money($discounts['discount_total']), '⛔ মোট ছাড় লাইনের ছাড় + মাথার ছাড় নয়।');
         $this->assertSame($this->money((float) $discounts['gross'] - (float) $discounts['discount_total']), $this->money($discounts['after_discount']), '⛔ ছাড়ের আগের দাম − ছাড় = ছাড়ের পরে নয়।');
-        $this->assertSame($this->money($this->run(SalespersonReports::KEY)->totals['sales']), $this->money($discounts['after_discount']), '⛔ ছাড়ের পরের দাম বিক্রয়কর্মী ধরে বিক্রির "বিক্রি"র সমান নয়।');
+        $this->assertSame($this->money($this->report(SalespersonReports::KEY)->totals['sales']), $this->money($discounts['after_discount']), '⛔ ছাড়ের পরের দাম বিক্রয়কর্মী ধরে বিক্রির "বিক্রি"র সমান নয়।');
     }
 
     /** হারের ঘর মোটে মোট ÷ মোট — হর শূন্য হলে ঘর খালি */
@@ -161,7 +161,7 @@ final class TheSalesControlReportsAgreeWithTheirSourcesTest extends TestCase
         return number_format((float) $value, 2, '.', '');
     }
 
-    private function run(string $key): ReportResult
+    private function report(string $key): ReportResult
     {
         return app(ReportEngine::class)->run($key, ['from' => $this->today, 'to' => $this->today], 1, 500);
     }

@@ -73,7 +73,7 @@ final class TheSalesAnalysisReportsAgreeWithEachOtherTest extends TestCase
         }
 
         // ⭐ লক্ষ্য — গ্রাহকের সারিতে তাঁর লক্ষ্য, অর্জন = নিট ÷ লক্ষ্য; মোটে মোট ÷ মোট
-        $target = $this->run(CustomerInsightReports::targetKey(SalesPlace::CUSTOMER));
+        $target = $this->report(CustomerInsightReports::targetKey(SalesPlace::CUSTOMER));
         $mine = collect($target->rows)->first(fn (array $r) => (int) $r['place_id'] === $this->customer);
         $this->assertNotNull($mine, '⛔ লক্ষ্য আছে এমন গ্রাহক লক্ষ্যের রিপোর্টে নেই।');
         $this->assertSame('1000.00', bcadd((string) $mine['target'], '0', 2), '⛔ গ্রাহকের সারিতে তাঁর মাসিক লক্ষ্য ওঠেনি।');
@@ -83,7 +83,7 @@ final class TheSalesAnalysisReportsAgreeWithEachOtherTest extends TestCase
             bcadd((string) $target->totals['achieved'], '0', 2), '⛔ মোটের অর্জন % মোট ÷ মোট নয়।');
 
         // ⭐ আদায়ের দক্ষতা — আদায়যোগ্য = শুরুর বাকি + নিট বিক্রি; হার = আদায় ÷ আদায়যোগ্য, মোটেও
-        $eff = $this->run(CustomerInsightReports::efficiencyKey(Location::AREA))->totals;
+        $eff = $this->report(CustomerInsightReports::efficiencyKey(Location::AREA))->totals;
         $this->assertSame(bcadd((string) $eff['opening'], (string) $eff['net_sales'], 2), bcadd((string) $eff['collectible'], '0', 2), '⛔ আদায়যোগ্য টাকা শুরুর বাকি + নিট বিক্রি নয়।');
         $this->assertSame($this->total(AreaSalesReports::levelKey(Location::AREA), 'due'), bcadd((string) $eff['due'], '0', 2), '⛔ শেষ বাকি এলাকা ধরে বিক্রয়ের বাকির সমান নয়।');
         if (bccomp((string) $eff['collectible'], '0', 2) > 0) {
@@ -92,7 +92,7 @@ final class TheSalesAnalysisReportsAgreeWithEachOtherTest extends TestCase
 
         // ⭐ ABC — বড় থেকে ছোট, জমা অংশ ১০০-তে শেষ, প্রথম সারি A
         foreach ([CustomerInsightReports::ABC, ProductInsightReports::ABC] as $key) {
-            $rows = collect($this->run($key)->rows);
+            $rows = collect($this->report($key)->rows);
             $this->assertSame($rows->pluck('net_sales')->map(fn ($v) => (float) $v)->sortDesc()->values()->all(), $rows->pluck('net_sales')->map(fn ($v) => (float) $v)->values()->all(), "⛔ {$key}: বড় থেকে ছোট সাজানো নয়।");
             $this->assertEqualsWithDelta(100.0, (float) $rows->last()['cumulative'], 0.01, "⛔ {$key}: জমা অংশ ১০০%-এ শেষ হয়নি।");
             $this->assertEqualsWithDelta(100.0, $rows->sum(fn (array $r) => (float) $r['share']), 0.05 * max(1, $rows->count()), "⛔ {$key}: অংশগুলোর যোগ ১০০% নয়।");
@@ -107,7 +107,7 @@ final class TheSalesAnalysisReportsAgreeWithEachOtherTest extends TestCase
         $this->customer = $fresh;
         $invoice = $this->sell('3');
 
-        $in = fn (string $key): bool => collect($this->run($key)->rows)->contains(fn (array $r) => (int) $r['source_id'] === $fresh);
+        $in = fn (string $key): bool => collect($this->report($key)->rows)->contains(fn (array $r) => (int) $r['source_id'] === $fresh);
 
         $this->assertTrue($in(CustomerInsightReports::NEW), '⛔ আজ প্রথম বিল হওয়া গ্রাহক "নতুন"-এ নেই।');
         foreach (CustomerInsightReports::IDLE as $days) {
@@ -135,7 +135,7 @@ final class TheSalesAnalysisReportsAgreeWithEachOtherTest extends TestCase
         DB::table('sal_invoices')->where('company_id', $this->company->id)->where('id', $first->id)->update(['trx_date' => now()->subYear()->toDateString()]);
 
         foreach ([SalesTrendReports::MONTHLY => 'ly_net', AreaSalesReports::BRANCH => 'ly_net'] as $key => $was) {
-            $totals = $this->run($key)->totals;
+            $totals = $this->report($key)->totals;
             $this->assertTrue(bccomp((string) $totals[$was], '0', 2) > 0, "প্রস্তুতি ({$key}): গত বছরের বিক্রিই নেই।");
             $this->assertSame(
                 bcdiv(bcmul(bcsub((string) $totals['net_sales'], (string) $totals[$was], 6), '100', 6), (string) $totals[$was], 2),
@@ -144,14 +144,14 @@ final class TheSalesAnalysisReportsAgreeWithEachOtherTest extends TestCase
         }
     }
 
-    private function run(string $key): \App\Core\Engines\Report\ReportResult
+    private function report(string $key): \App\Core\Engines\Report\ReportResult
     {
         return app(ReportEngine::class)->run($key, ['from' => $this->today, 'to' => $this->today], 1, 500);
     }
 
     private function total(string $key, string $column): string
     {
-        return bcadd((string) ($this->run($key)->totals[$column] ?? '0'), '0', 2);
+        return bcadd((string) ($this->report($key)->totals[$column] ?? '0'), '0', 2);
     }
 
     private function sell(string $qty): SalesInvoice

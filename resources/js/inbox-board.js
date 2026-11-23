@@ -59,9 +59,13 @@ export function inboxBoard (root = document, win = window) {
         const group = event.target.closest?.('[data-board-group-pick]')
 
         if (group) {
+            // ⓘ read once — each box's own change runs tally(), which re-counts the group tick half-way through the loop
+            //   (1 of 2 picked → unticked), and the next box would copy that instead of what the person clicked
+            const want = group.checked
+
             root.querySelectorAll('[data-board-in]').forEach((box) => {
                 if (box.dataset.boardIn === group.dataset.boardGroupPick) {
-                    box.checked = group.checked
+                    box.checked = want
                     box.dispatchEvent(new Event('change', { bubbles: true }))
                 }
             })

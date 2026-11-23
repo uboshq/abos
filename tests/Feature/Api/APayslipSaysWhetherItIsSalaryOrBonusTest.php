@@ -74,8 +74,8 @@ final class APayslipSaysWhetherItIsSalaryOrBonusTest extends TestCase
 
     public function test_the_old_fields_of_a_salary_slip_are_unchanged_and_run_type_is_added_for_both_kinds(): void
     {
-        $salary = $this->slip($this->run('PAY-RT-09', PayrollRun::SALARY), '30000', '2000');
-        $bonus = $this->slip($this->run('BON-RT-09', PayrollRun::BONUS), '15000', '0');
+        $salary = $this->slip($this->payrollRun('PAY-RT-09', PayrollRun::SALARY), '30000', '2000');
+        $bonus = $this->slip($this->payrollRun('BON-RT-09', PayrollRun::BONUS), '15000', '0');
 
         // ── তালিকা — বেতনের সারির পুরনো ঘরগুলো অবিকল, তারপর নতুন ঘর
         $rows = collect($this->phone()->getJson('/api/v1/hr/payslips')->assertOk()->json('rows'))->keyBy('id');
@@ -117,7 +117,7 @@ final class APayslipSaysWhetherItIsSalaryOrBonusTest extends TestCase
             '⛔ উৎসব ভাতার স্লিপ বলে না সেটা ভাতা।');
     }
 
-    private function run(string $no, string $type): PayrollRun
+    private function payrollRun(string $no, string $type): PayrollRun
     {
         $run = PayrollRun::acrossBranches()->create([
             'company_id' => $this->company->id, 'branch_id' => CompanyContext::branchId(), 'document_no' => $no, 'run_type' => $type,
