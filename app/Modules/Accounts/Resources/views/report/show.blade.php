@@ -507,7 +507,12 @@
                                     @foreach ($columns as $index => $column)
                                         <td @class(['num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true)])>
                                             @if ($index === 0)
-                                                {{ __($result->report->sections === null ? 'core.report.branch_total' : 'core.report.section_total') }} — {{ $section->branchName }}
+                                                {{-- ⓘ ভাগের নিজের মোটের লেখা থাকলে সেটাই ("দল মোট — করিম"; মালিক, ২৩ নভেম্বর ২০২৬) --}}
+                                                @if ($section->totalLabel !== null)
+                                                    {{ $section->totalLabel }}
+                                                @else
+                                                    {{ __($result->report->sections === null ? 'core.report.branch_total' : 'core.report.section_total') }} — {{ $section->branchName }}
+                                                @endif
                                             @elseif ($column->total && isset($section->totals[$column->key]))
                                                 {{-- ⓘ পরিমাণের মোটও দশমিক ছাড়া ([[ReportResult::number()]]) --}}
                                                 {{ \App\Core\Engines\Report\ReportResult::number($section->totals[$column->key], $column) }}

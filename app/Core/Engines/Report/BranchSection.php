@@ -17,6 +17,8 @@ final class BranchSection
     /**
      * @param  list<array<string, mixed>>  $rows  এই শাখার সারি — প্রথম পাতা
      * @param  array<string, string>  $totals  এই শাখার মোট — পুরো অংশের, পাতার নয়
+     * @param  string|null  $totalLabel  ⭐ ভাগের মোটের নিজের লেখা — রিপোর্টের নিজের ভাগ চাইলে ("দল মোট — করিম"; মালিক, ২৩ নভেম্বর
+     *                                   ২০২৬, [[SalespersonReports]])। ⓘ null = আগের মতো "শাখার মোট/উপ-মোট — নাম"।
      */
     public function __construct(
         public readonly ?int $branchId,
@@ -24,5 +26,6 @@ final class BranchSection
         public readonly array $rows,
         public readonly array $totals,
         public readonly int $rowCount,
+        public readonly ?string $totalLabel = null,
     ) {}
 }

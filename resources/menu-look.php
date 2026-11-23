@@ -563,6 +563,8 @@ return [
             'sales::channel.report_title' => ['reports', 'signpost'],
             'sales::route.report_title' => ['reports', 'milestone'],
             'sales::salesperson_report.title' => ['reports', 'id-card'],
+            // ⓘ কে কত বিল করেছেন — বিক্রয়কর্মী ধরে বিক্রির ঠিক পরে (২৩ নভেম্বর ২০২৬)
+            'sales::biller_report.title' => ['reports', 'clipboard-pen-line'],
             'sales::order_dispatch.title' => ['reports', 'alarm-clock'],
             'sales::collection_target.title' => ['target', 'goal'],
             'sales::menu.lot_trace' => ['control', 'search'],

@@ -13,7 +13,6 @@ use App\Models\Company;
 use App\Models\FinancialYear;
 use App\Models\User;
 use App\Modules\Customer\Models\Customer;
-use App\Modules\Customer\Services\DealerBindingService;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Sales\Models\SalesInvoice;
@@ -31,9 +30,10 @@ use Tests\TestCase;
 /**
  * ⭐ বিক্রয়কর্মী ধরে বিক্রি — বিক্রয় পরিকল্পনা সংস্করণ ২ §৯ (গ) ([[SalespersonReports]])।
  *
- * ⛔ "বিক্রি" ঘর লক্ষ্যের অর্জনের হুবহু সমান ([[SalesTargetService::achievedByUser()]]): দেয়াল চালু থাকলে বিলের দিনে বাঁধা জন,
- * হাতবদলের আগের বিক্রি পুরনো জনের; বাঁধনহীন ডিলার আলাদা সারিতে; ভ্যাট বাদ; খসড়া নয়; ফেরত একই নিয়মে বাদ। দেয়াল বন্ধ থাকলে বিল
- * যিনি কেটেছেন। দেয়ালের ভিতরের বিক্রয়কর্মী কেবল নিজের ডিলারের সারি দেখেন।
+ * ⛔ "বিক্রি" ঘর লক্ষ্যের অর্জনের হুবহু সমান ([[SalesTargetService::achievedByUser()]]): ⭐ বিলে লেখা দায়িত্বপ্রাপ্ত জন
+ * (`sales_person_id`; মালিক, ২৩ নভেম্বর ২০২৬), বিল যিনি কেটেছেন কখনো নন — দেয়াল চালু বা বন্ধ, দুইদিকেই; জন বসানো নেই এমন বিল
+ * আলাদা সারিতে ("দায়িত্ব বসানো নেই"); ভ্যাট বাদ; খসড়া নয়; ফেরত ফেরতে লেখা জনের ঘর থেকে বাদ। দেয়ালের ভিতরের বিক্রয়কর্মী কেবল
+ * নিজের ডিলারের সারি দেখেন। ⓘ জন কীভাবে বাছা হয় (বাঁধন, হাতবদল) তা [[SalesResponsibility]]-এর নিজের দাবিতে — এখানে জন সরাসরি বসানো।
  */
 final class TheSalesmanReportCountsLikeTheTargetTest extends TestCase
 {
@@ -62,27 +62,27 @@ final class TheSalesmanReportCountsLikeTheTargetTest extends TestCase
         $this->day = Carbon::today()->subDays(120);
     }
 
-    public function test_the_report_counts_whoever_was_bound_that_day_exactly_like_the_target(): void
+    public function test_the_report_counts_the_person_written_on_the_bill_exactly_like_the_target(): void
     {
         $rahim = Customer::acrossDealers()->where('name_en', 'Rahim Traders')->firstOrFail();
         $niloy = Customer::acrossDealers()->where('name_en', 'Niloy Store')->firstOrFail();
         $new = $this->colleague('new-sr@abos.test');
 
-        app(DealerBindingService::class)->handover((int) $this->sales->id, (int) $new->id, [(int) $rahim->id], $this->day->toDateString());
-
-        $old = $this->bill('SP-OLD', $rahim, $this->day->copy()->subDay(), '1150', '150');
-        $this->bill('SP-NEW', $rahim, $this->day, '500', '0');
+        $old = $this->bill('SP-OLD', $rahim, $this->day->copy()->subDay(), '1150', '150', person: $this->sales);
+        $this->bill('SP-NEW', $rahim, $this->day, '500', '0', person: $new);
         $this->bill('SP-LOOSE', $niloy, $this->day, '900', '0');
-        $this->bill('SP-DRAFT', $rahim, $this->day, '7000', '0', DocumentStatus::DRAFT);
+        $this->bill('SP-DRAFT', $rahim, $this->day, '7000', '0', DocumentStatus::DRAFT, person: $new);
+        // ⓘ ফেরত মূল বিলের জনকে নেয় ([[SalesResponsibility::forReturn()]]) — এখানে সরাসরি সেই জন
         $this->giveBack('SR-NEW', $rahim, $this->day, '200', $old);
 
         $rows = $this->rows();
 
-        $this->assertMoney('1000', $rows[$this->sales->id]['sales'] ?? null, '⛔ হাতবদলের আগের বিক্রি পুরনো জন পাননি (ভ্যাট বাদ)');
-        $this->assertMoney('500', $rows[$new->id]['sales'] ?? null, '⛔ হাতবদলের পরের বিক্রি নতুন জন পাননি, বা খসড়া গোনা হল');
-        $this->assertMoney('200', $rows[$new->id]['returns'] ?? null, '⛔ ফেরত ফেরতের দিনের বাঁধা জনের ঘরে যায়নি');
-        $this->assertMoney('300', $rows[$new->id]['net_sales'] ?? null, 'নিট = বিক্রি − ফেরত');
-        $this->assertMoney('900', $rows[0]['sales'] ?? null, '⛔ বাঁধনহীন ডিলারের বিক্রি আলাদা সারিতে নেই');
+        $this->assertMoney('1000', $rows[$this->sales->id]['sales'] ?? null, '⛔ বিলে লেখা জন বিক্রি পাননি (ভ্যাট বাদ)');
+        $this->assertMoney('500', $rows[$new->id]['sales'] ?? null, '⛔ বিলে লেখা নতুন জন বিক্রি পাননি, বা খসড়া গোনা হল');
+        $this->assertMoney('200', $rows[$this->sales->id]['returns'] ?? null, '⛔ ফেরত ফেরতে লেখা জনের ঘরে যায়নি');
+        $this->assertMoney('800', $rows[$this->sales->id]['net_sales'] ?? null, 'নিট = বিক্রি − ফেরত');
+        $this->assertMoney('0', $rows[$new->id]['returns'] ?? null, '⛔ অন্যের বিলের ফেরত এঁর ঘরে');
+        $this->assertMoney('900', $rows[0]['sales'] ?? null, '⛔ জন বসানো নেই এমন বিলের বিক্রি আলাদা সারিতে নেই');
         $this->assertSame((string) __('sales::salesperson_report.nobody'), $rows[0]['salesperson']);
         $this->assertArrayNotHasKey((int) $this->owner->id, $rows, '⛔ বিল যিনি কেটেছেন তিনি বিক্রি পেলেন');
 
@@ -97,23 +97,24 @@ final class TheSalesmanReportCountsLikeTheTargetTest extends TestCase
         $this->assertSame(count($achieved), count(array_filter(array_keys($rows))), '⛔ লক্ষ্যে নেই এমন কারও সারি রিপোর্টে');
     }
 
-    public function test_with_the_wall_off_the_sale_belongs_to_whoever_wrote_the_bill(): void
+    /** ⛔ দেয়াল বন্ধেও বিল যিনি কেটেছেন তিনি নন — আগে এখানে `created_by` ছিল (মালিক, ২৩ নভেম্বর ২০২৬) */
+    public function test_with_the_wall_off_the_sale_still_belongs_to_the_person_on_the_bill(): void
     {
         app(SettingsService::class)->set(DealerScope::SWITCH, false);
         app(DealerScope::class)->forget();
 
         $rahim = Customer::acrossDealers()->where('name_en', 'Rahim Traders')->firstOrFail();
-        $bill = $this->bill('SP-OFF', $rahim, $this->day, '800', '0');
-        $this->giveBack('SR-OFF', $rahim, $this->day, '100', $bill, by: $this->sales);
+        $bill = $this->bill('SP-OFF', $rahim, $this->day, '800', '0', person: $this->sales);
+        $this->giveBack('SR-OFF', $rahim, $this->day, '100', $bill, by: $this->owner);
 
         $rows = $this->rows();
 
-        $this->assertMoney('800', $rows[$this->owner->id]['sales'] ?? null, '⛔ দেয়াল বন্ধে বিল যিনি কেটেছেন তিনি বিক্রি পাননি');
-        $this->assertMoney('100', $rows[$this->owner->id]['returns'] ?? null, '⛔ দেয়াল বন্ধে ফেরত আসল বিলের লেখকের ঘরে যায়নি');
-        $this->assertArrayNotHasKey((int) $this->sales->id, $rows, '⛔ ফেরত যিনি বসিয়েছেন তিনি ফেরত পেলেন');
+        $this->assertMoney('800', $rows[$this->sales->id]['sales'] ?? null, '⛔ দেয়াল বন্ধে বিলে লেখা জন বিক্রি পাননি');
+        $this->assertMoney('100', $rows[$this->sales->id]['returns'] ?? null, '⛔ দেয়াল বন্ধে ফেরত ফেরতে লেখা জনের ঘরে যায়নি');
+        $this->assertArrayNotHasKey((int) $this->owner->id, $rows, '⛔ দেয়াল বন্ধে বিল আর ফেরত যিনি লিখেছেন তিনি বিক্রি পেলেন');
         $this->assertMoney(
-            (string) (app(SalesTargetService::class)->achievedByUser($this->day, $this->day)[$this->owner->id] ?? '0'),
-            $rows[$this->owner->id]['net_sales'] ?? null,
+            (string) (app(SalesTargetService::class)->achievedByUser($this->day, $this->day)[$this->sales->id] ?? '0'),
+            $rows[$this->sales->id]['net_sales'] ?? null,
             '⛔ দেয়াল বন্ধে রিপোর্ট আর লক্ষ্য আলাদা',
         );
     }
@@ -122,7 +123,7 @@ final class TheSalesmanReportCountsLikeTheTargetTest extends TestCase
     {
         $rahim = Customer::acrossDealers()->where('name_en', 'Rahim Traders')->firstOrFail();
         $niloy = Customer::acrossDealers()->where('name_en', 'Niloy Store')->firstOrFail();
-        $this->bill('SP-MINE', $rahim, $this->day, '400', '0');
+        $this->bill('SP-MINE', $rahim, $this->day, '400', '0', person: $this->sales);
         $this->bill('SP-THEIRS', $niloy, $this->day, '900', '0');
 
         $range = ['slug' => 'by-salesperson', 'from' => $this->day->toDateString(), 'to' => $this->day->toDateString()];
@@ -161,7 +162,7 @@ final class TheSalesmanReportCountsLikeTheTargetTest extends TestCase
         return $user;
     }
 
-    private function bill(string $no, Customer $customer, Carbon $on, string $amount, string $tax, string $status = DocumentStatus::CONFIRMED): SalesInvoice
+    private function bill(string $no, Customer $customer, Carbon $on, string $amount, string $tax, string $status = DocumentStatus::CONFIRMED, ?User $person = null): SalesInvoice
     {
         $invoice = SalesInvoice::create([
             'company_id' => $this->company->id,
@@ -175,6 +176,8 @@ final class TheSalesmanReportCountsLikeTheTargetTest extends TestCase
             'total' => $amount,
             'status' => $status,
             'created_by' => $this->owner->id,
+            // ⭐ দায়িত্বপ্রাপ্ত জন সরাসরি — নিশ্চিতের মুহূর্তে যা বসত (মালিক, ২৩ নভেম্বর ২০২৬)
+            'sales_person_id' => $person?->id,
         ]);
 
         (new SalesInvoiceLine)->forceFill([
@@ -200,6 +203,8 @@ final class TheSalesmanReportCountsLikeTheTargetTest extends TestCase
             'total' => $amount,
             'status' => DocumentStatus::CONFIRMED,
             'created_by' => ($by ?? $this->owner)->id,
+            // ⓘ ফেরত মূল বিলের জনকে নেয় ([[SalesResponsibility::forReturn()]])
+            'sales_person_id' => $invoice->sales_person_id,
         ]);
         $return->save();
 

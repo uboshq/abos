@@ -44,7 +44,8 @@ final class SalesProfile implements ContributesToAProfile
         return (string) SalesInvoice::acrossBranches()
             ->whereIn('status', DocumentStatus::POSTED)
             ->whereBetween('trx_date', [$from->toDateString(), $to->toDateString()])
-            ->when($by !== null, fn ($q) => $q->where('created_by', $by->getKey()))
+            // ⭐ "নিজের বিক্রি" = বিলে লেখা দায়িত্বপ্রাপ্ত জন আমি (মালিক, ২৩ নভেম্বর ২০২৬) — বিল আমি লিখেছি কি না নয়
+            ->when($by !== null, fn ($q) => $q->where('sales_person_id', $by->getKey()))
             ->sum('total');
     }
 

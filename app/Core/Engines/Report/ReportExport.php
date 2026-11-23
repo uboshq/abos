@@ -187,7 +187,8 @@ final class ReportExport
         foreach ($result->sections as $section) {
             $rows[] = ['__section' => 'head', '__label' => $section->branchName];
             array_push($rows, ...$section->rows);
-            $rows[] = ['__section' => 'total', '__label' => __('core.report.branch_total').' — '.$section->branchName, ...$section->totals];
+            // ⓘ ভাগের নিজের মোটের লেখা থাকলে সেটাই ("দল মোট — করিম"; ২৩ নভেম্বর ২০২৬) — পর্দার একই লেখা
+            $rows[] = ['__section' => 'total', '__label' => $section->totalLabel ?? __('core.report.branch_total').' — '.$section->branchName, ...$section->totals];
         }
 
         $rows[] = ['__section' => 'grand', '__label' => __('core.report.grand_total'), ...$result->totals];

@@ -10,5 +10,9 @@ return [
     'sales' => 'Sales (ex VAT)',
     'returns' => 'Returns (ex VAT)',
     'net_sales' => 'Net sales',
-    'nobody' => 'Not bound to anyone',
+    'nobody' => 'No one responsible',
+    'team' => 'Team — :name',
+    'team_total' => 'Team total — :name',
+    'no_team' => 'Not in a team',
+    'no_team_total' => 'Outside teams total',
 ];

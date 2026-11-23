@@ -348,8 +348,9 @@ final class SalesMetrics implements ProvidesMetrics
     /**
      * ⭐ যেকোনো চাবি ধরে নিট বিক্রি — বিক্রয়ের সারাংশের ভাগ (শাখা, ক্রেতা, বিক্রেতা, এরিয়া) আর ড্যাশবোর্ডের দণ্ড (fe, ২১ অক্টোবর ২০২৬)।
      * দুই কোয়েরি, [[invoices()]] আর [[returns()]]-এর একই ভিত ও দেয়াল, প্রতিটা একটা `GROUP BY`; ফেরত নিজের তারিখে।
-     * ⓘ `$billKey` বিলের (`sal_invoices`) উপর SQL, `$returnKey` ফেরতের (`sal_returns`) উপর — যেমন বিক্রেতা: বিলের `created_by`,
-     * ফেরতের মূল বিলের `created_by` ([[sellerOfReturnSql()]])। ⓘ চাবি স্ট্রিং, খালি চাবি `''`; `count` = পাকা বিলের সংখ্যা।
+     * ⓘ `$billKey` বিলের (`sal_invoices`) উপর SQL, `$returnKey` ফেরতের (`sal_returns`) উপর — যেমন বিক্রেতা: বিলের দায়িত্বপ্রাপ্ত
+     * জন ([[sellerOfInvoiceSql()]]), ফেরতের নিজের দায়িত্বপ্রাপ্ত জন ([[sellerOfReturnSql()]])। ⓘ চাবি স্ট্রিং, খালি চাবি `''`;
+     * `count` = পাকা বিলের সংখ্যা।
      * ⛔ সারির `net`-এর যোগ = [[net()]] পয়সায় — যে দলে কেবল ফেরত, সেটাও সারি পায়।
      *
      * @param  list<string>|null  $customerIds
@@ -371,10 +372,22 @@ final class SalesMetrics implements ProvidesMetrics
         return $out;
     }
 
-    /** ⓘ ফেরতের বিক্রেতা — মূল বিল যিনি কেটেছেন, বিল না থাকলে ফেরত যিনি লিখেছেন ([[SalespersonReports]]-এর একই নিয়ম) */
+    /**
+     * ⭐ বিলের বিক্রেতা — বিলে লেখা দায়িত্বপ্রাপ্ত জন (নিশ্চিতের মুহূর্তে বসা; মালিক, ২৩ নভেম্বর ২০২৬; [[SalespersonReports]]-এর একই
+     * নিয়ম)। ⛔ `created_by` নয় — বিল যিনি লিখেছেন তিনি বিক্রি পান না। ⓘ জন বসানো নেই = NULL, চাবি `''`।
+     */
+    public static function sellerOfInvoiceSql(): string
+    {
+        return 'sal_invoices.sales_person_id';
+    }
+
+    /**
+     * ⭐ ফেরতের বিক্রেতা — ফেরতে লেখা দায়িত্বপ্রাপ্ত জন (মালিক, ২৩ নভেম্বর ২০২৬; [[SalespersonReports]]-এর একই নিয়ম)।
+     * ⛔ আগে মূল বিল যিনি কেটেছেন (`created_by`), বিল না থাকলে ফেরত যিনি লিখেছেন — সেই পথ আর নেই।
+     */
     public static function sellerOfReturnSql(): string
     {
-        return '(COALESCE((SELECT ri.created_by FROM sal_invoices ri WHERE ri.id = sal_returns.sales_invoice_id), sal_returns.created_by))';
+        return 'sal_returns.sales_person_id';
     }
 
     /**

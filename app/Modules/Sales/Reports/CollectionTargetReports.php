@@ -9,7 +9,7 @@ use App\Core\Engines\Report\ReportDefinition;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Support\Money;
 use App\Modules\Sales\Services\CustomerTargetService;
-use App\Modules\Sales\Services\DealerOwnership;
+use App\Modules\Sales\Services\SalesResponsibility;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -19,8 +19,9 @@ use Illuminate\Support\Facades\DB;
  *
  * ⓘ লক্ষ্য ডিলার ধরে, মাস ধরে (`sal_customer_targets`, মালিক ৩ অক্টোবর)। "শুরু" যে মাসে পড়ে সেই মাসের লক্ষ্য থাকা প্রতিটা ডিলার
  * এক সারি; অর্জন মাসের ১ তারিখ থেকে মাসের শেষ, আজ বা "শেষ"-এর যেটা আগে। ⭐ অর্জনের নিয়ম লক্ষ্যের পাতা আর বিলের বাক্সের হুবহু
- * ([[CustomerTargetService::achievedQuery()]]) — আসা টাকা, ফেরত চেক বাদ, পাশ না হওয়া চেক বাদ। বিক্রয়কর্মী: লক্ষ্যের শেষ তারিখে
- * ডিলারটা যাঁর নামে বাঁধা ([[DealerOwnership::boundOn()]])।
+ * ([[CustomerTargetService::achievedQuery()]]) — আসা টাকা, ফেরত চেক বাদ, পাশ না হওয়া চেক বাদ। ⭐ বিক্রয়কর্মী: লক্ষ্যের শেষ তারিখে
+ * ডিলারের দায়িত্বপ্রাপ্ত জন ([[SalesResponsibility::forMany()]]; মালিক, ২৩ নভেম্বর ২০২৬) — বিক্রির রিপোর্ট আর লক্ষ্যের একই উত্তর।
+ * ⓘ আগে কেবল বাঁধন ([[DealerOwnership::boundOn()]])।
  *
  * ⛔ গোটা কোম্পানির — ডিলারের লক্ষ্য একটাই, শাখা ধরে ভাগ হয় না; তাই শাখায় সীমিত কেউ এটা পান না (`WHOLE_COMPANY`)।
  */
@@ -47,13 +48,15 @@ final class CollectionTargetReports
                 $achieved = CustomerTargetService::achievedQuery((int) $f['company_id'], $month->toDateString(), $end->toDateString());
                 $name = app()->getLocale() === 'bn' ? "COALESCE(NULLIF(cu.name_bn, ''), cu.name_en)" : 'cu.name_en';
 
+                $sellers = self::sellerSql((int) $f['company_id'], $month->toDateString());
+
                 $rows = DB::table('sal_customer_targets as t')
                     ->join('customers as cu', 'cu.id', '=', 't.customer_id')
                     ->leftJoinSub($achieved, 'a', 'a.customer_id', '=', 't.customer_id')
                     ->where('t.company_id', $f['company_id'])
                     ->whereDate('t.month', $month->toDateString())
                     ->tap(ReportEngine::dealerWall($f, 't.customer_id'))
-                    ->selectSub(DealerOwnership::boundOn('t.customer_id', 't.closes_on', 't.company_id'), 'seller_id')
+                    ->selectRaw($sellers.' as seller_id')
                     ->selectRaw("cu.code as code, {$name} as dealer, cu.id as source_id, t.amount as target, "
                         .'COALESCE(a.achieved, 0) as achieved, t.closes_on as closes_on');
 
@@ -93,5 +96,32 @@ final class CollectionTargetReports
                 ['key' => 'closes_on', 'label' => 'sales::collection_target.closes_on', 'type' => ReportColumn::DATE, 'width' => '7rem'],
             ],
         );
+    }
+
+    /**
+     * ⭐ মাসের প্রতিটা লক্ষ্যের ডিলার → লক্ষ্যের শেষ তারিখে তাঁর দায়িত্বপ্রাপ্ত জন, একটা `CASE t.customer_id …` হিসেবে
+     * (মালিক, ২৩ নভেম্বর ২০২৬; [[SalesResponsibility::forMany()]])। ⓘ শেষ তারিখ ধরে ভাগ করে ডাকা — এক মাসে লক্ষ্যের শেষ দিন
+     * আলাদা হতে পারে। ⓘ নম্বরগুলো পূর্ণসংখ্যায় ঢালা, তাই SQL-এ সরাসরি বসানো নিরাপদ; কেউ না থাকলে NULL।
+     */
+    private static function sellerSql(int $companyId, string $month): string
+    {
+        $targets = DB::table('sal_customer_targets')
+            ->where('company_id', $companyId)
+            ->whereDate('month', $month)
+            ->get(['customer_id', 'closes_on']);
+
+        $whens = [];
+
+        foreach ($targets->groupBy(fn ($t) => substr((string) $t->closes_on, 0, 10)) as $closesOn => $group) {
+            $ids = $group->pluck('customer_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+            foreach (app(SalesResponsibility::class)->forMany($ids, $closesOn) as $customer => $person) {
+                if ($person !== null) {
+                    $whens[] = 'WHEN '.(int) $customer.' THEN '.(int) $person;
+                }
+            }
+        }
+
+        return $whens === [] ? 'NULL' : 'CASE t.customer_id '.implode(' ', $whens).' END';
     }
 }
