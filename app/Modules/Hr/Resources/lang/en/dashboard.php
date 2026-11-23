@@ -74,7 +74,7 @@ return [
     'viz_heads_none' => 'Heads of confirmed payslips',
 
     // ⭐ my own signatures and HR's whole count (fe, 21 Oct 2026)
-    'my_pending_leave' => 'Awaiting my signature',
-    'my_pending_leave_hint' => 'Leave you can sign now',
+    'my_pending_leave' => 'Pending my approval',
+    'my_pending_leave_hint' => 'Leave you can approve now',
     'all_pending_leave' => 'All pending leave',
 ];

@@ -40,13 +40,15 @@
         </div>
     @endif
 
-    <p class="mb-4 text-sm text-(--color-ink-muted)">{{ __('hr::message.holiday_note', ['weekly' => $weeklyOff]) }}</p>
-
+    {{-- ⭐ ব্যাখ্যার লাইন নয় — লেখাটা নামের পাশে ⓘ-এ (মালিক, ১৯ নভেম্বর ২০২৬ রাত: "no description line on any screen");
+         `data-page-subtitle` লাইনটা কেবল "ABOS" আর "Dynamic"-এ লুকায়, বাকি রূপে আগের মতো ([[ui/page-info]]) --}}
+    <p data-page-subtitle class="mb-4 text-sm text-(--color-ink-muted)">{{ __('hr::message.holiday_note', ['weekly' => $weeklyOff]) }}</p>
     <div class="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
             <form method="GET" class="contents">
-                <x-ui.toolbar :title="__('hr::menu.holidays').' · '.$year" :columns="$columns" :search="false">
+                <x-ui.toolbar :title="__('hr::menu.holidays').' · '.$year" :columns="$columns" :search="false"
+                              :info="__('hr::message.holiday_note', ['weekly' => $weeklyOff])">
                     <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                         {{ __('hr::field.year') }}
                         <input type="number" name="year" value="{{ $year }}" min="2000" max="2100"

@@ -23,7 +23,7 @@ return [
     'pf_employee_percent' => 'Provident fund — proposed employee rate (% of basic; existing structures do not change by themselves)',
     'pf_employer_percent' => 'Provident fund — employer share (% of basic)',
     // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
-    'ot_enabled' => 'Overtime on — signed extra hours are paid at basic ÷ 208 × 2',
+    'ot_enabled' => 'Overtime on — approved extra hours are paid at basic ÷ 208 × 2',
     'ot_daily_hours' => 'Overtime — working hours a day (beyond this is extra)',
     'ot_eligible_types' => 'Who gets overtime — employment type codes, comma separated (e.g. WORKER)',
     // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])

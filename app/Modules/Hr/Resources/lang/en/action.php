@@ -33,19 +33,19 @@ return [
     'add_type' => 'Add type',
     'mark_all_present' => 'All present',
     // ⭐ সইয়ের অপেক্ষায় থাকা বেতন-বদলের অনুরোধ খোলা (§৮ ⚠️৫)
-    'open_signature' => 'Signature page',
+    'open_signature' => 'Approval page',
     // ⭐ public holidays (a6, 21 Oct 2026)
     'add_holiday' => 'Add holiday',
     'delete' => 'Delete',
     // ⭐ actual delivery date (a6, 21 Oct 2026)
     'record_delivery' => 'Enter delivery date',
-    'sign' => 'Sign',
+    'sign' => 'Approve',
     // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
     'pf_preview' => 'Show',
     'pf_apply' => 'Apply the proposed rate',
     // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
     'ot_prepare' => 'Build from attendance',
-    'ot_sign' => 'Sign',
+    'ot_sign' => 'Approve',
     // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
     'tax_certificate' => 'Tax certificate',
     // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])

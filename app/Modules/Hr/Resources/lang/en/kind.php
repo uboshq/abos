@@ -31,10 +31,10 @@ return [
     'pf_changes' => 'Will change',
     // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
     'ot_signed' => 'Approved',
-    'ot_waiting' => 'Awaiting signature',
+    'ot_waiting' => 'Pending approval',
     // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
     'run_salary' => 'Monthly salary',
     'run_bonus' => 'Festival bonus',
     // ⓘ বেতনশিট আটকে — সই-না-পড়া হিসাব (fe, ২১ অক্টোবর ২০২৬)
-    'held' => 'Held — not signed',
+    'held' => 'Held — account not approved',
 ];

@@ -108,7 +108,7 @@ return [
     // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
     'ot_days' => 'Days over',
     'ot_hours' => 'Extra hours',
-    'ot_signed_by' => 'Signed by',
+    'ot_signed_by' => 'Approver',
     // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
     'e_tin' => 'e-TIN',
     'income_year' => 'Income year',

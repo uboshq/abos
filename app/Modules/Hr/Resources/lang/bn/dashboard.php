@@ -74,7 +74,7 @@ return [
     'viz_heads_none' => 'নিশ্চিত বেতনশিটের খাত',
 
     // ⭐ নিজের সইয়ের গোনা আর HR-এর গোটা গোনা (fe, ২১ অক্টোবর ২০২৬; [[LeaveSigner::countSignable()]])
-    'my_pending_leave' => 'আমার সইয়ের অপেক্ষায়',
-    'my_pending_leave_hint' => 'যে ছুটিতে আপনি এখনই সই দিতে পারেন',
+    'my_pending_leave' => 'আমার অনুমোদনের অপেক্ষায়',
+    'my_pending_leave_hint' => 'যে ছুটিতে আপনি এখনই অনুমোদন দিতে পারেন',
     'all_pending_leave' => 'সব অপেক্ষার ছুটি',
 ];

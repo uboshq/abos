@@ -55,13 +55,13 @@ return [
     'days_format' => 'Write the days as a plain number with at most one decimal place, such as 2 or 1.5.',
     'leave_type_closed' => 'That leave type cannot be chosen: it is switched off, deleted or not of this company. Choose an active leave type.',
     // ⭐ leave goes to the line manager (gap list #15, a6, 21 Oct 2026)
-    'leave_not_your_line' => 'Only the employee\'s own manager (Reports To) or HR can sign this leave.',
+    'leave_not_your_line' => 'Only the employee\'s own manager (Reports To) or HR can approve this leave.',
     // ⭐ segregation of duties (fe, 21 Oct 2026)
-    'leave_entered_by_you' => 'You entered this leave for someone else, so you cannot sign or refuse it. Ask another HR signer or the owner.',
-    'leave_owner_self_signed' => 'The owner signed a leave he entered himself.',
+    'leave_entered_by_you' => 'You entered this leave for someone else, so you cannot approve or refuse it. Ask another HR approver or the owner.',
+    'leave_owner_self_signed' => 'The owner approved a leave he entered himself.',
     // ⭐ বেতনের কাঠামো বদলে দ্বিতীয় সই, দেওয়া মাসে বদল নয় (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬; [[SalaryStructureService::change()]])
     'salary_month_paid' => 'The :month payroll (:no) has already paid this employee. Changing the amount from that month or earlier would make the paid payslip and the structure disagree. Arrears pay is coming; until then, enter the new amount from the next month.',
-    'salary_change_waiting' => 'Another salary change for this employee is still waiting for a signature. Let it be signed or rejected first, then enter the new change.',
+    'salary_change_waiting' => 'Another salary change for this employee is still pending approval. Let it be approved or rejected first, then enter the new change.',
     // ⭐ working days only (labour law ss.115-118; a6, 21 Oct 2026; [[LeaveService::assertWithinWorkingDays()]])
     'days_exceed_working' => 'Only :working working days fall in these dates — the weekly off and listed holidays are not leave days.',
     'holiday_twice' => 'This date is already a holiday for this branch or for all branches.',
@@ -78,17 +78,17 @@ return [
     // ⭐ actual delivery date (s.45; a6, 21 Oct 2026)
     'delivery_not_maternity' => 'The actual delivery date goes only on an approved maternity leave.',
     'delivery_out_of_range' => 'The actual delivery date must be on or after the first day of leave and not in the future.',
-    'delivery_already_waiting' => 'An actual delivery date for this leave is already waiting for a signature.',
-    'delivery_entered_by_you' => 'You entered this delivery date, so you cannot sign or refuse it. Ask another signer or the owner.',
+    'delivery_already_waiting' => 'An actual delivery date for this leave is already pending approval.',
+    'delivery_entered_by_you' => 'You entered this delivery date, so you cannot approve or refuse it. Ask another approver or the owner.',
     'weekly_off_company_needs_all_branches' => 'Only someone whose reach covers every branch can change the weekly off for the whole company.',
     // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
     'pf_accounts_missing' => 'The provident fund accounts are missing — the chart needs 5225 (employer contribution) and 2131 (provident fund payable). Use "Install standard chart" in the chart of accounts.',
     'pf_head_missing' => 'No provident fund salary head — a deduction head on a percentage of basic, booked to 2131 (provident fund payable), is needed.',
     'pf_apply_needs_the_key' => 'Applying the proposed rate needs the salary-change permission (hr.salary.manage).',
     // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
-    'ot_month_paid' => 'The salary for :month (:no) is already confirmed — that month\'s overtime can no longer be built or signed.',
+    'ot_month_paid' => 'The salary for :month (:no) is already confirmed — that month\'s overtime can no longer be built or approved.',
     'ot_already_signed' => 'This sheet is already approved.',
-    'ot_not_your_line' => 'Only the employee\'s own manager can sign this sheet — on one\'s own or self-built sheet, only the owner.',
+    'ot_not_your_line' => 'Only the employee\'s own manager can approve this sheet — on one\'s own or self-built sheet, only the owner.',
     // ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; [[SalaryTax]])
     'e_tin_shape' => 'An e-TIN is twelve digits — no spaces or dashes.',
     'tds_account_missing' => 'The tax-at-source account (2132) is missing — use "Install standard chart" in the chart of accounts.',

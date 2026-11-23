@@ -21,5 +21,5 @@ return [
     'delegation_not_coming' => 'An active or finished hand-over cannot be changed — stop it and give a new one.',
 
     // ⭐ সইকারীর চাবি — a6, ২১ অক্টোবর ২০২৬ (Hr §৮ ⚠️৫; [[ApprovalFlowService]])
-    'signer_lacks_key' => ':who does not hold the ":key" key. Signing this action means reading the amounts, so nobody without that key can be a signer. Give the key first, or choose someone else.',
+    'signer_lacks_key' => ':who does not hold the ":key" key. Approving this action means reading the amounts, so nobody without that key can be an approver. Give the key first, or choose someone else.',
 ];

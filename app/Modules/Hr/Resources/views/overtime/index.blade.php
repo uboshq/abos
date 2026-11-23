@@ -44,28 +44,40 @@
         </div>
     @endif
 
-    <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+    {{--
+        ⭐ পাতার মাথা এক সারিতে — নাম · মাস … "হাজিরা থেকে বানান" (মালিক, ১৯ নভেম্বর ২০২৬ রাত: "no description line on any screen;
+        title+tabs+buttons one row")। চালু/বন্ধ, হিসাবের সূত্র আর "শ্রমিক" কে (BLA ধারা 2(65)) — নামের পাশে ⓘ-এ, আলাদা বাক্সে নয়।
+        ⓘ বানানোর ফর্মটা টুলবারের GET ফর্মের বাইরে (ফর্মের ভিতরে ফর্ম হয় না) — বোতাম `form` দিয়ে তাকে জমা দেয়।
+    --}}
+    @can('hr.attendance.manage')
+        <form id="ot-prepare" method="POST" action="{{ route('hr.overtime.store') }}" class="hidden">
+            @csrf
+            <input type="hidden" name="month" value="{{ $month->format('Y-m') }}">
+        </form>
+    @endcan
+
+    {{-- ⓘ আগের লেখাগুলো `data-page-subtitle`-এ — "ABOS" আর "Dynamic"-এ লুকায় (ⓘ-এ যায়), বাকি রূপে যেমন ছিল ([[ui/page-info]]) --}}
+    <div data-page-subtitle class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <p class="mb-2 text-sm">
             {{ __($enabled ? 'hr::message.ot_on_note' : 'hr::message.ot_off_note', ['hours' => $dailyHours, 'types' => $eligible === '' ? '—' : $eligible]) }}
         </p>
         <p class="text-2xs text-(--color-ink-muted)">{{ __('hr::message.ot_formula_note') }}</p>
         {{-- ⭐ BLA ধারা 2(65) — ব্যবস্থাপক/প্রশাসনিক কর্মী শ্রমিক নন, অধিকাল নেই (a6, ২১ অক্টোবর ২০২৬) --}}
         <p class="mt-1 text-2xs text-(--color-ink-muted)" data-worker-note>{{ __('hr::message.worker_note') }}</p>
-
-        @can('hr.attendance.manage')
-            <form method="POST" action="{{ route('hr.overtime.store') }}" class="mt-3">
-                @csrf
-                <input type="hidden" name="month" value="{{ $month->format('Y-m') }}">
-                <x-ui.button type="submit" tone="primary">{{ __('hr::action.ot_prepare') }}</x-ui.button>
-            </form>
-        @endcan
     </div>
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('hr::menu.overtime') . ' · ' . $month->format('M Y')" :columns="$columns" :search="false">
+            <x-ui.toolbar :title="__('hr::menu.overtime') . ' · ' . $month->format('M Y')" :columns="$columns" :search="false"
+                          :info="__($enabled ? 'hr::message.ot_on_note' : 'hr::message.ot_off_note', ['hours' => $dailyHours, 'types' => $eligible === '' ? '—' : $eligible])
+                              .' '.__('hr::message.ot_formula_note').' '.__('hr::message.worker_note')">
                 <x-ui.month name="month" :value="$month->format('Y-m')"
                             class="rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1.5 text-sm" />
+                @can('hr.attendance.manage')
+                    <x-slot:actions>
+                        <x-ui.button type="submit" form="ot-prepare" tone="primary">{{ __('hr::action.ot_prepare') }}</x-ui.button>
+                    </x-slot:actions>
+                @endcan
             </x-ui.toolbar>
         </form>
 
