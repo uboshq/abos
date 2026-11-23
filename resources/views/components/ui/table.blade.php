@@ -21,11 +21,11 @@
         $looks = ['page', 'sort', 'dir', 'direction', 'compact', 'view', 'show', 'per_page', 'tab', 'print', 'peek'];
         $filtered = collect(request()->query())->except($looks)->filter(fn ($v) => $v !== null && $v !== '' && $v !== [])->isNotEmpty();
     @endphp
-    <x-ui.empty-state :message="$empty"
+    <x-ui.empty-state data-list-part="table" :message="$empty"
                       :hint="$filtered ? __('core.empty.filtered_hint') : null"
                       :action="$filtered ? ['label' => __('core.empty.clear_filters'), 'url' => url()->current()] : null" />
 @else
-    <div class="table-responsive">
+    <div class="table-responsive" data-list-part="table">
         <table @class([
             'ui-list table-cards w-full border-collapse',
             'as-cards' => $grid,

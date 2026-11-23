@@ -108,6 +108,13 @@
      *   থেকে (নামসহ, একাধিক টিক আলাদা চিপ)। না দিলে আগের মতো — পর্দার নিজের ঘর টুলবারের নিচে।
      */
     'facets' => null,
+
+    /*
+     * ⭐ রিপোর্টের টুলবার (মালিক, ২৩ নভেম্বর ২০২৬: *রিপোর্ট ঘর বদলালে বা তারিখ বাছলেই চলবে না — "দেখান" বা Enter*)।
+     * ⓘ `true` হলে ঘর বদলালে জমা নেই (ছাঁকনির সারি আর সাজানো), টাইপের সাথে খোঁজা নেই, আর ছাঁকনির বোতাম "দেখান"।
+     *   তালিকায় (`false`) আগের মতো — বদলালেই ছাঁকে।
+     */
+    'report' => false,
 ])
 
 {{--
@@ -377,7 +384,7 @@
                 {{-- ⛔ `shrink-0` নয় — কিছু পাতা গোনার জায়গায় পুরো বাক্য পাঠায় ("কোন কাজে কে কত টাকা থেকে … · ৫টা নিয়ম চালু"), আর না-ভাঙা
                      বাক্য ফোনে পাতাকেই পাশে ঠেলত (অনুমোদনের নিয়মের পাতা ৩৯০-এ ৪৪৩px চওড়া, ৩০ অক্টোবর ২০২৬, দফা ২১)। ⓘ সারিটা
                      flex-wrap, তাই ছোট সংখ্যা জায়গা না পেলে আগে পরের লাইনে নামে, ভাঙে না। --}}
-                <span data-record-count
+                <span data-record-count data-list-part="count"
                       class="tabular min-w-0 border-s border-(--color-border) ps-3 text-sm
                              text-(--color-ink-muted)">{{ $count ?? $subtitle }}</span>
             @endif
@@ -437,7 +444,7 @@
             </span>
             @if ($facets['chips'] !== [])
                 {{-- ⭐ নমুনার মতো বারের নিচে নিজের লাইনে (basis-full + order-last) — বারটা এক লাইনেই থাকে --}}
-                <span class="order-last flex basis-full flex-wrap items-center gap-1" data-chip-row>
+                <span class="order-last flex basis-full flex-wrap items-center gap-1" data-chip-row data-list-part="chips">
                     @foreach ($facets['chips'] as $chip)
                         <a data-facet href="{{ $chip['url'] }}" class="list-filter-chip tone-{{ $chip['tone'] }}"
                            title="{{ __('core.toolbar.remove_filter') }}">
@@ -551,7 +558,7 @@
                        placeholder="{{ $searchPlaceholder ?? __('core.action.search') }}"
                        class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border)
                               bg-(--color-surface-app) ps-8 pe-3 text-sm" data-quick-find
-                       data-live-search="{{ $searched }}" @if (request()->has('q')) autofocus @endif>
+                       @unless ($report) data-live-search="{{ $searched }}" @endunless @if (request()->has('q')) autofocus @endif>
                 <svg viewBox="0 0 24 24" aria-hidden="true"
                      class="pointer-events-none absolute start-2 top-1/2 size-4 -translate-y-1/2
                             fill-(--color-ink-muted)">
@@ -634,7 +641,7 @@
                 @if ($facets !== null)
                     <span aria-hidden="true" class="pointer-events-none absolute start-2.5 text-(--color-ink-muted)">⇅</span>
                 @endif
-                <select name="sort" data-action="submit-form"
+                <select name="sort" @unless ($report) data-action="submit-form" @endunless
                         @class(['h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm',
                                 'ps-7' => $facets !== null])>
                     @foreach ($sort as $value => $label)
@@ -838,15 +845,16 @@
              "খুঁজুন" চাপতে হত, আর কেউ তা বুঝত না। ⓘ `data-action="submit-form"` ধারকে: বদলের
              ঘটনা ভেতরের ঘর থেকে উঠে এখানে ধরা পড়ে ([[actions.js]] `closest`), তাই ২৪টা তালিকার
              চেকবক্স আর বাছাই একসাথে — প্রতিটা পাতায় আলাদা করে নয়। বোতামটা থাকছে Enter-এর জন্য। --}}
+        {{-- ⭐ রিপোর্টে (`report`) বদলের জমা নেই — কেবল "দেখান" বা Enter (মালিক, ২৩ নভেম্বর ২০২৬) --}}
         <div id="toolbar-filters"
-             data-action="submit-form"
+             @if ($report) data-report-filters @else data-action="submit-form" @endif
              x-show="filtersOpen"
              x-cloak
              class="order-3 flex flex-wrap items-center gap-2 border-t border-(--color-border)
                     bg-(--color-surface-app) px-3 py-2">
             {{ $slot }}
 
-            <x-ui.button type="submit" tone="secondary">{{ __('core.action.search') }}</x-ui.button>
+            <x-ui.button type="submit" tone="secondary" :data-report-show="$report ? '' : null">{{ $report ? __('core.action.show') : __('core.action.search') }}</x-ui.button>
         </div>
     @endif
 </div>

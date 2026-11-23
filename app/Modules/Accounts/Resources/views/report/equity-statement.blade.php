@@ -32,7 +32,7 @@
         </x-ui.page-header>
     </x-slot:header>
 
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide">
+    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-report>
         <x-ui.field name="from" type="date" :label="__('accounts::field.equity_from')" :value="$statement['from']" />
         <x-ui.field name="to" type="date" :label="__('accounts::field.equity_to')" :value="$statement['to']" />
 
@@ -43,7 +43,7 @@
                          :selected="$branchId" />
         @endif
 
-        <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
+        <x-ui.button type="submit" tone="secondary" data-report-show>{{ __('core.action.show') }}</x-ui.button>
     </form>
 
     @if ($branchId !== null)

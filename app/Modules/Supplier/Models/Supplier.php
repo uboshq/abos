@@ -11,6 +11,7 @@ use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\IsAMasterRecord;
+use App\Core\Support\PartySearch;
 use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
@@ -141,19 +142,16 @@ class Supplier extends Model implements Drillable, IsAMasterRecord
 
     public function scopeSearch(Builder $query, ?string $term): Builder
     {
-        if (blank($term)) {
-            return $query;
-        }
-
-        $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim($term)).'%';
-
-        return $query->where(function (Builder $q) use ($like) {
-            $q->where('name_en', 'like', $like)
-                ->orWhere('name_bn', 'like', $like)
-                ->orWhere('code', 'like', $like)
-                ->orWhere('phone', 'like', $like)
-                ->orWhere('bin', 'like', $like);
-        });
+        /*
+         * ⭐ গ্রাহকের একই নিয়ম ([[PartySearch]], মালিক ২৩ নভেম্বর ২০২৬): নাম, কোড, BIN, ঠিকানা, যোগাযোগের মানুষ আর
+         * দুই ফোন — প্রতিটা শব্দ কোনো ঘরে মিলতে হবে, মোবাইলের শেষ চার অঙ্কেও আসে। ⓘ সরবরাহকারীর পয়েন্ট নেই।
+         */
+        return PartySearch::apply(
+            $query,
+            $term,
+            ['name_en', 'name_bn', 'short_name', 'code', 'bin', 'contact_person', 'address_en', 'address_bn'],
+            ['phone', 'contact_phone'],
+        );
     }
 
     /**

@@ -163,7 +163,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('purchase::cost_report.title') }}</x-slot:title>
 
-    <x-ui.filter-layout :filters="$filters" form="list-form" :noun="__('purchase::cost_report.col.purchases')">
+    <x-ui.filter-layout :filters="$filters" form="list-form" :report="true" :noun="__('purchase::cost_report.col.purchases')">
 
         {{-- ⭐ চারটা সরু রঙিন কার্ড — তালিকার কার্ডের একই গড়ন ([[filter-layout]]); এখানে লিংক নয়, কেবল অঙ্ক --}}
         <div class="list-cards" data-list-cards data-cost-cards>
@@ -181,9 +181,9 @@
 
         <div class="grid items-start gap-4 xl:grid-cols-3">
             <div data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-2">
-                <form id="list-form" method="GET" class="contents">
+                <form id="list-form" method="GET" class="contents" data-report>
                     <input type="hidden" name="by" value="{{ $by }}">
-                    <x-ui.toolbar :title="__('purchase::cost_report.title')" :search="false"
+                    <x-ui.toolbar :title="__('purchase::cost_report.title')" :search="false" :report="true"
                                   :count="implode(' · ', $chips)"
                                   :columns="$columns" :facets="$filters" :quiet="['by']">
                         <x-slot:actions>

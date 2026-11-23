@@ -49,7 +49,7 @@
     @endif
 
     {{-- ছাঁকনি — GET, কারণ এটা দেখা, কোনো কাজ নয় --}}
-    <form method="GET" action="{{ route('sales.portal.ledger') }}"
+    <form method="GET" action="{{ route('sales.portal.ledger') }}" data-report
           class="mb-4 flex flex-wrap items-end gap-2">
         <label class="flex-1">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::portal.from') }}</span>

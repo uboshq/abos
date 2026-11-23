@@ -183,7 +183,11 @@ export function wireActions (root = document) {
 
         const form = field.form ?? field.closest('form')
 
-        if (! form) {
+        /*
+         * ⭐ রিপোর্টের ফর্ম (`data-report`) ঘর বদলালে চলে না — কেবল "দেখান" বা Enter (মালিক, ২৩ নভেম্বর ২০২৬)।
+         * ⓘ টুলবারের রিপোর্ট-রূপ আগেই চিহ্নটা বাদ দেয়; এটা পাহারা, কোনো পাতা ভুলে চিহ্ন রেখে দিলেও।
+         */
+        if (! form || form.hasAttribute('data-report')) {
             return
         }
 

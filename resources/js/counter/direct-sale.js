@@ -30,6 +30,7 @@
 import { taka } from '../components/money.js'
 import { freeFromStock, lineMargin, marginLabel } from './margin.js'
 import { applyPrices, fetchPrices } from './customer-prices.js'
+import { searchWords } from '../party-search.js'
 
 /*
  * ⓘ জমার খালি খসড়া — তিন জায়গায় লাগে (শুরু, "যোগ করুন"-এর পরে, "সব
@@ -1046,13 +1047,19 @@ export default function directSale({
              * টাইপ করা ক্যাশিয়ার নিজের গ্রাহককেই খুঁজে পেতেন
              * না, আর পর্দা বলত "ওই নামে কোনো গ্রাহক নেই"।
              */
-            return (t === '' ? rows : rows.filter(c =>
-                (c.name || '').toLowerCase().includes(t)
-                || (c.name_en || '').toLowerCase().includes(t)
-                || (c.name_bn || '').toLowerCase().includes(t)
-                || (c.code || '').toLowerCase().includes(t)
-                || (c.phone || '').toLowerCase().includes(t)
-            )).slice(0, 30);
+            /*
+             * ⭐ মালিক, ২৩ নভেম্বর ২০২৬: *পয়েন্টের নাম লিখে সরাসরি বিক্রয়ে কিছুই আসে না*। ⓘ এখন ঠিকানা, পয়েন্ট আর তার
+             * উপরের দুই ধাপও (`find`, সার্ভার গড়ে — [[Customer::searchText()]]), আর প্রতিটা শব্দ কোনো ঘরে মিলতে হয়; সংখ্যার
+             * লেখা এক টুকরো, তাই মোবাইলের শেষ চার অঙ্কেও আসে ([[searchWords]], পক্ষ-পিকারের একই নিয়ম)।
+             */
+            const words = searchWords(t);
+
+            return (words.length === 0 ? rows : rows.filter(c => {
+                const haystack = [c.name, c.name_en, c.name_bn, c.code, c.phone, c.address, c.location, c.find]
+                    .filter(Boolean).join(' ').toLowerCase();
+
+                return words.every(w => haystack.includes(w));
+            })).slice(0, 30);
         },
 
         /*

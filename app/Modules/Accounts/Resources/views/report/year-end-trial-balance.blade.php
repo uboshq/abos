@@ -39,7 +39,7 @@
         </x-ui.page-header>
     </x-slot:header>
 
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-ytb-filter>
+    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-ytb-filter data-report>
         <x-ui.select name="year_id" :label="__('accounts::fs.ytb.year')"
                      :options="$years->mapWithKeys(fn ($fy) => [$fy->id => __('accounts::fs.ytb.year_range', [
                          'name' => $fy->name, 'from' => $day((string) $fy->starts_on), 'to' => $day((string) $fy->ends_on)])])"
@@ -52,7 +52,7 @@
                          :selected="$branchId" />
         @endif
 
-        <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
+        <x-ui.button type="submit" tone="secondary" data-report-show>{{ __('core.action.show') }}</x-ui.button>
     </form>
 
     <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">

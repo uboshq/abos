@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Core\Support\ListPart;
 use App\Core\Support\Peek;
 use Closure;
 use Illuminate\Http\Request;
@@ -51,15 +52,25 @@ final class PeekVaries
             explode(',', (string) $response->headers->get('Vary')),
         ));
 
-        foreach ($already as $name) {
-            if (strcasecmp($name, Peek::HEADER) === 0) {
-                return $response;
-            }
+        // ⓘ তালিকার টুকরো কোথাও জমা নয় — পেছনে যাওয়ার বোতাম যেন কখনো খোলসহীন টুকরো না দেখায় ([[ListPart]])
+        if (ListPart::wanted($request)) {
+            $response->headers->set('Cache-Control', 'no-store, private');
         }
 
-        $already[] = Peek::HEADER;
+        /*
+         * ⭐ তালিকার কেবল তালিকা-অংশও একই ঠিকানা ([[ListPart]], মালিক ২৩ নভেম্বর ২০২৬) — একই কারণে একই লাইনে।
+         */
+        $lower = array_map('strtolower', $already);
+        $missing = array_values(array_filter(
+            [Peek::HEADER, ListPart::HEADER],
+            fn (string $wanted) => ! in_array(strtolower($wanted), $lower, true),
+        ));
 
-        $response->headers->set('Vary', implode(', ', $already));
+        if ($missing === []) {
+            return $response;
+        }
+
+        $response->headers->set('Vary', implode(', ', [...$already, ...$missing]));
 
         return $response;
     }

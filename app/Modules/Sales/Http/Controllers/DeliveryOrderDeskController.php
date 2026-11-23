@@ -79,7 +79,8 @@ class DeliveryOrderDeskController extends Controller implements HasMiddleware
             ->with(['customer.location.parent', 'customer.branch', 'warehouse'])
             ->when($term !== '', fn (Builder $q) => $q->where(fn (Builder $w) => $w
                 ->where('document_no', 'like', '%'.$term.'%')
-                ->orWhereHas('customer', fn (Builder $c) => $c->where('name_en', 'like', '%'.$term.'%')->orWhere('name_bn', 'like', '%'.$term.'%'))));
+                // ⭐ গ্রাহকের নিজের খোঁজার নিয়ম — নাম, মোবাইল, ঠিকানা, পয়েন্ট (মালিক, ২৩ নভেম্বর ২০২৬; [[PartySearch]])
+                ->orWhereHas('customer', fn (Builder $c) => $c->search($term))));
 
         $dates = $this->applyDateRange($query, $request);
 

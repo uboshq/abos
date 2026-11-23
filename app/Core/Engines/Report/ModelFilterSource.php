@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Core\Engines\Report;
 
 use App\Core\Contracts\ReportFilterSource;
+use App\Core\Services\PartyRegistry;
+use App\Core\Support\PartySearch;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -90,6 +92,26 @@ abstract class ModelFilterSource implements ReportFilterSource
         $out = [];
 
         if ($q === '') {
+            return $out;
+        }
+
+        /*
+         * ⭐ পক্ষ (গ্রাহক, সরবরাহকারী …) — তার নিজের খোঁজার নিয়মে: নাম, মোবাইল, ঠিকানা, পয়েন্ট (মালিক, ২৩ নভেম্বর ২০২৬;
+         * [[PartySearch]])। ⓘ টাইপের সাথে চলা খোঁজা, তাই তিন অক্ষরের কম হলে কিছু নয়। বাকি মডেল আগের মতো লেখায় মেলে।
+         */
+        $probe = $this->query()->getModel();
+
+        if (method_exists($probe, 'scopeSearch') && app(PartyRegistry::class)->isPartyModel($probe)) {
+            if (! PartySearch::longEnough($q)) {
+                return $out;
+            }
+
+            foreach ($this->query()->search($q)->limit($limit)->get() as $model) {
+                $out[] = ['value' => $this->valueOf($model), 'label' => $this->labelOf($model)];
+            }
+
+            usort($out, fn (array $a, array $b) => strnatcasecmp($a['label'], $b['label']));
+
             return $out;
         }
 

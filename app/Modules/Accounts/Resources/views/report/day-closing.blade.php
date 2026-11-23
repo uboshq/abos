@@ -37,7 +37,7 @@
         </x-ui.page-header>
     </x-slot:header>
 
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide">
+    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-report>
         <x-ui.field name="date" type="date" :label="__('accounts::dayclose.date')" :value="$day->toDateString()" />
         <x-ui.button type="submit" tone="secondary">{{ __('accounts::dayclose.show') }}</x-ui.button>
     </form>

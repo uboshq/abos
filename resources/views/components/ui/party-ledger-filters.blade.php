@@ -13,7 +13,17 @@
     ]);
 @endphp
 
-<x-ui.date-range :dates="['from' => request('from'), 'to' => request('to')]" />
+{{-- ⭐ রিপোর্ট: তারিখ বসালেই চলে না — দুই তারিখ আর ছাঁকনি বেছে "দেখান" বা Enter (মালিক, ২৩ নভেম্বর ২০২৬)।
+     ⓘ তাই `x-ui.date-range` নয় (ওটা তারিখ বসলেই জমা দেয়, তালিকার জন্য) — একই দুই ঘর, জমা ছাড়া। --}}
+<x-ui.date name="from"
+           value="{{ request('from') ?? '' }}"
+           aria-label="{{ __('core.table.from_date') }}"
+           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+
+<x-ui.date name="to"
+           value="{{ request('to') ?? '' }}"
+           aria-label="{{ __('core.table.to_date') }}"
+           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
 
 <x-ui.select name="kind" :label="__('party_ledger.kind')" :options="$kinds"
              :selected="request('kind')" :placeholder="__('party_ledger.any_kind')" />

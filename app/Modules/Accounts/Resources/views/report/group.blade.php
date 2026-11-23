@@ -106,7 +106,7 @@
         </x-ui.page-header>
     </x-slot:header>
 
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide">
+    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-report>
         <x-ui.field name="from" type="date" :label="__('accounts::field.group_from')"
                     :value="$group['from']" />
         <x-ui.field name="to" type="date" :label="__('accounts::field.group_to')"
@@ -117,7 +117,7 @@
              `core.toolbar.filter` ("Filter By"), যা ড্রপডাউনের লেবেল,
              বোতামের নয়। ⚠️ ভুল চাবিটা [[EveryTranslationKeyExistsTest]]
              লাল করত, তাই স্থিতিপত্রের ফরমটাই নকল করা হয়েছে। --}}
-        <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
+        <x-ui.button type="submit" tone="secondary" data-report-show>{{ __('core.action.show') }}</x-ui.button>
     </form>
 
     {{-- ⚠️ একটাই কোম্পানি হলে কারণটা লেখা থাকে।

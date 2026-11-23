@@ -87,7 +87,8 @@ export function abosDate(iso, submitOnChange = false) {
             const own = (this.$root || this.$el).dataset.form
             const form = own ? document.getElementById(own) : this.$el.closest('form')
 
-            if (form && typeof form.requestSubmit === 'function') {
+            // ⭐ রিপোর্টের ফর্ম (`data-report`) তারিখ বসালেই চলে না — "দেখান" বা Enter (মালিক, ২৩ নভেম্বর ২০২৬)
+            if (form && ! form.hasAttribute('data-report') && typeof form.requestSubmit === 'function') {
                 form.requestSubmit()
             }
         },

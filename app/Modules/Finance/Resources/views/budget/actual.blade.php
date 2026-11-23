@@ -52,7 +52,7 @@
         @include('finance::budget.partials.tabs')
     @endunless
 
-    @include('finance::budget.partials.filters', ['extra' => view('finance::budget.partials.period', [
+    @include('finance::budget.partials.filters', ['report' => true, 'extra' => view('finance::budget.partials.period', [
         'month' => $month, 'scope' => $scope, 'byCenter' => $byCenter, 'isReport' => $isReport,
     ])])
 
@@ -60,7 +60,7 @@
                     bg-(--color-surface-card)">
         @if ($isReport)
             {{-- ⓘ টুলবার: ছাপা আর CSV — রিপোর্টের কাজটাই এটা --}}
-            <x-ui.toolbar :title="__('finance::budget.report')" :subtitle="$periodLabel" :columns="$columns"
+            <x-ui.toolbar :title="__('finance::budget.report')" :subtitle="$periodLabel" :columns="$columns" :report="true"
                           :search="false" :filter="false" :share="false"
                           :quiet="['year', 'center', 'month', 'scope', 'by_center']" />
         @else

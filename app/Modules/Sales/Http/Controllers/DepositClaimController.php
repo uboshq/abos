@@ -58,9 +58,8 @@ class DepositClaimController extends Controller implements HasMiddleware
             ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
                 fn ($w) => $w->where('reference', 'like', "%{$term}%")
                     ->orWhere('note', 'like', "%{$term}%")
-                    ->orWhereHas('customer', fn ($c) => $c->where('name_en', 'like', "%{$term}%")
-                        ->orWhere('name_bn', 'like', "%{$term}%")
-                        ->orWhere('code', 'like', "%{$term}%")),
+                    // ⭐ গ্রাহকের নিজের খোঁজার নিয়ম — নাম, মোবাইল, ঠিকানা, পয়েন্ট (মালিক, ২৩ নভেম্বর ২০২৬; [[PartySearch]])
+                    ->orWhereHas('customer', fn ($c) => $c->search($term)),
             ))
             ->orderByDesc('claimed_on')->orderByDesc('id');
 

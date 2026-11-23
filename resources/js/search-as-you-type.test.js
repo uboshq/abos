@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { SEARCH_DELAY, searchAsYouType } from './search-as-you-type.js'
+import { MIN_CHARS, SEARCH_DELAY, searchAsYouType, searched, worthSearching } from './search-as-you-type.js'
 
 /*
  * তালিকার খোঁজ — টাইপ করতেই (মালিক, ১ অক্টোবর ২০২৬)।
@@ -51,7 +51,7 @@ function enter() {
 }
 
 describe('টাইপ করতেই খোঁজ', () => {
-    it('শেষ চাপের ৪০০ মিলিসেকেন্ড পরে একবারই জমা পড়ে', () => {
+    it('শেষ চাপের ৬০০ মিলিসেকেন্ড পরে একবারই জমা পড়ে', () => {
         type('র')
         vi.advanceTimersByTime(SEARCH_DELAY - 50)
         type('রহি')
@@ -130,6 +130,90 @@ describe('টাইপ করতেই খোঁজ', () => {
         document.getElementById('list').requestSubmit(document.getElementById('compact'))
 
         expect(sent).toEqual(['করিম', 'করিম'])
+    })
+})
+
+/*
+ * ⭐ মালিক, ২৩ নভেম্বর ২০২৬: তিন বা বেশি অক্ষরে, বা ঘর খালি করলে — শেষ চাপের ৬০০ মিলিসেকেন্ড পরে; Enter তখনই, যত অক্ষরই।
+ */
+describe('তিন অক্ষর, ৬০০ মিলিসেকেন্ড, Enter তখনই', () => {
+    it('সময় ৬০০, সীমা তিন', () => {
+        expect(SEARCH_DELAY).toBe(600)
+        expect(MIN_CHARS).toBe(3)
+    })
+
+    it('এক বা দুই অক্ষরে জমা নয়, যতক্ষণই অপেক্ষা', () => {
+        type('a')
+        vi.advanceTimersByTime(SEARCH_DELAY * 3)
+        type('ab')
+        vi.advanceTimersByTime(SEARCH_DELAY * 3)
+        type('  ab  ')
+        vi.advanceTimersByTime(SEARCH_DELAY * 3)
+
+        expect(sent).toEqual([])
+    })
+
+    it('তিন অক্ষরে ঠিক ৬০০ মিলিসেকেন্ডে জমা — তার আগে নয়', () => {
+        type('abc')
+        vi.advanceTimersByTime(SEARCH_DELAY - 1)
+
+        expect(sent).toEqual([])
+
+        vi.advanceTimersByTime(1)
+
+        expect(sent).toEqual(['abc'])
+    })
+
+    it('তিন থেকে দুইয়ে নামলে অপেক্ষার ঘড়ি বাতিল', () => {
+        type('abc')
+        vi.advanceTimersByTime(SEARCH_DELAY / 2)
+        type('ab')
+        vi.advanceTimersByTime(SEARCH_DELAY * 2)
+
+        expect(sent).toEqual([])
+    })
+
+    it('Enter এক অক্ষরেও তখনই জমা দেয়', () => {
+        type('a')
+        enter()
+
+        expect(sent).toEqual(['a'])
+    })
+
+    it('ঘর খালি করলে জমা — খালি লেখা সীমার ব্যতিক্রম', () => {
+        document.body.innerHTML = PAGE('ab')
+        type('')
+        vi.advanceTimersByTime(SEARCH_DELAY)
+
+        expect(sent).toEqual([''])
+    })
+
+    it('বাংলা লেখা চলার সময় তিন অক্ষর হলেও কিছু নয়', () => {
+        box().dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+        type('রহিম', { isComposing: true })
+        vi.advanceTimersByTime(SEARCH_DELAY * 3)
+
+        expect(sent).toEqual([])
+    })
+
+    it('worthSearching — ফাঁক বাদে গোনে', () => {
+        expect(worthSearching('')).toBe(true)
+        expect(worthSearching('   ')).toBe(true)
+        expect(worthSearching('ab')).toBe(false)
+        expect(worthSearching(' ab ')).toBe(false)
+        expect(worthSearching('abc')).toBe(true)
+        expect(worthSearching('3344')).toBe(true)
+    })
+
+    it('অংশ বদলের পরে (searched) — নতুন খোঁজা মনে থাকে, একই লেখা আবার যায় না', () => {
+        type('karim')
+        vi.advanceTimersByTime(SEARCH_DELAY)
+        searched(box(), 'karim')
+        type('karim')
+        vi.advanceTimersByTime(SEARCH_DELAY)
+
+        expect(sent).toEqual(['karim'])
+        expect(box().dataset.liveSearch).toBe('karim')
     })
 })
 

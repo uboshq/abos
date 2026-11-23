@@ -13,6 +13,8 @@
     'form' => 'list-form',
     /** "Nটা … দেখুন" বোতামের বিশেষ্য — "গ্রাহক", "বিল" … */
     'noun' => '',
+    /** ⭐ রিপোর্টের পাতা — প্যানেলের তারিখ বসালেই জমা নয়, "দেখুন" চাপলে (মালিক, ২৩ নভেম্বর ২০২৬); তালিকায় আগের মতো */
+    'report' => false,
 ])
 
 @php
@@ -31,7 +33,7 @@
 
     {{-- ⭐ রঙিন কার্ড — চাপলেই সেই ছাঁকনি; বসানো কার্ডের চারপাশে উজ্জ্বল দাগ --}}
     @if (($filters['cards'] ?? []) !== [])
-        <div class="list-cards" data-list-cards>
+        <div class="list-cards" data-list-cards data-list-part="cards">
             @foreach ($filters['cards'] as $card)
                 <a href="{{ $card['url'] }}" @class(['list-card', 'is-on' => $card['on']])
                    style="--a: {{ $card['gradient'][0] }}; --b: {{ $card['gradient'][1] }}"
@@ -135,9 +137,9 @@
                                 </div>
                                 <div class="grid gap-2">
                                     <label class="grid gap-0.5 text-xs text-(--color-ink-muted)">{{ __('core.list_filter.from') }}
-                                        <x-ui.date dense :name="$section['from_key']" :value="$section['from']" :form="$form" /></label>
+                                        <x-ui.date dense :name="$section['from_key']" :value="$section['from']" :form="$form" :submit-on-change="$report ? false : null" /></label>
                                     <label class="grid gap-0.5 text-xs text-(--color-ink-muted)">{{ __('core.list_filter.to') }}
-                                        <x-ui.date dense :name="$section['to_key']" :value="$section['to']" :form="$form" /></label>
+                                        <x-ui.date dense :name="$section['to_key']" :value="$section['to']" :form="$form" :submit-on-change="$report ? false : null" /></label>
                                 </div>
                                 @break
                             @case('fields')
@@ -151,7 +153,7 @@
                                                     @endforeach
                                                 </select>
                                             @elseif ($field['type'] === 'date')
-                                                <x-ui.date dense :name="$field['key']" :value="$field['value']" :form="$form" />
+                                                <x-ui.date dense :name="$field['key']" :value="$field['value']" :form="$form" :submit-on-change="$report ? false : null" />
                                             @else
                                                 <input form="{{ $form }}" type="number" name="{{ $field['key'] }}" value="{{ $field['value'] }}"
                                                        @isset($field['min']) min="{{ $field['min'] }}" @endisset

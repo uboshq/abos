@@ -55,7 +55,7 @@
          "কবে থেকে" ঘরটা নেই, ইচ্ছাকৃতভাবে: স্থিতিপত্র একটা মুহূর্তের
          ছবি, পরিসরের হিসাব নয়। ঘরটা থাকলে ব্যবহারকারী ধরে নিতেন
          সংখ্যাগুলো ওই তারিখ থেকে গোনা। --}}
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide">
+    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-report>
         <x-ui.field name="as_of" type="date" :label="__('accounts::field.as_of')"
                     :value="$sheet['as_of']" />
 
@@ -66,7 +66,7 @@
                          :selected="$branchId" />
         @endif
 
-        <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
+        <x-ui.button type="submit" tone="secondary" data-report-show>{{ __('core.action.show') }}</x-ui.button>
     </form>
 
     @if ($branchId !== null)

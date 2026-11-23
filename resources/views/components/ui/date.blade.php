@@ -14,8 +14,11 @@
      * চলে না: Alpine-এর ভেতরে `this` মানে কম্পোনেন্ট, ইনপুট নয়। আর
      * লেখার ঘরে `change` ফোকাস ছাড়লে তবে ঘটে, তারিখ বসার সাথে নয় —
      * তাই জমাটা কম্পোনেন্ট থেকেই ডাকা হয়, মান পাকা হওয়ার পরে।
+     *
+     * ⓘ না দিলে (`null`) — `form` দেওয়া থাকলে জমা দেয়, নাহলে দেয় না (আগের আচরণ)। ⭐ রিপোর্টের ছাঁকনি প্যানেল
+     *   `false` দেয়: তারিখ বসালেই রিপোর্ট চলে না, "দেখান" চাপলে চলে (মালিক, ২৩ নভেম্বর ২০২৬)।
      */
-    'submitOnChange' => false,
+    'submitOnChange' => null,
 
     /*
      * সরু ঘর — কাউন্টারের ঠাসাঠাসি ছকের জন্য।
@@ -132,7 +135,7 @@
     $seed = $bindIso !== null ? $bindIso : json_encode($iso);
 @endphp
 
-<div class="relative" x-data="abosDate({{ $seed }}, {{ json_encode((bool) $submitOnChange || $form !== null) }})"
+<div class="relative" x-data="abosDate({{ $seed }}, {{ json_encode($submitOnChange === null ? $form !== null : (bool) $submitOnChange) }})"
      @if ($form) data-form="{{ $form }}" @endif
      @if ($bindModel) x-effect="{{ $bindModel }} = iso" @endif>
     <input type="text"

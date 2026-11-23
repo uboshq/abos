@@ -114,7 +114,8 @@ class DirectSaleController extends Controller implements HasMiddleware
          * দিয়ে বন্ধ করা হয়েছিল, সেটাই পাশের দরজা দিয়ে ফিরে আসত।
          * ⭐ ১৯ অক্টোবর ২০২৬ থেকে মা পয়েন্ট আর শাখাও ([[Customer::PLACE]]) — নিচের `location` এখন "পয়েন্ট · শাখা"।
          */
-        $customers = Customer::query()->inViewedBranch()->active()->with(Customer::PLACE)
+        // ⭐ পয়েন্টের উপরের দুই ধাপও — খোঁজার লেখার জন্য ([[Customer::searchText()]], মালিক ২৩ নভেম্বর ২০২৬)
+        $customers = Customer::query()->inViewedBranch()->active()->with([...Customer::PLACE, 'location.parent.parent'])
             ->withOutstanding()->orderBy('name_en')->get();
 
         /*
@@ -347,6 +348,8 @@ class DirectSaleController extends Controller implements HasMiddleware
                  * ([[Customer::placeName()]]); খোঁজার তালিকার সারিতেও বসে।
                  */
                 'location' => (string) ($c->placeName() ?? ''),
+                // ⭐ খোঁজার লেখা — নাম, মোবাইল, ঠিকানা, পয়েন্ট ও তার দুই ধাপ উপর (মালিক, ২৩ নভেম্বর ২০২৬; [[Customer::searchText()]])
+                'find' => $c->searchText(),
             ]]),
             'warehouses' => Warehouse::query()->active()->orderBy('code')->get(),
             'warehouse' => $warehouse,

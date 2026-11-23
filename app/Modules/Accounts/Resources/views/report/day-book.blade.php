@@ -30,7 +30,7 @@
         </x-ui.page-header>
     </x-slot:header>
 
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-daybook-filter>
+    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-daybook-filter data-report>
         <x-ui.field name="date" type="date" :label="__('accounts::daybook.date')" :value="$book['date']" />
 
         @if ($branches->count() > 1)

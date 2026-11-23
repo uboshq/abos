@@ -204,7 +204,8 @@ class EveryStaffDoorIsShutInSearchTest extends TestCase
             $queries++;
         });
 
-        $engine->search('ra', $this->owner);
+        // ⓘ তিন অক্ষর — ২৩ নভেম্বর ২০২৬ থেকে সীমা তিন ([[SearchEngine::MIN_TERM]]); দুই অক্ষরে কোয়েরিই যেত না, পাহারা ফাঁকা হত
+        $engine->search('ram', $this->owner);
 
         $this->assertLessThanOrEqual(80, $queries, implode("\n", [
             "⛔ একটা খোঁজায় {$queries}টা কোয়েরি গেছে।",

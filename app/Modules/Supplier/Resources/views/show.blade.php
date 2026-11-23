@@ -335,8 +335,8 @@
             ⓘ তাই ছাপার আগে `?ledger=asc` ঠিকানায় যাওয়া হয়, আর সেখানে
             পৌঁছেই ছাপা শুরু হয়।
         --}}
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('supplier::section.transactions')"
+        <form method="GET" class="contents" data-report>
+            <x-ui.toolbar :title="__('supplier::section.transactions')" :report="true"
                           :search-placeholder="__('party_ledger.search')"
                           :columns="$ledgerColumns"
                           {{-- ℹ এই দুইটা ছাঁকনি নয়, দৃশ্যের অবস্থা — না বললে টুলবার

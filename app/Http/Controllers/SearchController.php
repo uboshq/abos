@@ -62,8 +62,9 @@ class SearchController extends Controller
          * ⓘ দুই অক্ষরের নিচে খোঁজা হয় না — একটা অক্ষরে প্রায় সব সারিই
          * মেলে, আর তাতে ফলের তালিকাটা কাজে আসে না, কেবল ডাটাবেজ ব্যস্ত
          * করে। ⚠️ খালি ফল ফেরানো হয়, ভুল নয়: মানুষ তখনো টাইপ করছেন।
+         * ⭐ তিন অক্ষর — টাইপের সাথে চলা সব সার্ভার-খোঁজার একই সীমা ([[SearchEngine::MIN_TERM]]; মালিক, ২৩ নভেম্বর ২০২৬)।
          */
-        if (mb_strlen($term) < 2) {
+        if (mb_strlen($term) < SearchEngine::MIN_TERM) {
             return response()->json(['hits' => []]);
         }
 

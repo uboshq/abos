@@ -426,10 +426,22 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
 
         $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim($term)).'%';
 
-        return $query->where(function (Builder $q) use ($like) {
-            $q->where('document_no', 'like', $like)
-                ->orWhere('narration', 'like', $like)
-                ->orWhere('instrument_no', 'like', $like);
+        /*
+         * ⭐ পক্ষ দিয়েও — নাম, মোবাইল, ঠিকানা, পয়েন্ট (মালিক, ২৩ নভেম্বর ২০২৬: *সব জায়গায়*)। ⓘ পক্ষের নিজের খোঁজার নিয়মে
+         * ([[PartyRegistry::matching()]] → [[PartySearch]]) মেলা পক্ষ, মাথার পক্ষ বা কোনো সারির পক্ষ — জাবেদায় পক্ষ সারিতে বসে।
+         */
+        $parties = app(PartyRegistry::class);
+        $found = $parties->matching((string) $term, $parties->types());
+
+        return $query->where(function (Builder $q) use ($like, $found) {
+            $q->where($q->qualifyColumn('document_no'), 'like', $like)
+                ->orWhere($q->qualifyColumn('narration'), 'like', $like)
+                ->orWhere($q->qualifyColumn('instrument_no'), 'like', $like);
+
+            foreach ($found as $type => $ids) {
+                $q->orWhere(fn (Builder $p) => $p->where($p->qualifyColumn('party_type'), $type)->whereIn($p->qualifyColumn('party_id'), $ids))
+                    ->orWhereHas('lines', fn (Builder $l) => $l->where('party_type', $type)->whereIn('party_id', $ids));
+            }
         });
     }
 
