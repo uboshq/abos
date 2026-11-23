@@ -783,11 +783,14 @@
                          পাতা অকারণে লম্বা হত (রসিদে ১,৭০০px), স্টিকি সাইডবার পাতার সাথে সরে যেত আর মেনু নিচের বারের তলায় যেত (fe, ২২ অক্টোবর ২০২৬) --}}
                     @php
                         /* ⭐ দল ভাঁজ করা — কেবল তিন ABOS রূপে ([[Ui::foldsMenuGroups()]]; মালিক, ২০ নভেম্বর ২০২৬); বাকি রূপে আগের মাথা */
-                        $foldGroups = ($activeModule['panel_sections'] ?? []) === []
-                            && \App\Core\Support\Ui::foldsMenuGroups(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)));
+                        $foldLookOn = \App\Core\Support\Ui::foldsMenuGroups(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)));
+                        $foldGroups = ($activeModule['panel_sections'] ?? []) === [] && $foldLookOn;
+                        /* ⭐ ভাগে সাজানো মডিউলও (সিস্টেম ও প্রশাসন) ভাঁজ হয় — প্রতিটা ভাগ এক দল (মালিক, ২৩ নভেম্বর ২০২৬: "মেনু এবং সাবমেনু
+                           গুলা ফোল্ড হয়ে থাকার কথা, হচ্ছে না") */
+                        $foldSections = ($activeModule['panel_sections'] ?? []) !== [] && $foldLookOn;
                     @endphp
                     <nav class="min-h-0 flex-1 space-y-px overflow-y-auto overflow-x-hidden px-2 pb-4"
-                         @if ($foldGroups) data-menu-fold-nav="{{ $activeModule['code'] }}" @endif
+                         @if ($foldGroups || $foldSections) data-menu-fold-nav="{{ $activeModule['code'] }}" @endif
                          aria-label="{{ __('core.a11y.main_navigation') }}">
 
                         @php
@@ -820,6 +823,15 @@
                             $foldSeen = [];
                             $foldNow = null;
                             foreach ($panelRows as $foldAt => $foldRow) {
+                                if ($foldSections) {
+                                    $foldNow = 'sec-'.($foldRow['section'] ?? 'other');
+                                    $foldKeyOf[$foldAt] = $foldNow;
+                                    if ($foldRow['active'] ?? false) {
+                                        $foldHere[$foldNow] = true;
+                                    }
+
+                                    continue;
+                                }
                                 $foldLook = $menuLooks[$foldAt] ?? null;
                                 if (($foldLook['kind'] ?? null) === null) {
                                     $foldNow = null;
@@ -873,7 +885,20 @@
                                    x-show="filter === ''">{{ $look['name'] }}</p>
                                 @endif
                             @endif
-                            @if ($panelSections !== [] && ($item['section'] ?? null) !== null
+                            @if ($foldSections && $foldKey !== null && $foldOpenGroup === null)
+                                {{-- ⭐ ভাগের মাথা ভাঁজের বোতাম — অন্য মডিউলের দলের মাথার মতোই --}}
+                                <div class="menu-fold-grp" data-menu-fold-grp="{{ $foldKey }}">
+                                <button type="button" class="menu-kind-head menu-fold-head" data-menu-kind="section"
+                                        data-menu-fold="{{ $foldKey }}" data-panel-section="{{ $item['section'] ?? 'other' }}"
+                                        @if (isset($foldHere[$foldKey])) data-menu-fold-here @endif
+                                        aria-expanded="{{ isset($foldHere[$foldKey]) ? 'true' : 'false' }}"
+                                        x-show="filter === ''">
+                                    <span class="menu-fold-name">{{ ($item['section'] ?? null) !== null ? __($activeModule['code'].'::menu.section_'.$item['section']) : '…' }}</span>
+                                    <svg class="menu-fold-chev" data-menu-fold-chev width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                </button>
+                                <div class="menu-fold-items" data-menu-fold-items="{{ $foldKey }}">
+                                @php($foldOpenGroup = $foldKey)
+                            @elseif (! $foldSections && $panelSections !== [] && ($item['section'] ?? null) !== null
                                 && ($item['section'] ?? null) !== ($panelRows[$loop->index - 1]['section'] ?? null))
                                 <p data-panel-section="{{ $item['section'] }}"
                                    class="px-2.5 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wide text-(--color-ink-muted)">
