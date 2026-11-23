@@ -26,8 +26,11 @@ export function inboxBoard (root = document, win = window) {
 
     const fit = () => {
         const top = board.getBoundingClientRect().top + (win.scrollY || 0)
+        // ⓘ stop at the bottom of the page's own frame (the shell's footer sits under it), not at the window's edge
+        const frame = board.closest('main')?.getBoundingClientRect()
+        const bottom = frame && frame.bottom > top ? Math.min(win.innerHeight, frame.bottom + (win.scrollY || 0)) : win.innerHeight
 
-        board.style.setProperty('--board-h', Math.max(560, win.innerHeight - top - 16) + 'px')
+        board.style.setProperty('--board-h', Math.max(560, bottom - top - 20) + 'px')
     }
 
     fit()

@@ -39,6 +39,7 @@
         {{-- ⓘ the pick bar — how many and how much is picked, and the one "together" button (the existing bulk review) --}}
         <div class="inbox-board-pickbar" data-board-pickbar>
             {{-- ⓘ the count is on the button itself ([[approval-keys.js]]); here only how much — never the count twice --}}
+            <span class="text-sm text-(--color-ink-muted)">{{ __('approval::field.board_picked') }}</span>
             <span class="num text-sm font-semibold" data-board-picked-sum>৳0.00</span>
             <x-ui.button type="submit" tone="primary" form="bulk-form" data-bulk-button class="ms-auto"
                          data-label="{{ __('approval::action.bulk_picked', ['count' => '__N__']) }}">

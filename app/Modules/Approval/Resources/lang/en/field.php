@@ -164,7 +164,7 @@ return [
     'board_amount' => 'Amount',
     'board_waited' => 'Waiting',
     'board_subtotal' => ':kind — subtotal',
-    'board_picked' => ':count picked',
+    'board_picked' => 'Picked total',
     'board_pick_group' => ':kind — pick all',
     'board_date' => 'Date',
     'board_paper' => 'Paper',

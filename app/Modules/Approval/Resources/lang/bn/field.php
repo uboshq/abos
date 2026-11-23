@@ -167,7 +167,7 @@ return [
     'board_amount' => 'টাকা',
     'board_waited' => 'অপেক্ষা',
     'board_subtotal' => ':kind — উপমোট',
-    'board_picked' => 'বাছাই :count টা',
+    'board_picked' => 'বাছাইয়ের মোট',
     'board_pick_group' => ':kind — সব বাছাই',
     'board_date' => 'তারিখ',
     'board_paper' => 'কাগজ',
