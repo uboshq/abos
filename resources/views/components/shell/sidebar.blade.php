@@ -521,10 +521,13 @@
                                  থাকলে পরের পাঠক ভাবত ছায়াটা আসে। --}}
                             {{-- ⓘ `data-rail-tile` — টাইলের জমিন এই ঘরেই হিসাব হয় (`tokens.css`); `:root`-এ হলে
                                  `--color-module-current` সেখানে নেই বলে সব টাইল ব্র্যান্ডের এক নীলে পড়ত (৩০ অক্টোবর ২০২৬, ছবিতে ধরা) --}}
-                            <span data-rail-tile class="grid size-8 place-items-center transition-shadow"
-                                  style="background: {{ $isActive
+                            {{-- ⭐ কোপাইলটের টাইলে কোনো পট নেই — জীবন্ত "Ai" চিহ্ন নিজেই টাইলের পুরো মাপে (মালিক, ২৩ নভেম্বর ২০২৬:
+                                 "ব্যাকগ্রাউন্ড ছাড়া আইকনটা শুধু বড় করে দাও, বক্সটা যতটুক বড় অতটুক"; ABOS-এর চেহারাগুলোয়, [[AiMark::shows()]]) --}}
+                            @php $aiTile = (\App\Core\Navigation\MenuLook::LIVING_TILES[$module['code']] ?? null) === 'copilot-mark' && \App\Core\Support\AiMark::shows(); @endphp
+                            <span data-rail-tile class="grid size-8 place-items-center transition-shadow" @if ($aiTile) data-rail-tile-bare @endif
+                                  style="background: {{ $aiTile ? 'transparent' : ($isActive
                                              ? 'var(--rail-tile-on-bg, var(--rail-tile-bg))'
-                                             : 'var(--rail-tile-bg)' }};
+                                             : 'var(--rail-tile-bg)') }};
                                          border-radius: var(--rail-tile-radius);
                                          color: var(--rail-tile-ink);
                                          @if ($isActive) box-shadow: inset var(--rail-tile-on-edge-w) 0 0 var(--rail-tile-on-edge); @endif
@@ -552,8 +555,8 @@
                                      নয়, ফাঁকটাই চিহ্নের জায়গা খাচ্ছিল। --}}
                                 {{-- ⭐ কোপাইলট — উপরের বারের একই জীবন্ত মগজ, স্থির ছবি নয় (মালিক, ১৩ নভেম্বর ২০২৬) --}}
                                 {{-- ⭐ ABOS looks: the living "Ai" mark (owner, 21 Nov 2026); other looks keep the brain --}}
-                                @if ((\App\Core\Navigation\MenuLook::LIVING_TILES[$module['code']] ?? null) === 'copilot-mark' && \App\Core\Support\AiMark::shows())
-                                    <x-ui.ai-mark :size="22" data-rail-copilot />
+                                @if ($aiTile)
+                                    <x-ui.ai-mark :size="32" data-rail-copilot />
                                 @elseif ((\App\Core\Navigation\MenuLook::LIVING_TILES[$module['code']] ?? null) === 'copilot-mark')
                                     <x-shell.copilot-mark size="bare" class="cq-rail" data-rail-copilot />
                                 @else
