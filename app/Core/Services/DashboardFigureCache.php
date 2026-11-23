@@ -77,21 +77,99 @@ final class DashboardFigureCache
             $hit = null;
         }
 
-        if (is_array($hit) && ($hit['v'] ?? null) === 1 && array_key_exists('value', $hit)) {
-            return $hit['value'];
+        /*
+         * ⛔ 23 Nov 2026, demo: the home page gave 500 for everyone — "tried to access a property on an incomplete object
+         * … App\Core\Dashboard\Widget". The cache refuses to rebuild any object (`cache.serializable_classes = false`,
+         * a hardening), so a remembered Widget came back as __PHP_Incomplete_Class. The Mac runs use the array store,
+         * which never serialises, so no test saw it.
+         * ⓘ Now the answer is stored as its own serialised text with the list of classes inside it, and read back
+         *   allowing exactly those classes — and only ones from the allowed families ([[storable()]]). A class outside
+         *   them means "not stored"; a hit that would still hold an incomplete object is a miss, never a page.
+         */
+        $value = self::revive($hit);
+
+        if ($value !== self::MISS) {
+            return $value;
         }
 
         $value = $compute();
 
         try {
             // ⓘ a closure, a PDO handle or a resource inside the answer → not storable; the page still gets its answer
-            serialize($value);
-            Cache::put($key, ['v' => 1, 'value' => $value], self::TTL_SECONDS);
+            $blob = serialize($value);
+            $classes = self::classesIn($blob);
+
+            if ($classes !== null) {
+                Cache::put($key, ['v' => 2, 'blob' => $blob, 'classes' => $classes], self::TTL_SECONDS);
+            }
         } catch (Throwable) {
             // not storable — returned as computed
         }
 
         return $value;
+    }
+
+    /** ⓘ a stand-in for "no usable hit" — `null` and `false` are real answers a provider may give */
+    private const MISS = "\0dash-figure-miss";
+
+    /** the families a remembered answer may hold: our own classes, Laravel's collections and models, and dates */
+    private const STORABLE = ['App\\', 'Illuminate\\Support\\', 'Illuminate\\Database\\Eloquent\\', 'Carbon\\',
+        'DateTime', 'DateTimeImmutable', 'DateTimeZone', 'DateInterval', 'DatePeriod', 'stdClass', 'ArrayObject', 'ArrayIterator'];
+
+    private static function storable(string $class): bool
+    {
+        foreach (self::STORABLE as $family) {
+            if ($class === $family || (str_ends_with($family, '\\') && str_starts_with($class, $family))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The classes inside a serialised answer — or null when any of them is outside the allowed families.
+     *
+     * ⓘ May list a name that only looked like an object inside a string; that only widens the allow list by a name of
+     *   an allowed family, never past it.
+     *
+     * @return list<string>|null
+     */
+    private static function classesIn(string $blob): ?array
+    {
+        preg_match_all('/[OC]:\d+:"([^"]+)":/', $blob, $m);
+        $classes = array_values(array_unique($m[1]));
+
+        foreach ($classes as $class) {
+            if (! self::storable($class)) {
+                return null;
+            }
+        }
+
+        return $classes;
+    }
+
+    private static function revive(mixed $hit): mixed
+    {
+        if (! is_array($hit) || ($hit['v'] ?? null) !== 2 || ! is_string($hit['blob'] ?? null) || ! is_array($hit['classes'] ?? null)) {
+            return self::MISS;
+        }
+
+        // ⓘ the allow list is read from the text itself, not trusted from the stored list — every object in it is allowed,
+        //   or nothing is revived (⛔ never an incomplete object on a page)
+        $allowed = self::classesIn($hit['blob']);
+
+        if ($allowed === null) {
+            return self::MISS;
+        }
+
+        try {
+            $value = unserialize($hit['blob'], ['allowed_classes' => $allowed]);
+        } catch (Throwable) {
+            return self::MISS;
+        }
+
+        return $value === false && $hit['blob'] !== serialize(false) ? self::MISS : $value;
     }
 
     /** the full cache key of `$part` for the current scope, or null when nothing may be remembered now */
