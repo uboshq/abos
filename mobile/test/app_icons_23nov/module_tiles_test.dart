@@ -6,6 +6,7 @@ import 'package:abos_mobile/core/menu/menu_item.dart';
 import 'package:abos_mobile/core/menu/menu_module.dart';
 import 'package:abos_mobile/core/menu/menu_repository.dart';
 import 'package:abos_mobile/core/navigation/nav_catalog.dart';
+import 'package:abos_mobile/core/theme/app_colors.dart';
 import 'package:abos_mobile/core/theme/app_look.dart';
 import 'package:abos_mobile/core/theme/app_theme.dart';
 import 'package:abos_mobile/core/theme/glass.dart';
@@ -160,6 +161,14 @@ void main() {
     }
     expect(tree.module('system_admin')!.screens.map((r) => r.label), containsAll(['ব্যবহারকারী', 'অডিট লগ', 'ব্যাকআপ চালান']));
     expect(tree.module('notification')!.screens.map((r) => r.label), containsAll(['নোটিশ বোর্ড']));
+  });
+
+  test('system and master data wear the sample\'s slate, and a white icon reads on it', () {
+    for (final code in ['system_admin', 'master_data']) {
+      expect(AppColors.moduleColor(code), const Color(0xFF475569), reason: code);
+      expect(AppColors.moduleSolid(code), AppColors.moduleColor(code), reason: '$code already passes 3:1 — not darkened');
+      expect(AppColors.contrast(const Color(0xFFFFFFFF), AppColors.moduleSolid(code)), greaterThanOrEqualTo(3.0));
+    }
   });
 
   test('an older /me: the same tiles, the app\'s own names where the server merged nothing', () {
