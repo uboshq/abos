@@ -162,12 +162,13 @@ export function copilotPage () {
         },
 
         // ── asking ─────────────────────────────────────────────────────
-        submit () { this.ask(this.q, false) },
+        // ⓘ each returns ask()'s promise, so a caller (or a test) can wait for the answer to land
+        submit () { return this.ask(this.q, false) },
         pick (e) {
             const t = e && e.currentTarget ? e.currentTarget.getAttribute('data-cpp-chip') : ''
-            this.ask(t || '', false)
+            return this.ask(t || '', false)
         },
-        regenerate (item) { if (this.canRegenerate(item)) this.ask(item.question, true) },
+        regenerate (item) { return this.canRegenerate(item) ? this.ask(item.question, true) : Promise.resolve() },
         newTalk () {
             if (this.cfg.chatUrl) window.location.assign(this.cfg.chatUrl)
         },

@@ -31,7 +31,9 @@ final class HomeAndFinanceStayUnderAQueryCeilingTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const HOME_FIRST = 450;
+    // ⓘ Calibrated from the first Mac run of the 1.3.10 candidate (23 Nov 2026): home measured 529 on the merged seed
+    // (search + salesperson add their own reads); 600 keeps ~13% headroom and stays far below the 922 of the N+1 days.
+    private const HOME_FIRST = 600;
 
     private const FINANCE_FIRST = 500;
 
