@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../api_client/api_client.dart';
 import '../locale/app_locale.dart';
 import '../sync_engine/reference_cache.dart';
+import '../sync_engine/poll_gate.dart';
 import 'money.dart';
 import 'working_capital_record.dart';
 
@@ -281,7 +282,17 @@ class TodayApi {
   static const String _cacheType = 'TodaySummary';
   static const String _cacheId = 'latest';
 
-  static Future<TodayRecord> fetch() async {
+  /// ⭐ One answer for everyone asking within 30 s — the home and the launcher refresh at the same moment are one call
+  /// (polling cut, 23 Nov 2026; [SharedAnswer]).
+  static final SharedAnswer<TodayRecord> _shared = SharedAnswer<TodayRecord>();
+
+  /// Always asks the server (joining a call already under way); the answer is kept for [recent].
+  static Future<TodayRecord> fetch() => _shared.fresh(_fetch);
+
+  /// The answer of the last 30 s if there is one — for the launcher refresh, which must not ask twice.
+  static Future<TodayRecord> recent() => _shared.recent(_fetch);
+
+  static Future<TodayRecord> _fetch() async {
     final response = await ApiClient.dio.get<Map<String, dynamic>>(
       '/dashboard/today',
       options: Options(extra: const {'abosAllowStale': true}),

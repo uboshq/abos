@@ -2,6 +2,7 @@ import '../../core/api_client/once_key.dart';
 import 'package:dio/dio.dart';
 
 import '../api_client/api_client.dart';
+import '../sync_engine/poll_gate.dart';
 import '../records/approval_record.dart';
 import '../locale/app_locale.dart';
 
@@ -17,6 +18,14 @@ import '../locale/app_locale.dart';
 /// not have one.
 class ApprovalsApi {
   const ApprovalsApi._();
+
+  /// ⭐ The first page (limit 50), one answer for the home's count, its "waiting" card and the launcher refresh
+  /// (polling cut, 23 Nov 2026: cold start used to ask four times). [fresh] asks the server (joining a call under
+  /// way); otherwise an answer of the last 30 s is reused. ⛔ Any write wipes it ([SharedAnswer.clearAll]).
+  static Future<ApprovalPage> pendingShared({bool fresh = false}) =>
+      fresh ? _firstPage.fresh(pending) : _firstPage.recent(pending);
+
+  static final SharedAnswer<ApprovalPage> _firstPage = SharedAnswer<ApprovalPage>();
 
   /// One page of what is waiting for this person.
   ///

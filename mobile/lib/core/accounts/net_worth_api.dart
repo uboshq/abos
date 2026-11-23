@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 
 import '../api_client/api_client.dart';
+import '../auth/auth_user.dart';
+import '../sync_engine/poll_gate.dart';
 
 /// ⭐ নিট সম্পদ বিবরণী (Net Worth Statement) — `GET /accounts/net-worth` আর `/accounts/net-worth/summary` (মালিক, ২৫ অক্টোবর
 /// ২০২৬: "eta banaw r desboard e ekta card daw sudu maliker jonno, mobile app eo diba"; সার্ভার a5-এর NetWorthApiController)।
@@ -53,6 +55,14 @@ class NetWorthStatementRecord {
       .toList();
 }
 
+/// ⭐ The server shows the statement only to the company's owner — the `super_admin` role in this company
+/// (Ownership::role(), NetWorthStatement::mayView()); there is no key. Anyone else is not asked at all, so a
+/// non-owner's home costs no 404 (polling cut, 23 Nov 2026).
+bool mayAskNetWorth(AuthUser? user) => user != null && user.hasRole(netWorthOwnerRole);
+
+/// The owner role's name, as the server sends it in `roles`.
+const String netWorthOwnerRole = 'super_admin';
+
 abstract class NetWorthApi {
   /// null = মালিক নন (সার্ভারের ৪০৪)
   Future<NetWorthSummary?> summary();
@@ -62,8 +72,14 @@ abstract class NetWorthApi {
 class ServerNetWorthApi implements NetWorthApi {
   const ServerNetWorthApi();
 
+  /// ⭐ One answer per minute — the card is rebuilt on every new "today" figure, the call is not repeated
+  /// (polling cut, 23 Nov 2026). ⛔ Failures are not kept; sign-out and any write wipe it ([SharedAnswer]).
+  static final SharedAnswer<NetWorthSummary?> _shared = SharedAnswer<NetWorthSummary?>(maxAge: const Duration(seconds: 60));
+
   @override
-  Future<NetWorthSummary?> summary() async {
+  Future<NetWorthSummary?> summary() => _shared.recent(_summary);
+
+  static Future<NetWorthSummary?> _summary() async {
     try {
       final response = await ApiClient.dio.get<Map<String, dynamic>>('/accounts/net-worth/summary');
       return NetWorthSummary(response.data ?? const {});

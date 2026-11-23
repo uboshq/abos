@@ -342,12 +342,16 @@ void main() {
         signedIn: () => true,
         refresh: () async => runs++,
         clock: () => now,
+        anyPlaced: () async => true,
       );
 
       expect(await observer.syncNow(), isTrue);
       now = now.add(const Duration(seconds: 30));
       expect(await observer.syncNow(), isFalse);
+      // ⓘ ten minutes since the polling cut (23 Nov 2026)
       now = now.add(const Duration(minutes: 3));
+      expect(await observer.syncNow(), isFalse);
+      now = now.add(const Duration(minutes: 7));
       expect(await observer.syncNow(), isTrue);
 
       expect(runs, 2);

@@ -8,6 +8,7 @@ import '../auth/token_storage.dart';
 import '../launcher_widgets/hub/widget_hub.dart';
 import '../launcher_widgets/hub/widget_hub_task.dart';
 import '../launcher_widgets/launcher_widget_refresh.dart';
+import 'poll_gate.dart';
 import 'sync_engine.dart';
 
 /// Turns on what [SyncEngine] already does on reconnect — drain the offline
@@ -73,6 +74,10 @@ void callbackDispatcher() {
   });
 }
 
+/// ⭐ The one gate of every background round — last run kept in a file, shared by all isolates ([RoundGate]).
+@visibleForTesting
+RoundGate backgroundGate = RoundGate(name: 'abos-background-round', gap: const Duration(minutes: 15));
+
 /// ⭐ পেছনের উইজেট-গোল — সাইন-ইন না থাকলে কিছু নয় (৪০১-এ কিছু মোছা হত না, শুধু নষ্ট ডাক)।
 /// ⛔ Hive-এর সারি এখানে খোলা হয় না — খোলা অ্যাপের বাক্সের সাথে টক্কর নয়।
 Future<void> widgetRound() async {
@@ -80,6 +85,8 @@ Future<void> widgetRound() async {
   try {
     final refreshToken = await TokenStorage.instance.refreshToken();
     if (refreshToken == null || refreshToken.isEmpty) return;
+    // ⛔ one background round per 15 min, whichever task or push comes first ([backgroundGate])
+    if (!await backgroundGate.claim()) return;
     await WidgetHub.refresh();
   } catch (error) {
     debugPrint('ABOS widget hub task: failed ($error)');
@@ -123,6 +130,10 @@ Future<void> backgroundRound() async {
       // rejection — for a session that is simply closed, not failing.
       final refreshToken = await TokenStorage.instance.refreshToken();
       if (refreshToken == null || refreshToken.isEmpty) return;
+
+      // ⛔ at most one background round per 15 min on this phone — WorkManager, the widget task and every silent
+      // push share it; a push inside the gap only leaves its mark ([NudgeMark]) for when the app comes to the front
+      if (!await backgroundGate.claim()) return;
 
       // ⭐ চুপচাপ নবায়ন — সারি পাঠানোর আগে, যাতে পাঠানোও নতুন টোকেনে ([[renewIfStale]]); কখনো ছোড়ে না
       await renewIfStale();

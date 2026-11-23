@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import 'hub/widget_hub.dart';
 import 'launcher_widget_refresh.dart';
+import 'placed_widgets.dart';
 
 /// Fills the home-screen widgets at the moment somebody leaves the app.
 ///
@@ -23,8 +24,10 @@ class WidgetSyncObserver with WidgetsBindingObserver {
     required this.signedIn,
     Future<void> Function()? refresh,
     DateTime Function()? clock,
+    Future<bool> Function()? anyPlaced,
   })  : _refresh = refresh ?? _both,
-        _clock = clock ?? DateTime.now;
+        _clock = clock ?? DateTime.now,
+        _anyPlaced = anyPlaced ?? PlacedWidgets.any;
 
   /// Asked at the moment of leaving. Nobody signed in means there is nothing
   /// to fetch, and a refresh then would overwrite the "signed out" line with
@@ -40,10 +43,13 @@ class WidgetSyncObserver with WidgetsBindingObserver {
   final Future<void> Function() _refresh;
   final DateTime Function() _clock;
 
+  /// ⛔ No widget on the home screen — nothing to fill ([PlacedWidgets]; unknown counts as placed)
+  final Future<bool> Function() _anyPlaced;
+
   /// Not more often than this. Android sends `paused` for a permission
   /// dialog, a camera, a share sheet: somebody printing six invoices would
-  /// otherwise fire six rounds of calls.
-  static const minimumGap = Duration(minutes: 2);
+  /// otherwise fire six rounds of calls. ⓘ Ten minutes since the polling cut (23 Nov 2026), was two.
+  static const minimumGap = Duration(minutes: 10);
 
   DateTime? _lastRun;
 
@@ -66,6 +72,11 @@ class WidgetSyncObserver with WidgetsBindingObserver {
     final now = _clock();
     final last = _lastRun;
     if (last != null && now.difference(last) < minimumGap) return false;
+    bool placed = true;
+    try {
+      placed = await _anyPlaced();
+    } catch (_) {}
+    if (!placed) return false;
     _lastRun = now;
     await _refresh();
     return true;
