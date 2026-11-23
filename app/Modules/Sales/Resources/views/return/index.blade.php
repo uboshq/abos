@@ -23,6 +23,12 @@
         ['key' => 'status', 'label' => __('sales::field.state'), 'width' => '8rem',
          'render' => fn ($r) => view('sales::components.status-badge', ['document' => $r])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        \App\Core\ListFilter\Facets::flag('cancelled', __('sales::action.show_cancelled')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -36,11 +42,12 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::menu.returns')" :count="trans_choice('core.count.records', $returns->total(), ['count' => $returns->total()])"
                 :columns="$columns" :search-placeholder="__('sales::message.return_search')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
         <x-slot:actions>
             @can('sales.return.create')
                     <x-ui.button tone="primary" icon="plus" :href="route('sales.return.create')">
@@ -48,12 +55,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <x-ui.date-range :dates="$dates" />
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('sales::action.show_cancelled') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -68,4 +69,5 @@
         <x-ui.pager :rows="$returns" />
         <x-ui.list-totals :rows="$returns" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

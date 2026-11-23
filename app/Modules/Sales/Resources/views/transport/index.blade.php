@@ -102,7 +102,19 @@
         ];
     }
 
-    $field = 'h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm';
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        $vehicles->isNotEmpty()
+            ? \App\Core\ListFilter\Facets::pick('vehicle', __('sales::field.vehicle_no'),
+                $vehicles->mapWithKeys(fn ($v) => [$v->id => $v->registration_no ?: $v->code])->all(),
+                __('sales::transport_board.any_vehicle'))
+            : null,
+        \App\Core\ListFilter\Facets::text('driver', __('sales::field.driver_name'), __('sales::transport_board.driver_filter')),
+        \App\Core\ListFilter\Facets::pick('customer', __('sales::field.customer'),
+            $customers->mapWithKeys(fn ($c) => [$c->id => $c->nameWithPoint()])->all(),
+            __('sales::transport_board.any_customer')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -134,34 +146,14 @@
         @endforeach
     </nav>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
 
             <x-ui.toolbar :title="__('sales::transport_board.tab_'.$tab)" :quiet="['tab']"
                           :count="__('sales::transport_board.subtitle')"
-                          :columns="$columns" :search-placeholder="__('sales::message.challan_search')">
-                <x-ui.date-range :dates="$dates" />
-
-                @if ($vehicles->isNotEmpty())
-                    <select name="vehicle" class="{{ $field }}" aria-label="{{ __('sales::field.vehicle_no') }}">
-                        <option value="">{{ __('sales::transport_board.any_vehicle') }}</option>
-                        @foreach ($vehicles as $v)
-                            <option value="{{ $v->id }}" @selected($vehicle === $v->id)>{{ $v->registration_no ?: $v->code }}</option>
-                        @endforeach
-                    </select>
-                @endif
-
-                <input type="search" name="driver" value="{{ $driver }}" class="{{ $field }}"
-                       placeholder="{{ __('sales::transport_board.driver_filter') }}" aria-label="{{ __('sales::field.driver_name') }}">
-
-                <select name="customer" class="{{ $field }}" aria-label="{{ __('sales::field.customer') }}">
-                    <option value="">{{ __('sales::transport_board.any_customer') }}</option>
-                    @foreach ($customers as $c)
-                        <option value="{{ $c->id }}" @selected($customer === $c->id)>{{ $c->nameWithPoint() }}</option>
-                    @endforeach
-                </select>
-            </x-ui.toolbar>
+                          :columns="$columns" :search-placeholder="__('sales::message.challan_search')" :facets="$facetPanel" />
         </form>
 
         <x-ui.table
@@ -175,4 +167,5 @@
         <x-ui.pager :rows="$challans" />
         <x-ui.list-totals :rows="$challans" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

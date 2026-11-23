@@ -46,6 +46,11 @@
             'render' => fn ($d) => \App\Modules\Sales\Support\DeliveryOrderStatus::label((string) $d->status),
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -72,11 +77,12 @@
         </p>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
             <x-ui.toolbar :title="__('sales::delivery_order.title')" :columns="$columns"
-                          :search-placeholder="__('sales::delivery_order.search')" :sort="$sortOptions" :quiet="['tab']">
+                          :search-placeholder="__('sales::delivery_order.search')" :sort="$sortOptions" :quiet="['tab']" :facets="$facetPanel">
                 <x-slot:actions>
                     {{-- ⭐ কোম্পানি বিক্রয় আদেশে চলে গেলে "নতুন DO"-র জায়গায় নতুন আদেশ (নকশার ধাপ ১২) --}}
                     @if ($newStopped ?? false)
@@ -93,7 +99,6 @@
                         @endcan
                     @endif
                 </x-slot:actions>
-                <x-ui.date-range :dates="$dates" />
             </x-ui.toolbar>
         </form>
 
@@ -109,4 +114,5 @@
         <x-ui.list-totals :rows="$orders" :grand="$grand ?? []" :columns="$columns"
                            :totals="[['value' => __('sales::message.total_leaves_out_delivery_order')]]" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
