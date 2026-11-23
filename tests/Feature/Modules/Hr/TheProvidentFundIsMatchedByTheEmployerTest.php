@@ -148,9 +148,9 @@ final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
         $this->assertTrue($rows['PF-E']['member']);
         $this->assertFalse($rows['PF-E']['changes'], '⛔ হার আগে থেকেই ৮%, অথচ "বদলাবে"।');
 
-        $this->assertSame(1, SalaryStructure::query()->where('employee_id', $member->id)->where('salary_head_id', $this->head('PF')->id)->count(),
+        $this->assertSame(1, SalaryStructure::query()->where('employee_id', $member->id)->where('salary_head_id', $this->salaryHead('PF')->id)->count(),
             '⛔ প্রস্তাব দেখাতেই কাঠামো বদলাল।');
-        $this->assertSame(0, SalaryStructure::query()->where('employee_id', $outsider->id)->where('salary_head_id', $this->head('PF')->id)->count());
+        $this->assertSame(0, SalaryStructure::query()->where('employee_id', $outsider->id)->where('salary_head_id', $this->salaryHead('PF')->id)->count());
     }
 
     public function test_applying_from_a_date_changes_that_month_on_and_leaves_the_month_before(): void
@@ -170,7 +170,7 @@ final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
         $august = $this->payroll()->build('2026-08-01');
         $this->assertSame(0, bccomp((string) $august->payslips()->where('employee_id', $member->id)->value('deductions'), '1600', 4),
             '⛔ বসানোর তারিখ থেকে ৮% হওয়ার কথা।');
-        $this->assertSame(0, SalaryStructure::query()->where('employee_id', $outsider->id)->where('salary_head_id', $this->head('PF')->id)->count());
+        $this->assertSame(0, SalaryStructure::query()->where('employee_id', $outsider->id)->where('salary_head_id', $this->salaryHead('PF')->id)->count());
 
         $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $member->id)
             ->where('action', ProvidentFund::RATE_APPLIED)->exists(), '⛔ হার বসল, অথচ অডিটে নেই।');
@@ -240,7 +240,7 @@ final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
         app(SettingsService::class)->set(ProvidentFund::ENABLED, true);
     }
 
-    private function head(string $code): SalaryHead
+    private function salaryHead(string $code): SalaryHead
     {
         return SalaryHead::query()->where('code', $code)->firstOrFail();
     }
@@ -252,10 +252,10 @@ final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
         ]);
 
         $salaries = app(SalaryStructureService::class);
-        $salaries->set($employee, $this->head('BASIC'), '2026-01-15', $basic);
+        $salaries->set($employee, $this->salaryHead('BASIC'), '2026-01-15', $basic);
 
         if ($pf !== null) {
-            $salaries->set($employee, $this->head('PF'), '2026-01-15', $pf);
+            $salaries->set($employee, $this->salaryHead('PF'), '2026-01-15', $pf);
         }
 
         return $employee->fresh();

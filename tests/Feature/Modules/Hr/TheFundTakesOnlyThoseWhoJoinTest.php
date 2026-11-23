@@ -79,7 +79,7 @@ final class TheFundTakesOnlyThoseWhoJoinTest extends TestCase
 
         $this->assertNull($fund->enrol($candidate, Carbon::parse('2026-08-01'), $this->owner));
         $this->assertSame(0, bccomp((string) SalaryStructure::query()->where('employee_id', $candidate->id)
-            ->where('salary_head_id', $this->head('PF')->id)->value('amount'), '8', 4), '⛔ যোগ দিলেন, অথচ ৮% বসেনি।');
+            ->where('salary_head_id', $this->salaryHead('PF')->id)->value('amount'), '8', 4), '⛔ যোগ দিলেন, অথচ ৮% বসেনি।');
         $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $candidate->id)->where('action', ProvidentFund::ENROLLED)->exists());
 
         foreach ([$newcomer, $member] as $who) {
@@ -115,14 +115,14 @@ final class TheFundTakesOnlyThoseWhoJoinTest extends TestCase
         $this->assertNull($fund->vestedEmployerShare('12345.67', 7), '⛔ পড়া যায় না এমন ধাপকে বসানো ধরা হলো।');
     }
 
-    private function head(string $code): SalaryHead
+    private function salaryHead(string $code): SalaryHead
     {
         return SalaryHead::query()->where('code', $code)->firstOrFail();
     }
 
     private function pfRows(Employee $employee): int
     {
-        return SalaryStructure::query()->where('employee_id', $employee->id)->where('salary_head_id', $this->head('PF')->id)->count();
+        return SalaryStructure::query()->where('employee_id', $employee->id)->where('salary_head_id', $this->salaryHead('PF')->id)->count();
     }
 
     private function employee(string $code, string $joined, ?string $pf): Employee
@@ -131,10 +131,10 @@ final class TheFundTakesOnlyThoseWhoJoinTest extends TestCase
             'code' => $code, 'name_en' => 'Person '.$code, 'joining_date' => $joined, 'payment_method' => 'cash',
         ]);
         $salaries = app(SalaryStructureService::class);
-        $salaries->set($employee, $this->head('BASIC'), $joined, '20000');
+        $salaries->set($employee, $this->salaryHead('BASIC'), $joined, '20000');
 
         if ($pf !== null) {
-            $salaries->set($employee, $this->head('PF'), $joined, $pf);
+            $salaries->set($employee, $this->salaryHead('PF'), $joined, $pf);
         }
 
         return $employee->fresh();

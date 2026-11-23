@@ -88,7 +88,7 @@ final class GratuityIsBookedToTheObligationTest extends TestCase
         $this->assertSame(0, bccomp($this->liability(), '712222.07', 4));
         $this->assertSame(0, bccomp($this->liability(), $this->obligationOn('2026-07-31'), 4));
 
-        app(SalaryStructureService::class)->set($b, $this->head('BASIC'), '2026-08-01', '35000');
+        app(SalaryStructureService::class)->set($b, $this->salaryHead('BASIC'), '2026-08-01', '35000');
         $made = $g->accrue(Carbon::parse('2026-08-01'));
         $this->assertSame(0, bccomp(collect($made)->reduce(fn ($s, $p) => bcadd($s, (string) $p->amount, 4), '0'), '14999.97', 4));
         $this->assertSame(0, bccomp($this->liability(), '727222.04', 4), '⛔ আগস্টে বেতন বাড়ার পরে দায় আর খাতা মেলে না।');
@@ -166,12 +166,12 @@ final class GratuityIsBookedToTheObligationTest extends TestCase
         $employee = app(EmployeeService::class)->create([
             'code' => $code, 'name_en' => 'Person '.$code, 'joining_date' => $joined, 'payment_method' => 'cash',
         ]);
-        app(SalaryStructureService::class)->set($employee, $this->head('BASIC'), $joined, $basic);
+        app(SalaryStructureService::class)->set($employee, $this->salaryHead('BASIC'), $joined, $basic);
 
         return $employee->fresh();
     }
 
-    private function head(string $code): SalaryHead
+    private function salaryHead(string $code): SalaryHead
     {
         return SalaryHead::query()->where('code', $code)->firstOrFail();
     }
