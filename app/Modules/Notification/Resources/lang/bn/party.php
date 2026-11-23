@@ -65,6 +65,7 @@ return [
         'accounts_voucher' => 'ভাউচার',
         'accounts_transfer' => 'টাকা স্থানান্তর',
         'accounts_note' => 'ডেবিট/ক্রেডিট নোট',
+        'accounts_trade_voucher' => 'বিক্রয়/ক্রয় ভাউচার',
         'hr_payslip' => 'বেতনের স্লিপ',
         'inventory_transfer' => 'মাল স্থানান্তর',
     ],

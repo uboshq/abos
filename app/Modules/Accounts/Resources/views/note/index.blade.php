@@ -1,115 +1,103 @@
 {{--
-    ডেবিট ও ক্রেডিট নোট — মানচিত্র §৭।
+    ⭐ নোটের তালিকা — এক ভাগ এক পাতা: ক্রেডিট নোট, গ্রাহকের ডেবিট নোট, সরবরাহকারীর ডেবিট নোট (মালিকের নকশা v5, ২৩ নভেম্বর ২০২৬;
+    [[NoteListController]])। ⓘ ট্যাব নেই — প্রতিটা ভাগ নিজের মেনু-সারি। ⛔ বর্ণনার লাইন নেই (মালিক, ১৯ নভেম্বর: শিরোনাম + বোতাম এক সারি)।
 
-    ── ⚠️ একটা পর্দা, দুইটা ট্যাব ──────────────────────────────────────
-    কাজটা এক — "টাকার অঙ্কটা ভুল ছিল, শোধরাও" — কেবল কাকে দেওয়া হচ্ছে
-    সেটা আলাদা। ⓘ দুইটা আলাদা পর্দা বানালে একদিন একটায় ভ্যাটের ঘর যোগ
-    হত, অন্যটায় না।
+    ⛔ মোট কেবল পাকা নোটের; খসড়া আর অনুমোদনের অপেক্ষা আলাদা লাইনে। টাকা = নোটের সর্বমোট (নিজের সারি + ফেরতের ভাগ)।
 --}}
 @php
     use App\Core\Support\Money;
-    use App\Modules\Accounts\Models\Note;
 
-    $tabs = [
-        Note::CREDIT => __('accounts::note.credit_note'),
-        Note::DEBIT => __('accounts::note.debit_note'),
-    ];
+    $title = __('accounts::note.menu_'.$type);
 
     $columns = [
         ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '9rem',
          'render' => fn ($n) => view('accounts::note.partials.number', ['note' => $n])],
-        /* ⛔ শিরোনাম ছিল "কারণ" — তারিখের ঘরে, তাই "কারণ" দুইবার দেখাত (মালিকের ছবি, ৩ অক্টোবর ২০২৬) */
         ['key' => 'trx_date', 'label' => __('core.print.date'), 'width' => '7rem',
-         'render' => fn ($n) => $n->trx_date?->format('d M Y')],
+         'render' => fn ($n) => \App\Core\Support\DateFormat::format($n->trx_date)],
 
         /* ⭐ পক্ষের নাম তাঁর নিজের পাতায় যায় — মালিকের নিয়ম, ২০ সেপ্টেম্বর ২০২৬ */
         ['key' => 'party', 'label' => __('accounts::note.party'),
          'render' => fn ($n) => view('accounts::note.partials.party', [
              'note' => $n, 'names' => $names, 'routes' => $routes,
          ])],
-        /* ⭐ "কাকে"-র পরেই পয়েন্ট — মালিকের নিয়ম, ২৮ সেপ্টেম্বর ২০২৬ (সব তালিকায়); গ্রাহকের পয়েন্ট, অন্যদের জায়গা না থাকলে — */
+        /* ⭐ "কাকে"-র পরেই পয়েন্ট — মালিকের নিয়ম, ২৮ সেপ্টেম্বর ২০২৬ */
         ['key' => 'point', 'label' => __('accounts::note.point'), 'width' => '9rem',
          'render' => fn ($n) => $places[$n->party_type.':'.$n->party_id] ?? '—'],
-        ['key' => 'against_no', 'label' => __('accounts::note.against_no'), 'width' => '10rem',
-         // ⓘ বাঁধা বিল না হলে "রেফারেন্স:" আগে — বিলের বিপরীতে নয় (fe, ২৫ অক্টোবর ২০২৬)
+        ['key' => 'against_no', 'label' => __('accounts::note_list.col_bill_'.$type), 'width' => '10rem',
+         // ⓘ বাঁধা বিল না হলে "রেফারেন্স:" আগে — বিলের বিপরীতে নয়
          'render' => fn ($n) => $n->against_no ? ($n->against_id === null ? __('accounts::note.reference').': '.$n->against_no : $n->against_no) : '—'],
+    ];
+
+    /* ⓘ সরবরাহকারীর ডেবিট নোটে তাঁর মূসক-৬.৭ নম্বর — থাকলে তবেই ক্রয়-ভ্যাট উল্টায় (নকশা v5) */
+    if ($type === 'dn') {
+        $columns[] = ['key' => 'supplier_note_no', 'label' => __('accounts::note_list.col_supplier_note'), 'width' => '10rem',
+            'render' => fn ($n) => filled($n->supplier_note_no)
+                ? $n->supplier_note_no.($n->supplier_note_date ? ' · '.\App\Core\Support\DateFormat::format($n->supplier_note_date) : '')
+                : '—'];
+    }
+
+    $columns = array_merge($columns, [
         ['key' => 'reason', 'label' => __('accounts::note.reason'), 'width' => '12rem',
          'render' => fn ($n) => __('accounts::note.reason_'.$n->reason)],
-        ['key' => 'total', 'total' => 'money', 'label' => __('accounts::note.total'), 'numeric' => true, 'width' => '10rem',
-         'render' => fn ($n) => Money::format($n->total)],
-        ['key' => 'status', 'label' => __('core.table.status'), 'width' => '8rem',
-         'render' => fn ($n) => view('accounts::note.partials.status', ['note' => $n])],
+        ['key' => 'grand_total', 'total' => 'money', 'label' => __('accounts::note_list.col_amount'), 'numeric' => true, 'width' => '10rem',
+         'render' => fn ($n) => Money::format($n->grandTotal())],
+        ['key' => 'status', 'label' => __('core.table.status'), 'width' => '9rem',
+         'render' => fn ($n) => view('accounts::note.partials.status', ['note' => $n, 'waiting' => in_array((int) $n->id, $waitingIds, true)])],
+        /* ⭐ যুক্ত ফেরতের কাগজ — "মাল ফেরত" সারির SR/PR (নকশা v5) */
+        ['key' => 'returns', 'label' => __('accounts::note_list.col_returns'), 'width' => '9rem',
+         'render' => fn ($n) => implode(', ', $returns[(int) $n->id] ?? []) ?: '—'],
         /* ⭐ সারি থেকেই ছাপা — মালিক, ৩ অক্টোবর ২০২৬ */
         ['key' => 'print', 'label' => __('core.action.print'), 'width' => '6rem',
          'render' => fn ($n) => view('accounts::note.partials.print', ['note' => $n])],
-    ];
+    ]);
+
+    $countMoney = fn (array $part) => __('accounts::note_list.count_money', [
+        'count' => number_format($part['count']), 'money' => Money::format($part['money']),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
-    <x-slot:title>{{ __('accounts::note.title') }}</x-slot:title>
-
-    <x-slot:header>
-        <x-ui.page-header :title="__('accounts::note.title')"
-                          :subtitle="__('accounts::note.subtitle')">
-            <x-slot:actions>
-                @can('accounts.note.manage')
-                    <x-ui.button tone="primary" icon="plus"
-                                 :href="route('accounts.note.create', ['direction' => $direction])">
-                        {{ $direction === Note::CREDIT
-                            ? __('accounts::note.new_credit')
-                            : __('accounts::note.new_debit') }}
-                    </x-ui.button>
-                @endcan
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
+    <x-slot:title>{{ $title }}</x-slot:title>
 
     @if (session('saved'))
         <p role="status" class="mb-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2
                                 text-sm text-(--color-badge-success-ink)">{{ session('saved') }}</p>
     @endif
 
-    <nav class="mb-3 flex flex-wrap gap-1 border-b border-(--color-border) text-sm"
-         aria-label="{{ __('accounts::note.title') }}">
-        @foreach ($tabs as $key => $label)
-            @php $on = $direction === $key; @endphp
-            <a href="{{ route('accounts.note.index', ['direction' => $key]) }}"
-               @if ($on) aria-current="page" @endif
-               class="-mb-px flex min-h-(--spacing-touch) items-center gap-2 border-b-2 px-3
-                      {{ $on
-                          ? 'border-(--color-brand-500) font-semibold text-(--color-ink)'
-                          : 'border-transparent text-(--color-ink-muted) hover:text-(--color-ink)' }}">
-                {{ $label }}
-                <span class="rounded-full bg-(--color-surface-sunken) px-2 text-2xs text-(--color-ink-muted)">
-                    {{ $counts[$key] ?? 0 }}
-                </span>
-            </a>
-        @endforeach
-    </nav>
-
-    {{-- ⓘ ট্যাবটা কী জিনিস, সেটা এক লাইনে — দুইটার নাম কাছাকাছি, আর মানুষ
-         নিয়মিত উল্টে ফেলেন --}}
-    <p class="mb-3 text-sm text-(--color-ink-muted)">
-        {{ $direction === Note::CREDIT
-            ? __('accounts::note.credit_hint')
-            : __('accounts::note.debit_hint') }}
-    </p>
-
-    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        {{-- ⭐ সাধারণ টুলবার — খোঁজা, কলাম, রপ্তানি, ছাপা (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe");
-             ⓘ ট্যাবটা লুকানো ঘরে, যাতে খুঁজলে ক্রেডিট/ডেবিট না হারায় --}}
-        <form method="GET" class="contents">
-            <input type="hidden" name="direction" value="{{ $direction }}">
-            <x-ui.toolbar :title="$tabs[$direction] ?? __('accounts::note.title')" :filter="false"
+    {{-- ⭐ রঙিন কার্ড নেই, তালিকা আর ডান পাশের ছাঁকনি — সব তালিকায় এক ছাঁচ ([[filter-layout]]) --}}
+    <x-ui.filter-layout :filters="$filters" form="list-form" :noun="__('accounts::note_list.noun')">
+    <div data-boxed data-note-list="{{ $type }}"
+         class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :title="$title"
                           :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])"
-                          :columns="$columns" :sort="$sortOptions" />
+                          :columns="$columns" :sort="$sortOptions" :facets="$filters"
+                          :search-placeholder="__('accounts::note_list.search')">
+                <x-slot:actions>
+                    @can('accounts.note.manage')
+                        <x-ui.button tone="primary" icon="plus" :href="route('accounts.note.'.$type.'.create')" data-note-new>
+                            {{ __('accounts::note.new_'.$type) }}
+                        </x-ui.button>
+                    @endcan
+                </x-slot:actions>
+            </x-ui.toolbar>
         </form>
 
-        <x-ui.table :rows="$rows" :columns="$columns" :empty="__('accounts::note.none_yet')"
+        <x-ui.table :rows="$rows" :columns="$columns"
+                    :empty="$q ? __('core.empty.no_results') : __('accounts::note.none_yet')"
                     :grand="$grand ?? []"
+                    :compact="\App\Core\Support\Ui::compact()"
                     :view-url="fn ($n) => route('accounts.note.show', $n)" />
 
         <x-ui.pager :rows="$rows" />
-        <x-ui.list-totals :rows="$rows" :grand="$grand ?? []" :columns="$columns" />
+
+        {{-- ⛔ মোট কেবল পাকা নোটের — খসড়া আর অপেক্ষমাণ আলাদা লাইনে ([[CollectionController]]-এর একই ছাঁচ) --}}
+        <x-ui.list-totals :totals="[
+            ['value' => __('core.list.rows', ['count' => number_format($totals['rows'])])],
+            ['label' => __('accounts::note_list.total_posted'), 'value' => Money::format($totals['money'])],
+            ['label' => __('accounts::note_list.total_waiting'), 'value' => $countMoney($totals['waiting'])],
+            ['label' => __('accounts::note_list.total_drafts'), 'value' => $countMoney($totals['drafts'])],
+        ]" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

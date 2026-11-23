@@ -12,6 +12,8 @@ import { railFit } from '../rail-fit.js'
 import { copilotQuick } from './copilot.js'
 // ⭐ "ABOS" রূপের মডিউল-তালিকা — কেবল কম্পোনেন্টটা ([[chrome/rose.blade.php]])
 import { modulePicker } from '../module-picker.js'
+// ⭐ নোট আর স্টক ছাড়া ভাউচারের সারির ছক — কেবল কম্পোনেন্টটা; money/figures/plain সাহায্যকারী, x-data নয় (নকশা v5)
+import { tradeLines } from './trade-lines.js'
 
 /*
  * প্রতিটা নামওয়ালা কম্পোনেন্ট এক জায়গায় নিবন্ধিত — ব্লেড কেবল নামটা ডাকে।
@@ -22,7 +24,7 @@ import { modulePicker } from '../module-picker.js'
  * ওটাকে সরাসরি পায়।
  */
 // ⓘ rail-fit.js-এর সাহায্যকারীগুলো (hideOrder, fitRail…) x-data নয় — তাই কেবল কম্পোনেন্টটা
-const modules = [shell, money, forms, screens, pos, documents, collection, { railFit }, { copilotQuick }, { modulePicker }]
+const modules = [shell, money, forms, screens, pos, documents, collection, { railFit }, { copilotQuick }, { modulePicker }, { tradeLines }]
 
 /*
  * ব্রাউজারের কয়েকটা ফাংশন, পর্দা থেকে ডাকার মতো করে।

@@ -77,10 +77,16 @@ final class ANoteCouldOnlyReachTwoKindsOfPartyTest extends TestCase
         $provider = $this->provider();
         $this->owe($provider, StandardChart::TRANSPORT_PAYABLE, '900');
 
-        $page = $this->get(route('accounts.note.create', ['direction' => Note::CREDIT, 'kind' => Note::KIND_SERVICE_PROVIDER, 'party_id' => $provider->id]))
-            ->assertOk()->getContent();
-        $this->assertMatchesRegularExpression('/value="'.$this->id(StandardChart::TRANSPORT_PAYABLE).'"\s+selected/', $page, '⛔ বকেয়ার খাত আগে থেকে বাছা নেই।');
-        $this->assertMatchesRegularExpression('/value="'.$this->id(StandardChart::RENT).'"\s+selected/', $page, '⛔ শেষ বিলের খরচের খাত আগে থেকে বাছা নেই।');
+        /*
+         * ⓘ ফর্মের "আগে থেকে বাছা খাত" দাবিটা গেল — নকশা v5 (২৩ নভেম্বর ২০২৬): নতুন ফর্মে পক্ষের খাত/অন্য পাশের বাছাই নেই, সারির
+         * ছক; আর নোটের তিন পাতায় সেবাদাতা ধরন নেই ([[Note::TYPE_KINDS]])। পুরনো এক-অঙ্কের পথ (API) সেবাদাতায় আগের মতোই চলে — নিচে।
+         */
+        $this->assertSame($this->id(StandardChart::TRANSPORT_PAYABLE),
+            (int) app(\App\Modules\Accounts\Services\NoteAccounts::class)->defaultControl(Note::KIND_SERVICE_PROVIDER, (int) $provider->id),
+            '⛔ বকেয়ার খাত আগে থেকে বাছা নেই।');
+        $this->assertSame($this->id(StandardChart::RENT),
+            (int) app(\App\Modules\Accounts\Services\NoteAccounts::class)->defaultOther(Note::KIND_SERVICE_PROVIDER, Note::CREDIT, (int) $provider->id),
+            '⛔ শেষ বিলের খরচের খাত আগে থেকে বাছা নেই।');
 
         $lines = $this->confirm(['direction' => Note::CREDIT, 'party_kind' => Note::KIND_SERVICE_PROVIDER, 'party_id' => $provider->id,
             'other_account_id' => $this->id(StandardChart::RENT)]);
@@ -151,11 +157,13 @@ final class ANoteCouldOnlyReachTwoKindsOfPartyTest extends TestCase
         $vendor = $this->vendor();
         $provider = $this->provider();
 
-        $page = fn (string $kind) => $this->get(route('accounts.note.create', ['direction' => Note::CREDIT, 'kind' => $kind]))->assertOk()->viewData('parties');
+        // ⓘ নোটের তিন পাতা (নকশা v5, ২৩ নভেম্বর ২০২৬) — সরবরাহকারীর ডেবিট নোটের ফর্ম; সেবাদাতার তালিকা পক্ষের খাতের সেবা থেকে
+        $page = fn (string $kind) => $this->get(route('accounts.note.dn.create', ['kind' => $kind]))->assertOk()->viewData('parties');
         $ids = fn (array $options) => array_map(fn ($o) => (int) $o['id'], $options);
+        $providers = app(\App\Modules\Accounts\Services\NoteAccounts::class)->partyOptions(Note::KIND_SERVICE_PROVIDER);
 
-        $this->assertContains((int) $provider->id, $ids($page(Note::KIND_SERVICE_PROVIDER)));
-        $this->assertNotContains((int) $vendor->id, $ids($page(Note::KIND_SERVICE_PROVIDER)), '⛔ সেবাদাতার তালিকায় পণ্যের সরবরাহকারী।');
+        $this->assertContains((int) $provider->id, $ids($providers));
+        $this->assertNotContains((int) $vendor->id, $ids($providers), '⛔ সেবাদাতার তালিকায় পণ্যের সরবরাহকারী।');
         $this->assertContains((int) $vendor->id, $ids($page(Note::KIND_SUPPLIER)));
         $this->assertNotContains((int) $provider->id, $ids($page(Note::KIND_SUPPLIER)), '⛔ সরবরাহকারীর তালিকায় সেবাদাতা।');
     }

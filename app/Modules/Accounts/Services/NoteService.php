@@ -503,11 +503,12 @@ final class NoteService
             (string) $note->document_no,
         );
 
-        $byBillLine = collect($made['lines'])->keyBy('line_id');
+        // ⓘ ফেরতের সারি নোটের সারির একই ক্রমে বানানো — ক্রম ধরে মেলানো, যাতে একই বিলের সারি দুবার এলেও প্রতিটা নিজের অঙ্ক পায়
+        $made['lines'] = array_values($made['lines']);
         $returned = '0';
 
-        foreach ($moved as $line) {
-            $share = $byBillLine->get((int) $line->source_line_id);
+        foreach ($moved->values() as $i => $line) {
+            $share = $made['lines'][$i] ?? null;
             $amount = $share === null ? (string) $line->amount : bcadd((string) $share['amount'], '0', 4);
             $tax = $share === null ? (string) $line->vat_amount : bcadd((string) $share['tax'], '0', 4);
 
