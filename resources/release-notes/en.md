@@ -1,5 +1,15 @@
 # What's new
 
+## 1.3.10 — 23-11-2026
+
+- Copilot has its own full page: questions and answers on a big screen; each person's earlier talks are kept and open again later.
+- Bank matching: one bank line's money can now be matched to several deposit reports or receipts; the ticked total shows at once.
+- Two more modules are now one each: "System & Administration" (System Administration + Governance + Backup & Recovery) and "Communication" (Notifications + Messages and calls). No menu lost; old addresses and permissions unchanged.
+- WhatsApp and SMS to parties: send straight from a paper's page with a ready text; one book of who sent what to whom; due reminders and "money received" notes go out by themselves (when the owner turns them on).
+- Search: it searches after three letters; find a party by name, mobile, address or point; searching or paging a list changes only the list, not the whole page.
+- Reports run only on "Show" or Enter, not again on every field change.
+- Pages open faster, lists and dashboards above all; a new notice reaches the phone at once.
+
 ## 1.3.9 — 21-11-2026
 
 - Copilot's new live "Ai" mark: a small i with a golden dot, gently moving; in the three "ABOS" looks.
