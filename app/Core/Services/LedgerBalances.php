@@ -91,10 +91,51 @@ final class LedgerBalances
         return $this->loaded[$this->key($upto, $branchId)][$accountId] ?? null;
     }
 
+    /**
+     * ⭐ One leaf's raw sums, remembered for one read-only page (speed work, 23 Nov 2026).
+     *
+     * ⓘ Live /dashboard/finance asked the same leaf at the same date and branch again and again (182 single sums): a
+     * month's "before" date is the previous month's "to" date. ⛔ Only inside a [[ReadWindow]] — a GET/HEAD page being
+     * built, emptied by any ledger, account or till write — so a posting and a later read never share an answer;
+     * elsewhere `$load` runs every time, exactly as before.
+     *
+     * @template T
+     *
+     * @param  \Closure(): T  $load
+     * @return T
+     */
+    public function leaf(int $accountId, ?string $upto, ?int $branchId, \Closure $load): mixed
+    {
+        $generation = app(ReadWindow::class)->generation();
+
+        if ($generation === null) {
+            return $load();
+        }
+
+        if ($generation !== $this->leafGeneration) {
+            $this->leafGeneration = $generation;
+            $this->leaves = [];
+        }
+
+        $key = \App\Core\Support\CompanyContext::id().'|'.$accountId.'|'.$this->key($upto, $branchId);
+
+        if (! array_key_exists($key, $this->leaves)) {
+            $this->leaves[$key] = $load();
+        }
+
+        return $this->leaves[$key];
+    }
+
+    /** @var array<string, mixed> */
+    private array $leaves = [];
+
+    private ?int $leafGeneration = null;
+
     /** সব ভুলে যাওয়া — কেউ খাতায় লিখলে ডাকবেন। */
     public function forget(): void
     {
         $this->loaded = [];
+        $this->leaves = [];
     }
 
     private function key(?string $upto, ?int $branchId): string

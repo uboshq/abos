@@ -108,20 +108,24 @@ final class SignedButNotPosted
 
             try {
                 $table = (new $class)->getTable();
+                // ⭐ the table's columns read once, not once per question (speed work 23 Nov 2026: live home asked 25 times);
+                // ⓘ the same case-blind test Schema::hasColumn() makes
+                $columns = array_map('strtolower', Schema::getColumnListing($table));
+                $has = fn (string $column): bool => in_array(strtolower($column), $columns, true);
 
                 // ⓘ কেবল যে কাগজের "খসড়া" অবস্থা আর কোম্পানি আছে — গ্রাহকের সীমা বা ছকের মতো কাগজ এখানে আসে না
-                if (! Schema::hasColumn($table, 'status') || ! Schema::hasColumn($table, 'company_id')) {
+                if (! $has('status') || ! $has('company_id')) {
                     continue;
                 }
 
-                $label = Schema::hasColumn($table, 'document_no') ? 'document_no' : 'id';
-                $hasBranch = Schema::hasColumn($table, 'branch_id');
+                $label = $has('document_no') ? 'document_no' : 'id';
+                $hasBranch = $has('branch_id');
                 // ⛔ কোম্পানির ছাঁকনি হাতে — DB::table() গ্লোবাল স্কোপ মানে না ([[EveryRawQueryNamesItsCompanyTest]])
                 $found = DB::table($table)
                     ->where('company_id', CompanyContext::id())
                     ->whereIn('id', $rows->pluck('approvable_id')->all())
                     ->where('status', DocumentStatus::DRAFT)
-                    ->when(Schema::hasColumn($table, 'deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
+                    ->when($has('deleted_at'), fn ($q) => $q->whereNull('deleted_at'))
                     ->get(array_values(array_unique(array_filter(['id', $label, $hasBranch ? 'branch_id' : null]))))
                     ->keyBy(fn (object $d) => (int) $d->id);
                 $drafts = $found->map(fn (object $d) => $d->{$label})->all();

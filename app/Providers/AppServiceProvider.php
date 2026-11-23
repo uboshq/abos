@@ -86,6 +86,20 @@ class AppServiceProvider extends ServiceProvider
          * ⓘ ব্যতিক্রমের হুকের **আগে**: একজনকে ভুলে `invoice.create` দেওয়া থাকলেও নিয়মটা জেতে।
          * চাবির নিয়ম, তালিকা নয় — কাল নতুন মডিউলের `x.y.create`-ও আপনা থেকে আটকায়।
          */
+        /*
+         * ⭐ A read-only page remembers each permission answer once ([[GateMemo]], speed work 23 Nov 2026) — first in the
+         * line, so a remembered answer is the gate's own final answer (stored by the `after` hook below, after the
+         * dealer wall, the overrides and spatie all spoke). Outside a GET/HEAD request it never answers.
+         */
+        $this->app->singleton(\App\Core\Services\ReadWindow::class);
+        $this->app->singleton(\App\Core\Services\GateMemo::class);
+        Gate::before(fn ($user, string $ability, array $arguments = []): mixed => app(\App\Core\Services\GateMemo::class)->recall($user, $ability, $arguments));
+        Gate::after(function ($user, string $ability, mixed $result, array $arguments = []): mixed {
+            app(\App\Core\Services\GateMemo::class)->remember($user, $ability, $result, $arguments);
+
+            return null;
+        });
+
         Gate::before(fn (User $user, string $ability): ?bool => CompanyContext::id() === null
             ? null
             : app(\App\Core\Services\DealerScope::class)->mayDo($user, $ability));
@@ -268,6 +282,12 @@ class AppServiceProvider extends ServiceProvider
          * আগে-তোলা তথ্যটা পরের ডাকে আর থাকত না।
          */
         $this->app->scoped(LedgerBalances::class);
+
+        // ⭐ the chart's code lookups and tree, once per request ([[AccountLookups]], speed work 23 Nov 2026)
+        $this->app->scoped(\App\Modules\Accounts\Services\AccountLookups::class);
+
+        // ⭐ dashboard figures for five minutes per company, branch and user ([[DashboardFigureCache]], speed work 23 Nov 2026)
+        $this->app->scoped(\App\Core\Services\DashboardFigureCache::class);
     }
 
     /**
@@ -281,6 +301,31 @@ class AppServiceProvider extends ServiceProvider
          * বার্তা আর SQL-এর মানসহ দেখাত ([[FinanceControlController::jobs()]])। দাগ থাকলে পাতা কেবল নিজের কোম্পানিরটা দেখায়।
          */
         \Illuminate\Queue\Queue::createPayloadUsing(fn () => ['abos_company' => \App\Core\Support\CompanyContext::id()]);
+
+        /*
+         * ⭐ A chart, till or ledger write inside a read-only page empties the page's memories ([[ReadWindow::invalidate()]];
+         * speed work 23 Nov 2026) — [[AccountLookups]] and the leaf balances in [[LedgerBalances]] are then asked again.
+         */
+        foreach ([\App\Modules\Accounts\Models\Account::class, \App\Modules\Accounts\Models\CashTill::class, \App\Models\LedgerEntry::class,
+            \App\Modules\Inventory\Models\Warehouse::class, \App\Models\Branch::class, \App\Models\BranchModule::class] as $model) {
+            foreach (['saved', 'deleted'] as $event) {
+                $model::{$event}(static fn () => app(\App\Core\Services\ReadWindow::class)->invalidate());
+            }
+        }
+
+        /*
+         * ⭐ Posting busts the remembered dashboard figures of its company ([[DashboardFigureCache]]; speed work 23 Nov 2026) —
+         * a ledger row (every posting, [[PostingEngine]]), a stock movement (the only door, [[StockService]]) or an approval
+         * that moved. ⓘ After the transaction commits; a rolled-back write moves nothing.
+         */
+        foreach ([\App\Models\LedgerEntry::class, \App\Modules\Inventory\Models\StockMovement::class, \App\Models\Approval::class] as $model) {
+            foreach (['saved', 'deleted'] as $event) {
+                $model::{$event}(static fn ($row) => \App\Core\Services\DashboardFigureCache::bust(
+                    isset($row->company_id) ? (int) $row->company_id : \App\Core\Support\CompanyContext::id()));
+            }
+        }
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Database\Events\TransactionRolledBack::class,
+            static fn () => \App\Core\Services\DashboardFigureCache::rolledBack());
 
         /*
          * ⭐ `database` সেশনের `user_id` কেবল কর্মীর — পোর্টালের গ্রাহকের id নয় ([[StaffSessionHandler]],

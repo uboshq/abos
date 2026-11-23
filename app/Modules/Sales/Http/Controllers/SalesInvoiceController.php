@@ -129,9 +129,15 @@ class SalesInvoiceController extends Controller implements HasMiddleware
             ->selectRaw('COALESCE(SUM(LEAST(b.total, b.collected_total + b.voucher_total)), 0) AS s')
             ->value('s') ?? '0');
 
+        $menu = $this->menu->forUser($request->user());
+        $invoices = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
+
+        // ⭐ the row menus' "due" in seven queries for the page, not seven per row ([[SalesInvoice::primeDue()]]; speed work 23 Nov 2026)
+        SalesInvoice::primeDue($invoices->getCollection());
+
         return view('sales::invoice.index', [
-            'menu' => $this->menu->forUser($request->user()),
-            'invoices' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
+            'menu' => $menu,
+            'invoices' => $invoices,
             'totals' => [
                 'rows' => (clone $totalled)->count(),
                 'money' => $money,

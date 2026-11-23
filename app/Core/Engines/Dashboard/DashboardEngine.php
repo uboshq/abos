@@ -59,10 +59,10 @@ final class DashboardEngine
             reminders: $this->remindersFor($module, $user),
             search: $definition->search !== null && $user->can($definition->search['permission']) ? $definition->search : null,
             // ⓘ মডিউলের নিজের অংশ — চাবি থাকলে (মালিক, ৯ নভেম্বর ২০২৬: অর্থের চলতি মূলধন)
-            sections: array_values(array_filter($definition->sections,
+            sections: $this->rememberedSections($moduleCode, array_values(array_filter($definition->sections,
                 // ⓘ একটা চাবি বা কয়েকটা — কয়েকটা হলে সবগুলোই লাগে (মজুদের দামের সারি: মজুদ দেখা + খরচ দেখা)
                 fn (array $section) => ! isset($section['permission'])
-                    || collect((array) $section['permission'])->every(fn (string $key) => $user->can($key)))),
+                    || collect((array) $section['permission'])->every(fn (string $key) => $user->can($key)))), $user),
             board: $definition->board,
         );
     }
@@ -116,12 +116,19 @@ final class DashboardEngine
                 continue;
             }
 
-            $definition = $provider::dashboard();
-            $stats = $this->allowed($definition->stats, $user);
+            /*
+             * ⭐ The module's face (its figures, charts and home list), remembered five minutes for this user's scope
+             * ([[DashboardFigureCache]]; speed work 23 Nov 2026 — live home spent 1.7 s here). ⛔ The masks below still run
+             * on every page against the user of now; a face holding a closure is never stored and is counted every time.
+             */
+            $face = $this->faceOf($module->code, $provider, $user);
+            $stats = $this->allowed($face['stats'], $user);
 
             if ($stats === [] || $stats[0]->value === Stat::HIDDEN) {
                 continue;
             }
+
+            $definition = (object) ['panels' => $face['panels'], 'listings' => $face['listing'] === null ? [] : [$face['listing']]];
 
             $out[] = [
                 'module' => $module->code,
@@ -146,6 +153,55 @@ final class DashboardEngine
         }
 
         return $out;
+    }
+
+    /**
+     * A module's face for the home page — its stats (unmasked), its charts and the list it marks for home.
+     *
+     * @param  class-string<ProvidesDashboard>  $provider
+     * @return array{stats: list<Stat>, panels: list<mixed>, listing: Listing|null}
+     */
+    private function faceOf(string $code, string $provider, ?User $user): array
+    {
+        $compute = function () use ($provider): array {
+            $definition = $provider::dashboard();
+
+            return [
+                'stats' => $definition->stats,
+                'panels' => $definition->panels,
+                'listing' => collect($definition->listings)->first(fn (Listing $listing): bool => $listing->onHome),
+            ];
+        };
+
+        return $user !== null && $user->is(auth()->user())
+            ? app(\App\Core\Services\DashboardFigureCache::class)->remember('face|'.$code, $compute)
+            : $compute();
+    }
+
+    /**
+     * ⭐ A section's figures (a Closure in `data`) remembered five minutes for this user's scope ([[DashboardFigureCache]];
+     * speed work 23 Nov 2026 — live /dashboard/finance spent 4.3 s drawing its seven rows). ⛔ The section's key is still
+     * checked on every page before it is drawn; a figure that cannot be stored is counted every time.
+     *
+     * @param  list<array<string, mixed>>  $sections
+     * @return list<array<string, mixed>>
+     */
+    private function rememberedSections(string $code, array $sections, ?User $user): array
+    {
+        if ($user === null || ! $user->is(auth()->user())) {
+            return $sections;
+        }
+
+        return array_map(function (array $section) use ($code): array {
+            $data = $section['data'] ?? null;
+
+            if ($data instanceof \Closure) {
+                $part = 'section|'.$code.'|'.($section['view'] ?? '?');
+                $section['data'] = fn (): mixed => app(\App\Core\Services\DashboardFigureCache::class)->remember($part, $data);
+            }
+
+            return $section;
+        }, $sections);
     }
 
     /** মডিউলটা আদৌ ড্যাশবোর্ড ঘোষণা করেছে কি না। */
