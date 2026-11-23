@@ -77,6 +77,11 @@ final class MasterHealth
                 'new_today' => (string) (clone $rows)->whereDate($table.'.created_at', now()->toDateString())->count(),
                 'new_month' => (string) (clone $rows)->whereBetween($table.'.created_at',
                     [now()->startOfMonth()->toDateTimeString(), now()->endOfDay()->toDateTimeString()])->count(),
+                // ⓘ এ মাসের নতুন, দিন ধরে — JSON {"দিন": গোনা}; মাস্টার ডেটার "এ মাসে নতুন" স্তূপ-এলাকা পড়ে (নমুনা, ২৩ নভেম্বর ২০২৬)
+                'new_by_day' => (string) json_encode((clone $rows)->reorder()->whereBetween($table.'.created_at',
+                    [now()->startOfMonth()->toDateTimeString(), now()->endOfDay()->toDateTimeString()])
+                    ->selectRaw('DAY('.$table.'.created_at) as d, COUNT(*) as n')->groupByRaw('DAY('.$table.'.created_at)')
+                    ->toBase()->pluck('n', 'd')->map(fn ($n) => (int) $n)->all()),
             ],
         );
     }

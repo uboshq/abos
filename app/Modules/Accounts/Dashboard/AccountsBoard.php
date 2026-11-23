@@ -120,7 +120,10 @@ final class AccountsBoard
      * ⓘ বিক্রি = নিট বিক্রি (ফেরত ও আদায়ে ছাড় বাদ); অন্যান্য আয় = সব আয় − নিট বিক্রি; খরচ = সব খরচ − বিক্রীত পণ্যের খরচ, তার বেতন (5201) ও
      *   ভাড়া (5202) আলাদা। ⓘ নিট লাভ = সব আয় − সব খরচ — লাভ-ক্ষতির হিসাবের একই সংখ্যা।
      *
-     * @return array{sales: string, cogs: string, gross: string, people: string, other_cost: string, other_income: string, net: string}
+     * ⓘ `last_net` = গত পুরো মাসের নিট লাভ — সেতুর মাথায় তুলনার জন্য (এ মাসের নিট লাভ গ্রাফের বোর্ডের প্রথম কার্ডে, তাই সেতুতে
+     *   আর আলাদা দণ্ড নয়; মালিক, ২৩ নভেম্বর ২০২৬: একই অঙ্ক দুইবার নয়)।
+     *
+     * @return array{sales: string, cogs: string, gross: string, people: string, other_cost: string, other_income: string, net: string, last_net: string}
      */
     public function pnl(): array
     {
@@ -131,8 +134,11 @@ final class AccountsBoard
         $cogs = self::moved([StandardChart::COST_OF_GOODS_SOLD], $from, $to);
         $expense = self::moved(['5000'], $from, $to);
         $people = self::moved([StandardChart::SALARY_EXPENSE, StandardChart::RENT], $from, $to);
+        $lastFrom = $from->copy()->subMonthNoOverflow();
+        $lastTo = $from->copy()->subDay();
 
         return [
+            'last_net' => bcsub(self::moved([StandardChart::INCOME], $lastFrom, $lastTo), self::moved(['5000'], $lastFrom, $lastTo), 4),
             'sales' => $sales,
             'cogs' => $cogs,
             'gross' => bcsub($sales, $cogs, 4),
@@ -235,8 +241,12 @@ final class AccountsBoard
     }
 
     /**
-     * ⭐ এক নজরে · আজকের হিসাব — ছয়টা সারি, প্রতিটা চাপলে তালিকা। ⓘ ছোট রেখা কেবল যেখানে খাতায় অতীত আছে (শেষ 7 দিন/মাস);
-     * যার অতীত খাতায় নেই (অপেক্ষার সংখ্যা), সেখানে রেখা আঁকা হয় না — আন্দাজের রেখা নয়।
+     * ⭐ এক নজরে · আজকের হিসাব — প্রতিটা সারি চাপলে তালিকা। ⓘ ছোট রেখা কেবল যেখানে খাতায় অতীত আছে (শেষ 7 দিন/মাস)।
+     *
+     * ⛔ মালিক, ২৩ নভেম্বর ২০২৬ (ড্যাশবোর্ড যাচাই, দফা ৪ — "একই অঙ্ক দুইবার নয়"): আগের ছয় সারির চারটা পাতায় আরেক জায়গায়ও ছিল —
+     *   অনুমোদনের অপেক্ষা (গ্রাফের "খাতার স্বাস্থ্য"), অনুমোদিত-পোস্ট-হয়নি আর ব্যাংকে না-মেলা (সমস্যা কেন্দ্র), এ মাসের নিট লাভ (গ্রাফের
+     *   প্রথম কার্ড)। সেগুলো এখানে আর নেই; নগদ + ব্যাংকের জের গ্রাফের "টাকা কোথায় আছে"-তে, তাই এখানে কেবল গত মাস-শেষের পর
+     *   কতটা বদলাল (৬ মাসের ছোট রেখাসহ) — সেটা আর কোথাও নেই।
      *
      * @return list<array{key: string, value: string, sub: string, delta: string, up: ?bool, line: list<float>, href: string}>
      */
@@ -253,14 +263,6 @@ final class AccountsBoard
 
         $todayPapers = Voucher::query()->where('created_at', '>=', $today)->get(['status']);
         $yesterday = $week[5];
-        $user = auth()->user();
-        $signed = $user === null ? [] : app(SignedButNotPosted::class)->papers($user);
-        $awaiting = app(\App\Modules\Accounts\Services\MonthEndChecklist::class)->run(\Carbon\CarbonImmutable::parse($today))[1]['count'] ?? 0;
-
-        $unmatched = BankStatementLine::query()->unmatched()->get(['bank_account_id', 'debit', 'credit']);
-        $pnl = $this->pnl();
-        $pnlBefore = self::moved([StandardChart::INCOME], $today->copy()->startOfMonth()->subMonthNoOverflow(), $today->copy()->startOfMonth()->subDay());
-        $lastNet = bcsub($pnlBefore, self::moved(['5000'], $today->copy()->startOfMonth()->subMonthNoOverflow(), $today->copy()->startOfMonth()->subDay()), 4);
 
         $money = fn (Carbon $at) => array_reduce(StandardChart::MONEY_PARENTS, fn (string $c, string $code) => bcadd($c, self::balanceAt($code, $at), 4), '0');
         $months = [];
@@ -272,23 +274,17 @@ final class AccountsBoard
         $nowMoney = $money($today);
         $months[] = (float) $nowMoney;
         $lastMonthEnd = $months[5];
+        // ⓘ বদল টাকায় bcmath-এ — রেখার float কেবল আঁকার মাপ
+        $change = bcsub($nowMoney, $money($today->copy()->startOfMonth()->subDay()), 4);
 
         return [
             ['key' => 'today', 'value' => (string) $todayPapers->count(),
                 'sub' => (string) __('accounts::board.g.today_sub', ['d' => $todayPapers->where('status', DocumentStatus::DRAFT)->count(), 'p' => $todayPapers->where('status', DocumentStatus::CONFIRMED)->count()]),
                 'delta' => $yesterday > 0 ? (string) __('accounts::board.g.vs_yesterday', ['pct' => (int) round(($todayPapers->count() - $yesterday) / $yesterday * 100)]) : '',
                 'up' => $todayPapers->count() >= $yesterday, 'line' => $week, 'href' => self::link('accounts.voucher.list')],
-            ['key' => 'awaiting', 'value' => (string) $awaiting, 'sub' => '', 'delta' => '', 'up' => null, 'line' => [], 'href' => self::link('approval.inbox.index')],
-            ['key' => 'signed', 'value' => (string) count($signed), 'sub' => implode(', ', array_slice(array_values($signed), 0, 2)), 'delta' => '', 'up' => null, 'line' => [], 'href' => self::link('approval.inbox.signed_unposted')],
-            ['key' => 'bank', 'value' => (string) $unmatched->count(),
-                'sub' => (string) __('accounts::board.p.bank_detail', ['n' => $unmatched->groupBy('bank_account_id')->count(), 'value' => self::short($unmatched->reduce(fn (string $c, $l) => bcadd($c, bcadd((string) $l->debit, (string) $l->credit, 4), 4), '0'))]),
-                'delta' => '', 'up' => null, 'line' => [], 'href' => self::link('accounts.reconciliation.index')],
-            ['key' => 'profit', 'value' => self::short($pnl['net']),
-                'sub' => bccomp($pnl['sales'], '0', 4) > 0 ? (string) __('accounts::board.g.profit_sub', ['pct' => bcdiv(bcmul($pnl['net'], '100', 4), $pnl['sales'], 1)]) : '',
-                'delta' => (string) __('accounts::board.g.last_month', ['value' => self::short($lastNet)]), 'up' => bccomp($pnl['net'], $lastNet, 4) >= 0, 'line' => [], 'href' => self::link('accounts.balance_sheet')],
-            ['key' => 'money', 'value' => self::short($nowMoney), 'sub' => '',
+            ['key' => 'money', 'value' => (bccomp($change, '0', 4) > 0 ? '+' : '').self::short($change), 'sub' => (string) __('accounts::board.g.money_sub'),
                 'delta' => $lastMonthEnd > 0 ? (string) __('accounts::board.g.vs_month', ['pct' => number_format((((float) $nowMoney) - $lastMonthEnd) / $lastMonthEnd * 100, 1, '.', '')]) : '',
-                'up' => (float) $nowMoney >= $lastMonthEnd, 'line' => $months, 'href' => self::link('accounts.custody')],
+                'up' => bccomp($change, '0', 4) >= 0, 'line' => $months, 'href' => self::link('accounts.custody')],
         ];
     }
 
@@ -462,7 +458,10 @@ final class AccountsBoard
     }
 
     /**
-     * ⭐ আয় বনাম খরচ · 12 মাস — মাসে সব আয় আর সব খরচ (লাভ-ক্ষতির খাতা থেকে); চলতি মাস আজ পর্যন্ত।
+     * ⭐ আয় বনাম খরচ · আগের 6 মাস — মাসে সব আয় আর সব খরচ (লাভ-ক্ষতির খাতা থেকে), 12 থেকে 7 মাস আগে।
+     *
+     * ⛔ মালিক, ২৩ নভেম্বর ২০২৬ (ড্যাশবোর্ড যাচাই, দফা ৪): আগে 12 মাস — তার শেষ ছয় মাস গ্রাফের বোর্ডের "আয় ও ব্যয় — 6 মাস"-এর হুবহু।
+     *   এখন কেবল গ্রাফে যে ছয় মাস নেই সেগুলো, তাই 12 মাস তবু দেখা যায়, কোনো মাস দুইবার নয়।
      *
      * @return list<array{month: int, income: string, expense: string}>
      */
@@ -470,9 +469,9 @@ final class AccountsBoard
     {
         $out = [];
 
-        for ($i = 11; $i >= 0; $i--) {
+        for ($i = 11; $i >= 6; $i--) {
             $from = Carbon::today()->startOfMonth()->subMonthsNoOverflow($i);
-            $to = $i === 0 ? Carbon::today() : $from->copy()->endOfMonth();
+            $to = $from->copy()->endOfMonth();
             $out[] = ['month' => (int) $from->month, 'income' => self::moved([StandardChart::INCOME], $from, $to), 'expense' => self::moved(['5000'], $from, $to)];
         }
 

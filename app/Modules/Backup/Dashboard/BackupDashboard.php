@@ -107,7 +107,7 @@ final class BackupDashboard implements ProvidesDashboard
             // ⓘ প্রথম চার্ট আগের জায়গাতেই — হোমে মডিউলের প্রথম চার্টটা বসে; নতুনটা তার পরে (৬ অক্টোবর ২০২৬)
             panels: [...self::monthsOfCopies(), ...self::lastThirtyDays()],
 
-            listings: [...self::destinations(), ...self::policies()],
+            listings: [...self::runsList(), ...self::destinations(), ...self::policies()],
 
             /*
              * ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 'bak': ক্যালেন্ডার, কাঁটা-মিটার, কলাম, বুলেট, সময়রেখা,
@@ -115,10 +115,11 @@ final class BackupDashboard implements ProvidesDashboard
              *   আসে না, আর "গন্তব্য" সংখ্যাটা আগের মতো নিচে থাকে।
              * ⓘ গ্রাফে নেই, তাই নিচে আগের মতো: মাসে মাসে নিরাপদ বনাম সমস্যা (6 মাস), গন্তব্যের তালিকা।
              */
+            // ⓘ রানের ফল (যাচাই-করা বনাম না) আর সব নীতির তালিকা ঢাকা নয় — গ্রাফে নেই বা অর্ধেক, তাই নিচে থাকে (নিরীক্ষা, ২৩ নভেম্বর ২০২৬)
             sections: [Card::board(fn (): array => self::charts($latestAt, $lastRun), covers: [
                 __('backup::dashboard.last_backup'), __('backup::dashboard.last_verified'),
-                __('backup::dashboard.latest_size'), __('backup::dashboard.last_30_days'),
-                ...(auth()->user()?->can('backup.configure') ? [__('backup::dashboard.destinations'), __('backup::dashboard.schedule')] : []),
+                __('backup::dashboard.latest_size'),
+                ...(auth()->user()?->can('backup.configure') ? [__('backup::dashboard.destinations')] : []),
             ])],
         );
     }
@@ -130,7 +131,7 @@ final class BackupDashboard implements ProvidesDashboard
      * ⓘ কাঁটা-মিটার: গত 30 দিনে যে রানগুলো ফাইল বানিয়েছে, তার কতগুলো সত্যিই ফিরিয়ে এনে দেখা গেছে (`test_restore` পাস)।
      * ⓘ বুলেট: প্রতিটা চালু গন্তব্যে গত 30 দিনের রানের কত ভাগ পৌঁছেছে (`destinations_ok`), লক্ষ্য 95%।
      * ⓘ সময়রেখা: এখন থেকে 24 ঘণ্টা — সার্ভারের রাতের ব্যাকআপ (`abos.backup.daily_at`) আর পর্দার চালু নীতি (ঘণ্টায়/প্রতিদিন)।
-     * ⓘ প্রবাহ: কে চালাল (রাতের নিয়ম/হাতে/ডিপ্লয়) → কী হলো (সব গন্তব্যে/আংশিক/কেবল এই মেশিনে/ব্যর্থ), গত 30 দিন।
+     * ⓘ প্রবাহ: কোন কপি (রাতের নিয়ম/হাতে/ডিপ্লয়) → কোথায় পৌঁছাল (গন্তব্য ধরে, বা কেবল এই সার্ভারে), গত 30 দিন — নমুনার "কোথায় কোন কপি"।
      * ⓘ ভাগ আর মাপ bcmath/intdiv-এ — float নয়।
      *
      * @return list<array<string, mixed>>
@@ -155,7 +156,8 @@ final class BackupDashboard implements ProvidesDashboard
         $safe = 0;
         for ($day = $today->copy()->startOfWeek(Carbon::SATURDAY)->subWeeks(4); $day->lte($today); $day->addDay()) {
             $ok = isset($safeDays[$day->toDateString()]) ? 1 : 0;
-            $safe += $ok;
+            // ⓘ মাথার "x / 30" কেবল শেষ 30 দিনের — ঘরগুলো শনিবার থেকে, তাই কয়েকটা দিন বেশি দেখা যায়
+            $safe += $day->greaterThanOrEqualTo($from) ? $ok : 0;
             $days[] = [$day->day, $ok];
         }
 
@@ -184,8 +186,8 @@ final class BackupDashboard implements ProvidesDashboard
         $latest = BackupRun::query()->where('status', 'success')->whereNotNull('bytes')->latest('started_at')->latest('id')->first();
 
         $cards = [
-            Card::make(__('backup::dashboard.daily_runs'), 'calendar', ['days' => $days, 'marks' => true, 'color' => '#16a34a'],
-                value: $safe.' / '.count($days), sub: __('backup::dashboard.calendar_hint', ['last' => $latestAt === null
+            Card::make(__('backup::dashboard.viz_runs'), 'calendar', ['days' => $days, 'marks' => true, 'color' => '#16a34a'],
+                value: $safe.' / 30', sub: __('backup::dashboard.calendar_hint', ['last' => $latestAt === null
                     ? __('core.backup.none_yet')
                     : __('core.backup.days_ago', ['days' => (int) $latestAt->diffInDays(now())])]),
                 href: route('backup.index'), colour: '#16a34a'),
@@ -228,7 +230,8 @@ final class BackupDashboard implements ProvidesDashboard
             $p[] = [(string) $d->name, $total === 0 ? '0' : bcdiv((string) $landed, (string) $total, 4), '0.95'];
         }
 
-        return Card::make(__('backup::dashboard.destinations_reach'), 'bullet', ['p' => $p],
+        // ⓘ নমুনার বুলেট গন্তব্যের ভরা জায়গা মাপে — গন্তব্যের মাপ (কত জায়গা) খাতায় নেই, তাই মাপ রানের কত ভাগ পৌঁছাল
+        return Card::make(__('backup::dashboard.viz_destinations'), 'bullet', ['p' => $p],
             value: (string) $active->count(), sub: __('backup::dashboard.destinations_chart_hint', ['count' => $total]),
             href: route('backup.destination.index'), colour: '#7c3aed');
     }
@@ -271,40 +274,95 @@ final class BackupDashboard implements ProvidesDashboard
             }
         }
 
-        return Card::make(__('backup::dashboard.schedule'), 'gantt', [
+        return Card::make(__('backup::dashboard.viz_schedule'), 'gantt', [
             'ticks' => (array) __('backup::dashboard.ticks'), 'today' => 0, 'p' => $p,
         ], sub: __('backup::dashboard.schedule_chart_hint'), href: route('backup.policy.index'), colour: '#f97316');
     }
 
     /**
-     * কে চালাল → কী হলো, গত 30 দিন (প্রবাহ) — আগের "গত 30 দিনের রান" ডোনাটের পাঁচ ভাগ এখানে ডানে (যাচাই-করা অংশ কাঁটা-মিটারে)।
+     * কোথায় কোন কপি — গত 30 দিন (প্রবাহ, নমুনার "কপি → গন্তব্য"): বাঁয়ে কোন কপি (রাতের নিয়মে / হাতে / আপডেটের আগে), ডানে কোথায় পৌঁছাল।
+     *
+     * ⓘ একটা রান যত গন্তব্যে পৌঁছায় (`destinations_ok`), তত কপি; `local_only` রানের কপি কেবল এই সার্ভারে। ব্যর্থ রানের কপি কোথাও নেই —
+     *   তার গোনা নিচের "গত 30 দিনের রান — ফল ধরে" চার্টে।
+     * ⛔ গন্তব্যের নাম কেবল `backup.configure`-এ (নিচের গন্তব্যের তালিকার একই চাবি); বাকিদের কাছে সব গন্তব্য মিলে "অন্য গন্তব্যে"।
      *
      * @param  \Illuminate\Support\Collection<int, BackupRun>  $recent
      * @return array<string, mixed>
      */
     private static function flowChart($recent, string $range): array
     {
-        $outcomes = ['success' => __('backup::dashboard.copies_safe_short'), 'partial' => __('backup::dashboard.run_partial'),
-            'local_only' => __('backup::dashboard.run_local_only'), 'failed' => __('backup::dashboard.run_failed')];
+        $names = auth()->user()?->can('backup.configure')
+            ? BackupDestination::query()->pluck('name', 'id')->map(fn ($n) => (string) $n)->all()
+            : null;
+        $here = (string) __('backup::dashboard.flow_this_server');
+        $away = (string) __('backup::dashboard.flow_elsewhere');
         $triggers = ['schedule' => __('backup::screen.trigger_schedule'), 'manual' => __('backup::screen.trigger_manual'), 'deploy' => __('backup::dashboard.trigger_deploy')];
 
-        $left = [];
-        foreach ($triggers as $t => $tLabel) {
-            foreach ($outcomes as $o => $oLabel) {
-                $n = $recent->filter(fn (BackupRun $r) => ($r->triggered_by ?? 'schedule') === $t && $r->status === $o)->count();
-                if ($n > 0) {
-                    $left[] = [(string) $tLabel, $n, (string) $oLabel];
-                }
+        $copies = [];
+        foreach ($recent as $r) {
+            $from = (string) ($triggers[$r->triggered_by ?? 'schedule'] ?? $triggers['schedule']);
+            $to = [];
+            if ($r->status === 'local_only') {
+                $to[] = $here;
+            }
+            foreach ((array) ($r->destinations_ok ?? []) as $d) {
+                $id = (int) ($d['id'] ?? 0);
+                $to[] = $names === null ? $away : ($names[$id] ?? '#'.$id);
+            }
+            foreach ($to as $place) {
+                $copies[$from][$place] = ($copies[$from][$place] ?? 0) + 1;
             }
         }
+
+        $left = [];
         $right = [];
-        foreach ($outcomes as $o => $oLabel) {
-            $right[] = [(string) $oLabel, $recent->where('status', $o)->count()];
+        foreach ($copies as $from => $places) {
+            foreach ($places as $place => $n) {
+                $left[] = [(string) $from, $n, (string) $place];
+                $right[$place] = ($right[$place] ?? 0) + $n;
+            }
+        }
+        arsort($right);
+
+        return Card::make(__('backup::dashboard.flow'), 'sankey', [
+            'left' => $left, 'right' => array_map(fn ($place, $n) => [(string) $place, $n], array_keys($right), array_values($right)),
+        ], value: (string) array_sum($right), sub: __('backup::dashboard.flow_hint', ['range' => $range]),
+            href: route('backup.index'), colour: '#14b8a6');
+    }
+
+    /**
+     * ⭐ ব্যাকআপের তালিকা — শেষ দশটা রান: কবে, কে চালাল, কী হলো, মাপ (নমুনার নিচের তালিকা, ২৩ নভেম্বর ২০২৬)।
+     * ⓘ ব্যাকআপের পর্দার একই খাতা (`bak_runs`); ফাইলের নাম বা পথ নয়। ⓘ নতুন ড্যাশবোর্ডের অংশ (config abos.dashboards_v2)।
+     *
+     * @return list<Listing>
+     */
+    private static function runsList(): array
+    {
+        if (! config('abos.dashboards_v2')) {
+            return [];
         }
 
-        return Card::make(__('backup::dashboard.flow'), 'sankey', ['left' => $left, 'right' => $right],
-            value: (string) $recent->count(), sub: __('backup::dashboard.flow_hint', ['range' => $range]),
-            href: route('backup.index'), colour: '#14b8a6');
+        return [new Listing(
+            label: __('backup::dashboard.runs_list'),
+            columns: [
+                ['key' => 'when', 'label' => __('backup::screen.col_when'), 'width' => '10rem',
+                    'render' => fn (BackupRun $r) => $r->started_at?->format('d M Y, H:i') ?? '—'],
+                ['key' => 'how', 'label' => __('backup::screen.col_how'), 'width' => '8rem',
+                    'render' => fn (BackupRun $r) => match ($r->triggered_by ?? 'schedule') {
+                        'manual' => __('backup::screen.trigger_manual'),
+                        'deploy' => __('backup::dashboard.trigger_deploy'),
+                        default => __('backup::screen.trigger_schedule'),
+                    }],
+                ['key' => 'result', 'label' => __('backup::screen.col_result'),
+                    'render' => fn (BackupRun $r) => in_array($r->status, ['success', 'partial', 'local_only', 'failed', 'running'], true)
+                        ? __('backup::screen.status_'.$r->status) : (string) $r->status],
+                ['key' => 'size', 'label' => __('backup::dashboard.col_size'), 'width' => '7rem',
+                    'render' => fn (BackupRun $r) => $r->bytes === null ? '—' : self::size((int) $r->bytes)],
+            ],
+            rows: BackupRun::query()->latest('started_at')->latest('id')->limit(10)->get(),
+            empty: __('backup::dashboard.runs_list_empty'),
+            href: route('backup.index'),
+        )];
     }
 
     /**

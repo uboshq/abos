@@ -119,7 +119,8 @@ final class SupplierDashboard implements ProvidesDashboard
             sections: [Card::board(fn (): array => self::charts($total, $active, $inactive, $new), covers: [
                 __('supplier::dashboard.total'), __('supplier::dashboard.active'), __('supplier::dashboard.inactive'),
                 __('supplier::dashboard.new_this_month'), __('supplier::dashboard.ageing'), __('supplier::dashboard.most_owed'),
-                __('supplier::dashboard.performance'),
+                // ⓘ "সরবরাহকারীর কাজ — শীর্ষ পাঁচ" আর ঢাকা নয়: বাবল কেবল % দেখায়, তালিকার কেনা-টাকা, দেরির সংখ্যা আর ফেরত-টাকা হারাত
+                //   (ড্যাশবোর্ড যাচাই, ২৩ নভেম্বর ২০২৬, দফা ৭) — তালিকাটা নিচে
             ])],
         );
     }
@@ -141,6 +142,7 @@ final class SupplierDashboard implements ProvidesDashboard
         // ── দেনার বয়স — বয়সের রিপোর্টটাই (বড় চারজন আর সবাই মিলে), রিপোর্টের চাবিতে ([[ageing()]]-এর একই ডাক)
         $ageRows = [];
         $agePayable = null;
+        $ageTotals = [];
         // ⛔ লাইভ 1.3.7 (২১ নভেম্বর ২০২৬): গ্রাফের বোর্ড সুইচ বন্ধেও আঁকা হয়, অথচ এই তিন কার্ড (বয়স, সবচেয়ে বেশি দেনা, সময়মতো মাল) নতুন-ড্যাশবোর্ডের
         //   সুইচ দেখত — তাই ৳47.7 লাখ দেনা থাকতেও ফাঁকা। ⭐ বোর্ডের কার্ড কেবল চাবি মানে; আগের চার্ট (`panels`) সুইচ মানে আগের মতো।
         if ($user?->can('supplier.report')) {
@@ -153,6 +155,7 @@ final class SupplierDashboard implements ProvidesDashboard
                 $ageRows[] = [$t('viz_all'), array_map(fn (string $b) => (string) ($result->totals[$b] ?? '0'), $buckets)];
             }
             $agePayable = (string) ($result->totals['payable'] ?? '0');
+            $ageTotals = array_map(fn (string $b) => (string) ($result->totals[$b] ?? '0'), $buckets);
         }
 
         // ── সবচেয়ে বেশি যাঁদের দিতে হবে — [[mostOwed()]]-এর একই পাঁচজন
@@ -178,9 +181,14 @@ final class SupplierDashboard implements ProvidesDashboard
                 'c' => (string) $total, 'cs' => $t('viz_total'),
                 'p' => [[$t('active'), $active, Svg::STATUS[0], (string) $active], [$t('inactive'), $inactive, '#94a3b8', (string) $inactive]],
             ], value: $t('viz_people', ['n' => $total]), sub: $t('viz_suppliers_sub', ['n' => $new]), href: route('supplier.index'), colour: Svg::PALETTE[0]),
-            Card::make($t('ageing'), 'stack100', ['rows' => $ageRows, 'colors' => Svg::STATUS],
+            /*
+             * ⓘ শিরোনাম নমুনার হুবহু ("দেনার বয়স"); ⭐ প্রতিটা ধাপের টাকা রঙের নামের পাশে — আগের বয়সের চার্ট ধাপে ধাপে টাকা দেখাত, গ্রাফ
+             *   কেবল % দেখায়, তাই টাকাটা হারিয়েছিল (ড্যাশবোর্ড যাচাই, ২৩ নভেম্বর ২০২৬, দফা ৭ ও ৯)। অঙ্ক বয়সের রিপোর্টের মোট, একই চাবিতে।
+             */
+            Card::make($t('viz_ageing'), 'stack100', ['rows' => $ageRows, 'colors' => Svg::STATUS],
                 value: $agePayable === null ? '' : $short($agePayable), sub: $t('viz_ageing_sub'),
-                legend: [[$t('viz_age_0'), Svg::STATUS[0]], [$t('viz_age_30'), Svg::STATUS[1]], [$t('viz_age_60'), Svg::STATUS[2]], [$t('viz_age_90'), Svg::STATUS[3]]],
+                legend: array_map(fn (string $key, int $i) => [$t($key).(isset($ageTotals[$i]) ? ' · '.$short($ageTotals[$i]) : ''), Svg::STATUS[$i]],
+                    ['viz_age_0', 'viz_age_30', 'viz_age_60', 'viz_age_90'], [0, 1, 2, 3]),
                 href: route('supplier.report.show', ['slug' => 'ageing']), colour: '#f97316'),
             Card::make($t('most_owed'), 'hbars', [
                 'v' => array_column($owed, 'amount'), 'l' => array_map(fn (array $r) => Str::limit($r['name'], 12), $owed),

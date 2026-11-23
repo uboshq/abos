@@ -113,6 +113,14 @@ final class MasterDataDashboard implements ProvidesDashboard
                     href: route('master_data.location.index'),
                 ),
 
+                // ⓘ ব্র্যান্ডের গোনা আগে কেবল নিচের "কতগুলো" চার্টে ছিল — সে চার্ট পাতায় ঢাকা (একক, কর, শ্রেণি উপরের ঘরেই), তাই এখানে
+                new Stat(
+                    label: __('master_data::menu.brands'),
+                    value: (string) Brand::query()->count(),
+                    hint: __('master_data::dashboard.brands_hint'),
+                    href: route('master_data.brand.index'),
+                ),
+
                 ...$health['stats'],
             ],
 
@@ -139,9 +147,12 @@ final class MasterDataDashboard implements ProvidesDashboard
             // ⓘ রেডিয়ালে চারটা তালিকা ধরে — কেবল ঐ চারটার নিজের ঘর ঢাকা পড়ে, পঞ্চমটা নিচে থাকে
             // ⛔ লাইভ 1.3.7 (২১ নভেম্বর ২০২৬): `lists()` সুইচ বন্ধে খালি, অথচ বোর্ড দুই অবস্থাতেই আঁকা হয় — ছয়টা কার্ডই "এই সময়ে কিছু নেই"।
             //   ⭐ বোর্ড নিজের জন্য তালিকাগুলো পড়ে (সুইচ চালু থাকলে উপরের একই ফল, আবার গোনা নয়)
+            // ⓘ একক, কর, শ্রেণির গোনা উপরের ঘরে আর নিচের "কতগুলো" চার্টে — দুইবার; চার্টটা ঢাকা (হোম আর ফোন আগের মতো পড়ে), ব্র্যান্ড ঘরে
+            // ⓘ বন্ধ সারির সংখ্যা ঢাকা নয় — গ্রাফে কেবল %, সংখ্যা নিচের কলামে (নিরীক্ষা, ২৩ নভেম্বর ২০২৬)
             sections: [Card::board(fn (): array => self::charts($lists !== [] ? $lists : self::lists(board: true)), covers: [
+                __('master_data::dashboard.how_full'),
                 __('master_data::dashboard.quality_score'), __('master_data::dashboard.missing'),
-                __('master_data::dashboard.same'), __('master_data::dashboard.inactive'),
+                __('master_data::dashboard.same'),
                 __('master_data::dashboard.new_month'),
                 ...array_map(fn ($w) => $w->label, array_slice($lists, 0, 4)),
             ])],
@@ -150,7 +161,7 @@ final class MasterDataDashboard implements ProvidesDashboard
 
     /**
      * ⭐ মাস্টার ডেটার গ্রাফের বোর্ড — তালিকা ধরে পূর্ণতা (রেডিয়াল), ডেটার মান (রাডার), অসম্পূর্ণ সারি (আড়াআড়ি কলাম), একই ফোন বা নাম
-     *   (লোলিপপ), এ মাসে নতুন (কলাম), চালু বনাম বন্ধ (100% স্তূপ)। সবই প্রতিটা মডিউলের নিজের গোনা ([[MasterHealth]]) — চাবি মেনে।
+     *   (লোলিপপ), এ মাসে নতুন দিন ধরে (স্তূপ-এলাকা), চালু বনাম বন্ধ (100% স্তূপ)। সবই প্রতিটা মডিউলের নিজের গোনা ([[MasterHealth]]) — চাবি মেনে।
      *
      * @param  list<\App\Core\Dashboard\Widget>  $lists
      * @return list<array<string, mixed>>
@@ -161,32 +172,54 @@ final class MasterDataDashboard implements ProvidesDashboard
         // ⓘ গ্রাফে ছোট নাম — "সরবরাহকারী তালিকা" → "সরবরাহকারী" (রাডারের কোণে লম্বা নাম গ্রাফের উপর পড়ত)
         $labels = array_map(fn ($w) => (string) preg_replace('/\s+(তালিকা|list)$/iu', '', $w->label), $lists);
         $complete = array_map(fn ($w) => $n($w, 'active') === 0 ? 1 : $n($w, 'complete') / $n($w, 'active'), $lists);
-        $unique = array_map(fn ($w) => $n($w, 'active') === 0 ? 1 : 1 - $n($w, 'same') / $n($w, 'active'), $lists);
         $active = array_sum(array_map(fn ($w) => $n($w, 'active'), $lists));
         $whole = array_sum(array_map(fn ($w) => $n($w, 'complete'), $lists));
         $score = $active === 0 ? 100 : intdiv(100 * $whole, $active);
         $column = fn (string $key) => array_map(fn ($w) => $n($w, $key), $lists);
         $newMonth = $column('new_month');
+        $total = array_sum(array_map(fn ($w) => $n($w, 'total'), $lists));
+
+        // ⓘ ডেটার মান — নমুনার মতো অক্ষগুলো মানের দিক (তালিকা নয়), সব তালিকা মিলে, সারি ধরে ওজন। ⚠️ যেটার তথ্য আছে কেবল সেটা:
+        //   পূর্ণতা (দরকারি ঘর ভরা), অনন্যতা (একই ফোন/নাম নয়), চালু (বন্ধ নয়) — "সঠিকতা", "হালনাগাদ", "সংগতি" মাপার খাতা আজ নেই
+        $same = array_sum($column('same'));
+        $quality = $lists === [] ? [] : [
+            'axes' => [__('master_data::dashboard.axis_complete'), __('master_data::dashboard.axis_unique'), __('master_data::dashboard.axis_active')],
+            'sets' => [[
+                $active === 0 ? 1 : $whole / $active,
+                $active === 0 ? 1 : 1 - $same / $active,
+                $total === 0 ? 1 : $active / $total,
+            ]],
+        ];
+
+        // ⓘ এ মাসে নতুন — দিন ধরে, তালিকা ধরে স্তূপ ([[MasterHealth]]-এর `new_by_day`); প্রতিটা তালিকার মাসের মোট তার নামের পাশে
+        $today = (int) now()->day;
+        $byDay = array_map(function ($w) use ($today) {
+            $days = json_decode((string) ($w->parts['new_by_day'] ?? '{}'), true) ?: [];
+
+            return array_map(fn (int $d) => (int) ($days[$d] ?? $days[(string) $d] ?? 0), range(1, $today));
+        }, $lists);
+        $dayLabels = array_map(fn (int $d) => $d === 1 || $d === $today || $d % 7 === 1 ? (string) $d : '', range(1, $today));
+        $colours = array_map(fn (int $i) => Svg::PALETTE[$i % count(Svg::PALETTE)], array_keys($lists));
 
         return [
             Card::make(__('master_data::dashboard.complete_by_list'), 'radial', [
                 'p' => array_map(fn ($l, $c) => [$l, $c], array_slice($labels, 0, 4), array_slice($complete, 0, 4)),
             ], sub: __('master_data::dashboard.complete_by_list_hint'), colour: '#16a34a'),
-            Card::make(__('master_data::dashboard.quality_score'), 'radar', $lists === [] ? [] : [
-                'axes' => $labels, 'sets' => [$complete, $unique],
-            ], value: $lists === [] ? '' : $score.'%', sub: __('master_data::dashboard.quality_radar_hint'), legend: [
-                [__('master_data::dashboard.axis_complete'), Svg::PALETTE[0]], [__('master_data::dashboard.axis_unique'), Svg::PALETTE[1]],
-            ], colour: '#7c3aed'),
+            Card::make(__('master_data::dashboard.quality_score'), 'radar', $quality,
+                value: $lists === [] ? '' : $score.'%', sub: __('master_data::dashboard.quality_radar_hint'), legend: [
+                    [__('master_data::dashboard.all_lists'), Svg::PALETTE[0]],
+                ], colour: '#7c3aed'),
             Card::make(__('master_data::dashboard.missing'), 'hbars', [
                 'v' => $column('missing'), 'l' => $labels, 'color' => '#f97316',
             ], sub: __('master_data::dashboard.missing_board_hint'), colour: '#f97316'),
             Card::make(__('master_data::dashboard.same'), 'lollipop', [
                 'v' => $column('same'), 'l' => $labels,
             ], sub: __('master_data::dashboard.same_board_hint'), colour: '#e11d48'),
-            Card::make(__('master_data::dashboard.new_month'), 'bars', [
-                'v' => $newMonth, 'l' => $labels, 'color' => '#2160d8',
-            ], value: $lists === [] ? '' : number_format(array_sum($newMonth)), sub: __('master_data::dashboard.new_month_board_hint'), colour: '#2160d8'),
-            Card::make(__('master_data::dashboard.inactive'), 'stack100', [
+            Card::make(__('master_data::dashboard.new_month'), 'stackedArea', $lists === [] || $today < 2 ? [] : [
+                'series' => $byDay, 'colors' => $colours, 'l' => $dayLabels,
+            ], value: $lists === [] ? '' : number_format(array_sum($newMonth)), sub: __('master_data::dashboard.new_month_board_hint'),
+                legend: array_map(fn (string $l, int $k, string $c) => [$l.' · '.number_format($k), $c], $labels, $newMonth, $colours), colour: '#2160d8'),
+            Card::make(__('master_data::dashboard.viz_inactive'), 'stack100', [
                 'rows' => array_map(fn ($w, $l) => [$l, [$n($w, 'active'), $n($w, 'inactive')]], $lists, $labels),
                 'colors' => ['#16a34a', '#94a3b8'],
             ], sub: __('master_data::dashboard.inactive_board_hint'), legend: [

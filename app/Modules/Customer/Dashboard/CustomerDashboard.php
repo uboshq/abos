@@ -103,9 +103,10 @@ final class CustomerDashboard implements ProvidesDashboard
             ],
 
             // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 "ok"); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
+            // ⓘ মাসে মাসে নতুন আর তাঁদের কতজন এখনো সচল — বোর্ডের কলাম কেবল মাসের শেষে মোট দেখায়, তাই নিচে থাকে (নিরীক্ষা, ২৩ নভেম্বর ২০২৬)
             sections: [Card::board(fn (): array => self::charts(), covers: [
                 __('customer::dashboard.total'), __('customer::dashboard.active'), __('customer::dashboard.inactive'),
-                __('customer::dashboard.new_this_month'), __('customer::dashboard.growth'), __('customer::dashboard.ageing'),
+                __('customer::dashboard.new_this_month'), __('customer::dashboard.ageing'),
                 __('customer::dashboard.segments'),
             ])],
         );
@@ -137,27 +138,29 @@ final class CustomerDashboard implements ProvidesDashboard
             $totals[] = $running;
             $months[] = $month->translatedFormat('M');
         }
-        $newThisMonth = (int) ($added[$today->format('Y-m')] ?? 0);
         $cards[] = Card::make(__('customer::dashboard.viz_growth'), 'bars', [
             'v' => $totals, 'l' => $months, 'top' => array_map(fn (int $n) => number_format($n), $totals),
             'colors' => [...array_fill(0, max(count($totals) - 1, 0), '#93c5fd'), '#2160d8'],
         ], value: __('customer::dashboard.viz_people', ['n' => number_format($running)]),
-            sub: __('customer::dashboard.viz_growth_sub', ['n' => number_format($newThisMonth)]), href: route('customer.index'), colour: '#2160d8');
+            sub: __('customer::dashboard.viz_growth_sub'), href: route('customer.index'), colour: '#2160d8');
 
-        // ── অবস্থা — সচল, নিষ্ক্রিয়, বাকি বন্ধ (সচলের ভেতরের ভাগ, তাই যোগফল মোট গ্রাহক) ──────
+        // ── অবস্থা — সচল (বাকি খোলা), সচল কিন্তু বাকি বন্ধ, নিষ্ক্রিয়; যোগফল মোট গ্রাহক ──────
+        // ⓘ মাথায় আগের "সচল" ঘরের সংখ্যা (চালু সবাই, বাকি বন্ধসহ) — তাই ঘরের নাম বলে কোন সচল (নিরীক্ষা, ২৩ নভেম্বর ২০২৬)
         $state = Customer::query()->inViewedBranch()
             ->selectRaw('SUM(CASE WHEN customers.is_active = 1 AND customers.credit_blocked_at IS NULL THEN 1 ELSE 0 END) as on_,'
                 .' SUM(CASE WHEN customers.is_active = 0 THEN 1 ELSE 0 END) as off_,'
                 .' SUM(CASE WHEN customers.is_active = 1 AND customers.credit_blocked_at IS NOT NULL THEN 1 ELSE 0 END) as blocked_')
             ->toBase()->first();
         $parts = [
-            [__('customer::dashboard.active'), (int) ($state->on_ ?? 0)],
+            [__('customer::dashboard.viz_active_open'), (int) ($state->on_ ?? 0)],
             [__('customer::dashboard.inactive'), (int) ($state->off_ ?? 0)],
             [__('customer::dashboard.viz_blocked'), (int) ($state->blocked_ ?? 0)],
         ];
+        $active = (int) ($state->on_ ?? 0) + (int) ($state->blocked_ ?? 0);
         $cards[] = Card::make(__('customer::dashboard.viz_state'), 'waffle', [
             'p' => array_map(fn (array $p) => [$p[0], $p[1], number_format($p[1])], $parts),
-        ], sub: __('customer::dashboard.viz_state_sub'), href: route('customer.index'), colour: '#16a34a');
+        ], value: __('customer::dashboard.viz_active_n', ['n' => number_format($active)]),
+            sub: __('customer::dashboard.viz_state_sub'), href: route('customer.index'), colour: '#16a34a');
 
         // ── বাকির বয়স — বয়স রিপোর্টের যোগফল (নিচের পুরনো চার্টের একই উৎস) ──────────────
         $ageing = $money ? self::ageingTotals() : null;

@@ -12,11 +12,13 @@ use App\Core\Engines\Dashboard\DateRange;
 use App\Core\Engines\Dashboard\Listing;
 use App\Core\Engines\Dashboard\Stat;
 use App\Core\Engines\Dashboard\Tile;
+use App\Core\Security\LoginLock;
 use App\Core\Services\PermissionSyncer;
 use App\Core\Support\CompanyContext;
 use App\Models\AuditTrail;
 use App\Models\Company;
 use App\Models\ErrorEvent;
+use App\Models\LoginAttempt;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -150,8 +152,9 @@ final class SystemAdminDashboard implements ProvidesDashboard
         $covers = [__('system_admin::dashboard.last_backup')];
 
         if ($v2 && $viewer?->can('system_admin.user.manage')) {
+            // ⓘ "কী ধরনের বদল" ভাগটা ঢাকা নয় — গ্রাফে কেবল দিন ধরে মোট, ধরন নিচের কলামে (নিরীক্ষা, ২৩ নভেম্বর ২০২৬)
             array_push($covers, __('system_admin::menu.users'), __('system_admin::dashboard.who_gets_in'),
-                __('system_admin::dashboard.two_step'), __('system_admin::dashboard.access_changes'));
+                __('system_admin::dashboard.two_step'));
         }
         if ($v2 && self::superAdminHere()) {
             array_push($covers, __('system_admin::dashboard.jobs_queued'), __('system_admin::dashboard.jobs_failed'));
@@ -182,13 +185,21 @@ final class SystemAdminDashboard implements ProvidesDashboard
         $weekday = fn (Carbon $d) => $d->locale(app()->getLocale())->translatedFormat('D');
 
         if ($v2 && $viewer?->can('system_admin.user.manage')) {
-            // ব্যবহারকারীর অবস্থা — আগের চার্টের হুবহু চার ভাগ
+            // ব্যবহারকারীর অবস্থা — আগের চার্টের চার ভাগ, আর নমুনার "তালাবদ্ধ": এখন লগইনের তালায় আটকা ([[LoginLock]]) চালু মানুষ
+            //   নিজের ভাগ থেকে সরে তালাবদ্ধে — প্রতিজন ঠিক একটা ভাগে, যোগফল একই
+            $locked = self::lockedUsers();
             $who = self::whoCanGetIn(board: true)[0]->parts;
-            $everyone = array_sum(array_map(fn ($p) => (int) $p['value'], $who));
-            $tones = ['#16a34a', '#f59e0b', '#0ea5e9', '#94a3b8'];
+            $lockedFrom = $locked === [] ? null : self::userStates($locked);
+            $slices = [];
+            foreach (['live', 'idle', 'never'] as $k => $state) {
+                $slices[] = [$who[$k]['label'], (int) $who[$k]['value'] - (int) ($lockedFrom->{$state} ?? 0), ['#16a34a', '#f59e0b', '#0ea5e9'][$k]];
+            }
+            $slices[] = [__('system_admin::dashboard.users_locked'), $lockedFrom === null ? 0 : (int) $lockedFrom->live + (int) $lockedFrom->idle + (int) $lockedFrom->never, '#e11d48'];
+            $slices[] = [$who[3]['label'], (int) $who[3]['value'], '#94a3b8'];
+            $everyone = array_sum(array_column($slices, 1));
             $cards[] = Card::make(__('system_admin::dashboard.who_gets_in'), 'donut', [
                 'c' => number_format($everyone), 'cs' => __('system_admin::dashboard.users_word'),
-                'p' => array_map(fn ($p, $c) => [$p['label'], (int) $p['value'], $c, number_format((int) $p['value'])], $who, $tones),
+                'p' => array_map(fn ($p) => [$p[0], $p[1], $p[2], number_format($p[1])], $slices),
             ], value: number_format($everyone), sub: __('system_admin::dashboard.who_gets_in_board_hint'),
                 href: route('system_admin.user.index'), colour: '#2160d8');
 
@@ -220,7 +231,7 @@ final class SystemAdminDashboard implements ProvidesDashboard
                 ->selectRaw('DATE(created_at) as d, COUNT(*) as n')->groupBy('d')->toBase()->pluck('n', 'd');
             $days = array_map(fn ($i) => $from->copy()->addDays($i), range(0, 6));
             $changes = array_map(fn (Carbon $d) => (int) ($byDay[$d->toDateString()] ?? 0), $days);
-            $cards[] = Card::make(__('system_admin::dashboard.access_changes'), 'bars', [
+            $cards[] = Card::make(__('system_admin::dashboard.viz_access_changes'), 'bars', [
                 'v' => $changes, 'l' => array_map($weekday, $days), 'color' => '#7c3aed',
             ], value: number_format(array_sum($changes)), sub: __('system_admin::dashboard.access_changes_board_hint'), colour: '#7c3aed');
         }
@@ -233,6 +244,8 @@ final class SystemAdminDashboard implements ProvidesDashboard
                 ->selectRaw('SUM(CASE WHEN reserved_at IS NULL AND attempts > 0 THEN 1 ELSE 0 END) as retrying')
                 ->first();
             $failed = DB::table('failed_jobs')->count();
+            // ⓘ সারিতে মোট — নিচের পুরনো "পেছনের কাজ — অপেক্ষায়" ঘরের একই গোনা (jobs টেবিলের সব সারি), কার্ডের মাথায়
+            $queued = (int) ($jobs->waiting ?? 0) + (int) ($jobs->running ?? 0) + (int) ($jobs->retrying ?? 0);
             $steps = [
                 [__('system_admin::dashboard.jobs_waiting'), (int) ($jobs->waiting ?? 0)],
                 [__('system_admin::dashboard.jobs_running'), (int) ($jobs->running ?? 0)],
@@ -241,7 +254,8 @@ final class SystemAdminDashboard implements ProvidesDashboard
             ];
             $cards[] = Card::make(__('system_admin::dashboard.jobs'), 'funnel', [
                 'p' => array_map(fn ($s) => [$s[0], $s[1], number_format($s[1])], $steps),
-            ], sub: __('system_admin::dashboard.jobs_board_hint'), colour: '#0ea5e9');
+            ], value: __('system_admin::dashboard.jobs_in_queue', ['n' => number_format($queued)]),
+                sub: __('system_admin::dashboard.jobs_board_hint'), colour: '#0ea5e9');
         }
 
         if ($v2 && $viewer?->can('system_admin.settings.manage')) {
@@ -265,7 +279,8 @@ final class SystemAdminDashboard implements ProvidesDashboard
         // শেষ ব্যাকআপ — প্রতিদিন ফাইল আছে কি না, শনিবার থেকে পাঁচ সপ্তাহ, আজ পর্যন্ত (ফাইল দেখে, খাতা নয় — [[lastBackup()]]-এর নিয়ম)
         $start = $today->copy()->subDays((($today->dayOfWeek + 1) % 7) + 28);
         $perDay = [];
-        foreach (self::backupTimes() as $at) {
+        $times = self::backupTimes();
+        foreach ($times as $at) {
             $key = Carbon::createFromTimestamp($at, config('app.timezone'))->toDateString();
             $perDay[$key] = ($perDay[$key] ?? 0) + 1;
         }
@@ -273,9 +288,16 @@ final class SystemAdminDashboard implements ProvidesDashboard
         for ($d = $start->copy(); $d->lte($today); $d->addDay()) {
             $calendar[] = [(int) $d->format('j'), $perDay[$d->toDateString()] ?? 0];
         }
+        // ⓘ মাথায় ঘণ্টায়, নমুনার মতো ("2 ঘণ্টা আগে") — দুই দিনের বেশি হলে দিনে
+        $newest = $times === [] ? null : max($times);
+        $hours = $newest === null ? null : (int) Carbon::createFromTimestamp($newest, config('app.timezone'))->diffInHours(Carbon::now());
         $cards[] = Card::make(__('system_admin::dashboard.last_backup'), 'calendar', $perDay === [] ? [] : [
             'days' => $calendar, 'marks' => true, 'color' => '#16a34a',
-        ], value: $backup === null ? __('system_admin::dashboard.never') : __('system_admin::dashboard.days_ago', ['days' => $backup]),
+        ], value: match (true) {
+            $hours === null => __('system_admin::dashboard.never'),
+            $hours < 48 => __('system_admin::dashboard.hours_ago', ['hours' => $hours]),
+            default => __('system_admin::dashboard.days_ago', ['days' => (int) $backup]),
+        },
             sub: __('system_admin::dashboard.backup_board_hint'), href: route('backup.index'), colour: '#14b8a6');
 
         return $cards;
@@ -456,6 +478,7 @@ final class SystemAdminDashboard implements ProvidesDashboard
         }
 
         return [new Breakdown(
+            // ⓘ ধরন ধরে ভাগ — গ্রাফের "দিন ধরে" কার্ড থেকে আলাদা নাম, যাতে পাতায় নিচে থাকে
             label: __('system_admin::dashboard.access_changes'),
             parts: $rows->map(fn ($r) => ['label' => AuditTrail::actionInWords($r->action), 'value' => (string) (int) $r->n])->all(),
             hint: __('system_admin::dashboard.access_changes_hint', ['count' => (int) $rows->sum('n')]),
@@ -500,6 +523,51 @@ final class SystemAdminDashboard implements ProvidesDashboard
             chart: 'columns',
             range: DateRange::label($from, Carbon::today()),
         )];
+    }
+
+    /**
+     * এখন লগইনের তালায় আটকা এই কোম্পানির মানুষ — [[LoginLock::locked()]]-এর হুবহু নিয়ম।
+     *
+     * ⓘ সস্তা পথে: আগে দেখা হয় শেষ তালার সময়ের (15 মিনিট) মধ্যে কার নামে ভুল চেষ্টা আছে (এক প্রশ্ন); কেবল তাঁদের নাম তালাকে জিজ্ঞেস করা।
+     *
+     * @return list<int>
+     */
+    private static function lockedUsers(): array
+    {
+        if (CompanyContext::id() === null) {
+            return [];
+        }
+
+        // ⓘ চেষ্টার নিজের company_id নয় — তালা নাম ধরে, সব কোম্পানি মিলে; তাই ছাঁকনি "এই কোম্পানির সদস্য কি না"
+        $recent = LoginAttempt::query()
+            ->where('succeeded', false)
+            ->whereNotNull('user_id')
+            ->whereIn('user_id', DB::table('company_user')->where('company_user.company_id', CompanyContext::id())->select('company_user.user_id'))
+            ->where('created_at', '>=', Carbon::now()->subMinutes(LoginLock::MINUTES))
+            ->distinct()->get(['user_id', 'identifier']);
+
+        $lock = app(LoginLock::class);
+
+        return $recent->filter(fn (LoginAttempt $a) => $lock->locked((string) $a->identifier) !== null)
+            ->pluck('user_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+    }
+
+    /**
+     * কিছু মানুষের ভাগ — [[whoCanGetIn()]]-এর একই চার শর্ত, কেবল এই আইডিগুলোর।
+     *
+     * @param  list<int>  $ids
+     */
+    private static function userStates(array $ids): object
+    {
+        $since = Carbon::now()->subDays(30);
+
+        return User::query()
+            ->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
+            ->whereKey($ids)
+            ->selectRaw('SUM(CASE WHEN is_active = 1 AND last_login_at IS NULL THEN 1 ELSE 0 END) as never')
+            ->selectRaw('SUM(CASE WHEN is_active = 1 AND last_login_at < ? THEN 1 ELSE 0 END) as idle', [$since])
+            ->selectRaw('SUM(CASE WHEN is_active = 1 AND last_login_at >= ? THEN 1 ELSE 0 END) as live', [$since])
+            ->toBase()->first() ?? (object) ['never' => 0, 'idle' => 0, 'live' => 0];
     }
 
     /**

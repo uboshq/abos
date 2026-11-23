@@ -161,6 +161,7 @@ final class PurchaseDashboard implements ProvidesDashboard
                 ),
                 ...self::goodsNotYetIn(),
                 ...PurchaseCharts::listings(),
+                ...self::monthsBeforeTheChart(),
             ],
 
             /*
@@ -244,15 +245,16 @@ final class PurchaseDashboard implements ProvidesDashboard
             Card::make($t('viz_bought_paid'), 'line', $line + ['color' => Svg::PALETTE[0], 'c2' => '#f59e0b'],
                 value: $short($bought), sub: $t('viz_bought_paid_sub', ['paid' => Money::format($paid)]),
                 legend: [[$t('bought'), Svg::PALETTE[0]], [$t('paid'), '#f59e0b']], href: route('purchase.bill.index'), colour: Svg::PALETTE[0]),
-            Card::make($t('top_suppliers', ['year' => $today->year]), 'lollipop', [
+            // ⓘ শিরোনাম নমুনার হুবহু ("সবচেয়ে বেশি কেনা — সরবরাহকারী"), বছরটা নিচের লাইনে — ড্যাশবোর্ড যাচাই, ২৩ নভেম্বর ২০২৬ (দফা ৯)
+            Card::make($t('viz_top_suppliers'), 'lollipop', [
                 'v' => $top->map(fn (PurchaseBill $r) => (string) $r->amount)->all(),
                 'l' => $top->map(fn (PurchaseBill $r) => Str::limit($r->supplier?->name() ?? '—', 12))->all(),
                 'top' => $top->map(fn (PurchaseBill $r) => $short((string) $r->amount))->all(),
-            ], sub: $t('top_suppliers_hint'), href: route('purchase.bill.index'), colour: Svg::PALETTE[1]),
+            ], sub: $t('viz_top_suppliers_sub', ['year' => $today->year]), href: route('purchase.bill.index'), colour: Svg::PALETTE[1]),
             Card::make($t('viz_path'), 'funnel', ['p' => $funnel === null ? [] : array_map(
                 fn (array $part) => [$part['label'], (int) $part['value'], (string) $part['value']], $funnel->parts,
             )], sub: $t('viz_path_sub'), href: route('purchase.order.index'), colour: Svg::PALETTE[2]),
-            Card::make($t('payable'), 'bars', [
+            Card::make($t('viz_payable'), 'bars', [
                 'v' => $dues, 'l' => [$t('viz_due_later'), $t('viz_due_week'), $t('viz_due_late'), $t('viz_due_stale')],
                 'top' => array_map($short, $dues), 'colors' => [Svg::PALETTE[2], Svg::STATUS[1], Svg::STATUS[2], Svg::STATUS[3]],
             ], value: $short($payable), sub: $t('viz_due_sub'), href: route('purchase.bill.index'), colour: '#f97316'),
@@ -355,7 +357,8 @@ final class PurchaseDashboard implements ProvidesDashboard
         $today = Carbon::today();
 
         return [new Listing(
-            label: __('purchase::dashboard.goods_not_in'),
+            // ⓘ গ্রাফের "মাল আসেনি — খোলা ক্রয়াদেশ"-এর নাম নয় — তালিকার নিজের নাম, নমুনার নিচের সারির (ড্যাশবোর্ড যাচাই, ২৩ নভেম্বর ২০২৬, দফা ১০)
+            label: __('purchase::dashboard.open_orders_list'),
             columns: [
                 ['key' => 'no', 'label' => __('purchase::field.document_no'),
                     'render' => fn ($o) => $o->document_no],
@@ -454,6 +457,53 @@ final class PurchaseDashboard implements ProvidesDashboard
         }
 
         return [$bought, $paid];
+    }
+
+    /**
+     * ⭐ এ বছরের যে মাসগুলো গ্রাফে নেই — জানুয়ারি থেকে গ্রাফের ছয় মাসের আগের মাস পর্যন্ত, মাসে কেনা আর পরিশোধ।
+     *
+     * ⛔ ড্যাশবোর্ড যাচাই, ২৩ নভেম্বর ২০২৬ (দফা ৭, "কিছু হারাবে না"): বছরের চার্ট (জানুয়ারি–ডিসেম্বর) গ্রাফের বোর্ডে ঢাকা পড়েছিল, অথচ
+     *   গ্রাফ দেখায় কেবল শেষ ছয় মাস — জানুয়ারি থেকে মে হারিয়ে গিয়েছিল। ⓘ তালিকা, চার্ট নয়: হোম মডিউলের সব চার্ট দেখায়, সেখানে
+     *   বছরের চার্টটা আগে থেকেই আছে — দ্বিতীয় চার্ট হলে সেখানে একই মাস দুইবার হত। একই সংজ্ঞা ([[boughtAndPaidByMonth()]])।
+     * ⓘ বছরের চার্টের মতোই নতুন-ড্যাশবোর্ডের সুইচে — সুইচ বন্ধে চার্টটা ছয় মাসের, তাই হারানোর কিছু নেই। গ্রাফের ছয় মাস জানুয়ারিতে
+     *   বা তার আগে শুরু হলে (জুন পর্যন্ত) তালিকাটাই নেই।
+     *
+     * @return list<Listing>
+     */
+    private static function monthsBeforeTheChart(): array
+    {
+        $yearStart = Carbon::today()->startOfYear();
+        $window = Carbon::today()->startOfMonth()->subMonths(5);
+
+        if (! config('abos.dashboards_v2') || $window->lessThanOrEqualTo($yearStart)) {
+            return [];
+        }
+
+        [$bought, $paid] = self::boughtAndPaidByMonth($yearStart);
+        $rows = collect();
+
+        for ($month = $yearStart->copy(); $month->lessThan($window); $month->addMonth()) {
+            $ym = $month->format('Y-m');
+            $rows->push(['month' => $month->translatedFormat('F'), 'bought' => (string) ($bought[$ym] ?? '0'), 'paid' => (string) ($paid[$ym] ?? '0')]);
+        }
+
+        return [new Listing(
+            label: __('purchase::dashboard.months_before_chart', [
+                'year' => $yearStart->year,
+                'from' => $yearStart->translatedFormat('F'),
+                'to' => $window->copy()->subMonth()->translatedFormat('F'),
+            ]),
+            columns: [
+                ['key' => 'month', 'label' => __('purchase::dashboard.month'), 'render' => fn (array $r) => $r['month']],
+                ['key' => 'bought', 'label' => __('purchase::dashboard.bought'), 'width' => '10rem', 'numeric' => true,
+                    'render' => fn (array $r) => Money::format($r['bought'])],
+                ['key' => 'paid', 'label' => __('purchase::dashboard.paid'), 'width' => '10rem', 'numeric' => true,
+                    'render' => fn (array $r) => Money::format($r['paid'])],
+            ],
+            rows: $rows,
+            empty: __('purchase::dashboard.months_before_chart_empty'),
+            href: route('purchase.bill.index'),
+        )];
     }
 
     private static function boughtAgainstPaid(): Series

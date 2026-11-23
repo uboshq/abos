@@ -105,8 +105,9 @@ final class ApprovalDashboard implements ProvidesDashboard
             listings: [self::waitingNow()],
 
             // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা RoPEayT7 "ok"); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
+            // ⓘ এ পর্যন্ত অনুমোদিত আর নাকচের মোট কোনো গ্রাফে নেই — ঢাকা নয়, নিচে থাকে (নিরীক্ষা, ২৩ নভেম্বর ২০২৬); গড় সময় কাঁটা-মিটারের মাথায়
             sections: [Card::board(fn (): array => self::charts(), covers: [
-                __('approval::dashboard.pending'), __('approval::dashboard.approved'), __('approval::dashboard.rejected'),
+                __('approval::dashboard.pending'), __('approval::dashboard.average_time'),
                 __('approval::dashboard.how_long'), __('approval::dashboard.by_module'), __('approval::dashboard.by_person'),
             ])],
         );
@@ -148,6 +149,10 @@ final class ApprovalDashboard implements ProvidesDashboard
             ->get(['requested_at', 'decided_at']);
         $quick = $month->filter(fn ($a) => $a->requested_at->diffInMinutes($a->decided_at) <= 480)->count();
         $onTime = $month->count() > 0 ? $quick / $month->count() : null;
+        // ⓘ গড় সময় — নিচের পুরনো "সিদ্ধান্তে গড় সময়" ঘরের একই হিসাব (এ মাসে শেষ হ্যাঁ বা না, জমা থেকে সিদ্ধান্ত); সুইচ নয়
+        $average = $month->count() > 0
+            ? self::duration((string) intdiv((int) $month->sum(fn ($a) => max(0, (int) $a->requested_at->diffInSeconds($a->decided_at))), $month->count()))
+            : '';
 
         // অনুরোধ কখন আসে — গত 30 দিন, বার × সময়
         $weekdays = [6 => 'শনি', 0 => 'রবি', 1 => 'সোম', 2 => 'মঙ্গল', 3 => 'বুধ', 4 => 'বৃহঃ'];
@@ -184,10 +189,11 @@ final class ApprovalDashboard implements ProvidesDashboard
             ], sub: __('approval::dashboard.decisions_14_hint'), legend: [
                 [__('approval::dashboard.approved'), Svg::STATUS[0]], [__('approval::dashboard.rejected'), Svg::STATUS[3]],
             ], colour: '#16a34a'),
-            Card::make(__('approval::dashboard.on_time'), 'gauge', $onTime === null ? [] : [
-                'v' => $onTime, 'label' => round($onTime * 100).'%',
+            // ⭐ নমুনার "সিদ্ধান্তে গড় সময়" — মাথায় গড় সময়, কাঁটায় 8 ঘণ্টার মধ্যে সিদ্ধান্তের ভাগ, নিচে কয়টার কয়টা
+            Card::make(__('approval::dashboard.average_time'), 'gauge', $onTime === null ? [] : [
+                'v' => $onTime, 'label' => intdiv(100 * $quick, $month->count()).'%',
                 'sub' => __('approval::dashboard.on_time_sub', ['n' => $quick, 'of' => $month->count()]),
-            ], value: $onTime === null ? '' : round($onTime * 100).'%', sub: __('approval::dashboard.on_time_hint'), colour: '#2160d8'),
+            ], value: $average, sub: __('approval::dashboard.on_time_hint'), colour: '#2160d8'),
             Card::make(__('approval::dashboard.when_requests'), 'heat', [
                 'rows' => array_values($weekdays), 'cols' => array_keys($bands), 'v' => array_values($grid),
             ], sub: __('approval::dashboard.when_requests_hint'), colour: '#7c3aed'),
@@ -220,15 +226,13 @@ final class ApprovalDashboard implements ProvidesDashboard
                         'paperNo' => $facts[$a->id]['no'] ?? null,
                         'party' => $facts[$a->id]['party'] ?? null,
                     ])],
+                /*
+                 * ⛔ বেতনের রানের অঙ্ক বেতনের খবর — কেবল `hr.payroll.view`-এ (নিরীক্ষা, ২৩ নভেম্বর ২০২৬); বাকিদের কাছে ঢাকা।
+                 * ⓘ ইনবক্সে যিনি সই দেন তাঁর পর্দা আলাদা; এই তালিকা ড্যাশবোর্ডের, অনুমোদনের চাবিওয়ালা সবার চোখে পড়ে।
+                 */
                 ['key' => 'amount', 'label' => __('approval::dashboard.amount'), 'width' => '9rem',
-                    /*
-                     * ⛔ বেতনের রানের অঙ্ক কেবল `hr.payroll.view`-এ (ড্যাশবোর্ড নিরীক্ষা, 23 Nov 2026): `approval.report`-ওয়ালা গোটা কোম্পানির
-                     *   অনুমোদন দেখেন, আর তাতে বেতনের মোট অঙ্কও দেখা যেত — বেতনের পাতা যেটা চাবি ছাড়া দেখায় না।
-                     */
-                    'render' => fn ($a) => $a->amount === null
-                        || ($a->module === ApprovalFlowService::PAYROLL[0] && $a->action === ApprovalFlowService::PAYROLL[1]
-                            && auth()->user()?->can('hr.payroll.view') !== true)
-                        ? '—' : Money::format((string) $a->amount)],
+                    'render' => fn ($a) => $a->amount === null ? '—' : (self::isPayroll($a) && ! auth()->user()?->can('hr.payroll.view')
+                        ? Stat::HIDDEN : Money::format((string) $a->amount))],
                 /*
                  * ⭐ ডানে অবস্থার চিপ (মালিকের অনুমোদিত নকশা, ২০ অক্টোবর ২০২৬) — `x-ui.paper-state` (paper_states.json):
                  * অপেক্ষমাণ = waiting, ধাপ ছক থেকে ([[ApprovalEngine::stepsFor()]])।
@@ -245,6 +249,12 @@ final class ApprovalDashboard implements ProvidesDashboard
             // ⭐ হোমের অনুমোদনের কার্ডে এই তালিকা, চিপসহ — মালিকের অনুমোদিত নমুনা (২০ অক্টোবর ২০২৬)
             onHome: true,
         );
+    }
+
+    /** বেতনের রানের অনুরোধ — অনুমোদনের ছকের একই চিহ্ন ([[ApprovalFlowService::PAYROLL]]) */
+    private static function isPayroll(Approval $approval): bool
+    {
+        return [(string) $approval->module, (string) $approval->action] === ApprovalFlowService::PAYROLL;
     }
 
     /**

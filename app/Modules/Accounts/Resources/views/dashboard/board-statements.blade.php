@@ -24,7 +24,7 @@
         ['t' => __('accounts::board.st.people'), 'v' => '−'.$short($p['people'])] + $step($run1, $run2) + ['bg' => ['var(--color-dash-fb923c)', 'var(--color-dash-ea580c)'], 'c' => 'var(--color-dash-ea580c)'],
         ['t' => __('accounts::board.st.other_cost'), 'v' => '−'.$short($p['other_cost'])] + $step($run2, $run3) + ['bg' => ['var(--color-dash-fbbf24)', 'var(--color-dash-d97706)'], 'c' => 'var(--color-dash-d97706)'],
         ['t' => __('accounts::board.st.other_income'), 'v' => $sign($p['other_income'], true)] + $step($run3, $run4) + ['bg' => ['var(--color-dash-2dd4bf)', 'var(--color-dash-0d9488)'], 'c' => 'var(--color-dash-0d9488)'],
-        ['t' => __('accounts::board.st.net'), 'v' => $short($p['net']), 'h' => max(2, $px(abs($run4))), 'mb' => 0, 'bg' => ['var(--color-dash-a78bfa)', 'var(--color-dash-7c3aed)'], 'c' => bccomp($p['net'], '0', 4) < 0 ? 'var(--color-dash-dc2626)' : 'var(--color-dash-7c3aed)'],
+        // ⛔ নিট লাভের দণ্ড নেই — এ মাসের নিট লাভ গ্রাফের বোর্ডের প্রথম কার্ডে (মালিক, ২৩ নভেম্বর ২০২৬: একই অঙ্ক দুইবার নয়); শেষ ধাপের চূড়াই নিট
     ];
     $netPct = bccomp($p['sales'], '0', 4) > 0 ? bcdiv(bcmul($p['net'], '100', 4), $p['sales'], 1) : null;
 
@@ -56,7 +56,7 @@
         <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; flex-wrap: wrap">
             <h2 style="margin: 0; font-size: 1rem; font-weight: 700">{{ __('accounts::board.st.pnl') }}</h2>
             <span style="font-size: 0.8125rem; font-weight: 700; color: {{ bccomp($p['net'], '0', 4) < 0 ? 'var(--color-dash-dc2626)' : 'var(--color-dash-059669)' }}">
-                @if (bccomp($p['net'], '0', 4) < 0){{ __('accounts::board.st.loss_head', ['value' => $short(ltrim($p['net'], '-'))]) }}@else{{ __('accounts::board.st.net_head', ['value' => $short($p['net']), 'pct' => $netPct ?? '0']) }}@endif
+                @if (bccomp($p['net'], '0', 4) < 0){{ __('accounts::board.st.loss_head', ['last' => $sign($p['last_net'])]) }}@else{{ __('accounts::board.st.net_head', ['pct' => $netPct ?? '0', 'last' => $sign($p['last_net'])]) }}@endif
             </span>
         </div>
         <div style="display: flex; align-items: flex-end; gap: 0.875rem; height: 15.625rem; border-bottom: 1px solid var(--color-dash-e5e7f0); padding: 0 0.375rem">
