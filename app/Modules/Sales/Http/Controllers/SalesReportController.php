@@ -55,6 +55,51 @@ class SalesReportController extends Controller implements HasMiddleware
         'by-biller' => \App\Modules\Sales\Reports\BillerReports::KEY,
         // ⭐ প্রতিদিনের জমার খাতা (জমার খবর ধাপ গ, ১৮ নভেম্বর ২০২৬; [[DepositRegisterReport]])
         'deposit-register' => \App\Modules\Sales\Reports\DepositRegisterReport::KEY,
+        // ⭐ টাকা আসা — আসল টাকা, রূপগুলো পাতার ট্যাবে ([[MoneyInReports]]; মালিক, ২৩ নভেম্বর ২০২৬)
+        'money-in' => \App\Modules\Sales\Reports\MoneyInReports::DAY,
+        'money-in-branch' => \App\Modules\Sales\Reports\MoneyInReports::BRANCH,
+        'money-in-area' => 'sales.money_in_area',
+        'money-in-territory' => 'sales.money_in_territory',
+        'money-in-point' => 'sales.money_in_point',
+        'money-in-customer' => 'sales.money_in_customer',
+        'money-in-salesperson' => \App\Modules\Sales\Reports\MoneyInReports::PERSON,
+        'money-in-channel' => \App\Modules\Sales\Reports\MoneyInReports::CHANNEL,
+        'money-in-receipts' => \App\Modules\Sales\Reports\MoneyInReports::PAPERS,
+        'money-in-excluded' => \App\Modules\Sales\Reports\MoneyInReports::EXCLUDED,
+        'money-in-excluded-papers' => \App\Modules\Sales\Reports\MoneyInReports::EXCLUDED_PAPERS,
+        // ⭐ এলাকা ধরে বিক্রয় (স্তর ধরে) আর শাখা ধরে বিক্রয় ([[AreaSalesReports]]; মালিক, ২৩ নভেম্বর ২০২৬)
+        'area-sales' => 'sales.area_sales_area',
+        'area-sales-territory' => 'sales.area_sales_territory',
+        'area-sales-point' => 'sales.area_sales_point',
+        'area-sales-customer' => 'sales.area_sales_customer',
+        'branch-sales' => \App\Modules\Sales\Reports\AreaSalesReports::BRANCH,
+    ];
+
+    /**
+     * ⭐ এক রিপোর্টের কয়েক রূপ — পাতার মাথায় ট্যাব (মালিকের অনুমোদিত নমুনা, ২৩ নভেম্বর ২০২৬): স্লাগ → ট্যাবের নামের চাবি।
+     * ⓘ ট্যাব বদলালে সময় আর ছাঁকনি সাথে যায় — যে ছাঁকনি নতুন রূপ চেনে না, ইঞ্জিন সেটা ফেলে দেয়।
+     *
+     * @var list<array<string, string>>
+     */
+    private const TABS = [
+        [
+            'money-in' => 'sales::money_in.tab_day',
+            'money-in-branch' => 'sales::money_in.tab_branch',
+            'money-in-area' => 'sales::money_in.tab_area',
+            'money-in-territory' => 'sales::money_in.tab_territory',
+            'money-in-point' => 'sales::money_in.tab_point',
+            'money-in-customer' => 'sales::money_in.tab_customer',
+            'money-in-salesperson' => 'sales::money_in.tab_person',
+            'money-in-channel' => 'sales::money_in.tab_channel',
+            'money-in-receipts' => 'sales::money_in.tab_papers',
+            'money-in-excluded' => 'sales::money_in.tab_excluded',
+        ],
+        [
+            'area-sales' => 'sales::area_sales.tab_area',
+            'area-sales-territory' => 'sales::area_sales.tab_territory',
+            'area-sales-point' => 'sales::area_sales.tab_point',
+            'area-sales-customer' => 'sales::area_sales.tab_customer',
+        ],
     ];
 
     /**
@@ -117,6 +162,7 @@ class SalesReportController extends Controller implements HasMiddleware
         );
 
         return view('accounts::report.show', [
+            ...$this->tabsFor($request, $slug),
             'menu' => $this->menu->forUser($request->user()),
             'slug' => $slug,
             'report' => $definition,
@@ -139,5 +185,42 @@ class SalesReportController extends Controller implements HasMiddleware
             // বিক্রয় রিপোর্টের ফল পাতায় দেখাত না, অথচ হিসাবের রিপোর্টে দেখাত ([[ReportController]])
             'summary' => $definition->summary === null ? null : ($definition->summary)($result->totals),
         ]);
+    }
+
+    /**
+     * এই স্লাগ যে দলে, তার ট্যাবগুলো — দল না থাকলে কিছুই নয় (পাতা তখন আগের মতো)।
+     *
+     * ⓘ ঠিকানায় সময় আর ছাঁকনি থেকে যায়; পাতা, খোঁজা আর "Top" নয় — ওগুলো এক রূপের নিজের।
+     *
+     * @return array{reportTabs?: list<array{key: string, label: string, url: string, active: bool}>}
+     */
+    private function tabsFor(Request $request, string $slug): array
+    {
+        foreach (self::TABS as $group) {
+            // ⓘ দলের ভেতরের পাতা (যেমন "বাদ যাওয়া কাগজ") ট্যাবে নেই, তবু দলের ট্যাব দেখায় — তার মূল রূপটা চালু
+            $home = isset($group[$slug]) ? $slug : collect(array_keys($group))
+                ->sortByDesc(fn (string $s) => strlen($s))
+                ->first(fn (string $s) => str_starts_with($slug, $s.'-'));
+
+            if ($home === null) {
+                continue;
+            }
+
+            $carry = $request->except(['page', 'q', 'top', 'compare', 'export', 'print', 'hide', 'sort', 'dir']);
+            $tabs = [];
+
+            foreach ($group as $tab => $label) {
+                $tabs[] = [
+                    'key' => $tab,
+                    'label' => (string) __($label),
+                    'url' => route('sales.report.show', ['slug' => $tab, ...$carry]),
+                    'active' => $tab === $home,
+                ];
+            }
+
+            return ['reportTabs' => $tabs];
+        }
+
+        return [];
     }
 }

@@ -401,6 +401,14 @@ return [
             /* ⭐ আদায়ের লক্ষ্য বনাম অর্জন — ডিলার ধরে, পরিকল্পনা সংস্করণ ২ §৯ ঙ ([[CollectionTargetReports]]) */
             ['label' => 'sales::collection_target.title', 'icon' => 'wallet', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'collection-target'], 'permission' => 'sales.report'],
+            /* ⭐ টাকা আসা — আসল টাকা কত এল; বাকি রূপ পাতার ট্যাবে ([[MoneyInReports]]; মালিক, ২৩ নভেম্বর ২০২৬) */
+            ['label' => 'sales::money_in.menu', 'icon' => 'wallet', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'money-in'], 'permission' => 'sales.report'],
+            /* ⭐ এলাকা ধরে বিক্রয় — স্তর পাতার ট্যাবে; আর শাখা ধরে বিক্রয় ([[AreaSalesReports]]; মালিক, ২৩ নভেম্বর ২০২৬) */
+            ['label' => 'sales::area_sales.menu', 'icon' => 'globe', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'area-sales'], 'permission' => 'sales.report'],
+            ['label' => 'sales::area_sales.menu_branch', 'icon' => 'reports', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'branch-sales'], 'permission' => 'sales.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
@@ -887,6 +895,10 @@ return [
         \App\Modules\Sales\Reports\PartyTargetReport::class,
         // ⭐ প্রতিদিনের জমার খাতা — খবর, মিল, খাতায়, অপেক্ষা (ধাপ গ, ১৮ নভেম্বর ২০২৬)
         \App\Modules\Sales\Reports\DepositRegisterReport::class,
+        // ⭐ টাকা আসা — দিন, শাখা, এলাকার স্তর, বিক্রয়কর্মী, মাধ্যম, রসিদ, বাদ গেছে (মালিক, ২৩ নভেম্বর ২০২৬)
+        \App\Modules\Sales\Reports\MoneyInReports::class,
+        // ⭐ এলাকা ধরে বিক্রয় (এরিয়া › টেরিটরি › পয়েন্ট › গ্রাহক) আর শাখা ধরে বিক্রয় (মালিক, ২৩ নভেম্বর ২০২৬)
+        \App\Modules\Sales\Reports\AreaSalesReports::class,
     ],
 
     /*
