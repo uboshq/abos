@@ -106,6 +106,11 @@ final class SmsOutboxService
             };
 
             // ⓘ নিজের মানুষের বিজ্ঞপ্তি হলে বিলি-খাতাতেও — পৌঁছানো বা না-যাওয়া ([[ProviderCallbacks]]-এর একই পথ)
+            // ⭐ পার্টির বার্তা হলে পার্টির খাতাতেও — পাঠানো, পৌঁছেছে, ব্যর্থ (ধাপ ৩, নমুনা HUXqpfhxng8823eEFrvH54, ট্যাব গ)
+            if ($row->source === SmsOutbox::PARTY) {
+                app(PartyMessageDispatcher::class)->onSmsReport($row, $event, $clean);
+            }
+
             if ($row->source === SmsOutbox::NOTIFICATION && $event !== 'sent') {
                 app(ProviderCallbacks::class)->fromPhone((int) $gateway->company_id, [
                     'provider_ref' => 'phone:'.$row->public_id, 'event' => $event, 'reason' => $clean,
@@ -120,6 +125,11 @@ final class SmsOutboxService
     public function release(): void
     {
         $stale = SmsOutbox::query()->where('status', SmsOutbox::TAKEN)->where('taken_at', '<', now()->subMinutes(SmsOutbox::TAKEN_MINUTES));
+
+        // ⓘ পার্টির বার্তা হলে খাতাতেও "ব্যর্থ" — নিচের এক-লাইনের আপডেট মডেল ছোঁয় না, তাই আগে সারিগুলো ধরা
+        foreach ((clone $stale)->where('attempts', '>=', SmsOutbox::MAX_ATTEMPTS)->where('source', SmsOutbox::PARTY)->get() as $gone) {
+            app(PartyMessageDispatcher::class)->onSmsReport($gone, 'failed', 'the phone took it but never answered');
+        }
 
         (clone $stale)->where('attempts', '>=', SmsOutbox::MAX_ATTEMPTS)
             ->update(['status' => SmsOutbox::FAILED, 'error' => 'the phone took it but never answered', 'updated_at' => now()]);

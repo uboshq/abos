@@ -51,6 +51,56 @@ final class RowMenu
         return count($items) > 1 ? $items : [];
     }
 
+    /**
+     * ⭐ "ছাপা ও পাঠানো"-র পাঠানোর সারি — লিংক কপি · WhatsApp-এ পাঠান · SMS পাঠান (ধাপ ৩, নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ক)।
+     *
+     * ⓘ তিনটাই একই দরজা ([[PaperShareController::store()]]): লিংক বানায়, তারপর বাক্স/পপআপ খোলে — WhatsApp বা SMS বাছা অবস্থায়
+     *   (`channel`), না দিলে কেবল লিংক আর কপি। ⓘ WhatsApp কেবল "বোতাম চাপলে" পথ চালু থাকলে, SMS কেবল SMS-এর পথ চালু আর অফিসের
+     *   ফোন বসানো থাকলে ([[PartyMessageDispatcher]]) — বন্ধ পথের বোতাম মৃত বোতাম।
+     *
+     * @param  array<string, scalar|null>  $fields  paper.share-এর ঘর (route, params[…], document_type, document_id, document_no, paper)
+     * @return list<array<string, mixed>>
+     */
+    public static function send(array $fields): array
+    {
+        $item = fn (string $label, string $icon, ?string $channel, ?string $tone = null): array => array_filter([
+            'label' => $label, 'icon' => $icon, 'url' => route('paper.share'), 'method' => 'post', 'icon_tone' => $tone,
+            'fields' => $channel === null ? $fields : $fields + ['channel' => $channel],
+        ], fn ($v) => $v !== null);
+
+        [$wame, $sms] = self::roads();
+
+        $items = [$item(__('core.row_menu.copy_link'), 'link', null)];
+
+        if ($wame) {
+            $items[] = $item(__('core.row_menu.send_whatsapp'), 'chat', \App\Models\PartyMessageTemplate::WHATSAPP, 'chat');
+        }
+
+        if ($sms) {
+            $items[] = $item(__('core.row_menu.send_sms'), 'sms', \App\Models\PartyMessageTemplate::SMS, 'brand');
+        }
+
+        return $items;
+    }
+
+    /**
+     * ⓘ কোন পথ খোলা — এক অনুরোধে একবার (পঁচিশ সারির তালিকায় পঁচিশবার নয়); অনুরোধের নিজের ঘরে, তাই পরের অনুরোধে আবার নতুন করে।
+     *
+     * @return array{0: bool, 1: bool}
+     */
+    public static function roads(): array
+    {
+        $attributes = request()->attributes;
+        $key = 'abos.row-menu.send-roads';
+
+        if (! $attributes->has($key)) {
+            $d = app(\App\Core\Services\PartyMessageDispatcher::class);
+            $attributes->set($key, [$d->wameOn(), $d->smsOn()]);
+        }
+
+        return $attributes->get($key);
+    }
+
     /** খাতার সারির মাথার লেখা: কোড/নম্বর · নাম (নিজের name() থাকলে সেটা, নইলে পর্দার ভাষার নাম) */
     public static function title(object $row): string
     {

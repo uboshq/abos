@@ -6,6 +6,8 @@ namespace App\Http\Controllers;
 
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Services\PaperTrail;
+use App\Core\Services\PartyMessageDispatcher;
+use App\Core\Services\PartyMessageGuard;
 use App\Core\Services\PartyMessages;
 use App\Core\Support\CompanyContext;
 use App\Models\DocumentShare;
@@ -54,6 +56,8 @@ class PaperShareController extends Controller
             'document_id' => ['required', 'integer', 'min:1'],
             'document_no' => ['nullable', 'string', 'max:60'],
             'paper' => ['required', Rule::in(PaperSize::all())],
+            // ⭐ ধাপ ৩: ⋯ মেনুর "WhatsApp-এ পাঠান" / "SMS পাঠান" — পপআপটা ঐ পথ বাছা অবস্থায় খোলে; না দিলে "লিংক কপি"
+            'channel' => ['nullable', Rule::in(PartyMessageTemplate::CHANNELS)],
         ]);
 
         /*
@@ -179,7 +183,8 @@ class PaperShareController extends Controller
         );
 
         // ⓘ লিংকের সারিটাও — বাক্সটা এটা ধরে পার্টির নম্বর আর লেখাগুলো আনে ([[PartyMessages]])
-        return back()->with('shared_link', route('paper.shared', $share->token))->with('shared_share', (int) $share->id);
+        return back()->with('shared_link', route('paper.shared', $share->token))->with('shared_share', (int) $share->id)
+            ->with('shared_channel', $data['channel'] ?? null);
     }
 
     /**
@@ -189,43 +194,49 @@ class PaperShareController extends Controller
      * ⛔ লেখাটা পাতা থেকে নেওয়া হয় না, এখানে বানানো হয় — নাহলে খাতায় এক কথা আর পার্টির কাছে আরেক কথা যেতে পারত।
      * ⓘ ফেরত যায় `wa.me`-তে; খাতায় সারিটা তার আগেই লেখা।
      */
-    public function whatsapp(Request $request, DocumentShare $share, PartyMessages $messages): RedirectResponse
+    public function whatsapp(Request $request, DocumentShare $share, PartyMessages $messages, PartyMessageDispatcher $dispatcher): RedirectResponse
     {
-        [$document, $template, $phone, $locale] = $this->prepared($request, $share);
+        // ⛔ ধাপ ৩: "WhatsApp — বোতাম চাপলে" পথটা বন্ধ থাকলে মেনুতে বোতামই নেই — হাতে বানানো অনুরোধও ফেরে
+        abort_unless($dispatcher->wameOn(), 403);
 
+        [$document, $template, $phone, $locale] = $this->prepared($request, $share, PartyMessageTemplate::WHATSAPP);
+
+        // ⓘ অবস্থা "খোলা হয়েছে", পথ wa.me — সারির নিজের শুরুর মান (ব্রাউজার এর বেশি জানে না)
         $message = $messages->record($document, $share, $template, $locale, $phone);
 
         return redirect()->away('https://wa.me/'.$phone.'?text='.rawurlencode((string) $message->body));
     }
 
     /**
-     * ⭐ একই লেখা SMS-এ — অফিসের ফোনের সারিতে (মালিকের "ok", নমুনা U1X687u5MkwVfEL7ci7MGv ধাপ ২)।
+     * ⭐ SMS — অফিসের ফোনের সারিতে (মালিকের "ok", নমুনা U1X687u5MkwVfEL7ci7MGv ধাপ ২; ধাপ ৩ HUXqpfhxng8823eEFrvH54 ট্যাব ক)।
      *
-     * ⓘ পাহারা WhatsApp-এর হুবহু ([[prepared()]]); লেখা সার্ভারেই বানানো, খাতায় লেখা, তারপর সারিতে ([[SmsOutboxService]])।
-     * ⛔ কেবল বাংলাদেশের মোবাইলে — নিজের সিমে বিদেশে SMS দামি আর অনেক সময় বন্ধ। ⛔ ফোন বসানো না থাকলে সারিতে বসে না।
+     * ⓘ পাহারা WhatsApp-এর হুবহু ([[prepared()]]), কেবল লেখা SMS-এর; লেখা সার্ভারেই বানানো, খাতায় লেখা, তারপর পাঠানোর
+     *   একমাত্র দরজা দিয়ে ([[PartyMessageDispatcher::viaSms()]] — পথ "ফোন", অবস্থা "অপেক্ষায়", সারির নম্বর খাতায়)।
+     * ⛔ কেবল বাংলাদেশের মোবাইলে — নিজের সিমে বিদেশে SMS দামি আর অনেক সময় বন্ধ। ⛔ পথ বন্ধ বা ফোন বসানো না থাকলে সারিতে বসে না।
      */
-    public function sms(Request $request, DocumentShare $share, PartyMessages $messages, \App\Core\Services\SmsOutboxService $outbox): RedirectResponse
+    public function sms(Request $request, DocumentShare $share, PartyMessages $messages, PartyMessageDispatcher $dispatcher): RedirectResponse
     {
-        // ⓘ বাক্সটা খোলা থাকে — ফল বা ভুল বাক্সের ভিতরেই দেখা যায় (কাগজের সব পাতা আলাদা খবর দেখায় না)
+        // ⓘ পপআপটা SMS বাছা অবস্থায় খোলা থাকে — ফল বা ভুল পপআপের ভিতরেই দেখা যায় (কাগজের সব পাতা আলাদা খবর দেখায় না)
         $box = fn (string $key, string $text): RedirectResponse => back()->withInput()
-            ->with('shared_link', route('paper.shared', $share->token))->with('shared_share', (int) $share->id)->with($key, $text);
+            ->with('shared_link', route('paper.shared', $share->token))->with('shared_share', (int) $share->id)
+            ->with('shared_channel', PartyMessageTemplate::SMS)->with($key, $text);
 
         try {
-            [$document, $template, $phone, $locale] = $this->prepared($request, $share);
+            [$document, $template, $phone, $locale] = $this->prepared($request, $share, PartyMessageTemplate::SMS);
         } catch (ValidationException $e) {
             return $box('sms_error', (string) collect($e->errors())->flatten()->first());
         }
 
-        if (! str_starts_with($phone, '8801')) {
+        if (! PartyMessageDispatcher::isBangladeshMobile($phone)) {
             return $box('sms_error', (string) __('core.print.sms_phone_bad'));
         }
 
-        if (! $outbox->hasPhone()) {
+        if (! $dispatcher->smsOn()) {
             return $box('sms_error', (string) __('notification::sms.no_gateway'));
         }
 
         $message = $messages->record($document, $share, $template, $locale, $phone, PartyMessageTemplate::SMS);
-        $outbox->queue($phone, (string) $message->body, \App\Models\SmsOutbox::PARTY, (int) $message->id);
+        $dispatcher->viaSms($message);
 
         return $box('sms_queued', (string) __('notification::sms.queued'));
     }
@@ -233,46 +244,18 @@ class PaperShareController extends Controller
     /**
      * ⓘ WhatsApp আর SMS-এর একই পাহারা — কোম্পানি, কাগজের ছাপার চাবি, দেখার নাগাল, জীবিত লিংক, চালু লেখা, মোবাইল নম্বর।
      *
+     * ⓘ লেখাটা ঐ পথের আর ঐ কাগজের চলতি লেখার একটা — বাক্স যা দেখায় ([[PartyMessages::typesFor()]]), তার বাইরে নয়।
+     *
      * @return array{0: Model, 1: PartyMessageTemplate, 2: string, 3: string}
      */
-    private function prepared(Request $request, DocumentShare $share): array
+    private function prepared(Request $request, DocumentShare $share, string $channel): array
     {
-        abort_unless((int) $share->company_id === (int) CompanyContext::id(), 404);
+        // ⓘ একই নিয়ম ফোনের দরজা আর খাতার "আবার পাঠান"-এও — এক জায়গায় ([[PartyMessageGuard]])
+        $guard = app(PartyMessageGuard::class);
+        $document = $guard->forShare($share);
+        [$template, $phone, $locale] = $guard->choice($request->all(), $document, $share, $channel);
 
-        $abilities = PaperTrail::abilitiesFor($share->document_type);
-
-        abort_if($abilities === [], 403);
-
-        foreach ($abilities as $ability) {
-            $this->authorize($ability);
-        }
-
-        $document = self::visibleDocument((string) $share->document_type, (int) $share->document_id);
-
-        // ⛔ মরা লিংক পাঠানো মানে পার্টির হাতে খোলে না এমন কিছু
-        abort_unless($share->isAlive(), 410);
-
-        $data = $request->validate([
-            'template_id' => ['required', 'integer'],
-            'locale' => ['required', Rule::in(['bn', 'en'])],
-            'phone' => ['required', 'string', 'max:30'],
-        ]);
-
-        $template = PartyMessageTemplate::query()
-            ->usableFor(PartyMessageTemplate::WHATSAPP, (string) $share->document_type)
-            ->whereKey((int) $data['template_id'])
-            ->first();
-
-        $phone = PartyMessages::phone($data['phone']);
-
-        if ($template === null || $phone === null) {
-            throw ValidationException::withMessages(array_filter([
-                'template_id' => $template === null ? __('core.print.wa_template_gone') : null,
-                'phone' => $phone === null ? __('core.print.wa_phone_bad') : null,
-            ]));
-        }
-
-        return [$document, $template, $phone, (string) $data['locale']];
+        return [$document, $template, $phone, $locale];
     }
 
     /**

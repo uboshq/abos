@@ -177,6 +177,9 @@ class EveryRouteIsGuardedTest extends TestCase
         // ⓘ ফোনের ক্র্যাশের খবর — লগইনের আগেও ভাঙে; কেবল ভুলের খাতায় লেখে, কিছু ফেরায় না; throttle আর আকারের সীমা সহ
         'api.app.crash' => 'ফোনের ক্র্যাশের খবর; কেবল লেখে, কিছু ফেরায় না; throttle:10,1 আর ঘরের আকারের সীমা',
         'api.notification-callbacks' => 'প্রোভাইডারের ফেরত-খবর (রসিদ, bounce) — প্রোভাইডার লগইন ছাড়া ডাকে; পাহারা HMAC স্বাক্ষর আর ৫ মিনিটের সময়-সীমা, throttle:60,1, কিছু ফেরায় না',
+        // ⭐ Meta-র WhatsApp webhook (বার্তার পথ, নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ঘ) — Meta লগইন ছাড়া ডাকে
+        'api.notification.whatsapp_webhook.verify' => 'Meta-র webhook যাচাই (GET) — কেবল ঠিকানার কোম্পানির নিজের verify token মিললে challenge ফেরে, নইলে ৪০৩; কোনো ডেটা নয়, throttle:30,1',
+        'api.notification.whatsapp_webhook' => 'Meta-র ফেরত-খবর (পাঠানো/পৌঁছেছে/পড়েছে/ব্যর্থ, লেখার অনুমোদন) — পাহারা X-Hub-Signature-256 (ঠিকানার কোম্পানির app secret-এ HMAC-SHA256, hash_equals), নইলে ৪০৩; কেবল সেই কোম্পানির নিজের নম্বর/অ্যাকাউন্টের ঘটনা, throttle:300,1, কিছু ফেরায় না ([[WhatsAppWebhookController]])',
 
         /*
          * প্রথম দরজা — একদম নতুন ইনস্টলের একমাত্র প্রবেশপথ
@@ -338,6 +341,12 @@ class EveryRouteIsGuardedTest extends TestCase
         'api.reports.export' => '§৯-এর দরজাই (ReportApiController::show, ReportDefinition::allows) — চাবি নেই তো ৪০৩; ঢাকা কলাম ফাইলেও নেই',
         'api.papers.index' => 'ধরন সতেরো রকম, প্রতিটার চাবি ওয়েবের তালিকার নিজের (PhonePaper::permission) — কন্ট্রোলারে; চাবি নেই তো ৪০৩ (ThePhoneShowsEveryPaperOnItsOwnScreenTest)',
         'api.papers.show' => 'তালিকার একই পাহারা, একই পথে (PhonePaperApiController::open); কাগজ মডেলের নিজের দেয়ালে, বাইরের হলে ৪০৪',
+        // ⭐ পার্টিকে WhatsApp ও SMS — ফোনের দরজা (ধাপ ৩, মালিকের "ok" ২৩ নভেম্বর ২০২৬; PartyMessageApiController)
+        'api.party_messages.compose' => 'ওয়েবের "পাঠান" বাক্সের পাহারা (PartyMessageGuard::paper): কাগজের ছাপার রুটের নিজের can: — চাবি নেই তো ৪০৩, খালি তালিকাতেও ৪০৩; ছাপার দরজার চোখে নাগালের বাইরে ৪০৪; কাগজের মডিউল ফোনে বন্ধ ৪০৩',
+        'api.party_messages.index' => 'compose-এর একই পাহারা (PartyMessageApiController::paper) — যিনি কাগজটা পাঠাতে পারেন তিনিই দেখেন কী গেছে; সারি শাখার দেয়ালের ভিতরে',
+        'api.party_messages.whatsapp' => 'compose-এর একই পাহারা, তারপর লেখা আর নম্বর (PartyMessageGuard::choice, ৪২২); wa.me পথ বন্ধ তো ৪০৩',
+        'api.party_messages.sms' => 'compose-এর একই পাহারা, তারপর লেখা আর নম্বর (PartyMessageGuard::choice, ৪২২); কেবল বাংলাদেশের মোবাইল, পথ বন্ধ বা অফিসের ফোন নেই তো ৪২২',
+        'api.party_messages.resend' => 'কাগজের সারিতে কাগজের ছাপার চাবি আর নাগাল (PartyMessageResender::paperOf → PartyMessageGuard::paper); পার্টির হিসাবের সারিতে notification.party_messages; সারি শাখার দেয়ালের ভিতরে, বাইরের হলে ৪০৪',
     ];
 
     /**

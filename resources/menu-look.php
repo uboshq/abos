@@ -407,7 +407,9 @@ return [
             'notification::report.menu.summary' => ['my_notices', 'chart-bar'],
             'notification::menu.party_messages' => ['party_msg', 'book-open'],
             'notification::menu.party_templates' => ['party_msg', 'notebook-pen'],
-            'notification::menu.sms_phones' => ['party_msg', 'send'],
+            // ⓘ "SMS ফোন" সারি এখন "বার্তার পথ" পাতার ট্যাব (fe/wa-sms ধাপ ৩, ২৩ নভেম্বর ২০২৬) — তার জায়গায় বার্তার পথ, পাশে নিজে থেকে পাঠানো
+            'notification::party_roads.menu' => ['party_msg', 'send'],
+            'notification::party_auto.title' => ['party_msg', 'clock'],
             'notification::menu.channels' => ['setup_watch', 'settings'],
             'notification::menu.rules' => ['setup_watch', 'list-filter'],
             'notification::menu.templates' => ['setup_watch', 'file-text'],

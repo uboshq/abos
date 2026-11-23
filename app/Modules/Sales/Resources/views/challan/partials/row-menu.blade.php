@@ -30,15 +30,15 @@
         $items[] = ['label' => __('core.row_menu.print_challan_plain'), 'icon' => 'printer', 'url' => route('sales.print.challan', [$challan, 'prices' => 0]), 'blank' => true];
         $items[] = ['label' => __('core.row_menu.print_gatepass'), 'icon' => 'printer', 'url' => route('sales.print.gatepass', $challan), 'blank' => true];
         $items[] = ['label' => __('core.row_menu.pdf'), 'icon' => 'download', 'url' => route('sales.print.challan', [$challan, 'prices' => 1, 'download' => 1]), 'blank' => true];
-        $items[] = ['label' => __('core.row_menu.send'), 'icon' => 'share', 'url' => route('paper.share'), 'method' => 'post',
-            'fields' => [
-                'route' => 'sales.print.challan',
-                'params[challan]' => $challan->id,
-                'document_type' => 'sales_challan',
-                'document_id' => $challan->id,
-                'document_no' => $challan->document_no,
-                'paper' => \App\Core\Engines\Print\PaperSize::A4,
-            ]];
+        /* ⭐ লিংক কপি · WhatsApp-এ পাঠান · SMS পাঠান — পথ চালু থাকলে (ধাপ ৩; [[RowMenu::send()]]) */
+        array_push($items, ...\App\Core\Support\RowMenu::send([
+            'route' => 'sales.print.challan',
+            'params[challan]' => $challan->id,
+            'document_type' => 'sales_challan',
+            'document_id' => $challan->id,
+            'document_no' => $challan->document_no,
+            'paper' => \App\Core\Engines\Print\PaperSize::A4,
+        ]));
     }
 
     $items[] = \App\Core\Support\RowMenu::group('work');

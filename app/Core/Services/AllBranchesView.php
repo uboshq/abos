@@ -100,6 +100,12 @@ final class AllBranchesView
         'notifications.push.unsubscribe',
         'notifications.settings.update',
         'notification.quiet.save',
+        // ⓘ পার্টিকে বার্তা — কোম্পানির নিয়ম, কোনো শাখার কাগজ নয় (ধাপ ৩, ২৩ নভেম্বর ২০২৬)
+        'notification.party_roads.save',
+        'notification.party_roads.check',
+        'notification.party_auto.save',
+        'notification.party_auto.optout.store',
+        'notification.party_auto.optout.destroy',
         'governance.error.acknowledge',
         'governance.error.acknowledge_all',
         'system_admin.notice.dismiss',

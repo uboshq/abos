@@ -389,6 +389,27 @@ Route::prefix('v1')
             ->where('key', '[a-z_]+')->name('papers.index');
         Route::get('/papers/{key}/{id}', [\App\Http\Controllers\Api\PhonePaperApiController::class, 'show'])
             ->where('key', '[a-z_]+')->name('papers.show');
+
+        /*
+         * ⭐ পার্টিকে WhatsApp ও SMS — কাগজের পাতা থেকে (ধাপ ৩, মালিকের "ok" ২৩ নভেম্বর ২০২৬; [[PartyMessageApiController]],
+         * চুক্তি docs/"Contract — পার্টিকে WhatsApp ও SMS (অ্যাপ).md")। ⚠️ `can:` নেই, ইচ্ছা করে: চাবি কাগজের ওয়েবের ছাপার রুটের
+         * নিজের, ওয়েবের "পাঠান" বাক্সের একই পাহারায় ([[PartyMessageGuard]])। ⓘ লেখার তিন দরজা ফোনের চাবি মনে রাখে
+         * (`Idempotency-Key`, বাধ্যতামূলক — নতুন দরজার নিয়ম) — একই চাপ দুইবার এলে পার্টি দুইটা SMS পায় না; জনপ্রতি মিনিটে ৩০।
+         */
+        Route::get('/party-messages/compose', [\App\Http\Controllers\Api\PartyMessageApiController::class, 'compose'])
+            ->name('party_messages.compose');
+        Route::get('/party-messages', [\App\Http\Controllers\Api\PartyMessageApiController::class, 'index'])
+            ->name('party_messages.index');
+        Route::post('/party-messages/whatsapp', [\App\Http\Controllers\Api\PartyMessageApiController::class, 'whatsapp'])
+            ->middleware(['throttle:30,1,party-messages', \App\Http\Middleware\RemembersAPhoneWrite::class.':required'])
+            ->name('party_messages.whatsapp');
+        Route::post('/party-messages/sms', [\App\Http\Controllers\Api\PartyMessageApiController::class, 'sms'])
+            ->middleware(['throttle:30,1,party-messages', \App\Http\Middleware\RemembersAPhoneWrite::class.':required'])
+            ->name('party_messages.sms');
+        Route::post('/party-messages/{publicId}/resend', [\App\Http\Controllers\Api\PartyMessageApiController::class, 'resend'])
+            ->whereUuid('publicId')
+            ->middleware(['throttle:30,1,party-messages', \App\Http\Middleware\RemembersAPhoneWrite::class.':required'])
+            ->name('party_messages.resend');
     });
 
 Route::prefix('v1')

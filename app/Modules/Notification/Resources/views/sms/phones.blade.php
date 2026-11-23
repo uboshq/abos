@@ -8,6 +8,15 @@
     <x-slot:title>{{ __('notification::sms.title') }}</x-slot:title>
 
     <div class="space-y-4">
+        {{-- ⭐ "বার্তার পথ"-এর দ্বিতীয় ট্যাব (নমুনা HUXqpfhxng8823eEFrvH54 ট্যাব ঘ) — পথের চাবি থাকলে তবেই ট্যাবের সারি --}}
+        @can('notification.party_roads')
+            <x-ui.list-tabs :label="__('notification::party_roads.title')" :tabs="[
+                ['key' => 'roads', 'label' => __('notification::party_roads.tabs.roads'), 'url' => route('notification.party_roads.index'), 'active' => false],
+                ['key' => 'phones', 'label' => __('notification::party_roads.tabs.phones'), 'url' => route('notification.sms_phones.index'), 'active' => true],
+                ['key' => 'cost', 'label' => __('notification::party_roads.tabs.cost'), 'url' => route('notification.party_roads.index', ['tab' => 'cost']), 'active' => false],
+            ]" />
+        @endcan
+
         <x-ui.toolbar :title="__('notification::sms.title')" :info="__('notification::sms.note')" :search="false" :export="false" :share="false" />
 
         {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
