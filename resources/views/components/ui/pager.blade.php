@@ -35,7 +35,7 @@
     }
 @endphp
 
-<div data-pager
+<div data-pager data-list-part="pager"
      {{ $attributes->merge([
          'class' => 'pager flex flex-wrap items-center gap-3 border-t border-(--color-border) px-3 py-2',
      ]) }}>

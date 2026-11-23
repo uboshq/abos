@@ -70,6 +70,18 @@ final class PartyRegistry
         return array_key_exists($type, $this->all());
     }
 
+    /** ⓘ এই মডেলটা কোনো পক্ষের কি না (গ্রাহক, সরবরাহকারী …) — মডিউলের নাম না জেনে, ঘোষিত ধরন থেকে। */
+    public function isPartyModel(Model $model): bool
+    {
+        foreach ($this->types() as $type) {
+            if (($this->drill->map()[$type] ?? null) === $model::class) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function labelFor(string $type): ?string
     {
         $key = $this->all()[$type] ?? null;
@@ -155,7 +167,8 @@ final class PartyRegistry
                 // (স্থায়ী নিয়ম): *"গ্রাহকের নামের পাশে পয়েন্ট দিতে হবে অবশ্যই, সব জায়গায়, আর শাখার নামও দিতে হবে"*
                 ->when(
                     method_exists($model, 'location'),
-                    fn ($q) => $q->with(method_exists($model, 'pointName') ? 'location.parent' : 'location'),
+                    // ⓘ মায়ের মা-ও — খোঁজার লেখায় পয়েন্টের দুই ধাপ উপর ([[pickerFind()]]; মালিক, ২৩ নভেম্বর ২০২৬)
+                    fn ($q) => $q->with('location.parent.parent'),
                 )
                 ->when(
                     method_exists($model, 'branch'),
@@ -413,15 +426,34 @@ final class PartyRegistry
      */
     private function pickerFind(Model $row, string $label, string $hint): string
     {
+        /*
+         * ⭐ ঠিকানা আর পয়েন্টের উপরের দুই ধাপও — মালিক, ২৩ নভেম্বর ২০২৬: *নাম, মোবাইল, ঠিকানা বা পয়েন্ট — সব জায়গায়*
+         * ([[PartySearch]]-এর একই ঘর)। ⓘ ধাপগুলো আগেই একসাথে তোলা ([[forPicker()]]); না তোলা থাকলে প্রশ্ন নয়, বাদ।
+         */
+        $places = [];
         $place = $row->relationLoaded('location') ? $row->getRelation('location') : null;
+
+        for ($step = 0; $step < 3 && $place instanceof Model; $step++) {
+            $places[] = $place->getAttribute('name_en');
+            $places[] = $place->getAttribute('name_bn');
+            $place = $place->relationLoaded('parent') ? $place->getRelation('parent') : null;
+        }
+
+        $phone = $row->getAttribute('phone') ?? $row->getAttribute('mobile');
 
         return mb_strtolower(collect([
             $label,
             $row->getAttribute('name_en'),
             $row->getAttribute('name_bn'),
+            $row->getAttribute('owner_name'),
             $hint,
-            $place instanceof Model ? $place->getAttribute('name_en') : null,
-            $place instanceof Model ? $place->getAttribute('name_bn') : null,
+            ...$places,
+            $row->getAttribute('address_en'),
+            $row->getAttribute('address_bn'),
+            // ⛔ getAttribute('address') নয়: গ্রাহক-সরবরাহকারীর `address()` পদ্ধতিকে সম্পর্ক ভেবে ছুঁড়ে ফেলত
+            $row->getAttributes()['address'] ?? null,
+            // ⓘ ফাঁক-ড্যাশ ছাড়া মোবাইলও — "01711-223344" লেখা থাকলেও শেষ চার অঙ্কে আসে
+            filled($phone) ? preg_replace('/\D+/', '', (string) $phone) : null,
         ])->filter(fn ($v) => filled($v))->map(fn ($v) => (string) $v)->unique()->implode(' '));
     }
 
@@ -590,12 +622,19 @@ final class PartyRegistry
 
             $columns = array_values(array_intersect(['name_en', 'name_bn', 'name', 'code'], $model->getFillable()));
 
+            /*
+             * ⭐ যে পক্ষের নিজের খোঁজার নিয়ম আছে (গ্রাহক, সরবরাহকারী — [[PartySearch]]), সেটাই: নাম, মোবাইল, ঠিকানা,
+             * পয়েন্ট সব পর্দায় একই (মালিক, ২৩ নভেম্বর ২০২৬)। বাকিদের আগের মতো নাম-কোড-জায়গা।
+             */
+            $ownRule = method_exists($model, 'scopeSearch');
+
             $ids = $model::query()
                 ->when(
                     in_array('company_id', $model->getFillable(), true),
                     fn ($q) => $q->where('company_id', CompanyContext::id()),
                 )
-                ->where(function ($q) use ($columns, $like, $model) {
+                ->when($ownRule, fn ($q) => $q->search($term))
+                ->when(! $ownRule, fn ($query) => $query->where(function ($q) use ($columns, $like, $model) {
                     foreach ($columns as $column) {
                         $q->orWhere($column, 'like', $like);
                     }
@@ -603,7 +642,7 @@ final class PartyRegistry
                     if (method_exists($model, 'location')) {
                         $q->orWhereHas('location', fn ($l) => $l->where('name_en', 'like', $like)->orWhere('name_bn', 'like', $like));
                     }
-                })
+                }))
                 ->pluck($model->getKeyName())
                 ->map(fn ($id) => (int) $id)
                 ->all();

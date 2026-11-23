@@ -281,6 +281,7 @@ return [
         'cancel' => 'Cancel',
         'delete' => 'Delete',
         'search' => 'Search',
+        'show' => 'Show',
         'search_anything' => 'Search anything…',
         'search_everything' => 'Search anything: pages, customers, products, paper numbers…',
         'switch_language' => 'Switch language',

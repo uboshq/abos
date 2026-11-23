@@ -7,7 +7,8 @@ import { abosDate } from './date.js'
 import { followTheDevice } from './theme.js'
 import { listKeys } from './list-keys.js'
 import { approvalKeys } from './approval-keys.js'
-import { searchAsYouType } from './search-as-you-type.js'
+import { searchAsYouType, searched } from './search-as-you-type.js'
+import { listSwap } from './list-swap.js'
 import { guardOneSubmit } from './one-submit.js'
 import { bootLiveLogos } from './live-logo.js'
 import { guardConfirmOverview } from './confirm-overview.js'
@@ -157,6 +158,10 @@ approvalKeys()
 
 // তালিকার খোঁজ — টাইপ করতেই, Enter ছাড়া; নিয়ম `search-as-you-type.js`-এ
 searchAsYouType()
+
+// ⭐ তালিকার খোঁজা, সাজানো, পাতা বদল — কেবল তালিকার অংশ বদলায়, পুরো পাতা নয় (মালিক, ২৩ নভেম্বর ২০২৬; [[list-swap.js]])।
+// ⓘ নতুন টেবিলে "ABOS"-এর বাছাইয়ের ঘর আবার বসে ([[pickColumns]])
+listSwap(document, { searched, after: () => pickColumns() })
 
 /*
  * Columns মেনু — টিক-না-দেওয়া কলামগুলো `?hide=`-এ।

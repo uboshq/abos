@@ -74,7 +74,7 @@
     {{-- ⭐ ভাগ — চালান · গাড়ি · পয়েন্ট · মাস (`?by=`); ABOS রূপে মাথার সারিতে নামের পাশে বসে ([[compactPageHead]]) --}}
     <x-ui.list-tabs :tabs="$groups" :label="__('sales::delivery_cost.group_label')" />
 
-    <x-ui.filter-layout :filters="$filters" form="list-form" :noun="__('sales::delivery_cost.noun')">
+    <x-ui.filter-layout :filters="$filters" form="list-form" :report="true" :noun="__('sales::delivery_cost.noun')">
         {{-- ⭐ চার কার্ড — তালিকার রঙিন কার্ডের একই ছাঁচ, তবে লিংক নয় (কেবল অঙ্ক) --}}
         <div class="list-cards" data-list-cards data-cost-cards>
             @foreach ($cards as $card)
@@ -98,9 +98,9 @@
 
         <div class="grid items-start gap-3 xl:grid-cols-[minmax(0,2.3fr)_minmax(18rem,1fr)]">
             <div data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-                <form id="list-form" method="GET" class="contents">
+                <form id="list-form" method="GET" class="contents" data-report>
                     <input type="hidden" name="by" value="{{ $by }}">
-                    <x-ui.toolbar :title="$title" :columns="$columns" :facets="$filters" :quiet="['by']"
+                    <x-ui.toolbar :title="$title" :columns="$columns" :facets="$filters" :quiet="['by']" :report="true"
                                   :search-placeholder="__('sales::delivery_cost.search')" />
                 </form>
 

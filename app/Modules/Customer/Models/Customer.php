@@ -13,6 +13,7 @@ use App\Core\Contracts\CreditHolds;
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\IsAMasterRecord;
 use App\Core\Services\DataScope;
+use App\Core\Support\PartySearch;
 use App\Core\Support\ViewedBranch;
 use App\Models\Branch;
 use App\Models\LedgerEntry;
@@ -362,32 +363,20 @@ class Customer extends Model implements AuthenticatableContract, Drillable, IsAM
      */
     public function scopeSearch(Builder $query, ?string $term): Builder
     {
-        if (blank($term)) {
-            return $query;
-        }
-
-        $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim($term)).'%';
-
         /*
          * ⭐ মালিক, ১ অক্টোবর ২০২৬: *"কোড, নাম, পয়েন্ট, এরিয়া, ঠিকানা, মালিকের নাম, মোবাইল —
          * egulo zekono titei hobe"*। ⓘ পয়েন্ট আর এরিয়া গাছে থাকে: গ্রাহকের নিজের জায়গা,
          * তার উপরের ধাপ, আর তারও উপরের ধাপ — যেকোনোটার নাম মিললেই।
+         * ⭐ নিয়মটা এখন এক জায়গায়, সরবরাহকারীর সাথে ভাগে ([[PartySearch]], মালিক ২৩ নভেম্বর ২০২৬):
+         * প্রতিটা শব্দ কোনো ঘরে মিলতে হবে, আর মোবাইলের শেষ চার অঙ্কেও আসে।
          */
-        return $query->where(function (Builder $q) use ($like) {
-            $q->where('name_en', 'like', $like)
-                ->orWhere('name_bn', 'like', $like)
-                ->orWhere('code', 'like', $like)
-                ->orWhere('phone', 'like', $like)
-                ->orWhere('owner_name', 'like', $like)
-                ->orWhere('address_en', 'like', $like)
-                ->orWhere('address_bn', 'like', $like)
-                ->orWhereIn('location_id', fn ($s) => $s->select('l.id')->from('mdm_locations as l')
-                    ->leftJoin('mdm_locations as p', 'p.id', '=', 'l.parent_id')
-                    ->leftJoin('mdm_locations as g', 'g.id', '=', 'p.parent_id')
-                    ->where(fn ($w) => $w->where('l.name_en', 'like', $like)->orWhere('l.name_bn', 'like', $like)
-                        ->orWhere('p.name_en', 'like', $like)->orWhere('p.name_bn', 'like', $like)
-                        ->orWhere('g.name_en', 'like', $like)->orWhere('g.name_bn', 'like', $like)));
-        });
+        return PartySearch::apply(
+            $query,
+            $term,
+            ['name_en', 'name_bn', 'code', 'owner_name', 'address_en', 'address_bn'],
+            ['phone'],
+            'location_id',
+        );
     }
 
     /**
@@ -466,6 +455,30 @@ class Customer extends Model implements AuthenticatableContract, Drillable, IsAM
     public static function placeVia(string $relation): array
     {
         return array_map(fn (string $r) => $relation.'.'.$r, self::PLACE);
+    }
+
+    /**
+     * ⭐ ব্রাউজারের পিকারের খোঁজার লেখা — [[scopeSearch()]]-এর একই ঘর ([[PartySearch]]; মালিক, ২৩ নভেম্বর ২০২৬): দুই নাম, কোড,
+     * মালিকের নাম, ঠিকানা (দুই ভাষা), মোবাইল (ফাঁক-ড্যাশ ছাড়াও — শেষ চার অঙ্কে মেলে), আর পয়েন্ট ও তার উপরের দুই ধাপ।
+     * ⓘ কেবল আগে তোলা ধাপ পড়ে, প্রশ্ন নয় — ডাকার আগে `location.parent.parent` একসাথে আনুন।
+     */
+    public function searchText(): string
+    {
+        $places = [];
+        $place = $this->relationLoaded('location') ? $this->getRelation('location') : null;
+
+        for ($step = 0; $step < 3 && $place instanceof Model; $step++) {
+            $places[] = $place->getAttribute('name_en');
+            $places[] = $place->getAttribute('name_bn');
+            $place = $place->relationLoaded('parent') ? $place->getRelation('parent') : null;
+        }
+
+        return mb_strtolower(collect([
+            $this->name_en, $this->name_bn, $this->code, $this->owner_name,
+            $this->address_en, $this->address_bn, $this->phone,
+            filled($this->phone) ? preg_replace('/\D+/', '', (string) $this->phone) : null,
+            ...$places,
+        ])->filter(fn ($v) => filled($v))->map(fn ($v) => (string) $v)->unique()->implode(' '));
     }
 
     /**

@@ -2595,3 +2595,41 @@ describe('ভাড়ার খাত', () => {
         expect(c.fareWhen).toBe('now')
     })
 })
+
+/*
+ * ⭐ মালিক, ২৩ নভেম্বর ২০২৬: *সরাসরি বিক্রয়ে পয়েন্টের নাম লিখে কিছুই আসে না*। ⓘ ক্রেতার খোঁজা এখন নাম, মোবাইল (শেষ চার
+ * অঙ্কেও), ঠিকানা আর পয়েন্ট ও তার উপরের দুই ধাপে — `find` সার্ভার গড়ে ([[Customer::searchText()]])।
+ */
+describe('ক্রেতা খোঁজা — নাম, মোবাইল, ঠিকানা, পয়েন্ট', () => {
+    const shops = {
+        7: { name: 'রহিম ট্রেডার্স', name_en: 'Rahim Traders', name_bn: 'রহিম ট্রেডার্স', code: 'C-0007', phone: '01711-223344',
+            address: 'House 12, Lake Road', location: 'Notun Bazar · Dhaka',
+            find: 'rahim traders রহিম ট্রেডার্স c-0007 house 12, lake road 01711-223344 01711223344 notun bazar badda area dhaka north' },
+        8: { name: 'Karim Store', name_en: 'Karim Store', name_bn: '', code: 'C-0008', phone: '01811000002',
+            address: 'Shop 4, Mirpur Road', location: 'Mirpur 10 · Dhaka',
+            find: 'karim store c-0008 shop 4, mirpur road 01811000002 mirpur 10 mirpur area dhaka north' },
+    }
+    const found = (term) => {
+        const c = counter({ customers: shops })
+        c.customerTerm = term
+
+        return c.customerMatches.map((m) => m.id)
+    }
+
+    it.each([
+        ['নাম', 'rahim', ['7']],
+        ['মোবাইলের শেষ চার অঙ্ক', '3344', ['7']],
+        ['ড্যাশসহ মোবাইল', '01711-223344', ['7']],
+        ['ঠিকানার শব্দ', 'lake', ['7']],
+        ['পয়েন্ট', 'notun bazar', ['7']],
+        ['পয়েন্টের মা', 'badda', ['7']],
+        ['প্রতিটা শব্দ কোনো ঘরে', 'karim mirpur', ['8']],
+        ['একটা শব্দ না মিললে নেই', 'karim lake', []],
+    ])('%s দিয়ে', (_, term, ids) => {
+        expect(found(term)).toEqual(ids)
+    })
+
+    it('খালি লেখায় পুরো তালিকা', () => {
+        expect(found('')).toEqual(['7', '8'])
+    })
+})

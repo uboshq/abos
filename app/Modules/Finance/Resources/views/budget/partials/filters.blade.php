@@ -2,7 +2,7 @@
     বছর আর বিভাগ — একটা GET ফর্ম, জমা দিলেই ছাঁকে।
     ⓘ `$extra` দিয়ে পাতা নিজের বাড়তি ঘর (মাস) যোগ করে।
 --}}
-<form method="GET" class="mb-3 flex flex-wrap items-end gap-3">
+<form method="GET" class="mb-3 flex flex-wrap items-end gap-3" @if ($report ?? false) data-report @endif>
     <x-ui.field name="year" type="number" :label="__('finance::budget.year')" :value="$year"
                 min="2000" max="2100" class="w-28" />
 

@@ -36,7 +36,7 @@
 
             <span class="text-2xs text-(--color-ink-muted)">{{ \App\Core\Engines\Dashboard\DateRange::label($range['from'], $range['to']) }}</span>
 
-            <form method="GET" action="{{ route('executive.analysis') }}" class="flex flex-wrap items-center gap-2">
+            <form method="GET" action="{{ route('executive.analysis') }}" class="flex flex-wrap items-center gap-2" data-report>
                 <label class="sr-only" for="an-period">{{ __('executive::today.period') }}</label>
                 <select id="an-period" name="period" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                     @foreach (AnalysisController::PERIODS as $p)

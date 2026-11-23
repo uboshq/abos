@@ -28,15 +28,17 @@
         </div>
     @endunless
 
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-2">
+    {{-- ⭐ রিপোর্ট: মাস বাছলেই চলে না — "দেখান" বা Enter (মালিক, ২৩ নভেম্বর ২০২৬) --}}
+    <form method="GET" class="mb-4 flex flex-wrap items-end gap-2" data-report>
         <label class="block">
             <span class="mb-1 block text-2xs font-semibold uppercase tracking-wide
                          text-(--color-ink-muted)">{{ __('hr::field.month') }}</span>
             <x-ui.month name="month" :value="$month->format('Y-m')"
-                        data-action="submit-form"
                         class="rounded-(--radius-field) border border-(--color-border)
                                bg-(--color-surface-app) px-2 py-1.5 text-sm" />
         </label>
+
+        <x-ui.button type="submit" tone="secondary">{{ __('core.action.show') }}</x-ui.button>
     </form>
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">

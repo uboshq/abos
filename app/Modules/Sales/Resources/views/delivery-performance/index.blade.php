@@ -90,11 +90,20 @@
     </section>
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('sales::delivery_performance.late_list')" :search="false"
+        <form method="GET" class="contents" data-report>
+            <x-ui.toolbar :title="__('sales::delivery_performance.late_list')" :search="false" :report="true"
                           :count="__('sales::delivery_performance.range', ['from' => DateFormat::format($dates['from']), 'to' => DateFormat::format($dates['to'])])"
                           :columns="$columns">
-                <x-ui.date-range :dates="$dates" />
+                {{-- ⭐ রিপোর্ট: তারিখ বসালেই চলে না, "দেখান" বা Enter (মালিক, ২৩ নভেম্বর ২০২৬) — তাই `x-ui.date-range` নয়, একই দুই ঘর জমা ছাড়া --}}
+                <x-ui.date name="from"
+                           value="{{ $dates['from'] ?? '' }}"
+                           aria-label="{{ __('core.table.from_date') }}"
+                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
+
+                <x-ui.date name="to"
+                           value="{{ $dates['to'] ?? '' }}"
+                           aria-label="{{ __('core.table.to_date') }}"
+                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
             </x-ui.toolbar>
         </form>
 

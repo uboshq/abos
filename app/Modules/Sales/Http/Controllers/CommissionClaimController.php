@@ -63,12 +63,9 @@ class CommissionClaimController extends Controller implements HasMiddleware
             ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
                 fn ($w) => $w->where('document_no', 'like', "%{$term}%")
                     ->orWhere('narration', 'like', "%{$term}%")
-                    ->orWhereHas('customer', fn ($c) => $c->where('name_en', 'like', "%{$term}%")
-                        ->orWhere('name_bn', 'like', "%{$term}%")
-                        ->orWhere('code', 'like', "%{$term}%"))
-                    ->orWhereHas('supplier', fn ($s) => $s->where('name_en', 'like', "%{$term}%")
-                        ->orWhere('name_bn', 'like', "%{$term}%")
-                        ->orWhere('code', 'like', "%{$term}%")),
+                    // ⭐ পক্ষের নিজের খোঁজার নিয়ম — নাম, মোবাইল, ঠিকানা, পয়েন্ট (মালিক, ২৩ নভেম্বর ২০২৬; [[PartySearch]])
+                    ->orWhereHas('customer', fn ($c) => $c->search($term))
+                    ->orWhereHas('supplier', fn ($s) => $s->search($term)),
             ));
 
         $sort = $this->applySort($query, $request, $this->sorts());

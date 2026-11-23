@@ -22,7 +22,7 @@
                           :subtitle="__('finance::account_analysis.subtitle')" />
     </x-slot:header>
 
-    <form method="GET" action="{{ route('finance.account_analysis.index') }}"
+    <form method="GET" action="{{ route('finance.account_analysis.index') }}" data-report
           class="mb-3 flex flex-wrap items-end gap-2">
         <div class="min-w-72">
             <x-ui.select name="account_id" :label="__('finance::account_analysis.account')"

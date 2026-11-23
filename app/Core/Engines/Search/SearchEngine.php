@@ -6,6 +6,8 @@ namespace App\Core\Engines\Search;
 
 use App\Core\Contracts\Drillable;
 use App\Core\Module\ModuleRegistry;
+use App\Core\Services\PartyRegistry;
+use App\Core\Support\PartySearch;
 use App\Http\Middleware\RefuseSwitchedOffScreens;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -62,8 +64,9 @@ final class SearchEngine
      *
      * ⓘ এক অক্ষরে প্রায় প্রতিটা সারি মেলে, অর্থাৎ ফলাফল অর্থহীন আর
      * খরচ সর্বোচ্চ — সবচেয়ে খারাপ জোড়া।
+     * ⭐ তিন — টাইপের সাথে চলা সব সার্ভার-খোঁজার একই সীমা ([[PartySearch::MIN_TYPED]]; মালিক, ২৩ নভেম্বর ২০২৬)।
      */
-    public const MIN_TERM = 2;
+    public const MIN_TERM = PartySearch::MIN_TYPED;
 
     /**
      * ⚠️ এর বেশি লেখা কেটে নেওয়া হয় — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
@@ -519,11 +522,19 @@ final class SearchEngine
              * ⓘ মডেল নিজে বলে তার কী লাগে; না বললে কিছুই তোলা হয় না।
              */
             ->when(method_exists($class, 'drillRelations'), fn ($q) => $q->with($class::drillRelations()))
-            ->where(function ($query) use ($columns, $like) {
-                foreach ($columns as $column) {
-                    $query->orWhere($column, 'like', $like);
-                }
-            })
+            /*
+             * ⭐ পক্ষ (গ্রাহক, সরবরাহকারী …) — তার নিজের খোঁজার নিয়মে: নাম, মোবাইল (শেষ চার অঙ্কেও), ঠিকানা, পয়েন্ট ও তার
+             * উপরের দুই ধাপ (মালিক, ২৩ নভেম্বর ২০২৬; [[PartySearch]])। ⓘ বাকি উৎস আগের মতো স্থির ঘরগুলোয়।
+             */
+            ->when(
+                $this->searchesAsAParty($class),
+                fn ($q) => $q->search($term),
+                fn ($q) => $q->where(function ($query) use ($columns, $like) {
+                    foreach ($columns as $column) {
+                        $query->orWhere($column, 'like', $like);
+                    }
+                }),
+            )
             /*
              * ⛔ সারি-যাচাইয়ের উৎসে বেশি সারি, আর স্থির ক্রম — ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬।
              * ⓘ আগে LIMIT ৫ বসত পলিসির **আগে**, ক্রম ছাড়া: শাখা-খ-এর কর্মী "Store" লিখলে ডাটাবেজের প্রথম ৫টা অন্য শাখার
@@ -533,6 +544,16 @@ final class SearchEngine
             ->orderByDesc((new $class)->getQualifiedKeyName())
             ->limit($rowChecked ? self::PER_SOURCE * 8 : self::PER_SOURCE)
             ->get();
+    }
+
+    /**
+     * ⓘ এই উৎসটা কি পক্ষ, আর তার নিজের খোঁজার নিয়ম আছে কি — কোর মডিউলের নাম না জেনে ([[PartyRegistry::isPartyModel()]])।
+     *
+     * @param  class-string<Model>  $class
+     */
+    private function searchesAsAParty(string $class): bool
+    {
+        return method_exists($class, 'scopeSearch') && app(PartyRegistry::class)->isPartyModel(new $class);
     }
 
     /** একটা সারিকে ফলাফলে রূপ দেওয়া — চারটা ঘরই `Drillable` থেকে। */

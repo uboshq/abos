@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import partySearch, { matchParties, SHOWN_AT_ONCE } from './party-search.js'
+import partySearch, { matchParties, searchWords, SHOWN_AT_ONCE } from './party-search.js'
 import * as voucher from './party-voucher.js'
 
 /*
@@ -335,5 +335,43 @@ describe('partySearch — "লেখা নাম যোগ" (addable; মাল
     it('ফেরানো জমায় আগের লেখা নাম খোলা থাকে (old())', () => {
         expect([adding({ adding: true, newName: 'Rahim' }).adding, adding({ adding: true, newName: 'Rahim' }).newName]).toEqual([true, 'Rahim'])
         expect(make({ adding: true }).adding).toBe(false)
+    })
+})
+
+/*
+ * ⭐ মালিক, ২৩ নভেম্বর ২০২৬: *নাম, মোবাইল, ঠিকানা বা পয়েন্ট — সব জায়গায়*। ⓘ `find` সার্ভার গড়ে
+ * ([[PartyRegistry::pickerFind()]]): ঠিকানা, পয়েন্ট আর তার উপরের দুই ধাপ, আর মোবাইল খালি অঙ্কে।
+ */
+describe('partySearch — ঠিকানা, পয়েন্ট আর মোবাইলের শেষ চার অঙ্ক', () => {
+    const rich = [
+        { id: 21, label: 'Rahim Traders', hint: 'C-0201 · Notun Bazar · 01711-223344', find: 'rahim traders c-0201 · notun bazar · 01711-223344 notun bazar badda area dhaka north house 12, lake road 01711223344' },
+        { id: 22, label: 'Karim Store', hint: 'C-0202 · Mirpur 10 · 01811000002', find: 'karim store c-0202 · mirpur 10 · 01811000002 mirpur 10 mirpur area dhaka north shop 4, mirpur road 01811000002' },
+    ]
+
+    it('ঠিকানার শব্দ দিয়ে', () => {
+        expect(matchParties(rich, 'lake').map((p) => p.id)).toEqual([21])
+    })
+
+    it('পয়েন্ট, তার মা আর মায়ের মা — তিনটার নাম দিয়েই', () => {
+        expect(matchParties(rich, 'notun bazar').map((p) => p.id)).toEqual([21])
+        expect(matchParties(rich, 'badda').map((p) => p.id)).toEqual([21])
+        expect(matchParties(rich, 'dhaka north').map((p) => p.id)).toEqual([21, 22])
+    })
+
+    it('মোবাইলের শেষ চার অঙ্ক, ড্যাশ বা +88 লিখলেও', () => {
+        expect(matchParties(rich, '3344').map((p) => p.id)).toEqual([21])
+        expect(matchParties(rich, '01711-223344').map((p) => p.id)).toEqual([21])
+        expect(matchParties(rich, '+880 1711 223344').map((p) => p.id)).toEqual([21])
+    })
+
+    it('প্রতিটা শব্দ কোনো না কোনো ঘরে মিলতে হয়', () => {
+        expect(matchParties(rich, 'rahim lake').map((p) => p.id)).toEqual([21])
+        expect(matchParties(rich, 'karim lake').map((p) => p.id)).toEqual([])
+    })
+
+    it('সংখ্যার লেখা এক টুকরো, অন্য লেখা শব্দে', () => {
+        expect(searchWords('+880 1711-223344')).toEqual(['01711223344'])
+        expect(searchWords('12')).toEqual(['12'])
+        expect(searchWords('Rahim  Lake')).toEqual(['rahim', 'lake'])
     })
 })

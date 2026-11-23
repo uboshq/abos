@@ -33,7 +33,7 @@ export const SHOWN_AT_ONCE = 100
  * মোবাইল — [[PartyRegistry::pickerFind()]]); না থাকলে নাম আর ছোট লাইনটাই।
  */
 export function matchParties(options, term) {
-    const words = String(term || '').toLowerCase().split(/\s+/).filter(Boolean)
+    const words = searchWords(term)
 
     if (words.length === 0) {
         return options
@@ -44,6 +44,30 @@ export function matchParties(options, term) {
 
         return words.every((w) => haystack.includes(w))
     })
+}
+
+/**
+ * ⭐ খোঁজার শব্দ — সার্ভারের একই নিয়ম ([[PartySearch::words()]], মালিক ২৩ নভেম্বর ২০২৬)।
+ *
+ * ⓘ সংখ্যার মতো পুরো লেখা ("+880 1711-223344", "3344") একটাই টুকরো, খালি অঙ্কে — `find`-এ মোবাইলটা ফাঁক-ড্যাশ ছাড়াও
+ * থাকে, তাই শেষ চার অঙ্কেও মেলে। বাকি লেখা শব্দে ভাঙা, প্রতিটা শব্দ মিলতে হয়।
+ */
+export function searchWords(term) {
+    const text = String(term || '').trim().toLowerCase()
+
+    if (/^\+?[\d\s\-().]+$/.test(text)) {
+        let digits = text.replace(/\D+/g, '')
+
+        if (digits.length > 11 && digits.startsWith('880')) {
+            digits = digits.slice(2)
+        }
+
+        if (digits.length >= 4) {
+            return [digits]
+        }
+    }
+
+    return text.split(/\s+/).filter(Boolean)
 }
 
 /**

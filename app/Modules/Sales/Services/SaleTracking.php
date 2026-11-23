@@ -94,8 +94,8 @@ final class SaleTracking
             ->when($term, fn ($q, $t) => $q->where(fn ($w) => $w
                 ->where('document_no', 'like', "%{$t}%")
                 ->orWhere('sale_no', 'like', "%{$t}%")
-                ->orWhereHas('customer', fn ($c) => $c->where('name_en', 'like', "%{$t}%")
-                    ->orWhere('name_bn', 'like', "%{$t}%")->orWhere('code', 'like', "%{$t}%"))))
+                // ⭐ গ্রাহকের নিজের খোঁজার নিয়ম — নাম, মোবাইল, ঠিকানা, পয়েন্ট (মালিক, ২৩ নভেম্বর ২০২৬; [[PartySearch]])
+                ->orWhereHas('customer', fn ($c) => $c->search($t))))
             ->orderByDesc('trx_date')->orderByDesc('id')
             ->limit($limit)
             ->get();
@@ -110,8 +110,7 @@ final class SaleTracking
             ->when($customerId, fn ($q, $id) => $q->where('customer_id', $id))
             ->when($term, fn ($q, $t) => $q->where(fn ($w) => $w
                 ->where('document_no', 'like', "%{$t}%")
-                ->orWhereHas('customer', fn ($c) => $c->where('name_en', 'like', "%{$t}%")
-                    ->orWhere('name_bn', 'like', "%{$t}%")->orWhere('code', 'like', "%{$t}%"))))
+                ->orWhereHas('customer', fn ($c) => $c->search($t))))
             ->orderByDesc('trx_date')->orderByDesc('id')
             ->limit($limit)
             ->get();

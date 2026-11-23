@@ -86,10 +86,8 @@ final class DepotCheckController extends Controller implements HasMiddleware
             ->whereIn('status', [constant(self::STATUS.'::ACCOUNTS_APPROVED'), constant(self::STATUS.'::DEPOT_CHECK')])
             ->when($q !== '', fn ($query) => $query->where(fn ($w) => $w
                 ->where('document_no', 'like', '%'.$q.'%')
-                ->orWhereHas('customer', fn ($c) => $c->where(fn ($n) => $n
-                    ->where('name_en', 'like', '%'.$q.'%')
-                    ->orWhere('name_bn', 'like', '%'.$q.'%')
-                    ->orWhere('code', 'like', '%'.$q.'%')))));
+                // ⭐ গ্রাহকের নিজের খোঁজার নিয়ম — নাম, মোবাইল, ঠিকানা, পয়েন্ট (মালিক, ২৩ নভেম্বর ২০২৬; [[PartySearch]])
+                ->orWhereHas('customer', fn ($c) => $c->search($q))));
     }
 
     /**

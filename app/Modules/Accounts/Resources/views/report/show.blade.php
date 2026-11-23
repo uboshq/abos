@@ -196,7 +196,7 @@
     @endisset
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form method="GET" class="contents" data-report>
             {{-- ⛔ নাগালের বাইরের শাখা চাইলে ইঞ্জিন ফেরায় — কারণটা এখানে দেখা যায়, নীরব ফেরত নয় (অডিট ২৭ সেপ্টেম্বর, §৩)। --}}
             <x-ui.errors />
 
@@ -216,7 +216,7 @@
             {{-- ⭐ ছাপা গোটা পরিসর — পর্দায় এক পাতার বেশি সারি থাকলে "ছাপুন" `?print=1`-এ যায়, যেখানে ইঞ্জিন সব সারি আঁকে
                  আর পাতাটা নিজেই ছাপা শুরু করে (মালিক, ৩ অক্টোবর ২০২৬: কাস্টমার লেজার পাতা ধরে ধরে ছাপতে হত;
                  [[ReportEngine::wholeDocumentWanted()]])। ⓘ পুরো পরিসর এক পাতায় থাকলে আগের মতো পর্দাটাই ছাপে। --}}
-            <x-ui.toolbar :title="__($report->title)" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows]).($period !== null ? ' · '.$period : '')"
+            <x-ui.toolbar :title="__($report->title)" :report="true" :count="trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows]).($period !== null ? ' · '.$period : '')"
                           :search="$report->searchableColumns() !== []"
                           :print-href="\App\Modules\Accounts\Reports\PartyLedgerReports::statementHref($report->key, $result->filters)
                               ?? ($result->totalRows > $result->perPage ? request()->fullUrlWithQuery(['print' => 1, 'page' => null]) : null)"

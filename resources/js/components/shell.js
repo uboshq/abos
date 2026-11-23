@@ -25,6 +25,13 @@
  * ↵ বাছা ফলটা খোলে, Esc বন্ধ করে। বাছা সারিটা `aria-selected`, আর ঘরটা
  * `aria-activedescendant` দিয়ে স্ক্রিন-রিডারকে বলে কোনটা বাছা।
  */
+/**
+ * ⭐ গ্লোবাল খোঁজা — তিন অক্ষর, থামার ৩০০ মিলিসেকেন্ড পরে; Enter তখনই (মালিক, ২৩ নভেম্বর ২০২৬)।
+ * ⓘ সার্ভারের একই সীমা ([[SearchEngine::MIN_TERM]])।
+ */
+export const COMMAND_MIN_CHARS = 3
+export const COMMAND_WAIT = 300
+
 export function commandCenter ({ url }) {
     return {
         open: false,
@@ -249,6 +256,13 @@ export function commandCenter ({ url }) {
         choose (event) {
             if (event && event.isComposing) return
 
+            // ⭐ খোঁজা অপেক্ষায় থাকলে Enter তখনই খোঁজে — পুরনো ফল খোলে না (মালিক, ২৩ নভেম্বর ২০২৬)
+            if (this.timer !== null && ! this.tooShort) {
+                this.fetchHits()
+
+                return
+            }
+
             if (! this.items[this.active]) return
 
             document.getElementById(this.hitId(this.active))?.click()
@@ -273,7 +287,7 @@ export function commandCenter ({ url }) {
         },
 
         get tooShort () {
-            return this.q.trim().length < 2
+            return [...this.q.trim()].length < COMMAND_MIN_CHARS
         },
 
         get nothingFound () {
@@ -283,12 +297,13 @@ export function commandCenter ({ url }) {
         /*
          * প্রতিটা অক্ষরে অনুরোধ নয় — থেমে যাওয়ার পর।
          *
-         * ⓘ ২০০ মিলিসেকেন্ড: টাইপ করার স্বাভাবিক বিরতির চেয়ে বড়, আর
+         * ⓘ ৩০০ মিলিসেকেন্ড ([[COMMAND_WAIT]]; আগে ২০০): টাইপ করার স্বাভাবিক বিরতির চেয়ে বড়, আর
          * মানুষের কাছে তাৎক্ষণিকই মনে হয়। ⚠️ না দিলে 'invoice' লিখতে
          * সাতটা অনুরোধ যেত, আর শেষেরটা আগে ফিরলে তালিকায় ভুল ফল বসত।
          */
         ask () {
             clearTimeout(this.timer)
+            this.timer = null
 
             if (this.tooShort) {
                 this.hits = []
@@ -300,20 +315,36 @@ export function commandCenter ({ url }) {
 
             this.busy = true
 
-            this.timer = setTimeout(async () => {
-                try {
-                    const res = await fetch(url + '?q=' + encodeURIComponent(this.q))
-                    const data = await res.json()
-                    this.hits = data.hits ?? []
-                } catch (e) {
-                    // ⓘ নীরবে খালি — খোঁজা ব্যর্থ হলে পাতা ভাঙার কারণ নেই
-                    this.hits = []
-                }
+            this.timer = setTimeout(() => this.fetchHits(), COMMAND_WAIT)
+        },
 
-                // ⚠️ নতুন ফল মানে নতুন তালিকা — পুরনো ক্রমটা অন্য জিনিস দেখাত
-                this.active = 0
-                this.busy = false
-            }, 200)
+        /*
+         * ⓘ সার্ভারকে জিজ্ঞাসা — ঘড়ি ফুরালে, বা Enter চাপলে তখনই ([[choose()]])।
+         * ⛔ উত্তর আসার আগে লেখা বদলালে পুরনো উত্তর বসে না — পরেরটা আসছে।
+         */
+        async fetchHits () {
+            clearTimeout(this.timer)
+            this.timer = null
+
+            const asked = this.q
+
+            try {
+                const res = await fetch(url + '?q=' + encodeURIComponent(asked))
+                const data = await res.json()
+
+                if (asked !== this.q) return
+
+                this.hits = data.hits ?? []
+            } catch (e) {
+                if (asked !== this.q) return
+
+                // ⓘ নীরবে খালি — খোঁজা ব্যর্থ হলে পাতা ভাঙার কারণ নেই
+                this.hits = []
+            }
+
+            // ⚠️ নতুন ফল মানে নতুন তালিকা — পুরনো ক্রমটা অন্য জিনিস দেখাত
+            this.active = 0
+            this.busy = false
         },
     }
 }

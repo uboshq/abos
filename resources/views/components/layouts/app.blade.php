@@ -43,6 +43,19 @@
              পিকেও ওগুলো লাগে, নাহলে ভিতরের সারি-মেনুর বোতামগুলো মৃত হত --}}
         @stack('detached-forms')
     </div>
+@elseif (\App\Core\Support\ListPart::wanted())
+    {{-- ⭐ তালিকার কেবল তালিকা-অংশ — খোঁজা, সাজানো, পাতা বদলানোয় পুরো পাতা নয় (মালিক, ২৩ নভেম্বর ২০২৬; [[ListPart]],
+         [[list-swap.js]])। ⓘ ব্রাউজার এখান থেকে কেবল `data-list-part` চিহ্নের অংশগুলো নেয়; যোগফলের স্ট্যাক আলাদা ঘরে। --}}
+    <div {{ \App\Core\Support\ListPart::FRAGMENT }}>
+        <title>{{ isset($title) ? $title . ' — ABOS' : 'ABOS' }}</title>
+        <main id="main">
+            @isset($header)
+                <div>{{ $header }}</div>
+            @endisset
+            {{ $slot }}
+        </main>
+        <div data-list-foot-totals>@stack('list-totals')</div>
+    </div>
 @else
 <!DOCTYPE html>
 {{-- অ্যাকসেন্ট রংটা সার্ভারেই বসে, JavaScript-এ নয়। JS-এ করলে পাতাটা
