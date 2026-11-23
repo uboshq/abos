@@ -12,6 +12,8 @@
         </x-ui.page-header>
     </x-slot:header>
 
+    <x-ui.errors />
+
     <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <ol class="space-y-2 text-sm">
             @foreach ($messages as $m)

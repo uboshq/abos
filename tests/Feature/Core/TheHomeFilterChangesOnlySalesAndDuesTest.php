@@ -69,10 +69,14 @@ final class TheHomeFilterChangesOnlySalesAndDuesTest extends TestCase
             );
         };
 
-        // ⓘ প্রথম বিক্রি — মালিক আর অন্যজন দুজনেই SR-তালিকায় ওঠেন
+        // ⓘ প্রথম বিক্রি — মালিক আর অন্যজন দুজনেই SR-তালিকায় ওঠেন। ⭐ SR মানে বিলের দায়িত্বপ্রাপ্ত জন (`sales_person_id`;
+        //   মালিক, ২৩ নভেম্বর ২০২৬), বিল যিনি কেটেছেন নন — কে দায়িত্বে বসেন তা বিক্রয়কর্মীর নিজের দাবিগুলো দেখে
+        //   (TheSaleWentToWhoeverTypedTheBillTest …); এখানে কেবল ছাঁকনি, তাই দায়িত্বটা সরাসরি বসানো
+        $credit = fn (int $userId) => SalesInvoice::query()->latest('id')->firstOrFail()->forceFill(['sales_person_id' => $userId])->saveQuietly();
         $sell();
+        $credit($owner->id);
         $sell();
-        SalesInvoice::query()->latest('id')->firstOrFail()->forceFill(['created_by' => $other->id])->saveQuietly();
+        $credit($other->id);
 
         $filters = [
             'none' => [],
@@ -90,6 +94,7 @@ final class TheHomeFilterChangesOnlySalesAndDuesTest extends TestCase
 
         $before = $totals();
         $sell();
+        $credit($owner->id);
         $after = $totals();
         $grew = fn (string $k) => bcsub($after[$k], $before[$k], 4);
         $sale = $grew('none');

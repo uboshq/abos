@@ -71,7 +71,8 @@ class EveryModuleIsOnTheRailOrBehindMoreTest extends TestCase
         $rail = $this->rail($page);
 
         $this->assertSame($this->menuCodes($this->owner), $rail, '⛔ মালিকের রেল মেনুর মডিউলগুলোই নয়, বা আগের ক্রমে নয় — মালিক সব খোলেন, ক্রম বদলানোর কথা নয়');
-        $this->assertGreaterThan(12, count($rail), 'প্রস্তুতিটাই ভুল — এত কম মডিউলে রেল ভরে না');
+        // ⓘ মালিকের একত্র মডিউলে (২০ ও ২৩ নভেম্বর ২০২৬: হিসাব, বিক্রয়, ক্রয়, সিস্টেম ও প্রশাসন, যোগাযোগ) মেনু এখন ঠিক ১২ — তাতেও রেল ভরে
+        $this->assertGreaterThanOrEqual(12, count($rail), 'প্রস্তুতিটাই ভুল — এত কম মডিউলে রেল ভরে না');
         // ⭐ "⋯ আরও" উঠে গেল — সব মডিউল রেলেই, চাকায় চলে, প্রতিটার নিচে নাম (মালিক, ৬ নভেম্বর ২০২৬)
         $this->assertStringNotContainsString('data-rail-more-button', $page, '⛔ রেলে এখনো "⋯ আরও" — মালিক সব মডিউল সরাসরি চান');
         $this->assertMatchesRegularExpression('/<nav class="rail-scroll[^"]*overflow-y-auto/', $page, '⛔ রেল চাকায় চলে না — যা ধরে না তা কাটা যেত');

@@ -62,8 +62,11 @@ final class TheBrowserNeverEvaluatesOurCodeTest extends TestCase
          */
         $directives = collect($method->invoke(app(ContentSecurityPolicy::class), 'test-nonce'));
         $this->assertStringContainsString('blob:', (string) $directives->first(fn ($d) => str_starts_with($d, 'img-src')), '⛔ স্ক্যানের ছবি লাইভে আসবে না।');
-        $this->assertSame([], $directives->filter(fn ($d) => str_contains($d, 'blob:') && ! str_starts_with($d, 'img-src'))->values()->all(),
-            '⛔ blob: ছবির বাইরেও খুলে গেল।');
+        // ⓘ ২৩ নভেম্বর ২০২৬ (বার্তা): ভয়েস বার্তা পাঠানোর আগে blob: থেকে শোনা — `media-src`-এ; শব্দও কোড চালায় না।
+        //   ⛔ বাকি সব (লিপি, সংযোগ, ফ্রেম, worker …) blob: ছাড়া।
+        $this->assertStringContainsString('blob:', (string) $directives->first(fn ($d) => str_starts_with($d, 'media-src')), '⛔ ভয়েস বার্তা পাঠানোর আগে শোনা যাবে না।');
+        $this->assertSame([], $directives->filter(fn ($d) => str_contains($d, 'blob:') && ! str_starts_with($d, 'img-src') && ! str_starts_with($d, 'media-src'))->values()->all(),
+            '⛔ blob: ছবি আর শব্দের বাইরেও খুলে গেল।');
     }
 
     /**
