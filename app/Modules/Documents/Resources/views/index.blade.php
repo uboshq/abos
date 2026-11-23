@@ -132,6 +132,26 @@
             ];
         }
     }
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $search = $view === DocumentFinder::SEARCH;
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('doc_type', __('documents::field.doc_type'), $types, '—'),
+        \App\Core\ListFilter\Facets::pick('department_id', __('documents::field.department'), $departments, '—'),
+        \App\Core\ListFilter\Facets::pick('confidentiality', __('documents::field.confidentiality'), $levels, '—'),
+        \App\Core\ListFilter\Facets::pick('expiry', __('documents::field.expiry_date'), collect(\App\Modules\Documents\Support\DocumentCatalog::EXPIRY_WINDOWS)
+            ->mapWithKeys(fn ($w) => [$w => __('documents::catalog.expiry.'.$w)])->all(), '—'),
+        $search ? \App\Core\ListFilter\Facets::pick('status', __('documents::field.status'), $statuses, '—') : null,
+        $search ? \App\Core\ListFilter\Facets::pick('branch_id', __('documents::field.branch'), $branches, '—') : null,
+        $search ? \App\Core\ListFilter\Facets::pick('owner_id', __('documents::field.owner'), $owners, '—') : null,
+        $search ? \App\Core\ListFilter\Facets::dates(__('core.list_filter.date'), 'date_from', 'date_to', key: 'doc_date') : null,
+        $search ? \App\Core\ListFilter\Facets::number('version', __('documents::field.major_version'), 1) : null,
+        $search ? \App\Core\ListFilter\Facets::text('tag', __('documents::field.tag')) : null,
+        $search ? \App\Core\ListFilter\Facets::text('content', __('documents::field.content'), __('documents::message.content_hint')) : null,
+        in_array($view, [DocumentFinder::CENTER, DocumentFinder::MINE], true)
+            ? \App\Core\ListFilter\Facets::flag('archived', __('documents::action.show_archived'))
+            : null,
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -147,8 +167,9 @@
 
     <x-ui.list-tabs :tabs="$tabs" :label="__('documents::field.folder')" />
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             {{-- ⓘ বাছা ফোল্ডার ট্যাবের, ছাঁকনির নয় — ফর্ম জমা দিলেও ট্যাবটা থাকে --}}
             @if (filled($filters['folder']))
                 <input type="hidden" name="folder" value="{{ $filters['folder'] }}">
@@ -159,7 +180,7 @@
                 :columns="$columns"
                 :search-placeholder="__('documents::message.search_placeholder')"
                 :sort="$sortOptions"
-                :quiet="['folder']">
+                :quiet="['folder']" :facets="$facetPanel">
                 <x-slot:actions>
                     @can('create', Document::class)
                         <x-ui.button tone="primary" icon="plus"
@@ -168,56 +189,6 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
-
-                <x-ui.select name="doc_type" :label="__('documents::field.doc_type')"
-                             :options="$types" :selected="$filters['doc_type']" placeholder="—" />
-
-                <x-ui.select name="department_id" :label="__('documents::field.department')"
-                             :options="$departments" :selected="$filters['department_id']" placeholder="—" />
-
-                <x-ui.select name="confidentiality" :label="__('documents::field.confidentiality')"
-                             :options="$levels" :selected="$filters['confidentiality']" placeholder="—" />
-
-                {{-- ⭐ মেয়াদের ছাঁকনি (§১২) — শেষ হয়ে গেছে, বা ৭/৩০/৯০ দিনের মধ্যে শেষ হবে --}}
-                <x-ui.select name="expiry" :label="__('documents::field.expiry_date')"
-                             :options="collect(\App\Modules\Documents\Support\DocumentCatalog::EXPIRY_WINDOWS)
-                                 ->mapWithKeys(fn ($w) => [$w => __('documents::catalog.expiry.'.$w)])->all()"
-                             :selected="$filters['expiry']" placeholder="—" />
-
-                {{-- ⭐ বিস্তারিত খোঁজ (§১৬) — বাকি ছাঁকনিগুলো কেবল এই পর্দায় --}}
-                @if ($view === DocumentFinder::SEARCH)
-                    <x-ui.select name="status" :label="__('documents::field.status')"
-                                 :options="$statuses" :selected="$filters['status']" placeholder="—" />
-
-                    <x-ui.select name="branch_id" :label="__('documents::field.branch')"
-                                 :options="$branches" :selected="$filters['branch_id']" placeholder="—" />
-
-                    <x-ui.select name="owner_id" :label="__('documents::field.owner')"
-                                 :options="$owners" :selected="$filters['owner_id']" placeholder="—" />
-
-                    <x-ui.field name="date_from" type="date" :label="__('documents::field.date_from')"
-                                :value="$filters['date_from']" />
-
-                    <x-ui.field name="date_to" type="date" :label="__('documents::field.date_to')"
-                                :value="$filters['date_to']" />
-
-                    <x-ui.field name="version" type="number" min="1" :label="__('documents::field.major_version')"
-                                :value="$filters['version']" />
-
-                    <x-ui.field name="tag" :label="__('documents::field.tag')" maxlength="40"
-                                :value="$filters['tag']" />
-
-                    <x-ui.field name="content" :label="__('documents::field.content')" maxlength="100"
-                                :value="$filters['content']" :hint="__('documents::message.content_hint')" />
-                @endif
-
-                {{-- ⓘ আর্কাইভ করা কাগজ সেন্টারে দেখা যায় না — এই টিকে কেবল সেগুলোই, ফেরানোর জন্য --}}
-                @if (in_array($view, [DocumentFinder::CENTER, DocumentFinder::MINE], true))
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="archived" value="1" @checked($filters['archived']) class="size-4">
-                    {{ __('documents::action.show_archived') }}
-                </label>
-                @endif
             </x-ui.toolbar>
         </form>
 
@@ -231,4 +202,5 @@
         <x-ui.pager :rows="$documents" />
         <x-ui.list-totals :rows="$documents" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

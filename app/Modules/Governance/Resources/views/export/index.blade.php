@@ -30,6 +30,15 @@
         ['key' => 'filters', 'label' => __('governance::field.filters'),
          'render' => fn ($r) => $r->filterSummary()],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('user', __('governance::field.who'),
+            collect($users)->mapWithKeys(fn ($u) => [(string) $u->id => $u->name])->all(), __('governance::field.who')),
+        \App\Core\ListFilter\Facets::pick('route', __('governance::field.what_was_taken'),
+            collect($routes)->mapWithKeys(fn ($r) => [$r => $r])->all(), __('governance::field.what_was_taken')),
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ], null, ['from' => $dates['from'] ?? null, 'to' => $dates['to'] ?? null]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -40,8 +49,9 @@
         {{ __('governance::message.export_why') }}
     </p>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             {{--
                 রপ্তানির খাতাটা নিজে রপ্তানি হয় না।
 
@@ -52,41 +62,8 @@
                 ঢাকতে চান, তাঁর প্রথম কাজই হত পুরো খাতাটা নামিয়ে দেখা
                 কী কী ধরা পড়েছে।
             --}}
-            <x-ui.toolbar :title="__('governance::menu.export_log')" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :search="false">
-                <select name="user" aria-label="{{ __('governance::field.who') }}"
-                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2 text-sm">
-                    <option value="">{{ __('governance::field.who') }}</option>
-                    @foreach ($users as $user)
-                        <option value="{{ $user->id }}" @selected(request('user') == $user->id)>
-                            {{ $user->name }}
-                        </option>
-                    @endforeach
-                </select>
-
-                <select name="route" aria-label="{{ __('governance::field.what_was_taken') }}"
-                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2 text-sm">
-                    <option value="">{{ __('governance::field.what_was_taken') }}</option>
-                    @foreach ($routes as $route)
-                        <option value="{{ $route }}" @selected(request('route') === $route)>{{ $route }}</option>
-                    @endforeach
-                </select>
-
-                <label class="flex items-center gap-1 text-sm">
-                    <span class="sr-only">{{ __('core.table.from_date') }}</span>
-                    <x-ui.date name="from"
-                               value="{{ $dates['from'] ?? '' }}"
-                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-                               </label>
-
-                <label class="flex items-center gap-1 text-sm">
-                    <span class="sr-only">{{ __('core.table.to_date') }}</span>
-                    <x-ui.date name="to"
-                               value="{{ $dates['to'] ?? '' }}"
-                               class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-                               </label>
-                               </x-ui.toolbar>
+            <x-ui.toolbar :title="__('governance::menu.export_log')" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :search="false" :facets="$facetPanel">
+            </x-ui.toolbar>
         </form>
 
         @if ($rows->isEmpty())
@@ -98,4 +75,5 @@
 
     <x-ui.pager :rows="$rows" />
     <x-ui.list-totals :rows="$rows" />
+    </x-ui.filter-layout>
 </x-layouts.app>

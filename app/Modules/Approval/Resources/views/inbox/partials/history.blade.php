@@ -67,34 +67,31 @@
     }
 
     $grand = ['amount' => $sumAll];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('module', __('approval::field.work'),
+            collect($modules)->map(fn ($entry) => $entry['label'].' ('.$entry['count'].')')->all(),
+            __('approval::field.all_work')),
+        count($branches) > 1
+            ? \App\Core\ListFilter\Facets::pick('branch', __('approval::field.branch'),
+                collect($branches)->mapWithKeys(fn ($name, $id) => [(string) $id => $name])->all(),
+                __('approval::field.all_branches'))
+            : null,
+    ]);
 @endphp
 
+<x-ui.filter-layout :filters="$facetPanel" form="list-form">
 <div data-boxed data-inbox-history="{{ $tab }}"
      class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-    <form method="GET" action="{{ route('approval.inbox.index') }}" class="contents">
+    <form id="list-form" method="GET" action="{{ route('approval.inbox.index') }}" class="contents">
         <input type="hidden" name="tab" value="{{ $tab }}">
 
+        {{-- ⓘ ছাঁকনি — ইনবক্সের একই ঘর (কাজ, শাখা), একই নামে, তাই ঠিকানা ট্যাব বদলালেও কাজ করে; এখন ডান পাশের প্যানেলে --}}
         <x-ui.toolbar :title="__('approval::field.tab_'.$tab)" :quiet="['tab']"
             :count="__('approval::message.tab_summary', ['count' => $visibleTotal, 'total' => '৳'.\App\Core\Support\Money::format($sumAll)])"
             :sort="$historySorts"
-            :columns="$columns">
-            {{-- ⓘ ছাঁকনি — ইনবক্সের একই ঘর (কাজ, শাখা, অঙ্কের ধাপ), একই নামে, তাই ঠিকানা ট্যাব বদলালেও কাজ করে --}}
-            <select name="module" aria-label="{{ __('approval::field.work') }}" data-action="submit-form"
-                    class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
-                <option value="">{{ __('approval::field.all_work') }}</option>
-                @foreach ($modules as $code => $entry)
-                    <option value="{{ $code }}" @selected($selected === $code)>{{ $entry['label'] }} ({{ $entry['count'] }})</option>
-                @endforeach
-            </select>
-            @if (count($branches) > 1)
-                <select name="branch" aria-label="{{ __('approval::field.branch') }}" data-action="submit-form"
-                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
-                    <option value="">{{ __('approval::field.all_branches') }}</option>
-                    @foreach ($branches as $id => $name)
-                        <option value="{{ $id }}" @selected($branch === (int) $id)>{{ $name }}</option>
-                    @endforeach
-                </select>
-            @endif
+            :columns="$columns" :facets="$facetPanel">
         </x-ui.toolbar>
     </form>
 
@@ -108,3 +105,4 @@
     <x-ui.pager :rows="$approvals" />
     <x-ui.list-totals :rows="$approvals" :grand="$grand" :columns="$columns" />
 </div>
+</x-ui.filter-layout>

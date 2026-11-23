@@ -90,15 +90,40 @@
         $bandNames = collect(array_keys(\App\Modules\Approval\Http\Controllers\ApprovalInboxController::AMOUNT_BANDS))
             ->mapWithKeys(fn ($key) => [$key => __('approval::field.band_'.$key)])->all();
         $field = 'h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm';
+
+        // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+        $facetPanel = \App\Core\ListFilter\Facets::panel([
+            \App\Core\ListFilter\Facets::pick('module', __('approval::field.work'),
+                collect($modules)->map(fn ($one) => $one['label'].' ('.$one['count'].')')->all(),
+                __('approval::field.all_work').' ('.$total.')'),
+            ($lateCount > 0 || $late)
+                ? \App\Core\ListFilter\Facets::flag('late', __('approval::field.late').' ('.$lateCount.')')
+                : null,
+            count($branches) > 1
+                ? \App\Core\ListFilter\Facets::pick('branch', __('approval::field.branch'),
+                    collect($branches)->mapWithKeys(fn ($name, $id) => [(string) $id => $name])->all(),
+                    __('approval::field.all_branches'))
+                : null,
+            \App\Core\ListFilter\Facets::pick('amount', __('approval::field.amount_band'), $bandNames, __('approval::field.any_amount')),
+            count($signers) > 1
+                ? \App\Core\ListFilter\Facets::pick('person', __('approval::field.whose_inbox'),
+                    collect($signers)->mapWithKeys(fn ($name, $id) => [(string) $id => $name])->all(),
+                    __('approval::field.my_inbox'))
+                : null,
+        ]);
     @endphp
-    <form method="GET" action="{{ route('approval.inbox.index') }}" data-inbox-filters
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+    <form id="list-form" method="GET" action="{{ route('approval.inbox.index') }}" data-inbox-filters
           class="mb-3 block overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         @if ($tab !== 'waiting')
             <input type="hidden" name="tab" value="{{ $tab }}">
         @endif
+        @if (count($signers) <= 1 && $person)
+            <input type="hidden" name="person" value="{{ $person }}">
+        @endif
 
         {{-- ⓘ শিরোনাম নেই — ঠিক উপরে ট্যাবের নামই সেটা বলে; দুবার লিখলে তালিকা এক সারি নিচে নামে --}}
-        <x-ui.toolbar :quiet="['tab', 'open']"
+        <x-ui.toolbar :quiet="['tab', 'open']" :facets="$facetPanel"
             :search-placeholder="__('approval::field.search_hint')"
             :sort="$inboxSorts"
             :filter-labels="[
@@ -115,51 +140,6 @@
                 'amount' => $bandNames,
                 'person' => collect($signers)->mapWithKeys(fn ($name, $id) => [(string) $id => $name])->all(),
             ]">
-            {{-- ⓘ কাজ — সংখ্যাসহ, সংখ্যা সবসময় পুরো (ছাঁকা) তালিকার --}}
-            <select name="module" aria-label="{{ __('approval::field.work') }}" data-action="submit-form" class="{{ $field }}">
-                <option value="">{{ __('approval::field.all_work') }} ({{ $total }})</option>
-                @foreach ($modules as $code => $one)
-                    <option value="{{ $code }}" @selected($selected === $code)>{{ $one['label'] }} ({{ $one['count'] }})</option>
-                @endforeach
-            </select>
-
-            {{-- ⓘ দেরি — সংখ্যা শূন্য হলে ঘরটাই নেই, যদি না এখনই বাছা থাকে --}}
-            @if ($lateCount > 0 || $late)
-                <label class="inline-flex items-center gap-1.5 text-sm" data-late-chip>
-                    <input type="checkbox" name="late" value="1" data-action="submit-form" @checked($late)>
-                    {{ __('approval::field.late') }} <span class="num text-(--color-ink-muted)">({{ $lateCount }})</span>
-                </label>
-            @endif
-
-            @if (count($branches) > 1)
-                <select id="inbox-branch" name="branch" aria-label="{{ __('approval::field.branch') }}" data-action="submit-form" class="{{ $field }}">
-                    <option value="">{{ __('approval::field.all_branches') }}</option>
-                    @foreach ($branches as $id => $name)
-                        <option value="{{ $id }}" @selected($branch === $id)>{{ $name }}</option>
-                    @endforeach
-                </select>
-            @endif
-
-            <select id="inbox-amount" name="amount" aria-label="{{ __('approval::field.amount_band') }}" data-action="submit-form" class="{{ $field }}">
-                <option value="">{{ __('approval::field.any_amount') }}</option>
-                @foreach ($bandNames as $key => $name)
-                    <option value="{{ $key }}" @selected($band === $key)>{{ $name }}</option>
-                @endforeach
-            </select>
-
-            {{-- ⓘ কার ইনবক্স — কেবল `approval.report` আছে যাঁর; "সবাই" বিকল্প নেই, সেটা রিপোর্টের প্রশ্ন --}}
-            @if (count($signers) > 1)
-                <select id="person" name="person" aria-label="{{ __('approval::field.whose_inbox') }}" data-action="submit-form" class="{{ $field }}">
-                    <option value="">{{ __('approval::field.my_inbox') }}</option>
-                    @foreach ($signers as $id => $name)
-                        <option value="{{ $id }}" @selected($person === $id)>{{ $name }}</option>
-                    @endforeach
-                </select>
-            @elseif ($person)
-                <input type="hidden" name="person" value="{{ $person }}">
-            @endif
-
-            <noscript><button type="submit" class="text-xs underline">{{ __('core.action.apply') }}</button></noscript>
         </x-ui.toolbar>
     </form>
 
@@ -247,6 +227,7 @@
             @endif
         </div>
     </div>
+    </x-ui.filter-layout>
     @endif
     </x-money.page>
 </x-layouts.app>

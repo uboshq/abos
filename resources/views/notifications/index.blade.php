@@ -7,46 +7,34 @@
     ⚠️ সারির ছোট বোতামগুলো (পড়া, আর্কাইভ) টেবিলের বাইরের নিজের ফর্মে — `form="…"` দিয়ে জোড়া; ফর্মের ভিতরে ফর্ম চলে না,
     আর বাছাইয়ের বড় ফর্মটা গোটা টেবিল ঘিরে থাকে।
 --}}
+@php
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('category', __('core.notify.category_label'),
+            collect(\App\Core\Support\NotificationKinds::CATEGORIES)->mapWithKeys(fn ($category) => [$category => __('core.notify.category.'.$category)])->all(),
+            __('core.notify.any')),
+        \App\Core\ListFilter\Facets::pick('priority', __('core.notify.priority_label'),
+            collect(\App\Core\Support\NotificationKinds::PRIORITIES)->mapWithKeys(fn ($priority) => [$priority => __('core.notify.priority.'.$priority)])->all(),
+            __('core.notify.any')),
+        \App\Core\ListFilter\Facets::pick('module', __('core.notify.module_label'),
+            collect($modules)->mapWithKeys(fn ($module) => [$module => \App\Core\Support\NotificationKinds::sourceLabel($module)])->all(),
+            __('core.notify.any')),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('core.notify.mine') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('core.notify.mine')"
-                      :search-placeholder="__('core.notify.search')"
-                      :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest'), 'priority' => __('core.notify.sort.priority')]"
-                      :export="false" :share="false">
+        <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
 
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('core.notify.category_label') }}
-                <select name="category" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach (\App\Core\Support\NotificationKinds::CATEGORIES as $category)
-                        <option value="{{ $category }}" @selected(($filters['category'] ?? '') === $category)>{{ __('core.notify.category.'.$category) }}</option>
-                    @endforeach
-                </select>
-            </label>
-
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('core.notify.priority_label') }}
-                <select name="priority" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach (\App\Core\Support\NotificationKinds::PRIORITIES as $priority)
-                        <option value="{{ $priority }}" @selected(($filters['priority'] ?? '') === $priority)>{{ __('core.notify.priority.'.$priority) }}</option>
-                    @endforeach
-                </select>
-            </label>
-
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('core.notify.module_label') }}
-                <select name="module" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach ($modules as $module)
-                        <option value="{{ $module }}" @selected(($filters['module'] ?? '') === $module)>{{ \App\Core\Support\NotificationKinds::sourceLabel($module) }}</option>
-                    @endforeach
-                </select>
-            </label>
-        </x-ui.toolbar>
+            <x-ui.toolbar :title="__('core.notify.mine')"
+                          :search-placeholder="__('core.notify.search')"
+                          :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest'), 'priority' => __('core.notify.sort.priority')]"
+                          :export="false" :share="false" :facets="$facetPanel">
+            </x-ui.toolbar>
+        </form>
 
         <x-ui.list-tabs :label="__('core.notify.mine')" :tabs="collect(['all', 'unread', 'read', 'archived'])->map(fn ($key) => [
             'key' => $key,
@@ -143,4 +131,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

@@ -11,33 +11,26 @@
         {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
         <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::party.messages_note') }}</p>
 
-        <form method="GET" class="flex flex-wrap items-end gap-3 text-2xs text-(--color-ink-muted)">
-            <label class="grid gap-1">{{ __('notification::party.from') }}
-                <x-ui.date name="from" :value="$filters['from'] ?? null" />
-            </label>
-            <label class="grid gap-1">{{ __('notification::party.to') }}
-                <x-ui.date name="to" :value="$filters['to'] ?? null" />
-            </label>
-            <label class="grid gap-1">{{ __('notification::party.paper') }}
-                <select name="document_type" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('notification::party.any_paper') }}</option>
-                    @foreach (array_keys(\App\Core\Services\PaperTrail::DOCUMENT_ROUTES) as $type)
-                        <option value="{{ $type }}" @selected(($filters['document_type'] ?? '') === $type)>{{ __('notification::party.types.'.$type) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1">{{ __('notification::party.who') }}
-                <select name="sent_by" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('notification::party.anyone') }}</option>
-                    @foreach ($senders as $sender)
-                        <option value="{{ $sender->id }}" @selected((string) ($filters['sent_by'] ?? '') === (string) $sender->id)>{{ $sender->name }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1">{{ __('notification::party.search') }}
-                <input type="search" name="q" maxlength="60" value="{{ $filters['q'] ?? '' }}" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-            </label>
-            <button type="submit" class="h-(--spacing-field) rounded-(--radius-field) bg-(--color-brand-500) px-3 text-sm text-white">{{ __('notification::party.filter') }}</button>
+        {{-- ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]]); খোঁজার ঘর বারেই --}}
+        @php
+            $facetPanel = \App\Core\ListFilter\Facets::panel([
+                \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+                \App\Core\ListFilter\Facets::pick('document_type', __('notification::party.paper'),
+                    collect(array_keys(\App\Core\Services\PaperTrail::DOCUMENT_ROUTES))->mapWithKeys(fn ($t) => [$t => __('notification::party.types.'.$t)])->all(),
+                    __('notification::party.any_paper')),
+                \App\Core\ListFilter\Facets::pick('sent_by', __('notification::party.who'),
+                    collect($senders)->mapWithKeys(fn ($s) => [(string) $s->id => $s->name])->all(), __('notification::party.anyone')),
+            ]);
+        @endphp
+        <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.filter-bar :facets="$facetPanel">
+                <label class="ms-auto">
+                    <span class="sr-only">{{ __('notification::party.search') }}</span>
+                    <input type="search" name="q" maxlength="60" value="{{ $filters['q'] ?? '' }}" placeholder="{{ __('notification::party.search') }}"
+                           class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                </label>
+            </x-ui.filter-bar>
         </form>
 
         @if ($rows->isEmpty())
@@ -88,5 +81,6 @@
 
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
+        </x-ui.filter-layout>
     </div>
 </x-layouts.app>
