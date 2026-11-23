@@ -37,7 +37,9 @@ final class TheMoneyInReportsCountOnlyReceiptPapersTest extends TestCase
     use RefreshDatabase;
 
     /** রিপোর্টের সব রূপ, যাদের "মোট" একই অঙ্ক হতে হয় */
-    private const VIEWS = [MoneyInReports::DAY, MoneyInReports::BRANCH, MoneyInReports::PERSON, MoneyInReports::CHANNEL];
+    private const VIEWS = [MoneyInReports::DAY, MoneyInReports::BRANCH, MoneyInReports::PERSON, MoneyInReports::CHANNEL,
+        // ⓘ হিসাবের পাতার তিন ভাগ — দিন, শাখা, মাধ্যম; একই সারি, তাই একই মোট
+        CoreReports::INFLOW_DAY, CoreReports::INFLOW_BRANCH, CoreReports::INFLOW_CHANNEL];
 
     public function test_only_receipt_papers_are_money_in_and_everything_else_is_listed_as_left_out(): void
     {

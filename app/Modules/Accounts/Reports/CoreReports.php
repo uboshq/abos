@@ -38,6 +38,11 @@ final class CoreReports
         $engine->register(self::balanceSheet());
         $engine->register(self::cashFlow());
         $engine->register(self::inflow());
+
+        // ⭐ টাকা আসার ভাগ — দিন, শাখা, মাধ্যম (মালিক, ২৩ নভেম্বর ২০২৬)
+        foreach (self::inflowBreakdowns() as $breakdown) {
+            $engine->register($breakdown);
+        }
         $engine->register(self::byCostCentre());
         // ⭐ প্রকল্পভিত্তিক খতিয়ান — ২০ সেপ্টেম্বর ২০২৬ (অর্থের মানচিত্র §১৮)
         $engine->register(self::projectLedger());
@@ -76,7 +81,9 @@ final class CoreReports
             // ⛔ ওয়েবের দরজা যে চাবি দেখে, সেটাই — সূচি ও ফোন এখান থেকে পড়ে (২৭ সেপ্টেম্বর ২০২৬)
             permission: 'accounts.report',
             title: 'accounts::menu.inflow',
-            filters: ['date_range', 'branch'],
+            // ⓘ খাত আর মাধ্যম — ভাগের রিপোর্টের অঙ্কে চাপলে এই তালিকা সেই খাত বা মাধ্যমে ছেঁকে খোলে ([[inflowBreakdowns()]])
+            filters: ['date_range', 'branch', 'account', 'kind'],
+            choices: ['kind' => array_combine(self::MONEY_KINDS, array_map(fn (string $k) => 'accounts::inflow.kind_'.$k, self::MONEY_KINDS))],
             query: fn (array $f) => self::moneyIn($f)
                 ->orderBy('ledger_entries.trx_date')
                 ->orderBy('ledger_entries.id')
@@ -122,6 +129,82 @@ final class CoreReports
      */
     public const MONEY_IN = ['receipt_voucher', 'collection', 'cheque:cleared'];
 
+    /** টাকার তিন মাধ্যম — `accounts.money_kind`-এর মান */
+    public const MONEY_KINDS = ['cash', 'bank', 'mfs'];
+
+    public const INFLOW_DAY = 'accounts.inflow_day';
+
+    public const INFLOW_BRANCH = 'accounts.inflow_branch';
+
+    public const INFLOW_CHANNEL = 'accounts.inflow_channel';
+
+    /**
+     * ⭐ টাকা আসার তিন ভাগ — দিন, শাখা আর মাধ্যম (কোন খাতে) ধরে; হিসাবের "টাকা আসা" পাতার ট্যাব (মালিক, ২৩ নভেম্বর ২০২৬: রিপোর্টটা
+     * হিসাব আর বিক্রয় দুই মডিউলেই)। একই সারি ([[moneyIn()]]), তাই তিন ভাগের মোট রসিদের তালিকার মোটের সমান।
+     *
+     * ⓘ এলাকা আর বিক্রয়কর্মী ধরে ভাগ বিক্রয়ের রিপোর্টে — ওগুলো গ্রাহক আর জায়গার টেবিল পড়ে, যা হিসাবের মডিউল জানে না।
+     *
+     * @return list<ReportDefinition>
+     */
+    public static function inflowBreakdowns(): array
+    {
+        $papers = fn (array $row, array $more = []): array => [
+            'route' => 'accounts.report.show',
+            'params' => ['slug' => '=inflow', 'from' => '@from', 'to' => '@to', 'branch_id' => '@branch_id', 'account_id' => '@account_id', 'kind' => '@kind', ...$row, ...$more],
+            'total' => ['slug' => '=inflow', 'from' => '@from', 'to' => '@to', 'branch_id' => '@branch_id', 'account_id' => '@account_id', 'kind' => '@kind', ...$more],
+            'label' => 'accounts::inflow.drill',
+        ];
+        $figures = function (array $row) use ($papers): array {
+            $columns = [['key' => 'receipts', 'label' => 'accounts::inflow.receipts', 'type' => ReportColumn::QUANTITY, 'width' => '5rem']];
+
+            foreach (self::MONEY_KINDS as $kind) {
+                $columns[] = ['key' => $kind, 'label' => 'accounts::inflow.kind_'.$kind, 'type' => ReportColumn::MONEY, 'drill' => $papers($row, ['kind' => '='.$kind])];
+            }
+
+            return [...$columns, ['key' => 'total', 'label' => 'accounts::inflow.total', 'type' => ReportColumn::MONEY, 'drill' => $papers($row)]];
+        };
+        $kinds = implode(', ', array_map(
+            fn (string $k) => "SUM(CASE WHEN accounts.money_kind = '{$k}' THEN ledger_entries.debit ELSE 0 END) as {$k}", self::MONEY_KINDS));
+        $sums = "COUNT(DISTINCT CONCAT(ledger_entries.source_type, ':', ledger_entries.source_id)) as receipts, {$kinds}, SUM(ledger_entries.debit) as total";
+        $define = fn (string $key, string $title, \Closure $query, array $columns, ?string $groupBy = null): ReportDefinition => new ReportDefinition(
+            key: $key,
+            permission: 'accounts.report',
+            title: $title,
+            filters: ['date_range', 'branch', 'account', 'kind'],
+            choices: ['kind' => array_combine(self::MONEY_KINDS, array_map(fn (string $k) => 'accounts::inflow.kind_'.$k, self::MONEY_KINDS))],
+            query: $query,
+            columns: $columns,
+            groupBy: $groupBy,
+            rankBy: $groupBy === null ? null : 'total',
+            // ⓘ শাখা খাতার সারির — নিজেই ছাঁকে; শাখা ধরে ভাগ নিজেই একটা রূপ
+            splitByBranch: false,
+        );
+        $bn = app()->getLocale() === 'bn';
+
+        return [
+            $define(self::INFLOW_DAY, 'accounts::inflow.title_day',
+                fn (array $f) => self::moneyIn($f)->groupBy('ledger_entries.trx_date')
+                    ->selectRaw('ledger_entries.trx_date as trx_date, '.$sums)->orderBy('ledger_entries.trx_date'),
+                [['key' => 'trx_date', 'label' => 'core.print.date', 'type' => ReportColumn::DATE, 'width' => '8rem'],
+                    ...$figures(['from' => 'trx_date', 'to' => 'trx_date'])]),
+            $define(self::INFLOW_BRANCH, 'accounts::inflow.title_branch',
+                fn (array $f) => self::moneyIn($f)->leftJoin('branches', 'branches.id', '=', 'ledger_entries.branch_id')
+                    ->groupBy('ledger_entries.branch_id', 'branches.name_bn', 'branches.name_en')
+                    ->selectRaw('ledger_entries.branch_id as branch_id, COALESCE('
+                        .($bn ? "COALESCE(NULLIF(branches.name_bn, ''), branches.name_en)" : "COALESCE(NULLIF(branches.name_en, ''), branches.name_bn)")
+                        .', '.DB::getPdo()->quote((string) __('accounts::inflow.no_branch')).') as branch, '.$sums)
+                    ->orderByRaw('SUM(ledger_entries.debit) DESC')->orderBy('ledger_entries.branch_id'),
+                [['key' => 'branch', 'label' => 'accounts::inflow.branch'], ...$figures(['branch_id' => 'branch_id'])], 'branch_id'),
+            $define(self::INFLOW_CHANNEL, 'accounts::inflow.title_channel',
+                fn (array $f) => self::moneyIn($f)
+                    ->groupBy('ledger_entries.account_id', 'accounts.code', 'accounts.name_bn', 'accounts.name_en', 'accounts.money_kind')
+                    ->selectRaw("ledger_entries.account_id as account_id, CONCAT(accounts.code, ' — ', "
+                        .($bn ? "COALESCE(NULLIF(accounts.name_bn, ''), accounts.name_en)" : 'accounts.name_en').') as channel, '.$sums)
+                    ->orderByRaw("FIELD(accounts.money_kind, 'cash', 'bank', 'mfs')")->orderByRaw('SUM(ledger_entries.debit) DESC')->orderBy('ledger_entries.account_id'),
+                [['key' => 'channel', 'label' => 'accounts::field.received_into'], ...$figures(['account_id' => 'account_id'])], 'account_id'),
+        ];
+    }
+
     /**
      * ⭐ আসল টাকা আসার সারি — টাকার খাতের (নগদ, ব্যাংক, MFS) ডেবিট, কেবল রসিদের কাগজে ([[MONEY_IN]])। হিসাবের "আদায়ের তালিকা" আর
      * বিক্রয়ের "টাকা আসা"-র সব রূপ এই একটাই সারি পড়ে, তাই দুই মডিউলের মোট কখনো আলাদা হয় না।
@@ -145,6 +228,9 @@ final class CoreReports
             ->where('ledger_entries.debit', '>', 0)
             // ⛔ কেবল রসিদের কাগজ — অনুমতির তালিকা ([[MONEY_IN]]); উল্টো দাখিলা (`…:reversal`) তাই নিজেই বাদ
             ->whereIn('ledger_entries.source_type', self::MONEY_IN)
+            // ⓘ ছাঁকনি — একটা খাত, বা টাকার এক মাধ্যম; যে রিপোর্ট ঘোষণা করেনি তার কাছে ঘরটাই আসে না
+            ->when(! empty($f['account_id']), fn ($q) => $q->where('ledger_entries.account_id', (int) $f['account_id']))
+            ->when(in_array($f['kind'] ?? null, self::MONEY_KINDS, true), fn ($q) => $q->where('accounts.money_kind', $f['kind']))
             /*
              * ⛔ আদায় মানে বাইরে থেকে টাকা আসা — Accounts লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬ ([[TheInflowListIsMoneyFromOutsideTest]])।
              * ⓘ আগে টাকার খাতের প্রতিটা ডেবিট আসত: টিল থেকে ব্যাংকে জমা পুরো অঙ্কে "আদায়", বাতিল পরিশোধের উল্টো সারিও "আদায়", আর
