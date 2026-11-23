@@ -11,6 +11,7 @@ import '../../../core/messenger/messenger_unread.dart';
 import '../../../core/widgets/search_debouncer.dart';
 import '../chat/chat_screen.dart';
 import 'chat_list_look.dart';
+import 'narrow_now.dart';
 import 'people_picker.dart';
 
 /// ⭐ বার্তার তালিকা — মালিকের অনুমোদিত নমুনা 3nuwRUdn v5 "ক" (২১ নভেম্বর ২০২৬)। অ্যাপের নিজের উপরের আর নিচের বারের ভেতরে
@@ -46,6 +47,11 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
   _State _state = _State.loading;
   String? _deniedMessage;
   List<ChatThread> _threads = const [];
+
+  /// সার্ভারের উত্তর কোন লেখার — আর খালি খোঁজায় আনা পুরো তালিকা (কোন চিপে), যা থেকে প্রতিটা চাপে ছাঁকা হয়
+  String _threadsFor = '';
+  List<ChatThread> _everything = const [];
+  ThreadFilter? _everythingFilter;
   int _unreadTotal = 0;
   bool _foreground = true;
 
@@ -88,6 +94,11 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
       if (!mounted || filter != _filter || query != _query.text.trim()) return;
       setState(() {
         _threads = page.threads;
+        _threadsFor = query;
+        if (query.isEmpty) {
+          _everything = page.threads;
+          _everythingFilter = filter;
+        }
         _unreadTotal = page.unreadTotal;
         _state = _State.ready;
       });
@@ -116,6 +127,20 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
   }
 
 
+  /// ফোনে যা আছে তা প্রতিটা চাপে সাথে সাথে ছাঁকা; সার্ভারের খোঁজা ৩ অক্ষর / ৬০০ ms-এ ([narrowNow])
+  void _onQuery(String text) {
+    setState(() {});
+    _typed.onChanged(text);
+  }
+
+  List<ChatThread> get _shown => narrowNow(
+        typed: _query.text,
+        answeredFor: _threadsFor,
+        answered: _threads,
+        everything: _everythingFilter == _filter ? _everything : _threads,
+        fields: (t) => [t.title, t.subtitle, t.person?.name, t.person?.designation, t.person?.branch, t.last?.text],
+      );
+
   Future<void> _open(ChatThread t) async {
     await openChat(context, t);
     if (mounted) _load();
@@ -135,8 +160,9 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
     final bottom = MediaQuery.paddingOf(context).bottom;
     final now = (widget.now ?? DateTime.now)();
 
+    final shown = _shown;
     final head = <Widget>[
-      _SearchPill(t: t, controller: _query, hint: l.msgListSearch, onChanged: _typed.onChanged, onSubmitted: _typed.onSubmitted),
+      _SearchPill(t: t, controller: _query, hint: l.msgListSearch, onChanged: _onQuery, onSubmitted: _typed.onSubmitted),
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
         child: Wrap(spacing: 8, runSpacing: 6, children: [
@@ -165,7 +191,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
       case _State.failed:
         calm = _Calm(t: t, icon: Symbols.cloud_off, text: l.msgListLoadFailed, action: l.msgListRetry, onAction: _load);
       case _State.ready:
-        if (_threads.isEmpty) {
+        if (shown.isEmpty) {
           calm = _Calm(
               t: t,
               icon: Symbols.forum,
@@ -186,8 +212,8 @@ class _ChatListPageState extends ConsumerState<ChatListPage> with WidgetsBinding
           if (calm != null)
             calm
           else
-            for (final (i, th) in _threads.indexed)
-              _Row(t: t, thread: th, now: now, last: i == _threads.length - 1, onTap: () => _open(th)),
+            for (final (i, th) in shown.indexed)
+              _Row(t: t, thread: th, now: now, last: i == shown.length - 1, onTap: () => _open(th)),
         ],
       ),
     );

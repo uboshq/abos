@@ -9,6 +9,7 @@ import '../../../core/messenger/messenger_api.dart';
 import '../../../core/widgets/search_debouncer.dart';
 import '../chat/chat_screen.dart';
 import 'chat_list_look.dart';
+import 'narrow_now.dart';
 
 /// ⭐ নিচ থেকে ওঠা সাদা শিটের রং — নমুনা 3nuwRUdn v5 "গ" ২-এর `.sheet` (আলোয় সাদা, WhatsApp-এর মতো); অন্ধকার থিমে (ক্লাসিকের
 /// অন্ধকার, গ্লাস) নমুনার অন্ধকার `--wa-sheet` রং
@@ -192,6 +193,10 @@ class _PeopleSheetState extends ConsumerState<_PeopleSheet> {
   List<ChatPerson>? _people;
   String? _error;
 
+  /// সার্ভারের উত্তর কোন লেখার; খালি খোঁজায় আনা সবাই — প্রতিটা চাপে এখান থেকে সাথে সাথে ছাঁকা ([narrowNow])
+  String _peopleFor = '';
+  List<ChatPerson>? _everyone;
+
   @override
   void initState() {
     super.initState();
@@ -212,6 +217,8 @@ class _PeopleSheetState extends ConsumerState<_PeopleSheet> {
       if (!mounted || q != _q.text.trim()) return;
       setState(() {
         _people = people;
+        _peopleFor = q;
+        if (q.isEmpty) _everyone = people;
         _error = null;
       });
     } catch (e) {
@@ -229,7 +236,16 @@ class _PeopleSheetState extends ConsumerState<_PeopleSheet> {
   Widget build(BuildContext context) {
     final s = SheetLook.of(context);
     final l = context.l10n;
-    final people = _people;
+    final answered = _people;
+    final people = answered == null
+        ? null
+        : narrowNow(
+            typed: _q.text,
+            answeredFor: _peopleFor,
+            answered: answered,
+            everything: _everyone ?? answered,
+            fields: (p) => [p.name, p.designation, p.branch],
+          );
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SizedBox(
@@ -244,7 +260,10 @@ class _PeopleSheetState extends ConsumerState<_PeopleSheet> {
               controller: _q,
               hint: l.msgListFindPerson,
               icon: Symbols.search,
-              onChanged: _typed.onChanged,
+              onChanged: (text) {
+                setState(() {});
+                _typed.onChanged(text);
+              },
               onSubmitted: _typed.onSubmitted,
             ),
             const SizedBox(height: 6),
