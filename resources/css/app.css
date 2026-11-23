@@ -2544,3 +2544,79 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
     cursor: not-allowed;
     filter: grayscale(1);
 }
+
+/* ⭐ Page heads in the three ABOS looks — owner "ok", 24 Nov 2026 (sample 9VVoe6uQ v2):
+   · the sentence beside a title goes into a round ⓘ (hover or keyboard focus shows it — the title attribute);
+   · titles wear colour: "ABOS Smart" the open module's own colour, navy and blue their brand blue (as in the sample);
+   · navy and blue lists get one head row like "ABOS Smart": title ⓘ · filter · search · sort … · "+ New" at the end.
+   ⛔ Scoped by data-ui — SAP (tiles), Dynamic, Odoo (apps) and the rest do not change a pixel. */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-title-note-text] {
+    display: none;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-title-note] {
+    display: inline-grid;
+    place-items: center;
+    margin-inline-start: 8px;
+    vertical-align: middle;
+    color: currentColor;
+    opacity: 0.85;
+    cursor: help;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-title-note]:is(:hover, :focus-visible) {
+    opacity: 1;
+}
+
+/* the page header's own note line — "ABOS Smart" already does this in abos-look.css */
+:root:is([data-ui='navy'], [data-ui='blue']) [data-page-subtitle] {
+    display: none;
+}
+
+:root:is([data-ui='navy'], [data-ui='blue']) [data-page-info] {
+    display: inline-grid;
+    place-items: center;
+    margin-inline-start: 8px;
+    vertical-align: middle;
+    color: currentColor;
+    opacity: 0.85;
+    cursor: help;
+}
+
+/* coloured titles */
+:root[data-ui='rose'] main :is([data-page-title], .toolbar-view [data-view-selector], [data-merged-title]):not(.inbox-board-title) {
+    color: var(--page-module-colour, var(--color-brand-600));
+}
+
+:root:is([data-ui='navy'], [data-ui='blue']) main :is([data-page-title], .toolbar-view [data-view-selector], [data-merged-title]):not(.inbox-board-title) {
+    color: var(--color-brand-600);
+}
+
+/* navy and blue: one head row */
+:root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 8px 12px 8px 16px;
+}
+
+:root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view > div.order-1,
+:root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view > div.order-2 {
+    display: contents;
+}
+
+:root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view :is([data-view-selector], [data-merged-title]) {
+    order: 0;
+    margin: 0;
+    white-space: nowrap;
+}
+
+:root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view [data-record-count] {
+    order: 0;
+}
+
+:root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view [data-command-bar] {
+    order: 4;
+    margin: 0;
+}

@@ -368,15 +368,28 @@
                  পরের endphp পর্যন্ত গিলে ফেলত (মাঝের সব if সহ): টুলবারওয়ালা প্রতিটা পাতা ৫০০ (cbws2-এর Mac দৌড়, ২০ অক্টোবর ২০২৬) --}}
             @php
                 $headingTag = \App\Core\Support\PageHeading::tag();
+
+                /*
+                 * ⭐ A sentence beside the title is a note, not a count (owner "ok", 24 Nov 2026, sample 9VVoe6uQ v2): in the three
+                 * ABOS looks it goes into the round ⓘ beside the title — hover or tap shows it — and the head stays one row.
+                 * ⓘ A note: `subtitle` when no count is given, or a count with no digit or longer than 40 letters ("আদেশে কিছুই
+                 *   নড়ে না …"). A real count ("১২টি রেকর্ড") stays where it is.
+                 * ⛔ Every other look keeps the line as it was — the ⓘ is hidden there and the line is not marked.
+                 */
+                $headCount = $count ?? $subtitle;
+                $titleNote = $headCount !== null && trim((string) $headCount) !== ''
+                    && ($count === null || ! preg_match('/\d/u', (string) $count) || mb_strlen(trim((string) $count)) > 40)
+                    ? trim((string) $headCount)
+                    : null;
             @endphp
             @if ($viewMode === 'dropdown')
                 <{{ $headingTag }} class="contents">
-                    <x-ui.view-menu :label="$title" mode="heading" /><x-ui.page-info :text="$info" />
+                    <x-ui.view-menu :label="$title" mode="heading" /><x-ui.page-info :text="$info" />@if ($titleNote)<span data-title-note class="hidden" title="{{ $titleNote }}" aria-label="{{ $titleNote }}" tabindex="0"><x-ui.icon name="info" :size="15" /></span>@endif
                 </{{ $headingTag }}>
             @else
                 <{{ $headingTag }} data-view-selector
                     class="shrink-0 truncate text-lg font-semibold text-(--color-ink)">
-                    {{ $title }}<x-ui.page-info :text="$info" />
+                    {{ $title }}<x-ui.page-info :text="$info" />@if ($titleNote)<span data-title-note class="hidden" title="{{ $titleNote }}" aria-label="{{ $titleNote }}" tabindex="0"><x-ui.icon name="info" :size="15" /></span>@endif
                 </{{ $headingTag }}>
             @endif
 
@@ -384,7 +397,7 @@
                 {{-- ⛔ `shrink-0` নয় — কিছু পাতা গোনার জায়গায় পুরো বাক্য পাঠায় ("কোন কাজে কে কত টাকা থেকে … · ৫টা নিয়ম চালু"), আর না-ভাঙা
                      বাক্য ফোনে পাতাকেই পাশে ঠেলত (অনুমোদনের নিয়মের পাতা ৩৯০-এ ৪৪৩px চওড়া, ৩০ অক্টোবর ২০২৬, দফা ২১)। ⓘ সারিটা
                      flex-wrap, তাই ছোট সংখ্যা জায়গা না পেলে আগে পরের লাইনে নামে, ভাঙে না। --}}
-                <span data-record-count data-list-part="count"
+                <span data-record-count data-list-part="count" @if ($titleNote) data-title-note-text @endif
                       class="tabular min-w-0 border-s border-(--color-border) ps-3 text-sm
                              text-(--color-ink-muted)">{{ $count ?? $subtitle }}</span>
             @endif

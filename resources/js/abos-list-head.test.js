@@ -38,8 +38,18 @@ describe('mergeMoneyHead', () => {
         expect(document.querySelectorAll('.toolbar-view h1').length).toBe(1)
     })
 
+    // ⭐ owner "ok", 24 Nov 2026 (sample 9VVoe6uQ v2): navy and blue merge too — one head row in all three ABOS looks
+    it('merges in navy and blue as well', () => {
+        for (const ui of ['navy', 'blue']) {
+            page(ui)
+
+            expect(mergeMoneyHead(document)).toBe(1)
+            expect(document.querySelector('[data-money-hero]').hidden).toBe(true)
+        }
+    })
+
     it('leaves every other look untouched', () => {
-        for (const ui of ['navy', 'blue', 'tiles', 'dynamic']) {
+        for (const ui of ['tiles', 'dynamic', 'apps']) {
             page(ui)
 
             expect(mergeMoneyHead(document)).toBe(0)
@@ -118,7 +128,15 @@ describe('compactPageHead', () => {
         expect(compactPageHead(document)).toBeNull()
         expect(document.querySelectorAll('[data-head-filter]').length).toBe(1)
 
-        for (const ui of ['navy', 'blue', 'tiles', 'dynamic']) {
+        // ⭐ navy and blue compact like "ABOS Smart" (owner "ok", 24 Nov 2026)
+        for (const ui of ['navy', 'blue']) {
+            budget(ui)
+
+            expect(compactPageHead(document)).not.toBeNull()
+            expect(document.querySelectorAll('[data-head-filter]').length).toBe(1)
+        }
+
+        for (const ui of ['tiles', 'dynamic', 'apps']) {
             budget(ui)
 
             expect(compactPageHead(document)).toBeNull()
@@ -156,7 +174,7 @@ describe('foldPageNotes', () => {
     })
 
     it('leaves every other look untouched', () => {
-        for (const ui of ['navy', 'blue', 'tiles']) {
+        for (const ui of ['tiles', 'apps']) {
             companies(ui)
 
             expect(foldPageNotes(document)).toBe(0)

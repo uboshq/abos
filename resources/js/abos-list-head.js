@@ -7,8 +7,15 @@
  *   পট্টিটা লুকায়। বাকি সাজ (এক সারি, রং, ক্রম) [[abos-look.css]]-এ।
  * ⛔ কেবল `rose`-এ — অন্য রূপে কিছুই নড়ে না। জাভাস্ক্রিপ্ট ছাড়া পট্টিটা সাদা হয়েই থাকে, কাজ সব চলে।
  */
+/*
+ * ⭐ The three ABOS looks share one head (owner "ok", 24 Nov 2026, sample 9VVoe6uQ v2: "Filter line r module r create egulo sob ek
+ *   line thakbe") — navy and blue now merge, fold and compact like "ABOS Smart" did since 19 Nov. ⛔ SAP, Dynamic (except its
+ *   note fold, as before), Odoo and the rest: nothing moves.
+ */
+export const ABOS_HEAD_LOOKS = ['rose', 'navy', 'blue']
+
 export function mergeMoneyHead (root = document) {
-    if (root.documentElement?.dataset.ui !== 'rose') {
+    if (! ABOS_HEAD_LOOKS.includes(root.documentElement?.dataset.ui)) {
         return 0
     }
 
@@ -66,7 +73,7 @@ export function mergeMoneyHead (root = document) {
 const INFO = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>'
 
 export function foldPageNotes (root = document) {
-    if (! ['rose', 'dynamic'].includes(root.documentElement?.dataset.ui)) {
+    if (! [...ABOS_HEAD_LOOKS, 'dynamic'].includes(root.documentElement?.dataset.ui)) {
         return 0
     }
 
@@ -199,7 +206,7 @@ function asHeadTabs (nav, root, collapse = false) {
 }
 
 export function compactPageHead (root = document) {
-    if (root.documentElement?.dataset.ui !== 'rose') {
+    if (! ABOS_HEAD_LOOKS.includes(root.documentElement?.dataset.ui)) {
         return null
     }
 
