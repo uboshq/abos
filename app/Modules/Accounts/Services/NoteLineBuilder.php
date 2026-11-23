@@ -32,8 +32,13 @@ final class NoteLineBuilder
      * @param  list<array<string, mixed>>  $input
      * @return array{lines: list<array<string, mixed>>, amount: string, tax: string, total: string, returned: string, first_account_id: int|null}
      */
-    public function build(string $type, string $kind, ?NoteTarget $target, array $input, bool $supplierNoteGiven): array
+    /**
+     * @param  int|null  $exceptNoteId  পাকা করার সময় আবার মাপলে নোট নিজেকে গোনে না
+     */
+    public function build(string $type, string $kind, ?NoteTarget $target, array $input, bool $supplierNoteGiven, ?int $exceptNoteId = null): array
     {
+        /** @var array<int, string> $usedHere এই নোটেরই আগের সারিগুলো যতটা নিল, বিলের সারি ধরে */
+        $usedHere = [];
         $billLines = $target instanceof NoteTargetLines ? collect($target->noteTargetLines())->keyBy('line_id') : collect();
         $trade = $this->productsAllowed($type, $kind);
         $vatAllowed = $target !== null && ($type !== Note::TYPE_DN || $supplierNoteGiven);
@@ -83,10 +88,17 @@ final class NoteLineBuilder
 
                     $qty = LineMath::money($row['qty'] ?? '0');
 
-                    // ⛔ পরিমাণ বিলের বেশি নয়
-                    if (bccomp($qty, LineMath::money($bill['qty']), 4) > 0) {
-                        throw ValidationException::withMessages([$field => __('accounts::note.qty_over_billed', [
-                            'name' => $bill['name'], 'qty' => TradeCatalog::rate((string) $bill['qty']),
+                    /*
+                     * ⛔ পরিমাণ বিলের জায়গার বেশি নয় — বিলের পরিমাণ − পাকা ফেরত − অন্য নোটে ফেরতের অপেক্ষায় থাকা মাল − এই নোটের আগের সারি
+                     * (মালিকের নির্দেশ, ২৩ নভেম্বর ২০২৬)। ⓘ বেশি ফেরত লেখার মুহূর্তেই থামে — মালিক সই দেওয়ার পরে ফেরতের কাগজে নয়।
+                     */
+                    $room = bcsub($this->roomOnTheLine($target, $bill, $exceptNoteId), $usedHere[(int) $bill['line_id']] ?? '0', 4);
+
+                    if (bccomp($qty, $room, 4) > 0) {
+                        throw ValidationException::withMessages([$field => __('accounts::note.qty_over_room', [
+                            'name' => $bill['name'],
+                            'qty' => TradeCatalog::rate(bccomp($room, '0', 4) > 0 ? $room : '0'),
+                            'billed' => TradeCatalog::rate((string) $bill['qty']),
                         ])]);
                     }
 
@@ -98,6 +110,11 @@ final class NoteLineBuilder
                     // ⛔ ভ্যাটের হার বিলের সারির — পর্দা যা-ই পাঠাক
                     $vatRate = $vatAllowed ? (string) $bill['vat_rate'] : '0';
                     $line['goods_moved'] = in_array($type, [Note::TYPE_CN, Note::TYPE_DN], true) && filter_var($row['goods_moved'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+                    // ⓘ ফেরতের সারি এই নোটের পরের সারির জায়গা খায় (দামের সারি খায় না — একই মালে দুই দামের সমন্বয় হতে পারে)
+                    if ($line['goods_moved']) {
+                        $usedHere[(int) $bill['line_id']] = bcadd($usedHere[(int) $bill['line_id']] ?? '0', $qty, 4);
+                    }
 
                     if ($type === Note::TYPE_DN) {
                         $billed = LineMath::money($bill['qty']);
@@ -123,6 +140,8 @@ final class NoteLineBuilder
                     $line['product_id'] = $product['id'];
                     $line['item_name'] = $product['name'];
                     $line['unit'] = $product['unit'];
+                    // ⓘ বিল ছাড়া কোন স্তরের মাল জানা নেই — সরবরাহকারীর নোটে পুরোটা ক্রয়মূল্যের পার্থক্যে (৫১৫০), মজুদের খাত ছোঁয় না
+                    $line['stock_share'] = $type === Note::TYPE_DN ? '0.000000' : null;
                     $rateIn = (string) ($row['rate'] ?? '0');
                     $amountIn = $row['amount'] ?? null;
                 }
@@ -190,13 +209,36 @@ final class NoteLineBuilder
      */
     public function accountChoices(string $type): array
     {
+        /*
+         * ⛔ মজুদের খাত (১১২০) খাতের সারিতে নয় — হাতে ১১২০ ক্রেডিট করলে মজুদের স্তর বদলাত না, আর মজুদ-মূল্য রিপোর্ট খাতার
+         * সাথে মিলত না। মজুদের দামের ছাড় কেবল বিলের পণ্যের সারি দিয়ে, স্তরসহ ([[\App\Core\Contracts\RevaluesStockForNotes]])।
+         */
         $extra = [StandardChart::DAMAGE_CLAIM];
 
-        if ($type === Note::TYPE_DN) {
-            $extra[] = StandardChart::INVENTORY;
-        }
-
         return $this->catalog->accounts([Account::INCOME, Account::EXPENSE], $extra);
+    }
+
+    /**
+     * ⭐ বিলের সারির এখনো খালি জায়গা — বিলের পরিমাণ − পাকা ফেরত − অন্য (বাতিল নয়) নোটের এখনো ফেরতের কাগজ না-পাওয়া "মাল ফেরত" সারি।
+     * ⓘ পাকা নোটের ফেরতের সারির মাল তার ফেরতের কাগজেই গোনা (`returned`) — দুবার নয়।
+     *
+     * @param  array<string, mixed>  $bill
+     */
+    private function roomOnTheLine(NoteTarget $target, array $bill, ?int $exceptNoteId): string
+    {
+        $pending = (string) (\Illuminate\Support\Facades\DB::table('acc_note_lines as l')
+            ->join('acc_notes as n', 'n.id', '=', 'l.note_id')
+            ->where('n.against_type', $target->noteTargetType())
+            ->where('n.against_id', (int) $target->getKey())
+            ->whereNull('n.deleted_at')
+            ->where('n.status', '<>', \App\Core\Support\DocumentStatus::CANCELLED)
+            ->when($exceptNoteId !== null, fn ($q) => $q->where('n.id', '<>', $exceptNoteId))
+            ->where('l.source_line_id', (int) $bill['line_id'])
+            ->where('l.goods_moved', true)
+            ->whereNull('l.return_id')
+            ->sum('l.qty') ?: '0');
+
+        return bcsub(bcsub(LineMath::money($bill['qty']), LineMath::money($bill['returned'] ?? '0'), 4), LineMath::money($pending), 4);
     }
 
     /** পণ্যের সারি কোন পক্ষে চলে — বিলের পক্ষে: ক্রেডিট/গ্রাহকের ডেবিট নোটে গ্রাহক, সরবরাহকারীর ডেবিট নোটে সরবরাহকারী */

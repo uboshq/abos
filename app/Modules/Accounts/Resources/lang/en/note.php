@@ -86,4 +86,5 @@ return [
     'return_needs_bill' => 'Goods-returned lines need the original bill — pick the bill.',
     'discount_no_signer' => 'A credit note is a discount — the owner\'s signature flow is not set, so it cannot post.',
     'bin_missing' => 'The company BIN is empty — Mushak-6.7/6.8 needs your own BIN',
+    'qty_over_room' => ':name — of the :billed billed, no more than :qty is left (after earlier returns and other notes\' returns).',
 ];

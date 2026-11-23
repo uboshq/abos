@@ -43,8 +43,12 @@ final class NotePosting
             $gross = bcadd($gross, (string) $line->total, 4);
 
             if ($note->type() === Note::TYPE_DN && $line->line_type === NoteLine::PRODUCT) {
+                // ⭐ পাকা হওয়ার পরে: মজুদের স্তর ঠিক যতটা কমেছে ([[\App\Core\Contracts\RevaluesStockForNotes]]) — খাতা আর মজুদ-মূল্য এক
                 $share = (string) ($line->stock_share ?? '1');
-                $inStock = LineMath::round2(bcmul($amount, $share, 8));
+                $inStock = $line->stock_value !== null
+                    ? bcadd((string) $line->stock_value, '0', 4)
+                    : LineMath::round2(bcmul($amount, $share, 8));
+                $inStock = bccomp($inStock, $amount, 4) > 0 ? $amount : $inStock;
                 $sold = bcsub($amount, $inStock, 4);
 
                 $this->add($byAccount, (int) StandardChart::accountFor(StandardChart::INVENTORY)->id, $inStock);

@@ -310,3 +310,23 @@ describe('জমা', () => {
         expect(c.lines.every((l) => l.source_line_id === null)).toBe(true)
     })
 })
+
+// ⭐ তিন ফাঁক বন্ধ (২৩ নভেম্বর ২০২৬) — পাকা ফেরত বিলের জায়গা কমায়; বিল ছাড়া DN-এর পণ্যের সারি মজুদের খাত ছোঁয় না
+describe('বিলের জায়গা আর বিল ছাড়া ডেবিট নোট', () => {
+    it('পাকা ফেরতের পরে পরিমাণ বিলের বাকি জায়গায় আটকায়', () => {
+        const c = make({ doc: 'cn', kind: 'customer' })
+
+        c.applyBill({ ...saleBill, lines: [{ ...saleBill.lines[0], returned: '150.0000' }] })
+        const line = c.lines[0]
+
+        expect(line.qty).toBe('50.00')
+        c.setQty(line, event('80'))
+        expect(line.qty).toBe('50.00')
+    })
+
+    it('বিল ছাড়া সরবরাহকারীর DN — পণ্যের সারি পুরোটা 5150, 1120 নয়', () => {
+        const c = make({ doc: 'dn', kind: 'supplier' })
+
+        expect(c.stockShare({ source_line_id: null, billed: null, in_stock: null })).toBe(0n)
+    })
+})

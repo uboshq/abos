@@ -124,6 +124,7 @@ export function tradeLines (config = {}) {
         vat_rate: '0',
         unit: '',
         billed: null,
+        room: null,
         in_stock: null,
         bill_rate: null,
         goods_moved: false,
@@ -212,7 +213,7 @@ export function tradeLines (config = {}) {
             const fresh = blank(line.type)
 
             for (const field of ['product_id', 'source_line_id', 'item_name', 'account_id', 'qty', 'rate', 'amountText',
-                'amountTyped', 'tax_id', 'vat_rate', 'unit', 'billed', 'in_stock', 'bill_rate', 'goods_moved']) {
+                'amountTyped', 'tax_id', 'vat_rate', 'unit', 'billed', 'room', 'in_stock', 'bill_rate', 'goods_moved']) {
                 line[field] = fresh[field]
             }
         },
@@ -279,9 +280,11 @@ export function tradeLines (config = {}) {
         setQty (line, event) {
             let value = String(event.target.value)
 
-            // ⛔ বিলের পরিমাণের বেশি নয় ([[NoteLineBuilder]]-এর একই পাহারা)
-            if (line.billed !== null && money(value) > money(line.billed)) {
-                value = plain(money(line.billed))
+            // ⛔ বিলের জায়গার বেশি নয় — বিলের পরিমাণ − পাকা ফেরত ([[NoteLineBuilder]]-এর একই পাহারা; অন্য নোটের অপেক্ষার ফেরত সার্ভার মাপে)
+            const cap = line.room ?? line.billed
+
+            if (cap !== null && money(value) > money(cap)) {
+                value = plain(money(cap))
                 event.target.value = value
             }
 
@@ -565,7 +568,9 @@ export function tradeLines (config = {}) {
             line.item_name = String(billLine.name ?? '')
             line.unit = String(billLine.unit ?? '')
             line.billed = String(billLine.qty)
-            line.qty = plain(money(billLine.qty))
+            const room = money(billLine.qty) - money(billLine.returned ?? '0')
+            line.room = plain(room > 0n ? room : 0n)
+            line.qty = line.room
             line.rate = plain(money(billLine.rate))
             line.bill_rate = String(billLine.rate)
             line.vat_rate = String(billLine.vat_rate ?? '0')
@@ -600,6 +605,7 @@ export function tradeLines (config = {}) {
                         const fresh = this.fromBillLine(source)
 
                         line.billed = fresh.billed
+                        line.room = fresh.room
                         line.bill_rate = fresh.bill_rate
                         line.vat_rate = fresh.vat_rate
                         line.in_stock = fresh.in_stock
@@ -837,6 +843,11 @@ export function tradeLines (config = {}) {
         /** বিলের মালের যত ভাগ এখনো মজুদে — ৬ দশমিকে কাটা, ০–১ ([[NoteLineBuilder]]) */
         stockShare (line) {
             const billed = money(line.billed ?? '0')
+
+            // ⓘ বিল ছাড়া পণ্যের সারি — কোন স্তর জানা নেই, পুরোটা ৫১৫০ (সার্ভারের একই নিয়ম)
+            if (line.source_line_id === null || line.source_line_id === undefined || line.source_line_id === '') {
+                return 0n
+            }
 
             if (line.in_stock === null || billed <= 0n) {
                 return 1000000n

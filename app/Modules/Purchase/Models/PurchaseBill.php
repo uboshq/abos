@@ -33,7 +33,7 @@ use Illuminate\Support\Facades\DB;
  * নিজে থেকেই মেলে: প্রদেয়ের সংখ্যাটা কোথাও জমা থাকে না, খতিয়ান থেকে গোনা
  * হয়। জমা রাখলে বিল বাতিল হলে দুই জায়গায় বদলাতে হত, আর একটা বাদ পড়ত।
  */
-class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Core\Contracts\ShowsItselfForSigning, \App\Core\Contracts\NoteTarget, \App\Core\Contracts\NoteTargetLines, \App\Core\Contracts\ReturnsGoodsForNotes
+class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Core\Contracts\ShowsItselfForSigning, \App\Core\Contracts\NoteTarget, \App\Core\Contracts\NoteTargetLines, \App\Core\Contracts\ReturnsGoodsForNotes, \App\Core\Contracts\RevaluesStockForNotes
 {
     use BelongsToCompany;
     use HasDocumentStatus;
@@ -653,22 +653,16 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
         $bn = app()->getLocale() === 'bn';
         $lines = $this->lines()->with('product.unit')->get();
 
-        $receiptIds = DB::table('pur_receipt_lines')
-            ->whereIn('id', $lines->pluck('purchase_receipt_line_id')->filter()->unique()->values())
-            ->pluck('purchase_receipt_id')->unique()->values()->all();
-
-        $layers = DB::table('inv_cost_layers')
-            ->where('company_id', $this->company_id)
-            ->whereIn('product_id', $lines->pluck('product_id')->unique()->values())
-            ->where(fn ($q) => $q->where(fn ($b) => $b->where('source_type', self::STOCK_SOURCE)->where('source_id', $this->id))
-                ->when($receiptIds !== [], fn ($w) => $w->orWhere(fn ($r) => $r->where('source_type', PurchaseReceipt::STOCK_SOURCE)->whereIn('source_id', $receiptIds))))
+        $layers = $this->noteLayers($lines->pluck('product_id')->unique()->values()->all())
             ->groupBy('product_id')
             ->selectRaw('product_id, COALESCE(SUM(qty_in), 0) as qty_in, COALESCE(SUM(qty_remaining), 0) as qty_left')
             ->get()->keyBy('product_id');
 
+        $returned = $this->returnedByLine($lines->pluck('id')->all());
+
         return $lines
             ->filter(fn (PurchaseBillLine $l) => bccomp((string) $l->qty, '0', 4) > 0 && $l->product !== null)
-            ->map(function (PurchaseBillLine $l) use ($net, $bn, $layers) {
+            ->map(function (PurchaseBillLine $l) use ($net, $bn, $layers, $returned) {
                 $qty = (string) $l->qty;
                 $rate = $net->netRate($l);
                 $base = bcmul($rate, $qty, 4);
@@ -687,6 +681,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
                     'rate' => $rate,
                     'vat_rate' => bccomp($base, '0', 4) > 0 ? bcadd(bcdiv(bcmul((string) ($l->tax ?? '0'), '100', 8), $base, 6), '0.005', 2) : '0.00',
                     'in_stock' => $inStock,
+                    'returned' => $returned[(int) $l->id] ?? '0.0000',
                 ];
             })->values()->all();
     }
@@ -694,6 +689,111 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
     public function noteTargetIssuedAt(): ?\DateTimeInterface
     {
         return $this->created_at;
+    }
+
+    /**
+     * ⭐ বিলের সারি ধরে পাকা ক্রয় ফেরত — নোটের পরিমাণের সীমা এটুকু বাদ দেয় (একই মাল দুবার ফেরত নয়)।
+     *
+     * @param  list<int>  $lineIds
+     * @return array<int, string>
+     */
+    private function returnedByLine(array $lineIds): array
+    {
+        if ($lineIds === []) {
+            return [];
+        }
+
+        return PurchaseReturnLine::query()
+            ->whereIn('purchase_bill_line_id', $lineIds)
+            ->whereHas('return', fn ($q) => $q->withoutGlobalScopes()->whereIn('status', DocumentStatus::POSTED))
+            ->groupBy('purchase_bill_line_id')
+            ->selectRaw('purchase_bill_line_id, COALESCE(SUM(qty), 0) as returned')
+            ->pluck('returned', 'purchase_bill_line_id')
+            ->map(fn ($q) => bcadd((string) $q, '0', 4))
+            ->all();
+    }
+
+    /**
+     * ⓘ এই বিলের মালের দামের স্তর যেসব উৎসে — বিল নিজে, আর তার মাল-গ্রহণগুলো।
+     *
+     * @return list<array{0: string, 1: int}>
+     */
+    private function noteLayerSources(): array
+    {
+        $receiptIds = DB::table('pur_receipt_lines')
+            ->whereIn('id', $this->lines()->pluck('purchase_receipt_line_id')->filter()->unique()->values())
+            ->pluck('purchase_receipt_id')->unique()->values()->all();
+
+        return [[self::STOCK_SOURCE, (int) $this->id], ...array_map(fn ($id) => [PurchaseReceipt::STOCK_SOURCE, (int) $id], $receiptIds)];
+    }
+
+    /**
+     * ⓘ বিলের জীবিত দামের স্তর — পুনর্মূল্যায়নে বা বাতিলে খালি হওয়া পুরনো স্তর বাদ (নাহলে নতুন স্তরের সাথে আগমন দুবার গোনা হত)।
+     *
+     * @param  list<int>  $productIds
+     */
+    private function noteLayers(array $productIds): \Illuminate\Database\Query\Builder
+    {
+        $sources = $this->noteLayerSources();
+
+        return DB::table('inv_cost_layers')
+            ->where('company_id', $this->company_id)
+            ->whereIn('product_id', $productIds)
+            ->where(function ($q) use ($sources) {
+                foreach ($sources as [$type, $id]) {
+                    $q->orWhere(fn ($s) => $s->where('source_type', $type)->where('source_id', $id));
+                }
+            })
+            ->whereNotIn('id', DB::table('inv_cost_layer_uses')
+                ->where(fn ($u) => $u->where('source_type', 'like', '%:revalue')->orWhere('source_type', 'like', '%:cancel'))
+                ->select('cost_layer_id'));
+    }
+
+    /**
+     * ⭐ সরবরাহকারীর ডেবিট নোটের দামের ছাড় মজুদের দামে — [[\App\Core\Contracts\RevaluesStockForNotes]]।
+     *
+     * ⓘ মজুদের নিজের পুনর্মূল্যায়ন ([[\App\Modules\Inventory\Services\CostLayerService::revalue()]]) — অন্য দামে বিল হলে ক্রয়
+     * যে পথ নেয়: পুরনো স্তর পুরনো দামে খালি, তাকে যা আছে নতুন দামে নতুন স্তর। ফেরত আসা `shelf_diff` ঠিক ততটা, যতটা মজুদের মূল্য
+     * বদলাল — তাই খাতার Cr ১১২০ সেটাই, আর মজুদ-মূল্য রিপোর্ট আর খাতা এক অঙ্ক বলে। ⓘ দাম ৪ দশমিকে গোল করে বসানো হয়, যাতে
+     * তফাতটা জমা দামের সাথে হুবহু মেলে। ⓘ একই উৎসের স্তরগুলো এক দামের ধরা হয় (একটা বিলের এক পণ্য এক দামে আসে)।
+     */
+    public function noteRevalueStock(array $lines, int $sign, string $date, string $noteNo): array
+    {
+        $costs = app(\App\Modules\Inventory\Services\CostLayerService::class);
+        $sources = $this->noteLayerSources();
+        $out = [];
+
+        foreach (array_values($lines) as $i => $line) {
+            $productId = (int) $line['product_id'];
+            $per = $line['per_unit'] ?? null;
+
+            if ($per === null) {
+                $qtyIn = (string) ($this->noteLayers([$productId])->sum('qty_in') ?: '0');
+                $per = bccomp($qtyIn, '0', 4) > 0 ? bcdiv((string) $line['amount'], $qtyIn, 6) : '0';
+            }
+
+            $shelf = '0';
+
+            if (bccomp((string) $per, '0', 6) > 0) {
+                foreach ($sources as [$type, $id]) {
+                    $layer = $this->noteLayers([$productId])->where('source_type', $type)->where('source_id', $id)->orderBy('id')->first();
+
+                    if ($layer === null) {
+                        continue;
+                    }
+
+                    $new = bcadd(bcadd((string) $layer->unit_cost, bcmul((string) $per, (string) $sign, 6), 6), '0', 4);
+                    $new = bccomp($new, '0', 4) < 0 ? '0.0000' : $new;
+                    $moved = $costs->revalue($type, $id, $productId, $new, $date);
+                    $diff = (string) $moved['shelf_diff'];
+                    $shelf = bcadd($shelf, bccomp($diff, '0', 4) < 0 ? bcmul($diff, '-1', 4) : $diff, 4);
+                }
+            }
+
+            $out[$i] = ['per_unit' => (string) $per, 'shelf' => $shelf];
+        }
+
+        return $out;
     }
 
     /**

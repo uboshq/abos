@@ -650,9 +650,19 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
         $share = app(\App\Modules\Sales\Services\SalesReturnService::class);
         $bn = app()->getLocale() === 'bn';
 
-        return $this->lines()->with(['product.unit', 'invoice'])->get()
+        $all = $this->lines()->with(['product.unit', 'invoice'])->get();
+
+        // ⓘ বিলের সারি ধরে পাকা বিক্রয় ফেরত — নোটের পরিমাণের সীমা এটুকু বাদ দেয় (একই মাল দুবার ফেরত নয়)
+        $returned = SalesReturnLine::query()
+            ->whereIn('sales_invoice_line_id', $all->pluck('id'))
+            ->whereHas('return', fn ($q) => $q->withoutGlobalScopes()->whereIn('status', \App\Core\Support\DocumentStatus::POSTED))
+            ->groupBy('sales_invoice_line_id')
+            ->selectRaw('sales_invoice_line_id, COALESCE(SUM(qty), 0) as returned')
+            ->pluck('returned', 'sales_invoice_line_id');
+
+        return $all
             ->filter(fn (SalesInvoiceLine $l) => bccomp((string) $l->qty, '0', 4) > 0 && $l->product !== null)
-            ->map(function (SalesInvoiceLine $l) use ($share, $bn) {
+            ->map(function (SalesInvoiceLine $l) use ($share, $bn, $returned) {
                 $qty = (string) $l->qty;
                 [$net, $tax] = $share->shareOfTheBill($l, $qty);
                 $unit = $l->product->unit;
@@ -666,6 +676,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
                     'rate' => bcdiv($net, $qty, 4),
                     'vat_rate' => bccomp($net, '0', 4) > 0 ? bcadd(bcdiv(bcmul($tax, '100', 8), $net, 6), '0.005', 2) : '0.00',
                     'in_stock' => null,
+                    'returned' => bcadd((string) ($returned[$l->id] ?? '0'), '0', 4),
                 ];
             })->values()->all();
     }

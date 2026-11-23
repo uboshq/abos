@@ -78,7 +78,8 @@ final class AccountsReversalService
 
             $this->assertMonthOpen($locked->document_no, $locked->trx_date);
 
-            $paper = $this->paper(Reversal::NOTE, (int) $locked->id, $locked->document_no, (int) $locked->branch_id, (string) $locked->total, $reason, $by);
+            // ⭐ উল্টো কাগজের অঙ্ক নোটের পুরো প্রভাব — নিজের মোট আর বাঁধা ফেরতের কাগজ (SR/PR), দুটোই এই একই লেনদেনে ফেরে ([[NoteService::cancel()]])
+            $paper = $this->paper(Reversal::NOTE, (int) $locked->id, $locked->document_no, (int) $locked->branch_id, $locked->grandTotal(), $reason, $by);
 
             $this->notes->cancel($locked, $this->narration($paper, $reason), $paper->document_no);
 

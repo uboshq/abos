@@ -64,6 +64,9 @@ return new class extends Migration
             $table->string('return_no', 64)->nullable();
             // ⓘ সরবরাহকারীর ডেবিট নোট: সারির মালের যত ভাগ এখনো মজুদে (১ = সব) — সেই ভাগ মজুদে, বাকি ক্রয়মূল্যের পার্থক্যে
             $table->decimal('stock_share', 10, 6)->nullable();
+            // ⓘ পাকা হওয়ার মুহূর্তে মজুদের দামের স্তর যতটা কমল (Cr ১১২০ ঠিক এতটা) আর এককপ্রতি কমা — বাতিলে একই অঙ্কে ফেরে
+            $table->decimal('stock_value', 18, 4)->nullable();
+            $table->decimal('revalue_unit', 18, 6)->nullable();
             $table->timestamps();
 
             $table->index(['note_id', 'line_no'], 'acc_note_line_order');

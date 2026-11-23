@@ -32,7 +32,7 @@ class NoteLine extends Model
     protected $fillable = [
         'company_id', 'note_id', 'line_no', 'line_type', 'product_id', 'item_name', 'description',
         'source_line_id', 'billed_qty', 'qty', 'unit', 'rate', 'amount', 'tax_id', 'vat_rate', 'vat_amount', 'total',
-        'account_id', 'goods_moved', 'return_type', 'return_id', 'return_no', 'stock_share',
+        'account_id', 'goods_moved', 'return_type', 'return_id', 'return_no', 'stock_share', 'stock_value', 'revalue_unit',
     ];
 
     /** @return array<string, string> */
@@ -47,6 +47,8 @@ class NoteLine extends Model
             'vat_amount' => 'decimal:4',
             'total' => 'decimal:4',
             'stock_share' => 'decimal:6',
+            'stock_value' => 'decimal:4',
+            'revalue_unit' => 'decimal:6',
             'goods_moved' => 'boolean',
         ];
     }
