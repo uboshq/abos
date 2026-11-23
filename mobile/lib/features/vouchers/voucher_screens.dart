@@ -842,7 +842,7 @@ class _VoucherPickSheetState<T> extends State<VoucherPickSheet<T>> {
     final rows = widget.options
         .where((o) => q.isEmpty ||
             (o is VoucherParty
-                ? partyMatches(q, fields: [widget.label(o), o.label, o.name, o.hint], phones: [o.hint])
+                ? partyMatches(q, fields: [widget.label(o), o.label, o.name, o.hint, o.find], phones: [o.hint, o.find])
                 : widget.label(o).toLowerCase().contains(q)))
         .take(100)
         .toList();

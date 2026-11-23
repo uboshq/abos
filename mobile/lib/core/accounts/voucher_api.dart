@@ -86,6 +86,7 @@ class VoucherParty {
     required this.id,
     required this.label,
     this.hint,
+    this.find,
     this.name,
     this.typeLabel = '',
     this.due,
@@ -98,6 +99,10 @@ class VoucherParty {
   /// পুরনো ফর্মের লেখা — "নাম · ধরন"
   final String label;
   final String? hint;
+
+  /// ⭐ সার্ভারের খোঁজার লেখা (`find`: নাম, কোড, মোবাইল, পয়েন্ট, শাখা …, ছোট হাতে; [[PartyRegistry::pickerFind()]]) —
+  /// অফলাইনেও মোবাইল আর পয়েন্টে মেলে। ⓘ পুরনো সার্ভার পাঠায় না, তখন null আর আগের মতো নাম/পাশের লেখায় মেলে।
+  final String? find;
 
   /// সার্ভারের নিজের নাম ("নাম · পয়েন্ট · শাখা"); না এলে [label]
   final String? name;
@@ -275,6 +280,7 @@ class VoucherSetup {
                     id: (p['id'] as num?)?.toInt() ?? 0,
                     label: '${p['label'] ?? ''} · ${g['label'] ?? ''}',
                     hint: p['hint']?.toString(),
+                    find: p['find']?.toString(),
                     name: p['label']?.toString(),
                     typeLabel: g['label']?.toString() ?? '',
                     due: p['due'] == null ? null : ((Money.value(p['due']) ?? 0) * 100).round(),
