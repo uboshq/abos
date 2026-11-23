@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Core;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Support\Money;
 use App\Models\Approval;
 use App\Models\Company;
 use App\Models\User;
@@ -82,11 +83,14 @@ final class TheBoardsShowedProfitAndCostWithoutTheKeyTest extends TestCase
             'amount' => '987654.32', 'status' => Approval::PENDING, 'current_level' => 1, 'requested_by' => $this->clerk->id, 'requested_at' => now(),
         ]);
 
-        $this->assertStringNotContainsString('987,654.32', $this->board('approval'), '⛔ বেতন দেখার চাবি ছাড়াই অপেক্ষমাণ তালিকায় বেতনের রানের মোট অঙ্ক।');
+        // ⓘ বোর্ড যেভাবে লেখে সেভাবেই খোঁজা — লাখের কমা (9,87,654.32), [[Money::format()]]; '987,654.32' খুঁজলে "নেই" দাবিটা অন্ধ থাকত
+        $shown = Money::format('987654.32');
+
+        $this->assertStringNotContainsString($shown, $this->board('approval'), '⛔ বেতন দেখার চাবি ছাড়াই অপেক্ষমাণ তালিকায় বেতনের রানের মোট অঙ্ক।');
 
         $this->grant(['hr.payroll.view']);
 
-        $this->assertStringContainsString('987,654.32', $this->board('approval'), '⛔ বেতন দেখার চাবি থাকতেও অঙ্কটা এল না।');
+        $this->assertStringContainsString($shown, $this->board('approval'), '⛔ বেতন দেখার চাবি থাকতেও অঙ্কটা এল না।');
     }
 
     /** @param  list<string>  $keys */
