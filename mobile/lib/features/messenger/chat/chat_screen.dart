@@ -153,12 +153,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     _push = MessengerPush.instance.events.listen((e) {
       if (e.type == 'chat' && (e.threadId == null || e.threadId == _thread.id)) unawaited(_pull());
     });
+    // ⓘ খোলা চ্যাটের নতুন বার্তায় নোটিফিকেশন নয় — push_service এটা দেখে চুপ থাকে
+    MessengerPush.instance.visibleThread.value = _thread.id;
     unawaited(_load());
+  }
+
+  void _hideFromPush() {
+    final v = MessengerPush.instance.visibleThread;
+    if (v.value == _thread.id) v.value = null;
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _hideFromPush();
     _timer?.cancel();
     _toastTimer?.cancel();
     _push?.cancel();
@@ -177,9 +185,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _active = true;
+      MessengerPush.instance.visibleThread.value = _thread.id;
       unawaited(_pull().then((_) => _schedule()));
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
       _active = false;
+      _hideFromPush();
       _timer?.cancel();
     }
   }

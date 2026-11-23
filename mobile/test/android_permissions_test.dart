@@ -36,7 +36,25 @@ void main() {
       'android.permission.RECEIVE_BOOT_COMPLETED',
       // ⭐ কোপাইলটের মাইক (মালিক, ১২ নভেম্বর ২০২৬) — চাওয়া হয় কেবল মাইক চাপলে; অডিও ফোনেই লেখা হয়, কোথাও জমা নয়
       'android.permission.RECORD_AUDIO',
+      // ⭐ বার্তা ও কল, প্রথম ধাপ (মালিক "ok", ২১ নভেম্বর ২০২৬) — চলতি কলের সামনের-সেবা (মাইক/ক্যামেরা ধরন)
+      'android.permission.FOREGROUND_SERVICE_MICROPHONE',
+      'android.permission.FOREGROUND_SERVICE_CAMERA',
+      // আসা কল তালাবদ্ধ ফোনেও পুরো পর্দায় রিং করে
+      'android.permission.USE_FULL_SCREEN_INTENT',
+      // স্পিকার ↔ কানের স্পিকার
+      'android.permission.MODIFY_AUDIO_SETTINGS',
+      // অ্যাপ খোলা থাকলে আসা কলের কাঁপুনি
+      'android.permission.VIBRATE',
     });
+  });
+
+  test('an ongoing call keeps a microphone/camera foreground service, and the reminder receiver stays private', () {
+    final code = _manifest().replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '');
+    expect(code, contains('android:name=".call.CallService"'));
+    expect(code, contains('android:foregroundServiceType="microphone|camera"'));
+    expect(code, contains('<receiver android:name=".call.CallReminderReceiver" android:exported="false" />'));
+    expect(_manifest().contains(RegExp(r'<!--(?:(?!-->).)*--(?!>)', dotAll: true)), isFalse,
+        reason: '⛔ XML মন্তব্যের ভেতরে দুই হাইফেন');
   });
 
   test('the storage and media permissions open_filex brings are removed', () {

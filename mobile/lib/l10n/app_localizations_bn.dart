@@ -12017,6 +12017,137 @@ class AppL10nBn extends AppL10n {
   }
 
   @override
+  String get msgCallRinging => 'রিং হচ্ছে…';
+
+  @override
+  String get msgCallConnecting => 'যুক্ত হচ্ছে…';
+
+  @override
+  String get msgCallIncomingVoice => 'ABOS ভয়েস কল আসছে…';
+
+  @override
+  String get msgCallIncomingVideo => 'ABOS ভিডিও কল আসছে…';
+
+  @override
+  String get msgCallMessage => 'বার্তা দিন';
+
+  @override
+  String get msgCallRemindLater => 'পরে মনে করান';
+
+  @override
+  String get msgCallDecline => 'কেটে দিন';
+
+  @override
+  String get msgCallAnswer => 'ধরুন';
+
+  @override
+  String get msgCallSpeaker => 'স্পিকার';
+
+  @override
+  String get msgCallMute => 'মিউট';
+
+  @override
+  String get msgCallUnmute => 'আবার শোনান';
+
+  @override
+  String get msgCallVideo => 'ভিডিও';
+
+  @override
+  String get msgCallEnd => 'কল শেষ';
+
+  @override
+  String get msgCallCameraOff => 'ক্যামেরা বন্ধ';
+
+  @override
+  String get msgCallCameraOn => 'ক্যামেরা চালু';
+
+  @override
+  String get msgCallFlipCamera => 'ক্যামেরা ঘোরান';
+
+  @override
+  String get msgCallBack => 'ফিরে যান';
+
+  @override
+  String get msgCallYou => 'আপনি';
+
+  @override
+  String get msgCallLeaveTitle => 'কল শেষ করবেন?';
+
+  @override
+  String get msgCallLeaveNo => 'না, চলুক';
+
+  @override
+  String get msgCallNoAnswer => 'উত্তর দেননি';
+
+  @override
+  String get msgCallDeclined => 'কেটে দিয়েছেন';
+
+  @override
+  String get msgCallEnded => 'কল শেষ';
+
+  @override
+  String get msgCallFailed => 'কল যুক্ত হলো না — নেট দেখে আবার চেষ্টা করুন';
+
+  @override
+  String get msgCallsOff =>
+      'কল এখনো চালু হয়নি — অফিস চালু করলে কল দেওয়া যাবে';
+
+  @override
+  String get msgCallNotAllowed => 'আপনার রোলে এই কল দেওয়ার অনুমতি নেই';
+
+  @override
+  String get msgCallDoorsMissing =>
+      'কল এখনো চালু হয়নি — সার্ভার আপডেট হলে আসবে';
+
+  @override
+  String get msgCallPermTitle => 'অনুমতি লাগবে';
+
+  @override
+  String get msgCallMicRefused =>
+      'মাইকের অনুমতি ছাড়া কল হয় না। ফোনের সেটিংস → অ্যাপ → ABOS → অনুমতি থেকে মাইক চালু করে আবার কল দিন।';
+
+  @override
+  String get msgCallCameraRefused =>
+      'ক্যামেরার অনুমতি নেই — ভিডিও ছাড়া, কেবল কথায় কল চলছে';
+
+  @override
+  String msgCallReminderTitle(String name) {
+    return '$name-কে কল করার কথা';
+  }
+
+  @override
+  String get msgCallReminderBody =>
+      'আপনি পরে মনে করাতে বলেছিলেন — চাপলে চ্যাট খোলে';
+
+  @override
+  String get msgCallReminderSet => '10 মিনিট পরে মনে করানো হবে';
+
+  @override
+  String get msgCallChannelName => 'আসা কল';
+
+  @override
+  String get msgCallChannelDescription => 'সহকর্মীদের ABOS ভয়েস ও ভিডিও কল';
+
+  @override
+  String get msgCallOngoing => 'কল চলছে — ফিরতে চাপুন';
+
+  @override
+  String get msgChatNotifTitle => 'নতুন বার্তা';
+
+  @override
+  String get msgChatNotifBody => 'বার্তা দেখতে চাপুন';
+
+  @override
+  String get msgCallOver => 'কল শেষ হয়ে গেছে — আর ধরা যাবে না';
+
+  @override
+  String get msgCallGroupSoon => 'শীঘ্রই আসছে — গ্রুপ কল দ্বিতীয় ধাপে';
+
+  @override
+  String get msgCallGroupVideoSoon =>
+      'শীঘ্রই আসছে — গ্রুপ ভিডিও সভা দ্বিতীয় ধাপে';
+
+  @override
   String get msgChatBack => 'পেছনে';
 
   @override

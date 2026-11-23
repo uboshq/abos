@@ -12197,6 +12197,139 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
+  String get msgCallRinging => 'Ringing…';
+
+  @override
+  String get msgCallConnecting => 'Connecting…';
+
+  @override
+  String get msgCallIncomingVoice => 'Incoming ABOS voice call…';
+
+  @override
+  String get msgCallIncomingVideo => 'Incoming ABOS video call…';
+
+  @override
+  String get msgCallMessage => 'Message';
+
+  @override
+  String get msgCallRemindLater => 'Remind me';
+
+  @override
+  String get msgCallDecline => 'Decline';
+
+  @override
+  String get msgCallAnswer => 'Answer';
+
+  @override
+  String get msgCallSpeaker => 'Speaker';
+
+  @override
+  String get msgCallMute => 'Mute';
+
+  @override
+  String get msgCallUnmute => 'Unmute';
+
+  @override
+  String get msgCallVideo => 'Video';
+
+  @override
+  String get msgCallEnd => 'End call';
+
+  @override
+  String get msgCallCameraOff => 'Camera off';
+
+  @override
+  String get msgCallCameraOn => 'Camera on';
+
+  @override
+  String get msgCallFlipCamera => 'Switch camera';
+
+  @override
+  String get msgCallBack => 'Back';
+
+  @override
+  String get msgCallYou => 'You';
+
+  @override
+  String get msgCallLeaveTitle => 'End the call?';
+
+  @override
+  String get msgCallLeaveNo => 'Keep talking';
+
+  @override
+  String get msgCallNoAnswer => 'No answer';
+
+  @override
+  String get msgCallDeclined => 'Declined';
+
+  @override
+  String get msgCallEnded => 'Call ended';
+
+  @override
+  String get msgCallFailed =>
+      'The call could not connect — check the connection and try again';
+
+  @override
+  String get msgCallsOff =>
+      'Calls are not turned on yet — they will work once the office switches them on';
+
+  @override
+  String get msgCallNotAllowed => 'Your role may not make this call';
+
+  @override
+  String get msgCallDoorsMissing =>
+      'Calls are not available yet — they arrive with the server update';
+
+  @override
+  String get msgCallPermTitle => 'Permission needed';
+
+  @override
+  String get msgCallMicRefused =>
+      'A call needs the microphone. Turn it on in the phone\'s Settings → Apps → ABOS → Permissions, then call again.';
+
+  @override
+  String get msgCallCameraRefused =>
+      'No camera permission — the call goes on with voice only';
+
+  @override
+  String msgCallReminderTitle(String name) {
+    return 'Call $name back';
+  }
+
+  @override
+  String get msgCallReminderBody =>
+      'You asked to be reminded — tap to open the chat';
+
+  @override
+  String get msgCallReminderSet => 'You will be reminded in 10 minutes';
+
+  @override
+  String get msgCallChannelName => 'Incoming calls';
+
+  @override
+  String get msgCallChannelDescription =>
+      'ABOS voice and video calls from colleagues';
+
+  @override
+  String get msgCallOngoing => 'Call in progress — tap to return';
+
+  @override
+  String get msgChatNotifTitle => 'New message';
+
+  @override
+  String get msgChatNotifBody => 'Tap to read';
+
+  @override
+  String get msgCallOver => 'The call is already over';
+
+  @override
+  String get msgCallGroupSoon => 'Coming soon — group calls arrive in phase 2';
+
+  @override
+  String get msgCallGroupVideoSoon =>
+      'Coming soon — group video meetings arrive in phase 2';
+
+  @override
   String get msgChatBack => 'Back';
 
   @override

@@ -20090,6 +20090,252 @@ abstract class AppL10n {
   /// **'ABOS অ্যাপ {version}'**
   String menuPageAppVersion(String version);
 
+  /// Outgoing call screen: status line while the other phone rings
+  ///
+  /// In bn, this message translates to:
+  /// **'রিং হচ্ছে…'**
+  String get msgCallRinging;
+
+  /// Call screen: status line while joining the call
+  ///
+  /// In bn, this message translates to:
+  /// **'যুক্ত হচ্ছে…'**
+  String get msgCallConnecting;
+
+  /// Incoming call screen and ringing notification: a voice call is coming in
+  ///
+  /// In bn, this message translates to:
+  /// **'ABOS ভয়েস কল আসছে…'**
+  String get msgCallIncomingVoice;
+
+  /// Incoming call screen and ringing notification: a video call is coming in
+  ///
+  /// In bn, this message translates to:
+  /// **'ABOS ভিডিও কল আসছে…'**
+  String get msgCallIncomingVideo;
+
+  /// Incoming call: small round button that opens the chat with the caller instead of answering
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা দিন'**
+  String get msgCallMessage;
+
+  /// Incoming call: small round button that declines and reminds in 10 minutes
+  ///
+  /// In bn, this message translates to:
+  /// **'পরে মনে করান'**
+  String get msgCallRemindLater;
+
+  /// Incoming call: red button (and notification action) that declines; also the red end button on the outgoing voice call
+  ///
+  /// In bn, this message translates to:
+  /// **'কেটে দিন'**
+  String get msgCallDecline;
+
+  /// Incoming call: green button (and notification action) that answers
+  ///
+  /// In bn, this message translates to:
+  /// **'ধরুন'**
+  String get msgCallAnswer;
+
+  /// Voice call bar: loudspeaker on/off button
+  ///
+  /// In bn, this message translates to:
+  /// **'স্পিকার'**
+  String get msgCallSpeaker;
+
+  /// Call bar: microphone mute button
+  ///
+  /// In bn, this message translates to:
+  /// **'মিউট'**
+  String get msgCallMute;
+
+  /// Call bar: the mute button while muted
+  ///
+  /// In bn, this message translates to:
+  /// **'আবার শোনান'**
+  String get msgCallUnmute;
+
+  /// Voice call bar: button that turns the call into a video call
+  ///
+  /// In bn, this message translates to:
+  /// **'ভিডিও'**
+  String get msgCallVideo;
+
+  /// Video call bar: red end button; also the end-call confirmation's yes
+  ///
+  /// In bn, this message translates to:
+  /// **'কল শেষ'**
+  String get msgCallEnd;
+
+  /// Video call bar: turn my camera off
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্যামেরা বন্ধ'**
+  String get msgCallCameraOff;
+
+  /// Video call bar: the camera button while my camera is off
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্যামেরা চালু'**
+  String get msgCallCameraOn;
+
+  /// Video call bar: switch between front and back camera
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্যামেরা ঘোরান'**
+  String get msgCallFlipCamera;
+
+  /// Video call: the back arrow at top-left (asks before ending the call)
+  ///
+  /// In bn, this message translates to:
+  /// **'ফিরে যান'**
+  String get msgCallBack;
+
+  /// Video call: label on my own small self-view
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনি'**
+  String get msgCallYou;
+
+  /// Dialog when going back during a call
+  ///
+  /// In bn, this message translates to:
+  /// **'কল শেষ করবেন?'**
+  String get msgCallLeaveTitle;
+
+  /// Dialog when going back during a call: stay in the call
+  ///
+  /// In bn, this message translates to:
+  /// **'না, চলুক'**
+  String get msgCallLeaveNo;
+
+  /// Call screen: the other person did not answer in time
+  ///
+  /// In bn, this message translates to:
+  /// **'উত্তর দেননি'**
+  String get msgCallNoAnswer;
+
+  /// Call screen: the other person declined the call
+  ///
+  /// In bn, this message translates to:
+  /// **'কেটে দিয়েছেন'**
+  String get msgCallDeclined;
+
+  /// Call screen: the call has ended
+  ///
+  /// In bn, this message translates to:
+  /// **'কল শেষ'**
+  String get msgCallEnded;
+
+  /// Call screen: joining the call failed
+  ///
+  /// In bn, this message translates to:
+  /// **'কল যুক্ত হলো না — নেট দেখে আবার চেষ্টা করুন'**
+  String get msgCallFailed;
+
+  /// The server has no call server set up yet (503 calls_off)
+  ///
+  /// In bn, this message translates to:
+  /// **'কল এখনো চালু হয়নি — অফিস চালু করলে কল দেওয়া যাবে'**
+  String get msgCallsOff;
+
+  /// 403 without a message from the server
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনার রোলে এই কল দেওয়ার অনুমতি নেই'**
+  String get msgCallNotAllowed;
+
+  /// The server is too old for calls (404)
+  ///
+  /// In bn, this message translates to:
+  /// **'কল এখনো চালু হয়নি — সার্ভার আপডেট হলে আসবে'**
+  String get msgCallDoorsMissing;
+
+  /// Dialog title when the microphone or camera was refused for a call
+  ///
+  /// In bn, this message translates to:
+  /// **'অনুমতি লাগবে'**
+  String get msgCallPermTitle;
+
+  /// Dialog body when the microphone permission was refused
+  ///
+  /// In bn, this message translates to:
+  /// **'মাইকের অনুমতি ছাড়া কল হয় না। ফোনের সেটিংস → অ্যাপ → ABOS → অনুমতি থেকে মাইক চালু করে আবার কল দিন।'**
+  String get msgCallMicRefused;
+
+  /// Snack/line when the camera was refused on a video call
+  ///
+  /// In bn, this message translates to:
+  /// **'ক্যামেরার অনুমতি নেই — ভিডিও ছাড়া, কেবল কথায় কল চলছে'**
+  String get msgCallCameraRefused;
+
+  /// Reminder notification 10 minutes after Remind me
+  ///
+  /// In bn, this message translates to:
+  /// **'{name}-কে কল করার কথা'**
+  String msgCallReminderTitle(String name);
+
+  /// Reminder notification body
+  ///
+  /// In bn, this message translates to:
+  /// **'আপনি পরে মনে করাতে বলেছিলেন — চাপলে চ্যাট খোলে'**
+  String get msgCallReminderBody;
+
+  /// Snack after choosing Remind me
+  ///
+  /// In bn, this message translates to:
+  /// **'10 মিনিট পরে মনে করানো হবে'**
+  String get msgCallReminderSet;
+
+  /// Android notification channel name for ringing calls
+  ///
+  /// In bn, this message translates to:
+  /// **'আসা কল'**
+  String get msgCallChannelName;
+
+  /// Android notification channel description for ringing calls
+  ///
+  /// In bn, this message translates to:
+  /// **'সহকর্মীদের ABOS ভয়েস ও ভিডিও কল'**
+  String get msgCallChannelDescription;
+
+  /// The ongoing-call notification text
+  ///
+  /// In bn, this message translates to:
+  /// **'কল চলছে — ফিরতে চাপুন'**
+  String get msgCallOngoing;
+
+  /// Chat notification title when the server sent no text
+  ///
+  /// In bn, this message translates to:
+  /// **'নতুন বার্তা'**
+  String get msgChatNotifTitle;
+
+  /// Chat notification body when the server sent no text
+  ///
+  /// In bn, this message translates to:
+  /// **'বার্তা দেখতে চাপুন'**
+  String get msgChatNotifBody;
+
+  /// Answering a call that stopped ringing meanwhile (409 call_over)
+  ///
+  /// In bn, this message translates to:
+  /// **'কল শেষ হয়ে গেছে — আর ধরা যাবে না'**
+  String get msgCallOver;
+
+  /// Short message when the call button of a group chat is pressed (group calls come in phase 2)
+  ///
+  /// In bn, this message translates to:
+  /// **'শীঘ্রই আসছে — গ্রুপ কল দ্বিতীয় ধাপে'**
+  String get msgCallGroupSoon;
+
+  /// Short message when the video button of a group chat is pressed (video meetings come in phase 2)
+  ///
+  /// In bn, this message translates to:
+  /// **'শীঘ্রই আসছে — গ্রুপ ভিডিও সভা দ্বিতীয় ধাপে'**
+  String get msgCallGroupVideoSoon;
+
   /// Chat page header: back button
   ///
   /// In bn, this message translates to:
