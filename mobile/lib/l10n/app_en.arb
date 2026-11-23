@@ -3878,7 +3878,7 @@
   "msgChatMediaEmpty": "No photos, files or papers yet",
   "msgChatMembersEmpty": "No members",
   "msgChatClose": "Close",
-  "msgChatUnselect": "Clear selection",
+  "msgChatUnselect": "Cancel selection",
   "msgChatActReply": "Reply",
   "msgChatActForward": "Forward",
   "msgChatActCopy": "Copy",

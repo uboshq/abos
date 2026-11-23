@@ -11,7 +11,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/api_client/api_client.dart';
@@ -23,6 +22,7 @@ import '../../../core/messenger/messenger_push.dart';
 import '../../../core/navigation/recent_papers.dart';
 import '../../../core/permissions/camera_shot.dart';
 import '../../../core/printing/documents_api.dart';
+import '../../../core/printing/paper_files.dart';
 import '../../../core/theme/app_look.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/voice/copilot_voice.dart';
@@ -699,7 +699,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
   Future<File> _toFile(ChatMessage m, String name) async {
     final local = m.clientId == null ? null : _uploads[m.clientId!]?.bytes;
     final bytes = local ?? await _bytes(m.attachment?.url ?? '');
-    final dir = await getTemporaryDirectory();
+    // ⓘ অ্যাপের নিজের কাগজের ফোল্ডারে — open_filex অনুমতি চায় না, আর বেরোলে PaperFiles.wipe() মুছে দেয়
+    final dir = await PaperFiles.cache();
     final safe = name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     final f = File('${dir.path}/chat-${m.id.replaceAll(RegExp(r'[^A-Za-z0-9-]'), '')}-$safe');
     await f.writeAsBytes(bytes, flush: true);

@@ -7,6 +7,7 @@ import 'package:material_symbols_icons/symbols.dart';
 
 import '../../../core/locale/l10n.dart';
 import '../../../core/messenger/messenger_api.dart';
+import '../../../core/profile/face_image.dart';
 import 'call_controller.dart';
 
 /// ⭐ কলের পাতা — নমুনা 3nuwRUdn v5 "ঘ": আসা কল (ফোন ১), একজনের সাথে ভিডিও (ফোন ২), আর চ্যাটের মাথা থেকে দেওয়া ভয়েস কল
@@ -609,7 +610,8 @@ class CallAvatar extends StatelessWidget {
           gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [base, dark]),
         ),
         child: photo != null && photo.startsWith('http')
-            ? Image.network(photo, fit: BoxFit.cover, errorBuilder: (_, __, ___) => letter)
+            // ⛔ মুখ টোকেন, pinning আর নবায়নসহ — FaceImage (ApiClient) দিয়ে, সাধারণ Image.network নয়
+            ? Image(image: FaceImage(photo), fit: BoxFit.cover, errorBuilder: (_, __, ___) => letter)
             : letter,
       ),
     );

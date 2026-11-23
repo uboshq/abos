@@ -12556,7 +12556,7 @@ class AppL10nEn extends AppL10n {
   String get msgChatClose => 'Close';
 
   @override
-  String get msgChatUnselect => 'Clear selection';
+  String get msgChatUnselect => 'Cancel selection';
 
   @override
   String get msgChatActReply => 'Reply';

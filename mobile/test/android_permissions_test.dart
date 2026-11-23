@@ -68,19 +68,28 @@ void main() {
     expect(_manifest(), contains('xmlns:tools="http://schemas.android.com/tools"'));
   });
 
-  test('the two files open_filex opens stay inside the app\'s own folders', () {
-    // ⓘ open_filex অনুমতি চায় কেবল অ্যাপের নিজের ফোল্ডারের বাইরের পথে — তাই এই দুইটা ভিতরে থাকলে তবেই সরানো নিরাপদ
+  test('the three files open_filex opens stay inside the app\'s own folders', () {
+    // ⓘ open_filex অনুমতি চায় কেবল অ্যাপের নিজের ফোল্ডারের বাইরের পথে — তাই এই তিনটা ভিতরে থাকলে তবেই সরানো নিরাপদ
     final installer = File('lib/core/update/apk_installer.dart').readAsStringSync();
     expect(installer, contains('getTemporaryDirectory()'));
     final papers = File('lib/core/printing/paper_files.dart').readAsStringSync();
     expect(papers, contains('static Future<Directory> cache() => _inside(temporaryRoot);'));
+    // ⓘ বার্তার ফাইল নামানো হয় কাগজের ফোল্ডারেই — নিজের ফোল্ডার, আর বেরোলে PaperFiles.wipe() মোছে
+    final chat = File('lib/features/messenger/chat/chat_screen.dart').readAsStringSync();
+    expect(chat, contains('await PaperFiles.cache()'));
+    expect(chat, isNot(contains('getTemporaryDirectory()')));
+    expect(chat, isNot(contains('getExternal')));
     final opens = Directory('lib')
         .listSync(recursive: true)
         .whereType<File>()
         .where((f) => f.path.endsWith('.dart') && f.readAsStringSync().contains('OpenFilex.open('))
         .map((f) => f.path.replaceAll('\\', '/'))
         .toSet();
-    expect(opens, {'lib/core/update/apk_installer.dart', 'lib/features/web_inside/web_inside_screen.dart'},
+    expect(opens, {
+      'lib/core/update/apk_installer.dart',
+      'lib/features/messenger/chat/chat_screen.dart',
+      'lib/features/web_inside/web_inside_screen.dart',
+    },
         reason: 'নতুন জায়গায় OpenFilex — ফাইলটা অ্যাপের নিজের ফোল্ডারে কিনা দেখুন, নাহলে অনুমতি লাগবে');
   });
 }
