@@ -108,7 +108,8 @@ void main() {
     await toModules(tester);
 
     expect(find.byKey(const ValueKey('module-sales')), findsOneWidget);
-    expect(find.byKey(const ValueKey('module-customer')), findsOneWidget);
+    // ⭐ গ্রাহক এখন বিক্রয়ের টাইলের ভিতরে (মালিক, ২০ নভেম্বর ২০২৬: বিক্রয় + গ্রাহক + বাকি নিয়ন্ত্রণ + অফার; [[NavCatalog.hosts]])
+    expect(find.byKey(const ValueKey('module-customer')), findsNothing);
 
     await tester.tap(find.byKey(const ValueKey('module-sales')));
     await tester.pumpAndSettle();
@@ -128,9 +129,11 @@ void main() {
     await tester.pumpWidget(shell());
     await tester.pumpAndSettle();
     await toModules(tester);
-    await tester.tap(find.byKey(const ValueKey('module-customer')));
+    // ⓘ গ্রাহকের সারি বিক্রয়ের টাইলের ভিতরে (একত্র মডিউল)
+    await tester.tap(find.byKey(const ValueKey('module-sales')));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(find.text('বকেয়া তালিকা'), 200, scrollable: find.byType(Scrollable).last);
     await tester.tap(find.text('বকেয়া তালিকা'));
     await tester.pumpAndSettle();
     expect(opened, ['dues']);

@@ -17,6 +17,7 @@ import 'package:abos_mobile/core/orders/order_api.dart';
 import 'package:abos_mobile/core/printing/printer_settings.dart';
 import 'package:abos_mobile/core/printing/thermal_printer.dart';
 import 'package:abos_mobile/core/records/customer_record.dart';
+import 'package:abos_mobile/core/records/notification_record.dart';
 import 'package:abos_mobile/core/records/today_record.dart';
 import 'package:abos_mobile/core/sync_engine/reference_cache.dart';
 import 'package:abos_mobile/core/sync_engine/sync_engine.dart';
@@ -196,6 +197,8 @@ Widget homeShell({double textScale = 1}) => ProviderScope(
           now: () => DateTime(2026, 10, 1, 10, 30),
           fetchNoticeBar: () async => const [],
           fetchPending: () async => throw StateError('not an approver'),
+          // ⓘ ঘণ্টার গোনা নকল — আসল Dio-তে গেলে অনুরোধ ঝুলে থাকত আর পাতা বন্ধের পরও টাইমার থাকত (একবারের ঘণ্টা-খোঁজা, ২৩ নভেম্বর ২০২৬)
+          fetchNotifications: () async => const NotificationPage(items: [], unread: 0),
           syncNow: () async {},
           prefs: MemoryNavPrefsStore(),
           openPath: (_) async {},

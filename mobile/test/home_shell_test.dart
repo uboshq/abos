@@ -327,7 +327,9 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('nav-modules')));
     await tester.pumpAndSettle();
-    expect(find.text('গ্রাহক'), findsOneWidget);
+    // ⓘ গ্রাহক এখন বিক্রয়ের টাইলের ভিতরে (একত্র মডিউল, [[NavCatalog.hosts]]) — সব মডিউলের পাতা খুলেছে, বিক্রয়ের টাইল আছে
+    expect(find.byKey(const ValueKey('module-sales')), findsOneWidget);
+    expect(find.byKey(const ValueKey('module-customer')), findsNothing);
 
     // ⓘ "আমি" — নিচের বারের শেষ ঘর (১৩ নভেম্বর ২০২৬); আইটেম ১০ (২১ নভেম্বর ২০২৬): নিজের প্রোফাইল
     await _openMe(tester);
