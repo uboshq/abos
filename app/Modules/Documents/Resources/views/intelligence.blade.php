@@ -11,15 +11,25 @@
         'url' => route('documents.intelligence', ['document' => $document->id, 'tool' => $t]),
         'active' => $tool === $t,
     ])->all();
+
+    $abosPick = \App\Core\Support\AbosHead::on() && $enabled && $document === null;
+    $facetPanel = \App\Core\ListFilter\Facets::panel($abosPick ? [\App\Core\ListFilter\Facets::pick('doc_type', __('documents::field.doc_type'), $choices->types(true))] : []);
+    $pickColumns = [
+        ['key' => 'document_no', 'label' => __('documents::field.document_no'), 'width' => '12rem', 'render' => fn ($d) => (string) $d->document_no],
+        ['key' => 'name', 'label' => __('documents::field.name'), 'render' => fn ($d) => new \Illuminate\Support\HtmlString('<a href="'.e(route('documents.intelligence', ['document' => $d->id])).'" class="text-(--color-link) hover:underline">'.e($d->name).'</a>')],
+        ['key' => 'doc_type', 'label' => __('documents::field.doc_type'), 'render' => fn ($d) => $choices->typeName($d->doc_type)],
+    ];
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('documents::menu.intelligence') }}</x-slot:title>
 
+    @unless ($abosPick)
     <x-slot:header>
         <x-ui.page-header :title="__('documents::menu.intelligence')"
                           :subtitle="$document ? $document->document_no.' · '.$document->name : __('documents::message.abe_subtitle')" />
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status" class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)">
@@ -27,13 +37,29 @@
         </div>
     @endif
 
+    @unless ($abosPick)
     <p class="mb-4 rounded-(--radius-field) bg-(--color-badge-info-bg) px-3 py-2 text-sm text-(--color-badge-info-ink)" data-abe-promise>
         {{ __('documents::message.abe_promise') }}
     </p>
+    @endunless
 
     @if (! $enabled)
         <p class="text-sm text-(--color-ink-muted)">{{ __('documents::message.abe_off') }}</p>
     @elseif ($document === null)
+        @if ($abosPick)
+            <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+            <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+                <form id="list-form" method="GET" class="contents">
+                    <x-ui.toolbar :title="__('documents::menu.intelligence')" :info="__('documents::message.abe_subtitle').' '.__('documents::message.abe_promise')"
+                                  :search-placeholder="__('documents::message.abe_pick')" :share="false" :columns="$pickColumns" :facets="$facetPanel"
+                                  :sort="['newest' => __('core.notify.sort.newest'), 'name' => __('documents::field.name')]" />
+                </form>
+                <x-ui.table :rows="$picks" :columns="$pickColumns" :empty="__('core.empty.no_results')" />
+                <x-ui.pager :rows="$picks" />
+                <x-ui.list-totals :rows="$picks" />
+            </div>
+            </x-ui.filter-layout>
+        @else
         {{-- ── কাগজ বাছা ── --}}
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <form method="GET" class="flex flex-wrap items-end gap-2 border-b border-(--color-border) px-4 py-3">
@@ -56,6 +82,7 @@
             <x-ui.list-totals :rows="$picks" />
             <x-ui.pager :rows="$picks" />
         </section>
+        @endif
     @else
         <x-ui.list-tabs :tabs="$tabs" :label="__('documents::menu.intelligence')" />
 

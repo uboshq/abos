@@ -88,6 +88,8 @@ final class DocumentIntelligenceController extends Controller
                 ? Document::query()->inViewedBranch()->visibleTo($user)->notArchived()
                     ->when($q !== '', fn ($w) => $w->where(fn ($x) => $x->where('dms_documents.name', 'like', '%'.addcslashes($q, '\\%_').'%')
                         ->orWhere('dms_documents.document_no', 'like', '%'.addcslashes($q, '\\%_').'%')))
+                    ->when($request->string('doc_type')->value(), fn ($w, $t) => $w->where('dms_documents.doc_type', $t))
+                    ->when($request->query('sort') === 'name', fn ($w) => $w->orderBy('dms_documents.name'))
                     ->orderByDesc('dms_documents.updated_at')
                     ->paginate(20)
                     ->withQueryString()
