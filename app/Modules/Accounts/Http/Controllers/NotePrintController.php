@@ -7,6 +7,7 @@ namespace App\Modules\Accounts\Http\Controllers;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Services\BranchSettings;
+use App\Core\Services\PaperPreview;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\AmountInWords;
@@ -55,7 +56,8 @@ final class NotePrintController extends Controller implements HasMiddleware
 
             $notice = match (true) {
                 $note->isCancelled() => (string) __('accounts::print.cancelled'),
-                $printed > 0 && ! $asFile => (string) __('core.print.duplicate_notice', ['n' => $printed + 1]),
+                // ⓘ দেখা ছাপা নয় — DUPLICATE ছাপার ([[PaperPreview]]; মালিক, ২৪ নভেম্বর ২০২৬)
+                $printed > 0 && ! $asFile && ! PaperPreview::looking() => (string) __('core.print.duplicate_notice', ['n' => $printed + 1]),
                 default => null,
             };
 
