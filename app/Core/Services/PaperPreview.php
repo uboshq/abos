@@ -48,7 +48,8 @@ final class PaperPreview
         $request->setUserResolver(fn () => request()->user());
 
         $controller = $route->getController();
-        $method = $route->getActionMethod();
+        // ⓘ a one-action controller (the voucher's) names its class, not `__invoke`
+        $method = method_exists($controller, $route->getActionMethod()) ? $route->getActionMethod() : '__invoke';
 
         DB::beginTransaction();
 
