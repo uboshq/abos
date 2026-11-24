@@ -150,7 +150,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * নিজের কোনো দাবি এটা ধরত না, কারণ প্রতিটাতেই মানুষটার
              * কোনো না কোনো চাবি ছিল।
              */
-            new Middleware('can:approval.decide', only: ['approve', 'reject', 'sendBack', 'forward', 'bulkApprove', 'bulkReview', 'confirmAll']),
+            new Middleware('can:approval.decide', only: ['approve', 'reject', 'sendBack', 'forward', 'bulkApprove', 'bulkReview', 'confirmAll', 'paper']),
 
             /*
              * ⚠️ `show` এখানে নেই, আর সেটা ইচ্ছাকৃত।
@@ -554,6 +554,19 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         ]);
     }
 
+    public function paper(Request $request, int $approval): \Illuminate\Http\Response
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $detail = $this->detailFor(Approval::query()->findOrFail($approval), $user);
+
+        // ⛔ the same two questions as the paper beside it: may this person open the record, and read the paper itself
+        abort_if($detail === null || $detail['documentHidden'], 403);
+        abort_unless($detail['document'] instanceof \Illuminate\Database\Eloquent\Model, 404);
+
+        return app(\App\Core\Services\PaperPreview::class)->render($detail['document']);
+    }
+
     public function show(Request $request, int $approval): View
     {
         /** @var User $user */
@@ -746,6 +759,11 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * ভাববেন কাগজটা মুছে গেছে, আর সেটা মিথ্যা।
              */
             'documentHidden' => ! $mayReadDocument,
+
+            // ⭐ "দেখুন" — ছাপলে যে কাগজ বেরোয় সেটা; ছাপার কাগজ না থাকলে null, তখন আগের জানালাই
+            'printView' => $document !== null && $user->can('approval.decide')
+                && app(\App\Core\Services\PaperPreview::class)->typeOf($document) !== null
+                    ? route('approval.inbox.paper', $entry->id) : null,
 
             'canDecide' => $canDecide,
             // ⭐ "সংশোধনে ফেরত" আলাদা অবস্থায় যায় কি না — না গেলে পুরনো পথ ("না", কারণ: কাগজের ভুল)

@@ -81,6 +81,9 @@ Route::middleware('auth')->prefix('approvals')->group(function () {
 
     Route::get('/{approval}', [ApprovalInboxController::class, 'show'])
         ->whereNumber('approval')->name('inbox.show');
+    // ⭐ ছাপার কাগজটাই, কেবল দেখা — ছাপা গোনা হয় না (মালিক, ২৪ নভেম্বর ২০২৬; [[PaperPreview]])
+    Route::get('/{approval}/paper', [ApprovalInboxController::class, 'paper'])
+        ->whereNumber('approval')->name('inbox.paper');
     Route::post('/{approval}/approve', [ApprovalInboxController::class, 'approve'])
         ->whereNumber('approval')->name('inbox.approve');
     // ⭐ এক বিক্রির সব অনুরোধ একসাথে নিশ্চিত — [[ApprovalBundles]], ২৮ সেপ্টেম্বর ২০২৬

@@ -55,7 +55,7 @@
         {{-- ⓘ চারটা বোতাম এই ফর্মের ভেতরে, কিন্তু জমা-বোতাম কেবল অনুমোদনেরটা — বাকি তিনটা `type="button"`, কেবল পপ-আপ খোলে --}}
         <div @class(['flex flex-wrap items-center justify-end gap-2', 'mt-3' => ! $boardActions])>
             @if ($boardActions)
-                @if ($boardSheetOpen)
+                @if ($boardSheetOpen || ($printView ?? null) !== null)
                     <x-ui.button type="button" tone="secondary" x-on:click="$dispatch('open-paper')" data-opens-dialog aria-haspopup="dialog" class="inbox-board-view">
                         {{ __('approval::action.board_view') }}
                     </x-ui.button>

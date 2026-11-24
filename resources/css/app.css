@@ -2817,6 +2817,8 @@ a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; te
     align-items: center; gap: 5px; padding: 2px 10px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface-card);
 }
 .inbox-board-route > ol > li > span { margin-top: 0; }
+.inbox-board-paper { display: flex; flex-direction: column; inline-size: min(960px, 100%); block-size: 92vh; border-radius: var(--radius-card); overflow: hidden; background: var(--color-surface-card); box-shadow: var(--shadow-overlay); }
+.inbox-board-paperframe { flex: 1 1 auto; min-height: 0; inline-size: 100%; border: 0; }
 .inbox-board-remark { display: none; }
 .inbox-board-remark.is-open, .inbox-board-remark:focus-within { display: block; margin-bottom: 8px; }
 .inbox-board-actions button { min-height: 34px; padding-block: 0; font-size: 14px; }

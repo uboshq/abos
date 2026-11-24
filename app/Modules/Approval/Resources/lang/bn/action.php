@@ -46,4 +46,5 @@ return [
     'board_bulk' => '✓ একসাথে অনুমোদন',
     'board_view' => 'দেখুন',
     'board_remark' => 'মন্তব্য',
+    'board_new_tab' => 'নতুন ট্যাবে',
 ];
