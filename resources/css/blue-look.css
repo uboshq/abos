@@ -50,34 +50,32 @@
 }
 
 /* ── ফ্রেম আর অ্যাপ ───────────────────────────────────────────────────── */
+/* ⭐ ফ্রেম নেই — অ্যাপের নীল পর্দার কিনারা পর্যন্ত (মালিক "ok", ২৪ নভেম্বর ২০২৬, নমুনা 8kuUTtFx v2: "পর্দার ডানের নীল বর্ডার বাদ …
+   হালকা নীল যেটা রয়ে গেছে … তিন পাশ"): আগে চারপাশে হালকা নীলের একটা ফ্রেম (`--blue-frame`) আর অ্যাপের গোল কোণ ছিল। */
 :root[data-ui='blue'] body {
-    background:
-        radial-gradient(circle at 12% 18%, rgb(255 255 255 / 0.14) 0 18%, transparent 19%),
-        radial-gradient(circle at 88% 82%, rgb(255 255 255 / 0.12) 0 16%, transparent 17%),
-        var(--blue-frame);
-    background-attachment: fixed;
-    padding: var(--blue-ring) var(--blue-ring) 0;
+    background: var(--blue-shell);
+    padding: 0;
 }
 
-/* উপরের বার — অ্যাপের মাথা, উপরের দুই কোণ গোল */
+/* উপরের বার — অ্যাপের মাথা, পর্দার কিনারা পর্যন্ত */
 :root[data-ui='blue'] [data-topbar] {
     background: var(--blue-shell);
     border-bottom-color: transparent;
-    border-radius: calc(var(--blue-ring) * 2.5) calc(var(--blue-ring) * 2.5) 0 0;
+    border-radius: 0;
 }
 
-/* বারের নিচের সারি (রেল + মেনু + কাজের জায়গা) — অ্যাপের শরীর, নিচের দুই কোণ গোল */
+/* বারের নিচের সারি (রেল + মেনু + কাজের জায়গা) — নিচে নোটিশের পিলের জায়গা */
 :root[data-ui='blue'] body > div.flex:has(> div > #main) {
     background: var(--blue-shell);
-    border-radius: 0 0 calc(var(--blue-ring) * 2.5) calc(var(--blue-ring) * 2.5);
-    padding: 0 var(--blue-ring) var(--blue-ring) 0;
-    margin-bottom: calc(var(--spacing-status-bar) + var(--blue-ring) * 2);
+    border-radius: 0;
+    padding: 0;
+    margin-bottom: calc(var(--spacing-status-bar) + 16px);
 }
 
-/* রেল আর মেনুর খুঁটি — বারের নিচে আটকে থাকে; ফ্রেম আর নিচের পিলের জায়গা বাদ (inline style-কে হারাতে !important) */
+/* রেল আর মেনুর খুঁটি — বারের নিচে আটকে থাকে; নিচের পিলের জায়গা বাদ (inline style-কে হারাতে !important) */
 @media (min-width: 768px) {
     :root[data-ui='blue'] aside[data-under-bar] {
-        height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - var(--blue-ring) * 4) !important;
+        height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - 16px) !important;
         padding-bottom: 4px;
     }
 }
@@ -162,9 +160,10 @@
 /* ⭐ কাজের জায়গা — হালকা নীল, ২৬px কোণ, মেনুর পাশে আলাদা প্যানেল */
 :root[data-ui='blue'] body > div.flex > div:has(> #main) {
     background: var(--color-surface-app);
-    border-radius: 26px;
+    /* ⓘ ডানে পর্দার কিনারা পর্যন্ত — বাঁয়ের দুই কোণ গোল, ডানে সোজা (মালিক "ok", ২৪ নভেম্বর ২০২৬) */
+    border-radius: 26px 0 0 26px;
     margin-top: 4px;
-    min-height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - var(--blue-ring) * 4);
+    min-height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - 20px);
     overflow: clip;
 }
 
@@ -173,7 +172,7 @@
    (টেবিলের মাথা, টুলবার) এখন এই বাক্সের মাথায় আটকায়। ফোনে (৭৬৮-এর নিচে) আগের মতো গোটা পাতা স্ক্রল করে। */
 @media (min-width: 768px) {
     :root[data-ui='blue'] body > div.flex > div:has(> #main) {
-        height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - var(--blue-ring) * 4 - 4px);
+        height: calc(100dvh - var(--spacing-header) - var(--spacing-status-bar) - 20px);
         min-height: 0;
         overflow-x: clip;
         overflow-y: auto;
@@ -204,38 +203,13 @@
     background: var(--color-status-urgent-soft);
 }
 
-/* ⭐ নিচের বার — কাজের জায়গার নিচে আলাদা একটা সাদা পিল, পাতার উপরে চাপে না (নমুনা `.status`)।
-   ⓘ বারটা আগের মতোই স্থির (ঘোষণা সবসময় চোখে — মালিক, ২১ অক্টোবর ২০২৬); তার পেছনে অ্যাপের নীলের একটা স্থির পট্টি
-   (`body::after`, নিচের দুই কোণ গোল), তাই স্ক্রল করা পাতা পিলের নিচে না ঢুকে পট্টির কিনারায় থামে — ফ্রেম, অ্যাপের তলা, পিল,
-   ঠিক নমুনার মতো। */
+/* ⭐ নিচের নোটিশের বার — গোল কোণার সাদা বক্স, পর্দার নিচে, পেছনে আলাদা কোনো পট্টি নেই (মালিক "ok", ২৪ নভেম্বর ২০২৬,
+   নমুনা 8kuUTtFx v2: "নোটিশ বার ফুটার … রাউন্ড বক্সের মধ্যে")। ⓘ বারটা আগের মতোই স্থির (ঘোষণা সবসময় চোখে — ২১ অক্টোবর ২০২৬);
+   পেছনটা অ্যাপের নীল (body), কাজের জায়গা নিজে স্ক্রল করে, তাই পাতা পিলের নিচে ঢোকে না। */
 @media (min-width: 768px) {
-    :root[data-ui='blue'] body::after {
-        content: "";
-        position: fixed;
-        z-index: 19;
-        inset-inline: var(--blue-ring);
-        bottom: var(--blue-ring);
-        height: calc(var(--spacing-status-bar) + var(--blue-ring) * 1.5);
-        background: var(--blue-shell);
-        border-radius: 0 0 calc(var(--blue-ring) * 2.5) calc(var(--blue-ring) * 2.5);
-        pointer-events: none;
-    }
-
-    /* ⓘ পট্টির নিচে ফ্রেমের ফালি — স্ক্রলে পাতা ওখানেও দেখা না যায় */
-    :root[data-ui='blue'] body::before {
-        content: "";
-        position: fixed;
-        z-index: 19;
-        inset-inline: 0;
-        bottom: 0;
-        height: var(--blue-ring);
-        background: var(--blue-frame);
-        pointer-events: none;
-    }
-
     :root[data-ui='blue'] footer[data-footer] {
-        inset-inline: calc(var(--blue-ring) * 2);
-        bottom: calc(var(--blue-ring) * 1.5);
+        inset-inline: 10px;
+        bottom: 6px;
         border-radius: 999px;
         border: 0;
         box-shadow: var(--shadow-card);
