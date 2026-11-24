@@ -121,6 +121,13 @@ final class FinishTheAccountsPaperOnTheLastSignature
             return;
         }
 
+        // ⭐ নোটের উল্টানোর অনুমোদন — পোস্টের অনুমোদন নয়, `reverse` চিহ্ন দেখে
+        if ($paper instanceof Note && (((array) $approval->payload)['reverse'] ?? false) === true) {
+            app(\App\Modules\Accounts\Services\AccountsReversalService::class)->finishNote($paper, $approval);
+
+            return;
+        }
+
         // ⭐ স্টক ছাড়া ভাউচারের উল্টানোর অনুমোদন — পোস্টের অনুমোদন নয়, `reverse` চিহ্ন দেখে
         if ($paper instanceof \App\Modules\Accounts\Models\TradeVoucher && (((array) $approval->payload)['reverse'] ?? false) === true) {
             app(\App\Modules\Accounts\Services\AccountsReversalService::class)->finishTradeVoucher($paper, $approval);

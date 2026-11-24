@@ -414,7 +414,7 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $vouchers->cancel($first->fresh(), 'wrong wallet');
         $this->assertSame(0, \App\Modules\Hr\Models\HeldWagePayment::query()->where('payslip_id', $held->id)->count(), '⛔ বাতিল ভাউচারে মজুরি আটকে রইল');
         $this->assertContains((int) $held->id, $held_(), '⛔ বাতিলের পরে মজুরি দেওয়ার অপেক্ষায় ফেরেনি');
-        $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $mfs->id)->where('action', 'held_wage_payment_released')
+        $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $mfs->id)->where('action', 'held_wage_released')
             ->where('reason', 'like', '%'.$first->document_no.'%')->exists(), '⛔ ছাড়ার কথা কর্মীর অডিটে নেই');
         $this->as($this->owner)->get(route('hr.payroll.held.index'))->assertOk()->assertSee('data-held-line="EMP-REL"', false);
 

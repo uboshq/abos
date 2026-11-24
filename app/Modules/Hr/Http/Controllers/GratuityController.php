@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\FinalSettlement;
 use App\Modules\Hr\Models\GratuityProvision;

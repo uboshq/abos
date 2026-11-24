@@ -41,6 +41,7 @@ class LeaveController extends Controller implements HasMiddleware
     {
         return [
             // ⓘ তালিকার দরজা নীতিতে ([[LeaveApplicationPolicy::viewAny()]]) — চাবি, বা দল থাকা ব্যবস্থাপক; মেনুর সারিও তাই
+            new Middleware('can:viewAny,'.LeaveApplication::class, only: ['index']),
             new Middleware('can:hr.leave.view', only: ['create', 'types']),
             new Middleware('can:hr.leave.manage', only: ['store', 'cancel', 'storeType', 'installTypes']),
             // ⓘ চাবি দরজায়; "কার ছুটি" — কর্মীর নিজের ব্যবস্থাপক বা HR — সেবায় ([[LeaveSigner]], ঘাটতির তালিকা #১৫)
@@ -53,8 +54,6 @@ class LeaveController extends Controller implements HasMiddleware
         // ⭐ শাখার দেয়াল — কেবল নাগালের কর্মীদের আবেদন (চূড়ান্ত অডিট ⛔১৭, [[BranchReach]])
         // ⭐ আর হেডারের বাছা শাখা ([[BranchReach::viewing()]], fe, ২১ অক্টোবর ২০২৬)
         // ⭐ সাথে নিজের দলের আবেদন, নাগালের বাইরে হলেও — সারিতে বোতামের বদলে "HR-এর কাছে গেছে" ([[LeaveSigner::fallsToHr()]])
-        $this->authorize('viewAny', LeaveApplication::class);
-
         // ⭐ চাবি ছাড়া ব্যবস্থাপক — কেবল নিজের দলের আবেদন, শাখার বাকিদের নয় (a6, ২১ অক্টোবর ২০২৬)
         $query = ($request->user()->can('hr.leave.view')
                 ? LeaveSigner::listFor($request->user())

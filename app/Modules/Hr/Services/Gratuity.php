@@ -140,10 +140,10 @@ final class Gratuity
     {
         $monthStart = $month->copy()->startOfMonth();
         $monthEnd = $monthStart->copy()->endOfMonth();
-        $expense = Account::query()->postable()->where('code', StandardChart::GRATUITY_EXPENSE)->first();
-        $liability = Account::query()->postable()->where('code', StandardChart::GRATUITY_LIABILITY)->first();
-
-        if ($expense === null || $liability === null) {
+        try {
+            $expense = StandardChart::accountFor(StandardChart::GRATUITY_EXPENSE);
+            $liability = StandardChart::accountFor(StandardChart::GRATUITY_LIABILITY);
+        } catch (ValidationException) {
             throw ValidationException::withMessages(['account' => __('hr::validation.gratuity_accounts_missing')]);
         }
 

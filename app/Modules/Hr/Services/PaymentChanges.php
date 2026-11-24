@@ -279,6 +279,8 @@ final class PaymentChanges
 
     private function pendingApproval(PaymentChange $change): Approval
     {
+        // ⛔ তালা দিয়ে তাজা অবস্থা — হাতের কপি বাসি হতে পারে
+        $change = DB::transaction(fn () => PaymentChange::query()->whereKey($change->getKey())->lockForUpdate()->firstOrFail());
         $approval = $this->approvalOf($change);
 
         if (! $change->isPending() || $approval === null || ! $approval->isPending()) {
