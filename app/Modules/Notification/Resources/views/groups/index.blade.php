@@ -1,14 +1,26 @@
 {{-- ⭐ প্রাপক-দলের তালিকা (মালিকের স্পেক §৪ "Recipient Management"; ধাপ ৩) --}}
+@php
+    // ⓘ ব্যাখ্যা নামের পাশে ⓘ-এ, "নতুন" মাথার সারিতে — কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $abosHead = \App\Core\Support\AbosHead::shows();
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::group.title') }}</x-slot:title>
 
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::group.title')" :search="false" :export="false" :share="false" />
+        <x-ui.toolbar :title="__('notification::group.title')" :info="__('notification::group.note')" :search="false" :export="false" :share="false" >
+            @if ($abosHead)
+                <x-slot:actions>
+                    <x-ui.button tone="primary" icon="plus" :href="route('notification.groups.create')">{{ __('notification::group.new') }}</x-ui.button>
+                </x-slot:actions>
+            @endif
+        </x-ui.toolbar>
 
-        <div class="flex items-center justify-between gap-2">
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::group.note') }}</p>
-            <a href="{{ route('notification.groups.create') }}" class="shrink-0 rounded-(--radius-field) bg-(--color-brand-500) px-3 py-1.5 text-sm text-white">{{ __('notification::group.new') }}</a>
-        </div>
+        @unless ($abosHead)
+            <div class="flex items-center justify-between gap-2">
+                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::group.note') }}</p>
+                <a href="{{ route('notification.groups.create') }}" class="shrink-0 rounded-(--radius-field) bg-(--color-brand-500) px-3 py-1.5 text-sm text-white">{{ __('notification::group.new') }}</a>
+            </div>
+        @endunless
 
         @include('notification::partials.flash')
 

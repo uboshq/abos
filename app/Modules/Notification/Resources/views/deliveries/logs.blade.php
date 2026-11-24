@@ -18,11 +18,11 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::delivery.logs_title')" :search="false" :export="false" :share="false" :facets="$facetPanel">
+        <x-ui.toolbar :title="__('notification::delivery.logs_title')" :info="__('notification::delivery.logs_note')" :search="false" :export="false" :share="false" :facets="$facetPanel">
         </x-ui.toolbar>
         </form>
 
-        <p class="text-sm text-(--color-ink-muted)">{{ __('notification::delivery.logs_note') }}</p>
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::delivery.logs_note') }}</p>
 
         @if ($rows->isEmpty())
             <p class="text-sm text-(--color-ink-muted)">{{ __('notification::delivery.empty') }}</p>

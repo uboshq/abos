@@ -15,11 +15,11 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::escalation.title')" :search="false" :export="false" :share="false" :facets="$facetPanel">
+        <x-ui.toolbar :title="__('notification::escalation.title')" :info="__('notification::escalation.note')" :search="false" :export="false" :share="false" :facets="$facetPanel">
         </x-ui.toolbar>
         </form>
 
-        <p class="text-sm text-(--color-ink-muted)">{{ __('notification::escalation.note') }}</p>
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::escalation.note') }}</p>
 
         @if ($holes->isNotEmpty())
             <section data-escalation-holes class="space-y-1 rounded-(--radius-card) border border-(--color-border) bg-(--color-badge-warning-bg) p-3 text-sm text-(--color-badge-warning-ink)">

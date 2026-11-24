@@ -16,11 +16,11 @@
 @endphp
 <x-ui.filter-layout :filters="$facetPanel" form="list-form">
 <form id="list-form" method="GET" class="contents">
-<x-ui.toolbar :title="$title" :search="false" :export="false" :share="false" :facets="$facetPanel">
+<x-ui.toolbar :title="$title" :info="$note" :search="false" :export="false" :share="false" :facets="$facetPanel">
 </x-ui.toolbar>
 </form>
 
-<p class="text-sm text-(--color-ink-muted)">{{ $note }}</p>
+<p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ $note }}</p>
 
 @if (session('saved'))
     <p role="status" class="rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2
