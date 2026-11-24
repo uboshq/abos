@@ -38,6 +38,12 @@
             'render' => fn ($o) => view('accounts::obligation.partials.actions', ['o' => $o]),
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('accounts::obligation.col.due_on'), bar: false),
+        \App\Core\ListFilter\Facets::pick('kind', __('accounts::obligation.col.kind'), collect(['kosagar_deposit_ait', 'kosagar_deposit_vds', 'mushak_6_6_issue_vds'])->mapWithKeys(fn ($k) => [$k => __('accounts::obligation.kind.'.$k)])->all()),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -72,21 +78,23 @@
     <x-ui.list-tabs :tabs="$tabs" :label="__('accounts::menu.obligations')" />
 
     {{-- ⓘ তালিকার মান: টুলবার (খোঁজা), সর্বমোট আর যোগফলের পট্টি — অন্য তালিকার মতোই --}}
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed data-obligations class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
             <x-ui.toolbar :title="__('accounts::menu.obligations')"
                           :info="\App\Core\Support\AbosHead::on() ? __('accounts::obligation.subtitle') : null"
                           :search-placeholder="__('accounts::obligation.search')"
-                          :columns="$columns" />
+                          :columns="$columns" :facets="$facetPanel" :quiet="['tab']" />
         </form>
 
         <x-ui.table :rows="$rows"
                     :grand="$grand ?? []"
                     :columns="$columns"
-                    :empty="$q ? __('core.empty.no_results') : __('accounts::obligation.empty.'.$tab)" />
+                    :empty="$q !== '' || filled(request('kind')) || filled(request('from')) || filled(request('to')) ? __('core.empty.no_results') : __('accounts::obligation.empty.'.$tab)" />
     </div>
 
     <div class="mt-3">{{ $rows->links() }}</div>
     <x-ui.list-totals :rows="$rows" :grand="$grand ?? []" :columns="$columns" />
+    </x-ui.filter-layout>
 </x-layouts.app>

@@ -17,6 +17,10 @@
         ->map(fn ($atLevel) => ['who' => $atLevel->map($whoOf)->unique()->implode(' / '), 'from' => $atLevel->first()->from_amount]);
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    // ⓘ ABOS রূপে বাক্যটা নামের পাশের ⓘ-তে ([[foldPageNotes]]), মাথায় কেবল কয়টা চালু আর কয়টা বন্ধ
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $summary = __('approval::message.flows_summary', ['live' => $live, 'off' => $off]);
+    [$summaryNote, $summaryCounts] = array_pad(explode(' · ', $summary, 2), 2, $summary);
     $facetPanel = \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::pick('module', __('approval::field.module'), collect($choices)->map(fn ($c) => $c['label'])->all()),
         \App\Core\ListFilter\Facets::pick('state', __('core.table.status'), ['on' => __('approval::field.on_off'), 'off' => __('approval::message.coverage_off')]),
@@ -27,7 +31,7 @@
 
     {{-- ⭐ রঙিন মাথা, অনুমোদনের রঙে — লাইভের সাজানো অটুট (মালিক, ৭ নভেম্বর ২০২৬: "baki porda gulo", নমুনা "ok"; [[money.page]]) --}}
     <x-money.page kind="approval" :title="__('approval::menu.flows')" icon="settings"
-        :count="__('approval::message.flows_summary', ['live' => $live, 'off' => $off])">
+        :count="$abosHead ? $summaryCounts : $summary">
         <x-slot:actions>
             <x-ui.button tone="primary" icon="plus" :href="route('approval.flow.create')">
                 {{ __('approval::action.new_flow') }}
@@ -35,6 +39,10 @@
         </x-slot:actions>
 
     @include('approval::partials.rule-tabs')
+
+    @if ($abosHead)
+        <p class="text-sm text-(--color-ink-muted)">{{ $summaryNote }}</p>
+    @endif
 
     @if (session('saved'))
         <div role="status"
