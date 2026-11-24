@@ -63,11 +63,12 @@ final class WebPaperPickerAndCallsOffTest extends TestCase
         $this->assertNull($this->paperIn($wild, $invoice), '⛔ "%" matched every paper');
     }
 
-    public function test_the_picker_is_refused_without_the_messenger_key(): void
+    /** ⭐ owner, 24 Nov 2026: the messenger opens for every active person — the picker too, no messenger key needed */
+    public function test_the_picker_opens_for_every_active_person(): void
     {
-        $nobody = $this->person('No Key', [self::INVOICE_KEY], use: false);
+        $plain = $this->person('No Key', [self::INVOICE_KEY], use: false);
 
-        $this->web($nobody)->getJson(route('messaging.x.papers.find'))->assertForbidden();
+        $this->web($plain)->getJson(route('messaging.x.papers.find'))->assertOk();
     }
 
     public function test_the_picked_paper_goes_into_the_open_chat(): void

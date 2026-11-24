@@ -66,20 +66,11 @@ return [
 
     'moves_money' => [],
 
-    'settings' => [
-        [
-            /*
-             * ⭐ "কে কাকে বার্তা/কল দিতে পারবে — রোল দিয়ে" — `{ "<sender role>": ["<receiver role>", "*"] }`.
-             * ⓘ Empty = everyone in the company (the plan's default) — [[MessengerAccess]].
-             */
-            'key' => 'messaging.who_may_talk',
-            'label' => 'messaging::settings.who_may_talk',
-            'type' => 'json',
-            'default' => null,
-            // ⓘ one switch only — the core "general" group, already named in core.settings_group
-            'group' => 'general',
-        ],
-    ],
+    /*
+     * ⓘ No settings: the role allow-list ("কে কাকে বার্তা/কল দিতে পারবে") is gone — everyone of the group talks to everyone
+     *   (owner, 24 Nov 2026: "রেস্ট্রিকশান নেই এবং থাকবেও না"; [[MessengerAccess]]).
+     */
+    'settings' => [],
 
     /*
      * ⛔ Not audited, each on purpose — the full reasons sit in each model's docblock and in
