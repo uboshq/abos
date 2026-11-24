@@ -43,10 +43,13 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.obligations') }}</x-slot:title>
 
+    {{-- ⛔ কেবল ABOS Smart, Navy, Blue-এ — বাকি রূপ হুবহু আগের মতো ([[AbosHead]]) --}}
+    @unless (\App\Core\Support\AbosHead::on())
     <x-slot:header>
         <x-ui.page-header :title="__('accounts::menu.obligations')"
                           :subtitle="__('accounts::obligation.subtitle')" />
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -73,6 +76,7 @@
         <form method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
             <x-ui.toolbar :title="__('accounts::menu.obligations')"
+                          :info="\App\Core\Support\AbosHead::on() ? __('accounts::obligation.subtitle') : null"
                           :search-placeholder="__('accounts::obligation.search')"
                           :columns="$columns" />
         </form>

@@ -75,6 +75,18 @@
          ])],
     ];
 
+    // ⭐ বিবরণ যেন এক-দুই লাইনে থাকে — নম্বর, তারিখ, অঙ্ক আর অবস্থার বাড়তি চওড়া বিবরণে যায় (abos-08, ২৪ নভেম্বর ২০২৬; কেবল ABOS রূপ, [[AbosHead]])
+    if (\App\Core\Support\AbosHead::on()) {
+        $columns = array_map(fn (array $col) => match ($col['key']) {
+            'trx_date', 'status' => [...$col, 'width' => '6.5rem'],
+            'document_no' => [...$col, 'width' => '10rem'],
+            'method' => [...$col, 'width' => '6.5rem'],
+            'amount' => [...$col, 'width' => '7.5rem'],
+            'narration' => [...$col, 'width' => '20rem'],
+            default => $col,
+        }, $columns);
+    }
+
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]], [[VoucherListFilters]])
     // ⓘ পক্ষের মান আগের মতোই "ধরন:নম্বর" ([[PartyRegistry::forPicker()]]-এর একই দল); নামের পাশে পয়েন্ট, পক্ষ-খোঁজার মতোই
     $voucherAll = __('accounts::voucher.filter.all');
