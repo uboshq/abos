@@ -113,7 +113,7 @@
             </x-ui.toolbar>
         </form>
     @endif
-    <form id="target-form" @if ($abosHead) x-on:submit="saved()" @endif method="POST" action="{{ route('sales.target.store') }}">
+    <form id="target-form" @if ($errors->any()) data-unsaved @endif @if ($abosHead) x-on:submit="saved()" @endif method="POST" action="{{ route('sales.target.store') }}">
         @csrf
         <input type="hidden" name="month" value="{{ $month->toDateString() }}">
 
