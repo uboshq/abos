@@ -282,11 +282,11 @@ class EveryMenuRowHasItsOwnSwitchTest extends TestCase
      */
     public function test_the_control_panel_opens_by_tab(): void
     {
-        $first = $this->get(route('system_admin.control-panel', ['tab' => 'switches']))->assertOk();
-
-        $this->assertSame('switches', $first->viewData('tab'));
-        $this->assertNotEmpty($first->viewData('tree'));
+        // ⓘ খালি ঠিকানায় প্রথম বিষয়; সুইচের পুরনো ঠিকানা কোম্পানির মডিউলে (মালিক, ২৪ নভেম্বর ২০২৬)
+        $first = $this->get(route('system_admin.control-panel'))->assertOk();
+        $this->assertSame('subject-general', $first->viewData('tab'));
         $this->assertNotEmpty($first->viewData('tabs'));
+        $this->get(route('system_admin.control-panel', ['tab' => 'switches']))->assertRedirect(route('system_admin.module.companies'));
 
         $this->get(route('system_admin.control-panel', ['tab' => 'finance']))
             ->assertOk()->assertViewHas('tab', 'finance');

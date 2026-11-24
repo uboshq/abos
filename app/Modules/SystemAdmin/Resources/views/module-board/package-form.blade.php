@@ -28,15 +28,14 @@
             <x-ui.field name="name_en" :label="__('system_admin::module_board.name_en')" :value="old('name_en', $package->name_en)" required />
         </div>
         @foreach ($groups as $group)
-            <section data-boxed class= + CARD + r>
-                <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold">{{ $group['label'] }}</h2>
-                <div class="grid gap-x-4 px-4 py-2 sm:grid-cols-2">
+            <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+                <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-2 text-sm font-semibold">{{ $group['label'] }}</h2>
+                <div class="grid gap-x-4 px-4 py-2 sm:grid-cols-2 xl:grid-cols-3">
                     @foreach ($group['codes'] as $code)
-                        <label class="flex items-center gap-3 py-2 text-sm">
+                        <div class="flex items-center gap-3 py-2 text-sm">
                             <span class="flex-1">{{ $board->label($code) }}</span>
-                            <input type="checkbox" role="switch" name="modules[]" value="{{ $code }}" class="size-4"
-                                   @checked($board->locked($code) || in_array($code, (array) old('modules', $package->modules), true)) @disabled($board->locked($code))>
-                        </label>
+                            @include('system_admin::partials.switch', ['name' => 'modules[]', 'value' => $code, 'label' => $board->label($code), 'checked' => $board->locked($code) || in_array($code, (array) old('modules', $package->modules), true), 'disabled' => $board->locked($code)])
+                        </div>
                     @endforeach
                 </div>
             </section>

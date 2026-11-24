@@ -98,7 +98,7 @@ final class EverySettingStandsInOneSubjectTest extends TestCase
 
     public function test_the_old_addresses_still_open(): void
     {
-        foreach (['switches', 'mobile', 'accounts', 'sales', 'system_admin', 'no-such-tab'] as $tab) {
+        foreach (['mobile', 'accounts', 'sales', 'system_admin', 'no-such-tab'] as $tab) {
             $this->get(route('system_admin.control-panel', ['tab' => $tab]))->assertOk();
         }
     }

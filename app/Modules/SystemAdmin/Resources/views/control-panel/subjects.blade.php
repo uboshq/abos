@@ -43,7 +43,7 @@
                               :sort="['subject' => __('system_admin::control.col_subject'), 'name' => __('core.table.name'), 'changed' => __('system_admin::control.col_changed')]"
                               :search-placeholder="__('system_admin::control.find')">
                     <x-slot:actions>
-                        <x-ui.button tone="secondary" href="#control-history">{{ __('system_admin::control.history') }}</x-ui.button>
+                        <x-ui.button tone="secondary" href="#control-history">{{ __('system_admin::module_board.history') }}</x-ui.button>
                         <x-ui.button type="submit" form="board-form" tone="primary">{{ __('core.action.save') }}</x-ui.button>
                     </x-slot:actions>
                 </x-ui.toolbar>
@@ -54,7 +54,7 @@
             <div class="space-y-4" data-control-boxes>
                 @forelse ($boxes as $code => $rows)
                     <section data-boxed data-control-box="{{ $code }}" class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-                        <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold">{{ $moduleLabels[$code] ?? $code }}
+                        <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-2 text-sm font-semibold">{{ $moduleLabels[$code] ?? $code }}
                             <span class="num ms-1 text-2xs font-normal text-(--color-ink-muted)">{{ $rows->count() }}</span></h2>
                         <x-ui.table :rows="$rows" :columns="$columns" :compact="true" :empty="__('core.empty.no_results')" />
                     </section>

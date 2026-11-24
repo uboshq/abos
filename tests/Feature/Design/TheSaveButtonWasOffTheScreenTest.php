@@ -66,7 +66,7 @@ class TheSaveButtonWasOffTheScreenTest extends TestCase
         $missing = [];
 
         $screens = [
-            'কন্ট্রোল প্যানেল' => route('system_admin.control-panel', ['tab' => 'switches']),
+            'কন্ট্রোল প্যানেল' => route('system_admin.control-panel', ['tab' => 'finance']),
             'লেবেল ছাপা' => route('inventory.label.index'),
         ];
 
@@ -110,7 +110,7 @@ class TheSaveButtonWasOffTheScreenTest extends TestCase
     public function test_the_count_compares_against_what_was_there_before(): void
     {
         $html = (string) $this->actingAs($this->user)
-            ->get(route('system_admin.control-panel', ['tab' => 'switches']))->getContent();
+            ->get(route('system_admin.control-panel', ['tab' => 'finance']))->getContent();
 
         $this->assertStringContainsString('data-was=', $html, implode("\n", [
             'সুইচগুলোর পাশে আগের মানটা আর লেখা নেই।',

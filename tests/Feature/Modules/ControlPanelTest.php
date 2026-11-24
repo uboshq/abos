@@ -111,14 +111,13 @@ class ControlPanelTest extends TestCase
 
     public function test_switches_are_grouped_under_the_module_that_declared_them(): void
     {
-        $response = $this->get(route('system_admin.control-panel', ['tab' => 'switches']))->assertOk();
 
         foreach (app(ModuleRegistry::class)->all() as $module) {
             $hasSettings = collect(app(SettingsService::class)->definitions())
                 ->contains(fn (array $d) => ($d['module'] ?? null) === $module->code);
 
             if ($hasSettings) {
-                $response->assertSee($module->label(), false);
+                $this->get(route('system_admin.control-panel', ['tab' => $module->code]))->assertOk()->assertSee($module->label(), false);
             }
         }
     }

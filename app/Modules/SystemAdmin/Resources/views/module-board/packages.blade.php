@@ -29,7 +29,7 @@
                     </x-slot:actions>
                 </x-ui.toolbar>
             </form>
-            <x-ui.table :rows="$rows" :columns="$columns" :empty="__('core.empty.no_results')" />
+            <x-ui.table :rows="$rows" :columns="$columns" :empty="filled(request('q')) || filled(request('state')) ? __('core.empty.no_results') : __('system_admin::module_board.no_packages')" />
             <x-ui.pager :rows="$rows" />
             <x-ui.list-totals :rows="$rows" />
         </div>

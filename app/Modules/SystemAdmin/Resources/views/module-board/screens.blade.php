@@ -35,13 +35,13 @@
                 </x-ui.toolbar>
             </form>
         </div>
-        <div class="grid items-start gap-4 xl:grid-cols-3">
+        <div class="grid items-start gap-4 lg:grid-cols-[16.25rem_minmax(0,1fr)]">
             <div data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                 <x-ui.table :rows="$rows" :columns="$columns" :compact="true" :empty="__('core.empty.no_results')" />
                 <x-ui.pager :rows="$rows" />
                 <x-ui.list-totals :rows="$rows" />
             </div>
-            <div class="min-w-0 xl:col-span-2">
+            <div class="min-w-0">
                 @if ($open === null)
                     <x-ui.empty-state :message="__('core.empty.no_results')" />
                 @else
@@ -49,14 +49,13 @@
                         @csrf
                         @method('PUT')
                         @foreach ($open['groups'] as $group)
-                            <section data-boxed class= + CARD + r>
-                                <div class="flex items-center gap-3 border-b border-(--color-border) px-4 py-2">
+                            <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+                                <div class="flex items-center gap-3 border-b border-(--color-border) bg-(--color-section-head) px-4 py-2">
                                     <h2 class="flex-1 text-sm font-semibold">{{ __('core.menu.'.$group['name']) }}</h2>
-                                    <input type="checkbox" role="switch" name="settings[{{ $group['key'] }}]" value="1" class="size-4" aria-label="{{ __('core.menu.'.$group['name']) }}"
-                                           @checked($settings->get($group['key'], true))>
+                                    @include('system_admin::partials.switch', ['name' => 'settings['.$group['key'].']', 'label' => __('core.menu.'.$group['name']), 'checked' => $settings->get($group['key'], true)])
                                     <input type="hidden" name="scope[]" value="{{ $group['key'] }}">
                                 </div>
-                                <div class="grid gap-x-4 px-4 py-2 sm:grid-cols-2">
+                                <div class="grid gap-x-4 px-4 py-2 sm:grid-cols-2 xl:grid-cols-3">
                                     @foreach ($group['items'] as $item)
                                         <div class="flex items-center gap-3 py-2 text-sm" data-screen="{{ $item['key'] }}">
                                             <span class="min-w-0 flex-1">{{ __($item['label']) }}
@@ -64,8 +63,7 @@
                                                     <a href="{{ route('system_admin.control-panel', ['tab' => $open['code']]) }}" class="block text-2xs text-(--color-link) hover:underline">{{ __('system_admin::module_board.control_panel') }}</a>
                                                 @endunless
                                             </span>
-                                            <input type="checkbox" role="switch" name="settings[{{ $item['key'] }}]" value="1" class="size-4" aria-label="{{ __($item['label']) }}"
-                                                   @checked($settings->get($item['key'], true)) @disabled(! $mine($item['key']))>
+                                            @include('system_admin::partials.switch', ['name' => 'settings['.$item['key'].']', 'label' => __($item['label']), 'checked' => $settings->get($item['key'], true), 'disabled' => ! $mine($item['key'])])
                                             @if ($mine($item['key']))
                                                 <input type="hidden" name="scope[]" value="{{ $item['key'] }}">
                                             @endif
@@ -76,16 +74,16 @@
                         @endforeach
                         @if ($extra !== [])
                             <section data-boxed data-extra-screens class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-                                <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold">{{ __('system_admin::settings_group.screens') }}</h2>
-                                <div class="grid gap-x-4 px-4 py-2 sm:grid-cols-2">
+                                <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-2 text-sm font-semibold">{{ __('system_admin::settings_group.screens') }}</h2>
+                                <div class="grid gap-x-4 px-4 py-2 sm:grid-cols-2 xl:grid-cols-3">
                                     @foreach ($extra as $key => $definition)
-                                        <label class="flex items-center gap-3 py-2 text-sm">
+                                        <div class="flex items-center gap-3 py-2 text-sm">
                                             <span class="min-w-0 flex-1">{{ __($definition['label']) }}</span>
-                                            <input type="checkbox" role="switch" name="settings[{{ $key }}]" value="1" class="size-4" @checked($settings->get($key)) @disabled(! $mine($key))>
+                                            @include('system_admin::partials.switch', ['name' => 'settings['.$key.']', 'label' => __($definition['label']), 'checked' => $settings->get($key), 'disabled' => ! $mine($key)])
                                             @if ($mine($key))
                                                 <input type="hidden" name="scope[]" value="{{ $key }}">
                                             @endif
-                                        </label>
+                                        </div>
                                     @endforeach
                                 </div>
                             </section>

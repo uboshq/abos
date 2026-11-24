@@ -71,35 +71,6 @@ final class TheControlPanelListsItsPlacesOnTheLeftTest extends TestCase
         $this->assertStringContainsString(e(__('system_admin::control.find_none', ['find' => 'ঝঝঝ-এমন-কিছু-নেই'])), $none);
     }
 
-    /**
-     * ⭐ ব্যবসার মডিউল আর ভিত্তি আলাদা — ভিত্তির টিকই নেই (সার্ভার মানত না, অথচ টিপলে মনে হত বন্ধ হল); ব্যবসার মডিউলে
-     * বন্ধ করার প্রভাব সারিতেই লেখা।
-     */
-    public function test_foundation_modules_have_no_switch_and_business_modules_say_what_turning_off_does(): void
-    {
-        $tree = app(\App\Core\Services\MenuSwitches::class)->tree();
-        $essential = collect($tree)->firstWhere('essential', true);
-        $business = collect($tree)->firstWhere('essential', false);
-        $this->assertNotNull($essential, 'প্রস্তুতিটাই ভুল — কোনো ভিত্তির মডিউল নেই।');
-        $this->assertNotNull($business);
-
-        $html = (string) $this->get(route('system_admin.control-panel', ['tab' => 'switches']))->assertOk()->getContent();
-
-        $this->assertStringNotContainsString('name="settings['.$essential['key'].']"', $html, "⛔ ভিত্তির মডিউল ({$essential['label']}) বন্ধ করার টিক আছে।");
-        $this->assertStringContainsString('data-foundation-module="'.$essential['code'].'"', $this->part($html, 'data-foundation', '</section>'),
-            '⛔ ভিত্তির মডিউল তালাবদ্ধ ঘরে নেই।');
-        $this->assertStringContainsString('name="settings['.$business['key'].']"', $html, '⛔ ব্যবসার মডিউলের টিক হারাল।');
-        // ⓘ বন্ধের আগে নিশ্চিত — ফর্ম জমার সময় (forms.js confirmOff, vitest-এ প্রমাণিত); এখানে তারটা জোড়া আছে কিনা
-        $this->assertStringContainsString('@submit="confirmOff($event)"', $html, '⛔ মডিউল বন্ধের আগে নিশ্চিত করা হয় না।');
-        $this->assertStringContainsString('data-confirm-off="', $html);
-        $this->assertMatchesRegularExpression('/name="settings\['.preg_quote($business['key'], '/').'\]"[^>]*data-module-label="'.preg_quote(e($business['label']), '/').'"/s',
-            $html, '⛔ মডিউলের টিক নিজের নাম বলে না — নিশ্চিতের প্রশ্নে নাম আসবে না।');
-
-        $screens = array_sum(array_map(fn (array $g) => count($g['items']), $business['groups']));
-        $this->assertStringContainsString(e(__('system_admin::control.off_impact', ['screens' => $screens])), $html,
-            "⛔ {$business['label']} বন্ধ করলে কয়টা পর্দা সরবে, সারিতে লেখা নেই।");
-    }
-
     /** ⭐ বদলের ইতিহাস — কে, কবে, কোন সেটিং, আগে → পরে (নিরীক্ষা থেকে পড়া, নতুন কিছু লেখা নয়) */
     public function test_a_change_shows_in_the_history_with_who_and_what(): void
     {

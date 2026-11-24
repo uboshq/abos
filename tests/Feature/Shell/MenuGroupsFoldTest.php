@@ -372,7 +372,7 @@ final class MenuGroupsFoldTest extends TestCase
         $this->assertTrue(LucideIcons::has(MenuLook::section('no-such')['icon']));
 
         foreach (['rose', 'navy', 'blue'] as $look) {
-            $xpath = $this->menuOf($look, route('system_admin.control-panel', ['tab' => 'switches']));
+            $xpath = $this->menuOf($look, route('system_admin.control-panel', ['tab' => 'finance']));
             $heads = $xpath->query('//nav[@data-menu-fold-nav]//button[@data-panel-section]');
             $this->assertGreaterThan(3, $heads->length, "⛔ {$look}: ভাগের মাথা নেই");
 
