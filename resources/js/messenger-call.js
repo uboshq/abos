@@ -12,8 +12,12 @@
  * ⛔ খোলস [data-msgr-root] আঁকে কেবল তিন ABOS রূপে ([[MessengerChrome]]); না থাকলে এই ফাইল কিছুই করে না।
  */
 
-const POLL_IDLE_MS = 15000
-const POLL_RINGING_MS = 3000
+/*
+ * ⭐ A ring must reach the other PC in 1–2 s (owner, 24 Nov 2026: "1-2 সেকেন্ডের ভিতরে ওখানে পৌঁছার কথা … প্রায় 30 সেকেন্ড
+ * লাগে") — the light ask runs every 2 s while the tab is in front (a hidden tab asks nothing, see poll()). ⓘ It was 15 s.
+ */
+const POLL_IDLE_MS = 2000
+const POLL_RINGING_MS = 2000
 const RING_GIVE_UP_MS = 50000
 const AV_COLOURS = 6
 
@@ -454,7 +458,18 @@ async function join (payload, { outgoing }) {
     if (call.id !== payload.call_id) return
     call.lk = lk
 
-    const room = new lk.Room({ adaptiveStream: true, dynacast: true })
+    /*
+     * ⭐ HD video (owner, 24 Nov 2026: "ভিডিওর রেজুলেশন একদম খারাপ মানের … বাফারিং করে"): the camera is asked for 720p and sent
+     * as 720p with two lighter layers (180p, 360p) beside it — a weak line drops to a lighter layer instead of freezing, a good
+     * line gets HD. ⓘ Before, the Room took the library defaults.
+     */
+    const P = lk.VideoPresets
+    const room = new lk.Room({
+        adaptiveStream: true,
+        dynacast: true,
+        videoCaptureDefaults: { resolution: P.h720.resolution },
+        publishDefaults: { simulcast: true, videoEncoding: P.h720.encoding, videoSimulcastLayers: [P.h180, P.h360] },
+    })
     call.room = room
     const { RoomEvent, Track } = lk
     const audioBox = screen().querySelector('[data-msgr-audio]')

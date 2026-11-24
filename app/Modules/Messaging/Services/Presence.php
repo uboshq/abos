@@ -100,7 +100,8 @@ final class Presence
 
     private function seenKey(int $userId): string
     {
-        return 'messenger.seen.'.CompanyContext::id().'.'.$userId;
+        // ⓘ the person, not the open company — the messenger spans the group (owner, 24 Nov 2026), so "online" must too
+        return 'messenger.seen.'.$userId;
     }
 
     private function typingKey(int $threadId): string

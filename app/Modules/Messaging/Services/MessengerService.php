@@ -790,6 +790,7 @@ final class MessengerService
 
         Member::query()->where('thread_id', $thread->id)->where('user_id', '!=', $sender->id)->where('muted', false)
             ->pluck('user_id')
-            ->each(fn ($uid) => SendPushToUser::dispatch((int) $uid, $title, $data, $body));
+            // ⭐ now, not through the once-a-minute queue — a message reaches the phone in seconds (owner, 24 Nov 2026)
+            ->each(fn ($uid) => dispatch(new SendPushToUser((int) $uid, $title, $data, $body))->onConnection('sync'));
     }
 }

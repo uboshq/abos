@@ -56,12 +56,11 @@ final class CallService
             'status' => Call::RINGING,
         ]);
 
-        SendPushToUser::dispatch(
+        $this->now(new SendPushToUser(
             (int) $callee->id,
             (string) $caller->name,
             $this->callData($call, $caller, (string) $thread->public_id),
-            (string) __($video ? 'messaging::messenger.call.incoming_video' : 'messaging::messenger.call.incoming_voice'),
-        );
+            (string) __($video ? 'messaging::messenger.call.incoming_video' : 'messaging::messenger.call.incoming_voice'),));
 
         return $call;
     }
@@ -274,23 +273,23 @@ final class CallService
         switch ($event) {
             case Call::ANSWERED:
                 // ⓘ the callee's other phones stop ringing — answered elsewhere
-                SendCallEnd::dispatch($callee, $id, Call::ANSWERED);
+                $this->now(new SendCallEnd($callee, $id, Call::ANSWERED));
                 break;
 
             case Call::DECLINED:
-                SendCallEnd::dispatch($caller, $id, Call::DECLINED);
-                SendCallEnd::dispatch($callee, $id, Call::DECLINED);
+                $this->now(new SendCallEnd($caller, $id, Call::DECLINED));
+                $this->now(new SendCallEnd($callee, $id, Call::DECLINED));
                 break;
 
             case Call::MISSED:
-                SendCallEnd::dispatch($callee, $id, Call::MISSED);
-                SendCallEnd::dispatch($caller, $id, Call::MISSED);
+                $this->now(new SendCallEnd($callee, $id, Call::MISSED));
+                $this->now(new SendCallEnd($caller, $id, Call::MISSED));
                 $this->pushMissed($call);
                 break;
 
             case Call::ENDED:
                 $other = $actor !== null && (int) $actor->id === $caller ? $callee : $caller;
-                SendCallEnd::dispatch($other, $id, Call::ENDED);
+                $this->now(new SendCallEnd($other, $id, Call::ENDED));
                 break;
         }
     }
@@ -304,11 +303,10 @@ final class CallService
 
         $thread = $call->thread_id !== null ? (string) Thread::query()->whereKey($call->thread_id)->value('public_id') : '';
 
-        SendPushToUser::dispatch(
+        $this->now(new SendPushToUser(
             (int) $call->callee_id,
             (string) __('messaging::messenger.call.missed', ['name' => (string) $caller->name]),
-            $this->callData($call, $caller, $thread) + ['status' => Call::MISSED],
-        );
+            $this->callData($call, $caller, $thread) + ['status' => Call::MISSED],));
     }
 
     /** @return array<string, string> */
@@ -367,5 +365,15 @@ final class CallService
             'error' => 'call_over',
             'message' => __('messaging::messenger.refused.call_over'),
         ], 409));
+    }
+
+    /**
+     * ⭐ A call's pushes go out NOW, in this request — never through the queue (owner, 24 Nov 2026: "কল … 1-2 সেকেন্ডের ভিতরে
+     * ওখানে পৌঁছার কথা … প্রায় 30 সেকেন্ড লাগে"; "পিসি থেকে মোবাইলে কল আসে না"). ⓘ The queue on this host is worked once a
+     * minute by the scheduler, so a ring push waited 30–60 s — longer than the 45 s ring itself, and the phone never rang.
+     */
+    private function now(object $job): void
+    {
+        dispatch($job)->onConnection('sync');
     }
 }
