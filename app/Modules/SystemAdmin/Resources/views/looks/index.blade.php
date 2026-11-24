@@ -127,4 +127,7 @@
     @empty
         <x-ui.empty-state :message="__('core.look.none')" />
     @endforelse
+
+    <x-ui.pager :rows="$skins" />
+    <x-ui.list-totals :rows="$skins" />
 </x-layouts.app>

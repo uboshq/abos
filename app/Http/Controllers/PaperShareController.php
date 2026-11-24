@@ -199,7 +199,7 @@ class PaperShareController extends Controller
         // ⛔ ধাপ ৩: "WhatsApp — বোতাম চাপলে" পথটা বন্ধ থাকলে মেনুতে বোতামই নেই — হাতে বানানো অনুরোধও ফেরে
         abort_unless($dispatcher->wameOn(), 403);
 
-        [$document, $template, $phone, $locale] = $this->authorizeAndPrepare($request, $share, PartyMessageTemplate::WHATSAPP);
+        [$document, $template, $phone, $locale] = $this->prepared($request, $share, PartyMessageTemplate::WHATSAPP);
 
         // ⓘ অবস্থা "খোলা হয়েছে", পথ wa.me — সারির নিজের শুরুর মান (ব্রাউজার এর বেশি জানে না)
         $message = $messages->record($document, $share, $template, $locale, $phone);
@@ -210,7 +210,7 @@ class PaperShareController extends Controller
     /**
      * ⭐ SMS — অফিসের ফোনের সারিতে (মালিকের "ok", নমুনা U1X687u5MkwVfEL7ci7MGv ধাপ ২; ধাপ ৩ HUXqpfhxng8823eEFrvH54 ট্যাব ক)।
      *
-     * ⓘ পাহারা WhatsApp-এর হুবহু ([[authorizeAndPrepare()]]), কেবল লেখা SMS-এর; লেখা সার্ভারেই বানানো, খাতায় লেখা, তারপর পাঠানোর
+     * ⓘ পাহারা WhatsApp-এর হুবহু ([[prepared()]]), কেবল লেখা SMS-এর; লেখা সার্ভারেই বানানো, খাতায় লেখা, তারপর পাঠানোর
      *   একমাত্র দরজা দিয়ে ([[PartyMessageDispatcher::viaSms()]] — পথ "ফোন", অবস্থা "অপেক্ষায়", সারির নম্বর খাতায়)।
      * ⛔ কেবল বাংলাদেশের মোবাইলে — নিজের সিমে বিদেশে SMS দামি আর অনেক সময় বন্ধ। ⛔ পথ বন্ধ বা ফোন বসানো না থাকলে সারিতে বসে না।
      */
@@ -222,7 +222,7 @@ class PaperShareController extends Controller
             ->with('shared_channel', PartyMessageTemplate::SMS)->with($key, $text);
 
         try {
-            [$document, $template, $phone, $locale] = $this->authorizeAndPrepare($request, $share, PartyMessageTemplate::SMS);
+            [$document, $template, $phone, $locale] = $this->prepared($request, $share, PartyMessageTemplate::SMS);
         } catch (ValidationException $e) {
             return $box('sms_error', (string) collect($e->errors())->flatten()->first());
         }
@@ -248,9 +248,20 @@ class PaperShareController extends Controller
      *
      * @return array{0: Model, 1: PartyMessageTemplate, 2: string, 3: string}
      */
-    private function authorizeAndPrepare(Request $request, DocumentShare $share, string $channel): array
+    private function prepared(Request $request, DocumentShare $share, string $channel): array
     {
         // ⓘ একই নিয়ম ফোনের দরজা আর খাতার "আবার পাঠান"-এও — এক জায়গায় ([[PartyMessageGuard]])
+        // ⛔ [[revoke()]]-এর একই ক্রম: অন্য কোম্পানির লিংক ৪০৪, তারপর কাগজের ছাপার চাবি ৪০৩; নাগাল আর মরা লিংক নিচে পাহারায়
+        abort_unless((int) $share->company_id === (int) CompanyContext::id(), 404);
+
+        $abilities = PaperTrail::abilitiesFor((string) $share->document_type);
+
+        abort_if($abilities === [], 403);
+
+        foreach ($abilities as $ability) {
+            $this->authorize($ability);
+        }
+
         $guard = app(PartyMessageGuard::class);
         $document = $guard->forShare($share);
         [$template, $phone, $locale] = $guard->choice($request->all(), $document, $share, $channel);

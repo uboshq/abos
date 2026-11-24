@@ -19,7 +19,7 @@ use Illuminate\Validation\ValidationException;
  * ⭐ Who may send a paper to its party, and with what — one place for the web share box, the log's "আবার পাঠান" and the
  * phone's doors (WhatsApp/SMS step 3, owner "ok" 23 Nov 2026, sample HUXqpfhxng8823eEFrvH54).
  *
- * The rules are the web share flow's ([[PaperShareController::authorizeAndPrepare()]]), unchanged:
+ * The rules are the web share flow's ([[PaperShareController::prepared()]]), unchanged:
  *   404  the link belongs to another company;
  *   403  the paper's web print route keys (an empty list is "unknown", and unknown stays shut);
  *   404  the paper is outside this person's reach — the print door's own route binding and the model's `view` policy
@@ -53,7 +53,7 @@ final class PartyMessageGuard
     }
 
     /**
-     * ⭐ The first half of [[PaperShareController::authorizeAndPrepare()]] — the share link's paper, in the same order.
+     * ⭐ The first half of [[PaperShareController::prepared()]] — the share link's paper, in the same order.
      */
     public function forShare(DocumentShare $share): Model
     {
@@ -68,7 +68,7 @@ final class PartyMessageGuard
     }
 
     /**
-     * ⭐ The second half of [[PaperShareController::authorizeAndPrepare()]] — the chosen template, language and number.
+     * ⭐ The second half of [[PaperShareController::prepared()]] — the chosen template, language and number.
      * ⓘ The template must be one the box shows for that channel and paper ([[PartyMessages::typesFor()]]).
      * ⓘ The text is never taken from the screen: it is rendered on the server from the template ([[PartyMessages::record()]]).
      *
