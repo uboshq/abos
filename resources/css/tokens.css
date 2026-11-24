@@ -1346,6 +1346,14 @@
     --color-board-ink: #ffffff;
     /* ⭐ টাকার পাতার নিজের রং — মালিক, ৬ নভেম্বর ২০২৬ ("ei skin gulo update koro r colorfull koro", নমুনা "ok"; পরিশোধ লাল নয়:
        "পরিশোধ er color ta poriborton koro")। লাল কেবল ভুল/ফেরতের জন্য। হালকা জমিন CSS-এ এই রং থেকে মেশানো, তাই অন্ধকারেও মানায়। */
+    /* ⓘ the approval board's kinds — the owner's approved sample's colours (24 Nov 2026), one set for rose, navy and blue */
+    --color-inbox-receipt: #16a34a;
+    --color-inbox-payment: #e11d48;
+    --color-inbox-expense: #d97706;
+    --color-inbox-delivery: #2563eb;
+    --color-inbox-goods: #0d9488;
+    --color-inbox-note: #7c3aed;
+    --color-inbox-other: #64748b;
     --color-kind-receipt: #0f9d6b;
     --color-kind-receipt-deep: #0b7f57;
     --color-kind-payment: #a21caf;

@@ -77,24 +77,19 @@ class ApprovalInboxController extends Controller implements HasMiddleware
     public static function kindTone(string $module, string $action): array
     {
         $key = strtolower($module.'.'.$action);
-        $named = [
-            'receipt' => ['var(--color-kind-receipt)', 'var(--color-kind-receipt-deep)'],
-            'collection' => ['var(--color-kind-receipt)', 'var(--color-kind-receipt-deep)'],
-            'payment' => ['var(--color-kind-payment)', 'var(--color-kind-payment-deep)'],
-            'expense' => ['var(--color-kind-expense)', 'var(--color-kind-expense-deep)'],
-            'journal' => ['var(--color-kind-journal)', 'var(--color-kind-journal-deep)'],
-            'contra' => ['var(--color-kind-contra)', 'var(--color-kind-contra-deep)'],
-            'transfer' => ['var(--color-kind-transfer)', 'var(--color-kind-transfer-deep)'],
-            'loan' => ['var(--color-kind-loan)', 'var(--color-kind-loan-deep)'],
-        ];
-
-        foreach ($named as $word => $tone) {
-            if (str_contains($key, $word)) {
-                return $tone;
-            }
-        }
-
-        $one = 'var(--color-chart-'.(crc32($key) % 8 + 1).')';
+        // ⭐ the owner's sample's own colours (YRFmwfF7 v5), the same in rose, navy and blue — never a look's chart palette
+        $goods = in_array($module, ['purchase', 'inventory'], true) && preg_match('/receipt|grn|receive/', $key) === 1;
+        $tone = match (true) {
+            $goods => 'goods',
+            preg_match('/receipt|collection/', $key) === 1 => 'receipt',
+            str_contains($key, 'payment') => 'payment',
+            str_contains($key, 'expense') => 'expense',
+            preg_match('/deliver|challan/', $key) === 1 => 'delivery',
+            str_contains($key, 'note') => 'note',
+            str_contains($key, 'leave') => 'other',
+            default => ['other', 'delivery', 'goods', 'note', 'expense'][crc32($key) % 5],
+        };
+        $one = 'var(--color-inbox-'.$tone.')';
 
         return [$one, $one];
     }
