@@ -91,7 +91,8 @@ final class PartyMessageLogTest extends TestCase
         $sees($all, [$opened, $waiting, $sent, $delivered, $read, $failed]);
         $all->assertSee(__('notification::party_log.title'))
             ->assertSee(__('notification::party_log.tabs.delivered'))
-            ->assertDontSee(__('notification::party.messages_note'))
+            // ⓘ শিরোনামের নিচে বিবরণের লাইন নেই (মালিক, ১৯ নভেম্বর ২০২৬) — আগের দাবি মোছা চাবি খুঁজত, কিছু মাপত না
+            ->assertDontSee('data-page-subtitle', false)
             ->assertSee(__('notification::party_log.states.waiting_phone'))
             ->assertSee(__('notification::party_log.states.opened'));
 
