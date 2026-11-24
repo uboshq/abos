@@ -45,6 +45,7 @@ use Tests\TestCase;
  */
 final class GratuityIsBookedToTheObligationTest extends TestCase
 {
+    use \Tests\Concerns\OpensTheYears;
     use RefreshDatabase;
     // ⛔ বেতনের রান দ্বিতীয় সই ছাড়া খাতায় বসে না, সব ছক বন্ধ থাকলেও — সই-শাখার নিয়ম, মেশানোর পরে এখানেও (a6, ২১ অক্টোবর ২০২৬; [[ApprovalRules::secondHand()]])
     use SignsTheSecondHand;
@@ -58,6 +59,7 @@ final class GratuityIsBookedToTheObligationTest extends TestCase
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        $this->openTheYearsOf('2026-06-30');
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         app(StandardChart::class)->install();

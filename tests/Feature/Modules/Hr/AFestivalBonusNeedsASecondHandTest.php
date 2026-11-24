@@ -47,6 +47,7 @@ use Tests\TestCase;
  */
 final class AFestivalBonusNeedsASecondHandTest extends TestCase
 {
+    use \Tests\Concerns\OpensTheYears;
     use RefreshDatabase;
     use SignsMoneyOff;
     use SignsTheSecondHand;
@@ -64,6 +65,7 @@ final class AFestivalBonusNeedsASecondHandTest extends TestCase
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        $this->openTheYearsOf('2026-04-10');
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->actingAs($this->owner);
 

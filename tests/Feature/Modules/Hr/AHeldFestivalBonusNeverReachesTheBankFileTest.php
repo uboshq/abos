@@ -37,6 +37,7 @@ use Tests\TestCase;
  */
 final class AHeldFestivalBonusNeverReachesTheBankFileTest extends TestCase
 {
+    use \Tests\Concerns\OpensTheYears;
     use RefreshDatabase;
     use SignsTheSecondHand;
 
@@ -53,6 +54,7 @@ final class AHeldFestivalBonusNeverReachesTheBankFileTest extends TestCase
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        $this->openTheYearsOf('2026-04-10');
         $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
 
         app(StandardChart::class)->install();
