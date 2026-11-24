@@ -5,6 +5,8 @@
 --}}
 @php($can = auth()->user())
 @php($draft = $voucher->isDraft())
+{{-- ⓘ এই সারির প্রশ্ন একবার — ছাপা, PDF আর পাঠানো একই উত্তর নেয় (সইকারী কি না, তা খুঁজতে কোয়েরি লাগে) --}}
+@php($mayView = (bool) $can?->can('view', $voucher))
 @php($open = \App\Core\Support\RowMenu::monthOpen($voucher->trx_date))
 <x-ui.paper-row-menu
     :paper="$voucher"
@@ -17,6 +19,6 @@
     :cancellable="(bool) $can?->can('accounts.voucher.delete')"
     :cancel-label="__('core.row_menu.reverse')"
     :draft-cancel-label="($awaiting ?? false) ? __('core.row_menu.cancel_paper') : null"
-    :prints="$can?->can('view', $voucher) ? [[__('core.row_menu.print'), route('accounts.voucher.print', $voucher)]] : []"
-    :pdf="$can?->can('view', $voucher) ? route('accounts.voucher.print', ['voucher' => $voucher, 'download' => 1]) : null"
-    :share="$can?->can('view', $voucher) ? ['route' => 'accounts.voucher.print', 'param' => 'voucher', 'type' => 'accounts_voucher'] : null" />
+    :prints="$mayView ? [[__('core.row_menu.print'), route('accounts.voucher.print', $voucher)]] : []"
+    :pdf="$mayView ? route('accounts.voucher.print', ['voucher' => $voucher, 'download' => 1]) : null"
+    :share="$mayView ? ['route' => 'accounts.voucher.print', 'param' => 'voucher', 'type' => 'accounts_voucher'] : null" />

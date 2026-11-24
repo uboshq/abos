@@ -13,9 +13,16 @@
     $rate = fn (string $got, ?string $aim): ?string => $aim !== null && bccomp($aim, '0', 4) > 0 ? bcdiv(bcmul($got, '100', 6), $aim, 1) : null;
 @endphp
 
+@php
+    // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে; মাস ছাঁকনির প্যানেলে, সংরক্ষণ বারে (মালিক, ২৪ নভেম্বর ২০২৬)
+    // ⛔ খোঁজার ঘর নেই: টাইপের সাথে পাতা আবার আসে, আর বসানো-কিন্তু-না-রাখা লক্ষ্য হারাত
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel($abosHead ? [\App\Core\ListFilter\Facets::month('month', __('sales::product_target.month'), $month->format('Y-m'))] : []);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::product_target.title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('sales::product_target.title')">
             <x-slot:actions>
@@ -29,6 +36,7 @@
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status" class="mb-4 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)">
@@ -42,7 +50,19 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('sales.product_target.store') }}">
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+    @if ($abosHead)
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :title="__('sales::product_target.title')" :search="false" :export="false" :print="false" :share="false" :refresh="false" :facets="$facetPanel">
+                @if ($canManage && count($rows) > 0)
+                    <x-slot:actions>
+                        <x-ui.button type="submit" form="target-form" tone="primary">{{ __('core.action.save') }}</x-ui.button>
+                    </x-slot:actions>
+                @endif
+            </x-ui.toolbar>
+        </form>
+    @endif
+    <form id="target-form" method="POST" action="{{ route('sales.product_target.store') }}">
         @csrf
         <input type="hidden" name="month" value="{{ $month->toDateString() }}">
 
@@ -130,4 +150,5 @@
             </div>
         @endif
     </form>
+    </x-ui.filter-layout>
 </x-layouts.app>

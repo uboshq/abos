@@ -1,6 +1,7 @@
 {{-- ক্রয় বিলের "অ্যাকশন ▾" (মালিক, ৮ নভেম্বর ২০২৬) — পাতার একই শর্ত: `update` নীতিতে সম্পাদনা/নিশ্চিত, `delete` নীতিতে বাতিল; নিশ্চিত বিলে টাকা দিন আর ফেরত --}}
 @php($can = auth()->user())
 @php($confirmed = $bill->status === \App\Core\Support\DocumentStatus::CONFIRMED)
+@php($mayEdit = (bool) $can?->can('update', $bill))
 @php($ended = $bill->status === \App\Core\Support\DocumentStatus::CANCELLED)
 <x-ui.paper-row-menu
     :paper="$bill"
@@ -8,8 +9,8 @@
     :state="__('core.status.'.$bill->status)"
     module="purchase"
     :edit="route('purchase.bill.edit', $bill)"
-    :editable="(bool) $can?->can('update', $bill)"
-    :confirmable="(bool) ($can?->can('update', $bill) && $bill->status === \App\Core\Support\DocumentStatus::DRAFT)"
+    :editable="$mayEdit"
+    :confirmable="$mayEdit && ($bill->status === \App\Core\Support\DocumentStatus::DRAFT)"
     :cancellable="(bool) $can?->can('delete', $bill)"
     :prints="$can?->can('purchase.bill.view') ? [[__('core.row_menu.print'), route('purchase.print.bill', $bill)]] : []"
     :pdf="$can?->can('purchase.bill.view') ? route('purchase.print.bill', ['bill' => $bill, 'download' => 1]) : null"
