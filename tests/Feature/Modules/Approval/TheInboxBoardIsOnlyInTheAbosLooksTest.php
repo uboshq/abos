@@ -68,6 +68,9 @@ final class TheInboxBoardIsOnlyInTheAbosLooksTest extends TestCase
             $this->assertSame(2, substr_count($html, 'data-board-in="sales.discount"'), "⛔ {$look}: the discounts lost their checkboxes.");
             $this->assertStringNotContainsString('data-board-in="accounts.payment"', $html, "⛔ {$look}: a money paper got a checkbox.");
             $this->assertStringNotContainsString('data-card-state', $html, "⛔ {$look}: the old cards are drawn beside the board.");
+            // ⓘ owner, 24 Nov 2026: no path, date, company or branch line over the board
+            $this->assertStringNotContainsString('data-page-path', $html, "⛔ {$look}: the path line is back over the board.");
+            $this->assertStringNotContainsString('data-page-context', $html, "⛔ {$look}: the date · company · branch line is back.");
         }
     }
 
