@@ -208,7 +208,6 @@
                     <div x-on:click.outside="open = false" class="inbox-board-paper">
                         <div class="flex items-center gap-3 border-b border-(--color-border) px-4 py-2">
                             <p id="paper-view-{{ $approval->id }}" class="num min-w-0 flex-1 truncate font-bold">{{ $workName }} · {{ $paperNo ?? '#'.$approval->id }}</p>
-                            <a href="{{ $printView }}" target="_blank" rel="noopener" class="inbox-board-link text-sm">{{ __('approval::action.board_new_tab') }}</a>
                             <button type="button" x-on:click="open = false"
                                     class="rounded-(--radius-field) border border-(--color-border) px-3 py-1 text-xs">{{ __('approval::action.close') }}</button>
                         </div>
