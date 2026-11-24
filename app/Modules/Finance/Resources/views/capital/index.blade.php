@@ -146,6 +146,15 @@
 
     // ⓘ কলাম-মেনু আর ঘনত্ব যে ট্যাব খোলা, তার টেবিলেই খাটে
     $columns = $tab === 'owners' ? $ownerColumns : $entryColumns;
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    // ⓘ মালিকের ট্যাব তালিকা নয়, খাতা থেকে গোনা হিসাব — সেখানে ছাঁকনি কিছুই ছাঁকত না, তাই বোতামও নেই
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel($tab !== 'entries' ? [] : [
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        \App\Core\ListFilter\Facets::pick('who', __('finance::field.as'), collect(\App\Modules\Finance\Models\CapitalEntry::WHO)->mapWithKeys(fn ($v) => [$v => __('finance::who.'.$v)])->all()),
+        \App\Core\ListFilter\Facets::pick('type', __('finance::field.kind'), collect(\App\Modules\Finance\Models\CapitalEntry::KINDS)->mapWithKeys(fn ($v) => [$v => __('finance::kind.'.$v)])->all()),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -165,11 +174,18 @@
         </div>
     @endif
 
+    {{-- ⓘ ট্যাব ABOS রূপে মাথার সারিতে নামের পাশে বসে ([[compactPageHead]]) --}}
+    {{-- ⛔ কেবল ABOS Smart, Navy, Blue-এ — বাকি রূপ হুবহু আগের মতো ([[AbosHead]]) --}}
+    @if ($abosHead)
+        <x-ui.list-tabs :label="__('finance::menu.capital')" :tabs="collect($tabs)->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'url' => route('finance.capital.index', $key === 'entries' ? [] : ['tab' => $key]), 'active' => $tab === $key, ...($key === 'owners' ? ['count' => count($positions)] : [])])->values()->all()" />
+    @endif
+
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
     {{-- ⭐ শিরোনাম, "+ নতুন" আর খোঁজা — বাক্সের মাথায়, বাকি তালিকার মতো;
          ট্যাব তার নিচে, একই বাক্সে। মালিক, ১৯ সেপ্টেম্বর ২০২৬:
          *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
-    <form method="GET" class="contents">
+    <form id="list-form" method="GET" class="contents">
         {{-- ⓘ ঘনত্ব বা কলাম বদলালে ট্যাব আর একজনের ছাঁকনি হারায় না --}}
         @if ($tab === 'owners')
             <input type="hidden" name="tab" value="owners">
@@ -187,7 +203,7 @@
             :search-placeholder="__('finance::message.capital_search')"
             {{-- ⓘ ট্যাব আর ব্যক্তি ছাঁকনির চিপ নয় — ট্যাব নিজেই দেখায়, আর ব্যক্তির
                  নামসহ চিপ নিচে আছে ("সবার সারি দেখুন") --}}
-            :quiet="['tab', 'person']">
+            :facets="$tab === 'entries' ? $facetPanel : null" :filter="$tab === 'entries'" :quiet="['tab', 'person']">
             {{-- ⭐ "+ নতুন" উপরে, বাকি পর্দাগুলোর মতোই — এখন শিরোনামের ডানে --}}
             <x-slot:actions>
                 @can('finance.capital.create')
@@ -205,6 +221,7 @@
     </div>
 
     {{-- ট্যাবের সারি --}}
+    @unless ($abosHead)
     <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
          aria-label="{{ __('finance::menu.capital') }}">
         @foreach ($tabs as $key => $label)
@@ -223,6 +240,7 @@
             </a>
         @endforeach
     </nav>
+    @endunless
 
     {{-- ⭐ মালিক আর শাখা ধরে মূলধন — মালিকের আদেশ, ৫ অক্টোবর ২০২৬ ([[OwnerCapital]]) --}}
     @include('finance::capital.partials.owner-and-branches')
@@ -290,4 +308,5 @@
         </section>
     @endif
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

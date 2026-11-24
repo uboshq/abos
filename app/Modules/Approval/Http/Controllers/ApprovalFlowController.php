@@ -80,6 +80,10 @@ class ApprovalFlowController extends Controller implements HasMiddleware
 
         $flows = ApprovalFlow::query()
             ->with('steps')
+            // ⭐ প্যানেলের ছাঁকনি — মডিউল আর চালু/বন্ধ
+            ->when(filled($request->query('module')) && is_string($request->query('module')), fn ($query) => $query->where('module', $request->query('module')))
+            ->when($request->query('state') === 'on', fn ($query) => $query->where('is_active', true))
+            ->when($request->query('state') === 'off', fn ($query) => $query->where('is_active', false))
             ->when($q !== '', function ($query) use ($q, $names) {
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $q).'%';
 

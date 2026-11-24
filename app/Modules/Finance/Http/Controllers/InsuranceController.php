@@ -59,8 +59,8 @@ class InsuranceController extends Controller implements HasMiddleware
             'tab' => $tab,
             'counts' => collect(self::TABS)->mapWithKeys(fn ($t) => [$t => $this->filtered($t)->count()]),
             // ⭐ সর্বমোট — ট্যাবের সব পাতা মিলে ([[GrandTotals]])
-            'grand' => $this->grandTotals($this->filtered($tab), ['sum_insured' => 't.sum_insured', 'premium' => 't.premium']),
-            'policies' => $this->filtered($tab)
+            'grand' => $this->grandTotals($this->picked($tab, $request), ['sum_insured' => 't.sum_insured', 'premium' => 't.premium']),
+            'policies' => $this->picked($tab, $request)
                 ->with(['institution', 'premiums'])
                 ->orderBy('ends_on')
                 ->paginate(\App\Core\Support\PerPage::of())
@@ -179,6 +179,27 @@ class InsuranceController extends Controller implements HasMiddleware
     }
 
     /** @return Builder<InsurancePolicy> */
+    /** ট্যাবের সারি, প্যানেলের ছাঁকনি (কী বীমা, মেয়াদ শেষ) আর খোঁজা বসিয়ে — তালিকা আর সর্বমোট একই কোয়েরি */
+    private function picked(string $tab, Request $request): Builder
+    {
+        $term = trim((string) $request->query('q'));
+        $day = function (string $key) use ($request): ?string {
+            try {
+                return filled($request->query($key)) ? \Illuminate\Support\Carbon::parse((string) $request->query($key))->toDateString() : null;
+            } catch (\Throwable) {
+                return null;
+            }
+        };
+
+        return $this->filtered($tab)
+            ->when(in_array($request->query('covers'), InsurancePolicy::COVERS, true), fn ($q) => $q->where('covers', $request->query('covers')))
+            ->when($day('from'), fn ($q, $d) => $q->whereDate('ends_on', '>=', $d))
+            ->when($day('to'), fn ($q, $d) => $q->whereDate('ends_on', '<=', $d))
+            ->when($term !== '', fn ($q) => $q->where(fn ($w) => $w->where('policy_no', 'like', "%{$term}%")
+                ->orWhere('subject', 'like', "%{$term}%")
+                ->orWhereHas('institution', fn ($i) => $i->where('name_en', 'like', "%{$term}%")->orWhere('name_bn', 'like', "%{$term}%"))));
+    }
+
     private function filtered(string $tab): Builder
     {
         return match ($tab) {

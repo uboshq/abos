@@ -39,6 +39,12 @@
          'numeric' => true, 'width' => '140px',
          'render' => fn ($r) => view('accounts::custody.partials.sent', ['row' => $r])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('kind', __('accounts::custody.kind'), $kindChoices),
+        \App\Core\ListFilter\Facets::pick('holder', __('accounts::custody.holder'), $holderChoices),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -90,10 +96,13 @@
          "পথে" ম্লান, আর শেষে একটা যোগফলের সারি যেটা কোনো রেকর্ড নয়।
          শেয়ার্ড কম্পোনেন্টে এই তিনটা শর্ত জুড়লে বাকি চল্লিশটা তালিকাও
          ওগুলো বইত (§১৯.৮)। টোকেন ও মাপ হুবহু একই। --}}
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) shadow-(--shadow-card)">
-        {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe"); খোঁজার ঘর নেই — এই পাতার নিয়ন্ত্রক খোঁজে না --}}
-        <x-ui.toolbar :search="false" :filter="false" :columns="$columns" />
+        {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe") --}}
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :search-placeholder="__('core.table.name')" :columns="$columns" :facets="$facetPanel" />
+        </form>
 
         <div class="table-responsive">
             {{-- শেষ সারিটা কারও নামের পাশে বসে না, আর সেটাই পুরো কথা:
@@ -121,6 +130,7 @@
                         :empty="__('core.empty.no_results')" />
         </div>
     </div>
+    </x-ui.filter-layout>
 
     {{-- ── পথে কার কাছে কত ──────────────────────────────────────────
          যোগফলটা উপরের সারিতে আছে; এখানে **কে কাকে** পাঠিয়েছেন।

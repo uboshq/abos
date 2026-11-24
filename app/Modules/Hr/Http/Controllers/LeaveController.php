@@ -60,7 +60,9 @@ class LeaveController extends Controller implements HasMiddleware
                 ? LeaveSigner::listFor($request->user())
                 : LeaveApplication::query()->whereIn('hr_leave_applications.employee_id', app(LeaveSigner::class)->teamOf($request->user())))
             ->with(['employee', 'leaveType', 'decider'])
-            ->when($request->boolean('pending'), fn ($q) => $q->pending());
+            ->when($request->boolean('pending'), fn ($q) => $q->pending())
+            // ⭐ কর্মীর নাম, কোড বা মোবাইলে খোঁজা — কর্মীর তালিকার একই খোঁজা ([[Employee::scopeSearch()]]); নাগালের দেয়াল ওপরেই
+            ->when(is_string($request->query('q')) && filled($request->query('q')), fn ($q) => $q->whereHas('employee', fn ($e) => $e->search($request->query('q'))));
 
         $sort = $this->applySort($query, $request, $this->sorts());
 

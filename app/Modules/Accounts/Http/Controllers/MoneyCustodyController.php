@@ -126,9 +126,23 @@ class MoneyCustodyController extends Controller implements HasMiddleware
         // ⓘ পথে থাকা টাকা — কাঁচা অঙ্কটা সর্বমোটে যায়, লেখা অঙ্কটা ফুটারের সারিতে
         $transitAmount = (string) ($transit?->balanceInView() ?? '0');
 
+        /*
+         * ⭐ খোঁজা আর প্যানেলের ছাঁকনি (ধরন, কার কাছে) — গোনা সারির উপর, তাই জেরের হিসাব অটুট (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় ছাঁকনি)।
+         * ⓘ নিচের সর্বমোট পাতাই দেখানো সারি থেকে যোগ করে; পথের টাকার সারি ছাঁকনিতে ধরা পড়ে না — ওটা কারও কাছে নেই।
+         */
+        $all = $this->rows($tills, $officeCash, $banks, $branch);
+        $q = mb_strtolower(trim((string) $request->query('q')));
+        $text = fn (array $row, string $key): string => trim(strip_tags((string) ($row[$key] ?? '')));
+        $choices = fn (string $key): array => collect($all)->map(fn (array $r) => $text($r, $key))->filter()->unique()->sort()->mapWithKeys(fn (string $v) => [$v => $v])->all();
+        $rows = array_values(array_filter(is_array($all) ? $all : collect($all)->all(), fn (array $row): bool => ($q === '' || str_contains(mb_strtolower($text($row, 'code').' '.$text($row, 'name').' '.$text($row, 'holder')), $q))
+            && (! filled($request->query('kind')) || $text($row, 'kind') === $request->query('kind'))
+            && (! filled($request->query('holder')) || $text($row, 'holder') === $request->query('holder'))));
+
         return view('accounts::custody.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'rows' => $this->rows($tills, $officeCash, $banks, $branch),
+            'kindChoices' => $choices('kind'),
+            'holderChoices' => $choices('holder'),
+            'rows' => $rows,
             'onTheRoad' => $onTheRoad,
             'transit' => Money::format($transitAmount),
             'transitAmount' => $transitAmount,

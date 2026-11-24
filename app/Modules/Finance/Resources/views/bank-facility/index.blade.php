@@ -86,6 +86,13 @@
         ['key' => 'do', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($f) => view('finance::bank-facility.partials.open-it', ['facility' => $f])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('kind', __('finance::field.facility_kind'), collect(\App\Modules\Finance\Models\BankFacility::KINDS)->mapWithKeys(fn ($v) => [$v => __('finance::field.facility_'.$v)])->all()),
+        \App\Core\ListFilter\Facets::dates(__('finance::field.renews_on'), bar: false),
+    ]);
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::menu.bank_facility') }}</x-slot:title>
@@ -108,9 +115,16 @@
         </div>
     @endif
 
+    {{-- ⓘ ট্যাব ABOS রূপে মাথার সারিতে নামের পাশে বসে ([[compactPageHead]]) --}}
+    {{-- ⛔ কেবল ABOS Smart, Navy, Blue-এ — বাকি রূপ হুবহু আগের মতো ([[AbosHead]]) --}}
+    @if ($abosHead)
+        <x-ui.list-tabs :label="__('finance::menu.bank_facility')" :tabs="collect($tabs)->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'url' => route('finance.bank_facility.index', $key === 'active' ? [] : ['tab' => $key]), 'active' => $tab === $key, 'count' => $counts[$key]])->values()->all()" />
+    @endif
+
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             {{-- ⓘ ঘনত্ব বা কলাম বদলালে ট্যাবটা হারায় না --}}
             @if ($tab === 'closed')
                 <input type="hidden" name="tab" value="closed">
@@ -126,7 +140,7 @@
                           :subtitle="__('finance::field.facility_book_tag')"
                           :columns="$bfColumns"
                           :search-placeholder="__('finance::message.facility_search')"
-                          :quiet="['tab']">
+                          :facets="$facetPanel" :quiet="['tab']">
                 <x-slot:actions>
                     @can('finance.bank_facility.create')
                         <x-ui.button tone="primary" icon="plus" :href="route('finance.bank_facility.create')">
@@ -160,6 +174,7 @@
         @endcan
 
         {{-- ট্যাবের সারি — চালু · বন্ধ, পাশে গোনা --}}
+        @unless ($abosHead)
         <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
              aria-label="{{ __('finance::menu.bank_facility') }}">
             @foreach ($tabs as $key => $label)
@@ -176,6 +191,7 @@
                 </a>
             @endforeach
         </nav>
+        @endunless
 
         {{--
             ⭐ নবায়নের তালিকা — উপরে, আলাদা করে।
@@ -220,4 +236,5 @@
         <x-ui.pager :rows="$facilities" />
         <x-ui.list-totals :rows="$facilities" :grand="$grand ?? []" :columns="$bfColumns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

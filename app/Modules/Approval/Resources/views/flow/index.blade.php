@@ -15,6 +15,12 @@
 
     $levelsOf = fn ($flow) => $flow->steps->sortBy('level')->groupBy('level')
         ->map(fn ($atLevel) => ['who' => $atLevel->map($whoOf)->unique()->implode(' / '), 'from' => $atLevel->first()->from_amount]);
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('module', __('approval::field.module'), collect($choices)->map(fn ($c) => $c['label'])->all()),
+        \App\Core\ListFilter\Facets::pick('state', __('core.table.status'), ['on' => __('approval::field.on_off'), 'off' => __('approval::message.coverage_off')]),
+    ]);
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('approval::menu.flows') }}</x-slot:title>
@@ -48,17 +54,18 @@
 
     {{-- ⓘ শিরোনাম, গোনা, খোঁজা, রপ্তানি আর "নতুন নিয়ম" টুলবারে (মালিক, ১৯ ও ২২ সেপ্টেম্বর ২০২৬); গোনার জায়গায় এখন পরিকল্পনার
          সারাংশ — কয়টা চালু, কয়টা বন্ধ। ⛔ ঘনত্ব বন্ধ: ওটা কেবল `x-ui.table` মানে। --}}
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar :density="false" />
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :density="false" :facets="$facetPanel" />
         </form>
     </div>
 
     {{-- ⚠️ খোঁজার পর খালি পাওয়া আর সত্যিই কিছু না থাকা — দুইটা আলাদা কথা। --}}
-    @if ($flows->isEmpty() && $q !== '')
+    @if ($flows->isEmpty() && ($q !== '' || filled(request('module')) || filled(request('state'))))
         <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-6">
             <p class="text-sm font-medium">{{ __('approval::message.no_match') }}</p>
-            <p class="mt-1 text-sm text-(--color-ink-muted)">&ldquo;{{ $q }}&rdquo;</p>
+            @if ($q !== '')<p class="mt-1 text-sm text-(--color-ink-muted)">&ldquo;{{ $q }}&rdquo;</p>@endif
         </div>
     @elseif ($flows->isEmpty())
         <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-6">
@@ -153,6 +160,7 @@
 
     {{ $flows->links() }}
     <x-ui.list-totals :rows="$flows" />
+    </x-ui.filter-layout>
 
     @if ($opened !== null)
         @include('approval::flow.partials.editor', ['flow' => $opened])

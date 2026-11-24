@@ -53,7 +53,7 @@
         <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('hr::menu.leave')"
                 :sort="$sortOptions"
-                :columns="$columns" :search="false" :facets="$facetPanel">
+                :columns="$columns" :search-placeholder="__('hr::field.name')" :facets="$facetPanel">
         <x-slot:actions>
             {{-- ⭐ ছুটির দিনের তালিকা — ছুটির চাবিতেও দেখা যায় (fe-র উত্তর ৫; [[HolidayController]]) --}}
             <x-ui.button :href="route('hr.holiday.index')">{{ __('hr::menu.holidays') }}</x-ui.button>

@@ -74,6 +74,18 @@
             'render' => fn ($v) => view('accounts::voucher.partials.status', ['voucher' => $v])];
     }
 
+    // ⭐ বিবরণ যেন এক-দুই লাইনে থাকে — নম্বর, তারিখ, অঙ্ক আর অবস্থার বাড়তি চওড়া বিবরণে যায় (abos-08, ২৪ নভেম্বর ২০২৬; কেবল ABOS রূপ, [[AbosHead]])
+    if (\App\Core\Support\AbosHead::on()) {
+        $columns = array_map(fn (array $col) => match ($col['key']) {
+            'trx_date', 'status' => [...$col, 'width' => '6.5rem'],
+            'document_no' => [...$col, 'width' => '10rem'],
+            'method' => [...$col, 'width' => '6.5rem'],
+            'amount' => [...$col, 'width' => '7.5rem'],
+            'narration' => [...$col, 'width' => '20rem'],
+            default => $col,
+        }, $columns);
+    }
+
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই তারিখের ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
     $facetPanel = \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
