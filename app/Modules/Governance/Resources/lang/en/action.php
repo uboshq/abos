@@ -146,6 +146,7 @@ return [
     'salary_change_late' => 'Approved salary change not applied',
     // ⭐ salary change signed · login closed on leaving (a6)
     'salary_change_signed' => 'Salary change approved',
+    'held_wage_released' => 'Held wage back on the to-pay list',
     'pf_rate_applied' => 'Provident fund rate applied',
     'pf_rate_asked' => 'Provident fund rate asked',
     'pf_enrolled' => 'Joined the provident fund',

@@ -174,6 +174,7 @@ final class HeldWages
 
         // ⛔ খাতায় কখনো বসেছিল কি না — পাকা ভাউচারের নিজের সারি থাকে (বাতিলে উল্টো সারি আলাদা নামে)
         $everPosted = DB::table('ledger_entries')
+            ->where('company_id', (int) $voucher->company_id)
             ->where('source_type', Voucher::SOURCE_TYPES[Voucher::PAYMENT])
             ->where('source_id', $voucher->id)
             ->exists();
@@ -185,7 +186,7 @@ final class HeldWages
         $released = 0;
 
         foreach (HeldWagePayment::query()->where('voucher_id', $voucher->id)->with('payslip.employee')->get() as $payment) {
-            $payment->payslip?->employee?->auditAction('held_wage_payment_released',
+            $payment->payslip?->employee?->auditAction('held_wage_released',
                 __('hr::payroll.held_released', ['no' => (string) $voucher->document_no]));
             $payment->delete();
             $released++;
