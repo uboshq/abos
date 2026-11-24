@@ -37,9 +37,9 @@
     </x-slot:header>
     @endunless
 
-    <p class="mb-3 max-w-(--spacing-prose-max) rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm text-(--color-badge-warning-ink)">
-        {{ __('backup::screen.restore_why_no_button') }}
-    </p>
+    @unless ($abosHead)
+        @include('backup::partials.restore-why')
+    @endunless
 
     @if ($abosHead)
         <x-ui.filter-layout :filters="$facetPanel" form="list-form">
@@ -49,6 +49,8 @@
                               :search-placeholder="__('backup::screen.col_file')" :export="false" :print="false" :share="false" :columns="$columns" :facets="$facetPanel"
                               :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]" />
             </form>
+            {{-- ⭐ আগে মাথা, বাক্স তার নিচে (মালিকের নিয়ম; তিন ABOS রূপে) --}}
+            <div class="px-3 pt-3">@include('backup::partials.restore-why')</div>
             <x-ui.table :rows="$shown" :columns="$columns" :empty="$files->isEmpty() ? __('backup::screen.no_files') : __('core.empty.no_results')" />
         </div>
         </x-ui.filter-layout>

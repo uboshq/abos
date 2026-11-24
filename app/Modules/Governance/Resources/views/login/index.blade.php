@@ -90,13 +90,9 @@
         শূন্য হলে দেখানোই হয় না: "০টি ব্যর্থ চেষ্টা" প্রতিদিন দেখলে
         সংখ্যাটা অদৃশ্য হয়ে যায়, আর যেদিন ২৫ হবে সেদিনও চোখে পড়ত না।
     --}}
-    @if ($failedToday > 0)
-        <p class="mb-4 flex items-center gap-2 rounded-(--radius-field) bg-(--color-badge-danger-bg)
-                  px-3 py-2 text-sm text-(--color-badge-danger-ink)">
-            <x-ui.icon name="alert-triangle" :size="16" />
-            {{ __('governance::message.failed_today', ['count' => $failedToday]) }}
-        </p>
-    @endif
+    @unless (\App\Core\Support\AbosHead::on())
+        @include('governance::login.partials.failed')
+    @endunless
 
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
@@ -107,6 +103,10 @@
                           :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]" :facets="$facetPanel">
             </x-ui.toolbar>
         </form>
+        {{-- ⭐ আগে মাথা, বাক্স তার নিচে (মালিকের নিয়ম; তিন ABOS রূপে) --}}
+        @if ($failedToday > 0 && \App\Core\Support\AbosHead::on())
+            <div class="px-3 pt-3">@include('governance::login.partials.failed')</div>
+        @endif
 
         @if ($rows->isEmpty())
             <x-ui.empty-state :message="__('governance::message.no_logins')" />

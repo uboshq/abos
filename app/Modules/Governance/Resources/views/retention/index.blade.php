@@ -47,10 +47,9 @@
     {{-- ⚠️ সবচেয়ে দুর্বল জায়গাটা উপরে, কারণ দুইটা জিনিস এক মনে হয়:
          খাতা চিরকাল থাকে, কিন্তু ব্যাকআপ ত্রিশ দিনের। ডাটাবেস হারালে
          ছয় বছরের খাতা নয়, ত্রিশ দিনের পিছন পর্যন্তই ফেরানো যায়। --}}
-    <section data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-warning)
-                    bg-(--color-badge-warning-bg) p-4 text-sm text-(--color-badge-warning-ink)">
-        {{ __('governance::retention.backup_gap', ['days' => $backupDays, 'years' => $lawYears]) }}
-    </section>
+    @unless ($abosHead)
+        @include('governance::retention.partials.gap')
+    @endunless
 
     @if ($abosHead)
         <x-ui.filter-layout :filters="$facetPanel" form="list-form">
@@ -60,6 +59,8 @@
                               :search-placeholder="__('governance::retention.what')" :share="false" :columns="$columns" :facets="$facetPanel"
                               :sort="['plan' => __('governance::retention.what'), 'rows' => __('governance::retention.rows_now')]" />
             </form>
+            {{-- ⭐ আগে মাথা, বাক্স তার নিচে (মালিকের নিয়ম; তিন ABOS রূপে) --}}
+            <div class="px-3 pt-3">@include('governance::retention.partials.gap')</div>
             <x-ui.table :rows="$shown" :columns="$columns" :row-attributes="fn ($row) => ['data-kept' => $row['key']]" :empty="__('core.empty.no_results')" />
         </div>
         </x-ui.filter-layout>
