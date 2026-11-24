@@ -75,7 +75,7 @@
                 @endif
                 <x-ui.toolbar :title="$offer ? __('promotion::coupon.title').' · '.$offer->code : __('promotion::coupon_screen.all_offers')"
                               :info="$offer ? null : __('promotion::coupon_screen.pick_offer')"
-                              :search-placeholder="__('promotion::coupon_screen.search')" :export="false" :share="false" :columns="$columns" :facets="$facetPanel" :quiet="['offer']">
+                              :search-placeholder="__('promotion::coupon_screen.search')" :export="false" :print="false" :share="false" :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest'), 'code' => __('promotion::coupon.code')]" :columns="$columns" :facets="$facetPanel" :quiet="['offer']">
                     @if ($offer)
                         <x-slot:actions>
                             <x-ui.button :href="route('promotion.show', $offer)" tone="secondary">{{ __('promotion::coupon_screen.back_to_offer') }}</x-ui.button>
