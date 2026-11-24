@@ -63,8 +63,6 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
 
         // ⓘ বিজ্ঞপ্তির মাধ্যম কোডে নিবন্ধিত — নতুন মাধ্যম কেবল কোড লিখে আসে (১২ অক্টোবর ২০২৬, বিজ্ঞপ্তি মডিউল)
         'App\Modules\Notification\Http\Controllers\NotificationChannelController' => 'কোডে নিবন্ধিত মাধ্যমগুলো (ইমেইল, এসএমএস, পুশ, অ্যাপ) — সারি নয়, তালিকা কোডের সাথে বাঁধা।',
-        // ⓘ ২৩ নভেম্বর ২০২৬ (1.3.10; Mac run of b13373eaa) — পার্টির WhatsApp/SMS-এর পথ
-        'App\Modules\Notification\Http\Controllers\PartyRoadsController' => 'তিনটা পথ কোডে বাঁধা (wa.me, Cloud API, অফিসের ফোন) আর তাদের এই মাসের গোনা (পথ ধরে এক সারি); সাথে অফিসের SMS-ফোন — হাতে গোনা যন্ত্র, পার্টি বা লেনদেনে বাড়ে না।',
         // ⓘ ২৩ নভেম্বর ২০২৬ (1.3.10) — বার্তার পাতা
         'App\Modules\Messaging\Http\Controllers\MessengerPageController' => 'পাতাটা নিজে কোনো তালিকা আনে না — কথোপকথন আসে বার্তার দরজা থেকে, একবারে ৫০টা (MessengerService::LIST_PAGE), বার্তা ১০০/২০০-তে বাঁধা; unread() কেবল একটা বাজতে থাকা কল (first())।',
 

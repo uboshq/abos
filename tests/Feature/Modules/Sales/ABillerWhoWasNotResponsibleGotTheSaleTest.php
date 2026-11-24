@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Sales;
 
+use App\Core\Contracts\HomeSalesFilters;
+use App\Core\Dashboard\HomeFilter;
 use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\Company;
@@ -13,12 +15,14 @@ use App\Modules\Customer\Models\DealerBinding;
 use App\Modules\Inventory\Models\Product;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\MasterData\Models\ReasonCode;
+use App\Modules\Sales\Metrics\SalesMetrics;
 use App\Modules\Sales\Models\SalesInvoice;
 use App\Modules\Sales\Services\DirectSaleService;
 use App\Modules\Sales\Services\SalesResponsibility;
 use App\Modules\Sales\Services\SalesReturnService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -71,6 +75,30 @@ final class ABillerWhoWasNotResponsibleGotTheSaleTest extends TestCase
         $this->assertSame($sr->id, (int) $sale->sales_person_id, '⛔ পাকা হওয়ার সময় দায়িত্বের SR বসেননি।');
         $this->assertSame($this->biller->id, (int) $sale->created_by, '⛔ "বিল করেছেন" বদলে গেল।');
         $this->assertSame($sr->id, $sale->salesPerson?->id);
+    }
+
+    /** ⭐ আসল বিক্রি, হাতে বসানো ঘর নয় — হোমের বিক্রেতা-ছাঁকনিতে দায়িত্বের SR-এর নিচে ওঠে, বিল যিনি কেটেছেন তাঁর নিচে নয় */
+    public function test_a_real_sale_shows_under_its_sr_in_the_home_filter_and_not_under_the_biller(): void
+    {
+        $sr = $this->person();
+        DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $sr->id, 'customer_id' => $this->customer, 'starts_on' => now()->subYear()->toDateString()]);
+        app(SalesResponsibility::class)->forget();
+        $this->sell('2');
+
+        $today = now()->toDateString();
+        $under = function (int $userId) use ($today): ?string {
+            $sales = app(HomeSalesFilters::class);
+            $filter = HomeFilter::fromRequest(Request::create('/', 'GET', ['seller' => $userId]), $sales->choices(), $sales);
+
+            return $filter->active() ? $filter->during(fn () => SalesMetrics::invoiceTotal($today, $today)) : null;
+        };
+
+        $before = $under($sr->id);
+        $this->assertNotNull($before, '⛔ দায়িত্বের SR হোমের বিক্রেতার তালিকায় নেই।');
+        $second = $this->sell('3');
+
+        $this->assertSame(0, bccomp(bcsub((string) $under($sr->id), $before, 4), (string) $second->total, 4), '⛔ বিক্রিটা দায়িত্বের SR-এর নিচে পুরো ওঠেনি।');
+        $this->assertNull($under($this->biller->id), '⛔ বিল যিনি কেটেছেন তিনি বিক্রেতার তালিকায় উঠলেন।');
     }
 
     public function test_a_biller_who_is_not_responsible_gets_nothing(): void
