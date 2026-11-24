@@ -47,7 +47,9 @@ final class MessengerAuditController extends Controller implements HasMiddleware
     {
         $q = trim((string) $request->query('q', ''));
 
+        // ⛔ the messenger follows the person across companies ([[FollowsThePerson]]); the audit stays inside the open company
         $threads = Thread::query()
+            ->where('company_id', CompanyContext::id())
             ->with(['members.user:id,name'])
             ->when($q !== '', function ($query) use ($q): void {
                 $like = '%'.addcslashes($q, '%_\\').'%';
@@ -69,7 +71,7 @@ final class MessengerAuditController extends Controller implements HasMiddleware
 
     public function open(Request $request, string $thread): RedirectResponse
     {
-        $t = Thread::query()->wherePublicId($thread)->firstOrFail();
+        $t = Thread::query()->where('company_id', CompanyContext::id())->wherePublicId($thread)->firstOrFail();
         $data = $request->validate(['reason' => ['required', 'string', 'min:10', 'max:500']]);
 
         app(AuditEngine::class)->recordAction($t, self::ACTION, trim((string) $data['reason']));
@@ -81,7 +83,7 @@ final class MessengerAuditController extends Controller implements HasMiddleware
 
     public function show(Request $request, string $thread): View|RedirectResponse
     {
-        $t = Thread::query()->wherePublicId($thread)->with('members.user:id,name')->firstOrFail();
+        $t = Thread::query()->where('company_id', CompanyContext::id())->wherePublicId($thread)->with('members.user:id,name')->firstOrFail();
         $until = $request->session()->get($this->sessionKey($t));
 
         if (! is_int($until) || $until < now()->getTimestamp()) {

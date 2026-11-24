@@ -26,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Member extends Model
 {
     use BelongsToCompany;
+    use \App\Modules\Messaging\Models\Concerns\FollowsThePerson;
     use HasPublicId;
 
     protected $table = 'messenger_members';
