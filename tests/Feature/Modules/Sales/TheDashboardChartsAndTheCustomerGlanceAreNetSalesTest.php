@@ -73,6 +73,10 @@ final class TheDashboardChartsAndTheCustomerGlanceAreNetSalesTest extends TestCa
 
         $this->rahim = Customer::acrossDealers()->where('name_en', 'Rahim Traders')->firstOrFail();
         $this->rahim->forceFill(['credit_limit' => '100000000', 'credit_days' => 60])->save();
+        // ⓘ বিক্রি দায়িত্বের মানুষের, বিল যিনি কাটেন তাঁর নয় (২৩ নভেম্বর ২০২৬; [[SalesResponsibility]]) — ডেমোতে রহিম আরেকজনের, এখানে মালিকের
+        \App\Modules\Customer\Models\DealerBinding::query()->where('customer_id', $this->rahim->id)->delete();
+        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $this->owner->id, 'customer_id' => $this->rahim->id, 'starts_on' => now()->subYear()->toDateString()]);
+        app(\App\Modules\Sales\Services\SalesResponsibility::class)->forget();
     }
 
     public function test_the_sales_dashboard_seller_and_area_bars_are_net(): void

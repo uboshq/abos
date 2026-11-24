@@ -60,6 +60,8 @@ final class TheBankStatementHasTheFinalWordTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        // ⓘ দাবিগুলোর তারিখ ১৬ নভেম্বর ২০২৬ হাতে লেখা — ঘড়ি স্থির, নইলে পেছনের তারিখের ৭ দিনের জানালা পেরোলেই সব লাল ([[OpenPeriod]])
+        $this->travelTo(\Illuminate\Support\Carbon::parse('2026-11-20 10:00:00'));
         $this->seed(DemoSeeder::class);
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();

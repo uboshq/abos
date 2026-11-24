@@ -76,6 +76,11 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
 
         Customer::acrossDealers()->whereIn('name_en', ['Rahim Traders'])->get()
             ->each(fn (Customer $c) => $c->forceFill(['credit_limit' => '100000000', 'credit_days' => 60])->save());
+        // ⓘ বিক্রি দায়িত্বের মানুষের, বিল যিনি কাটেন তাঁর নয় (২৩ নভেম্বর ২০২৬; [[SalesResponsibility]]) — ডেমোতে রহিম আরেকজনের, এখানে মালিকের
+        $rahimId = (int) Customer::acrossDealers()->where('name_en', 'Rahim Traders')->value('id');
+        \App\Modules\Customer\Models\DealerBinding::query()->where('customer_id', $rahimId)->delete();
+        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $this->owner->id, 'customer_id' => $rahimId, 'starts_on' => now()->subYear()->toDateString()]);
+        app(\App\Modules\Sales\Services\SalesResponsibility::class)->forget();
     }
 
     public function test_every_breakdown_of_the_overview_grows_by_the_net_sale_only(): void
@@ -287,11 +292,14 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
                 'name_en' => "NS2A Buyer {$i}", 'name_bn' => "এনএস২এ ক্রেতা {$i}", 'credit_limit' => '0', 'credit_days' => 30,
             ]);
             $customer->forceFill(['credit_limit' => '100000000'])->save();
-            $paper = $this->billTo((int) $customer->id, '1', (string) (1000 + $i));
 
-            // ⓘ প্রতিটা বিল আলাদা মানুষের কাটা — বিক্রেতা ধরে তালিকা ২০ ছাড়ায়
+            // ⓘ প্রতিটা ক্রেতা আলাদা মানুষের দায়িত্বে — বিক্রেতা ধরে তালিকা ২০ ছাড়ায়
             $seller = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
-            DB::table('sal_invoices')->where('id', $paper->id)->update(['created_by' => $seller->id]);
+            $seller->companies()->attach($this->company->id, ['is_active' => true]);
+            \App\Modules\Customer\Models\DealerBinding::query()->where('customer_id', $customer->id)->delete();
+            \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $seller->id, 'customer_id' => $customer->id, 'starts_on' => now()->subYear()->toDateString()]);
+            app(\App\Modules\Sales\Services\SalesResponsibility::class)->forget();
+            $this->billTo((int) $customer->id, '1', (string) (1000 + $i));
         }
 
         $this->web($this->owner);

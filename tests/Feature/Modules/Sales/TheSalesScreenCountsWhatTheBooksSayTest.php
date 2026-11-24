@@ -432,15 +432,26 @@ final class TheSalesScreenCountsWhatTheBooksSayTest extends TestCase
             ]);
         }
 
+        // ⓘ অর্জন দায়িত্বের মানুষের (২৩ নভেম্বর ২০২৬; [[SalesResponsibility]]) — প্রথম দোকান মালিকের, দ্বিতীয়টা টার্গেটহীনের
+        $stranger = $this->newUser();
+        $this->actingAs($this->owner);
+        $shops = Customer::query()->orderBy('id')->limit(2)->get();
+        $shops[1]->forceFill(['credit_limit' => '100000000'])->save();
+        \App\Modules\Customer\Models\DealerBinding::query()->where('customer_id', $shops[0]->id)->delete();
+        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $this->owner->id, 'customer_id' => $shops[0]->id, 'starts_on' => now()->subYear()->toDateString()]);
+        app(\App\Modules\Sales\Services\SalesResponsibility::class)->forget();
+        \App\Modules\Customer\Models\DealerBinding::query()->where('customer_id', $shops[1]->id)->delete();
+        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $stranger->id, 'customer_id' => $shops[1]->id, 'starts_on' => now()->subYear()->toDateString()]);
+        app(\App\Modules\Sales\Services\SalesResponsibility::class)->forget();
+
         // মালিকের একটা বিল — টার্গেট আছে
         $mine = $this->billToday();
 
         // টার্গেটহীন একজনের বিল
-        $stranger = $this->newUser();
         $this->actingAs($stranger);
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         $service = app(SalesInvoiceService::class);
-        $service->confirm($service->create($this->header(),
+        $service->confirm($service->create(['customer_id' => $shops[1]->id] + $this->header(),
             [['product_id' => Product::query()->orderBy('id')->value('id'), 'qty' => '5', 'rate' => '1000']]));
 
         // হাতে গোনা: মালিকের বিলের সারিগুলো, দাম − ভ্যাট

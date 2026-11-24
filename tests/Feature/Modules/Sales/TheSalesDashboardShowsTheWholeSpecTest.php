@@ -38,7 +38,7 @@ use Tests\TestCase;
  *   ১. টার্গেট — অর্জন বাড়ে ঠিক বিলের লাইনের (দাম − ভ্যাট) যোগফল, বাকি কমে ততটাই; লক্ষ্য = বসানো টার্গেটের যোগ
  *   ২. মোট লাভ — বিক্রয় বাড়ে বিলের `total`, ব্যয় বাড়ে বিলের `cost_of_goods`, লাভ তাদের ফারাক;
  *      শতাংশ = এ মাসের পাকা বিলের (মোট − ব্যয়) ÷ ব্যয়
- *   ৩. বিক্রেতা আর এরিয়া — যিনি বিল কাটলেন তাঁর দণ্ড বাড়ে বিলের মোট; এরিয়ার দণ্ডের যোগফলও
+ *   ৩. বিক্রেতা আর এরিয়া — যাঁর দায়িত্বে দোকান তাঁর দণ্ড বাড়ে বিলের মোট; এরিয়ার দণ্ডের যোগফলও
  *   ৪. ফানেল — খসড়া DO কিছু বাড়ায় না, সই পেরোনো DO এক বাড়ায়; খসড়া আদায় কিছু নয়, পাকা আদায় এক
  *   ৫. ফেরতের কারণ — "ক্ষতিগ্রস্ত" দণ্ড বাড়ে ঠিক ফেরতের মোট
  *   ৬. সুইচ বন্ধে নতুন চার্টের একটাও নেই — একই মালিক, একই কাগজ, চালু করলে আবার আছে
@@ -63,11 +63,15 @@ final class TheSalesDashboardShowsTheWholeSpecTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        // ⓘ ডিলারের দেয়াল এই দাবির প্রশ্ন নয় — ডেমোতে চালু (⛔১৬, 758f2a11), তখন অর্জন যায় ডিলারে বাঁধা SR-এর কাছে; বন্ধে বিল লেখকের
+        // ⓘ ডিলারের দেয়াল এই দাবির প্রশ্ন নয় — ডেমোতে চালু (⛔১৬, 758f2a11)
         app(\App\Core\Services\SettingsService::class)->set('customer.dealer_scope_enabled', false);
         $this->actingAs($this->owner);
 
         $this->customer = Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();
+        // ⓘ বিক্রি দায়িত্বের মানুষের, বিল যিনি কাটেন তাঁর নয় (২৩ নভেম্বর ২০২৬; [[SalesResponsibility]]) — ডেমোতে রহিম আরেকজনের, এখানে মালিকের
+        \App\Modules\Customer\Models\DealerBinding::query()->where('customer_id', $this->customer->id)->delete();
+        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $company->id, 'user_id' => $this->owner->id, 'customer_id' => $this->customer->id, 'starts_on' => now()->subYear()->toDateString()]);
+        app(\App\Modules\Sales\Services\SalesResponsibility::class)->forget();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->product = Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->firstOrFail();
 
