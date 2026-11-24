@@ -33,6 +33,13 @@
         ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($c) => view('system_admin::company.partials.actions', ['company' => $c])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('status', __('system_admin::field.filter_status'),
+            ['active' => __('system_admin::field.status_active'), 'inactive' => __('system_admin::field.status_inactive')],
+            __('system_admin::field.filter_all')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -54,22 +61,23 @@
         </div>
     @endif
 
-    <p class="mb-4 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
+    <p data-page-subtitle class="mb-4 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
         {{ __('system_admin::message.company_note') }}
     </p>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             {{-- ⭐ শিরোনাম, গোনা আর "নতুন" বোতাম এখন টুলবারে — আগে ছিল
                  page-header-এ, তালিকার বাক্সের বাইরে। মালিকের নির্দেশ,
                  ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*।
 
                  ⓘ খোঁজা কোড আর দুই ভাষার নামে (CompanyController::index);
                  গোনাটা খোঁজার পরের সংখ্যা, তাই তালিকার সাথে মেলে। --}}
-            <x-ui.toolbar :title="__('system_admin::menu.companies')"
+            <x-ui.toolbar :title="__('system_admin::menu.companies')" :info="__('system_admin::message.company_note')"
                           :count="trans_choice('core.count.records', $companies->total(), ['count' => $companies->total()])"
                           :search-placeholder="__('system_admin::message.company_search')"
-                          :columns="$columns">
+                          :columns="$columns" :facets="$facetPanel">
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('system_admin.company.create')">
                         {{ __('core.action.create') }}
@@ -87,4 +95,5 @@
 
     <x-ui.pager :rows="$companies" />
     <x-ui.list-totals :rows="$companies" />
+    </x-ui.filter-layout>
 </x-layouts.app>

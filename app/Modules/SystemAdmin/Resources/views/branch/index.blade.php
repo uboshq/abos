@@ -51,14 +51,14 @@
         </div>
     @endif
 
-    <p class="mb-4 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
+    <p data-page-subtitle class="mb-4 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
         {{ __('system_admin::message.branch_note') }}
     </p>
 
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :title="__('system_admin::menu.branches')"
+            <x-ui.toolbar :title="__('system_admin::menu.branches')" :info="__('system_admin::message.branch_note')"
                           :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])"
                           :search-placeholder="__('system_admin::message.branch_search')"
                           :columns="$columns" :facets="$facetPanel">

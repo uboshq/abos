@@ -38,11 +38,15 @@
 
     $columns[] = ['key' => 'actions', 'label' => '', 'width' => '16rem',
         'render' => fn ($p) => view('sales::price_list.partials.row-actions', ['product' => $p, 'canEdit' => $canEdit])];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]), এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $abosHead = \App\Core\Support\AbosHead::on();
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::price_list.title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('sales::price_list.title')" :subtitle="__('sales::price_list.subtitle')">
             <x-slot:actions>
@@ -58,18 +62,28 @@
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+    @endunless
 
     <x-ui.errors />
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
         {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe"); খোঁজার ঘর নেই — এই পাতার নিয়ন্ত্রক খোঁজে না --}}
-        <x-ui.toolbar :title="__('sales::price_list.title')" :search="false" :filter="false" :columns="$columns" />
+        @if ($abosHead)
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :title="__('sales::price_list.title')" :info="__('sales::price_list.subtitle').' '.__('sales::price_list.history_note')"
+                              :search-placeholder="__('sales::price_list.search')" :filter="false" :columns="$columns" />
+            </form>
+        @else
+            <x-ui.toolbar :title="__('sales::price_list.title')" :search="false" :filter="false" :columns="$columns" />
+        @endif
 
         <x-ui.table :rows="$products" :columns="$columns" :empty="__('sales::price_list.no_products')" />
     </div>
 
-    <p class="mt-2 text-xs text-(--color-ink-muted)">{{ __('sales::price_list.history_note') }}</p>
+    @unless ($abosHead)
+        <p class="mt-2 text-xs text-(--color-ink-muted)">{{ __('sales::price_list.history_note') }}</p>
+    @endunless
 
     <x-ui.pager :rows="$products" />
     <x-ui.list-totals :rows="$products" />

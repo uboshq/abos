@@ -10,6 +10,8 @@
 --}}
 @php
     use App\Modules\Governance\Services\WhatIsKeptHowLong;
+
+    $abosHead = \App\Core\Support\AbosHead::on();
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -17,7 +19,8 @@
 
     <x-slot:header>
         <x-ui.page-header :title="__('governance::retention.title')"
-                          :subtitle="__('governance::retention.note', ['years' => $lawYears])" />
+                          :subtitle="__('governance::retention.note', ['years' => $lawYears])"
+                          :info="$abosHead ? __('governance::retention.footer') : null" />
     </x-slot:header>
 
     {{-- ⚠️ সবচেয়ে দুর্বল জায়গাটা উপরে, কারণ দুইটা জিনিস এক মনে হয়:
@@ -77,5 +80,7 @@
         </table>
     </div>
 
-    <p class="mt-3 text-2xs text-(--color-ink-muted)">{{ __('governance::retention.footer') }}</p>
+    @unless ($abosHead)
+        <p class="mt-3 text-2xs text-(--color-ink-muted)">{{ __('governance::retention.footer') }}</p>
+    @endunless
 </x-layouts.app>

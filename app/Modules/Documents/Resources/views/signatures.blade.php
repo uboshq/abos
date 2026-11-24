@@ -13,18 +13,35 @@
         'url' => route('documents.signatures', ['tab' => $key]),
         'active' => $tab === $key,
     ])->all();
+
+    // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates($tab === 'signed' ? __('documents::field.date') : __('documents::field.due_date')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('documents::menu.signature') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('documents::menu.signature')" :subtitle="__('documents::message.sign_subtitle')" />
     </x-slot:header>
+    @endunless
 
     <x-ui.list-tabs :tabs="$tabs" :label="__('documents::menu.signature')" />
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form id="list-form" method="GET" class="contents">
+            <input type="hidden" name="tab" value="{{ $tab }}">
+            @if ($abosHead)
+                <x-ui.toolbar :title="__('documents::menu.signature')" :info="__('documents::message.sign_subtitle')" :search="false" :export="false" :share="false" :facets="$facetPanel" :quiet="['tab']"></x-ui.toolbar>
+            @else
+                <x-ui.filter-bar :facets="$facetPanel" />
+            @endif
+        </form>
         <div class="overflow-x-auto">
             <table class="ui-list w-full border-collapse text-sm">
                 @if ($tab === 'signed')
@@ -103,4 +120,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

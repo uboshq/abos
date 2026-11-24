@@ -65,6 +65,10 @@
                 : view('sales::direct.partials.draft-actions', ['draft' => $d, 'why' => $why[$d->id] ?? '', 'held' => $held[$d->id] ?? false]),
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]), এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([\App\Core\ListFilter\Facets::dates(__('core.list_filter.date'))]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -91,18 +95,25 @@
          ⓘ নিশ্চিত করে সইয়ে পাঠানো বিক্রি খসড়া নয়, তাই আলাদা ট্যাবে; ওখানে কেবল দেখা। --}}
     @include('sales::do.partials.tabs', ['active' => $tab])
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             @if ($tab !== 'drafts')
                 <input type="hidden" name="tab" value="{{ $tab }}">
             @endif
             <x-ui.toolbar :title="__('sales::menu.direct_drafts')"
-                          :columns="$columns" :search-placeholder="__('sales::message.invoice_search')">
+                          :columns="$columns" :search-placeholder="__('sales::message.invoice_search')" :facets="$facetPanel" :quiet="['tab']">
+                @if ($abosHead)
+                    <x-slot:actions>
+                        <x-ui.button tone="primary" icon="plus" :href="route('sales.direct.create')">{{ __('sales::menu.direct') }}</x-ui.button>
+                    </x-slot:actions>
+                @else
                 <a href="{{ route('sales.direct.create') }}"
                    class="inline-flex min-h-(--spacing-touch) items-center rounded-(--radius-field) bg-(--color-brand-600)
                           px-3 text-sm font-semibold text-white hover:bg-(--color-brand-700)">
                     {{ __('sales::menu.direct') }}
                 </a>
+                @endif
             </x-ui.toolbar>
         </form>
 
@@ -115,4 +126,5 @@
         <x-ui.pager :rows="$drafts" />
         <x-ui.list-totals :rows="$drafts" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

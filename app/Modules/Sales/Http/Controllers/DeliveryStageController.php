@@ -53,6 +53,7 @@ class DeliveryStageController extends Controller implements HasMiddleware
         $tabs = ['open', ...DeliveryStage::ALL];
         $tab = in_array($request->query('stage'), $tabs, true) ? (string) $request->query('stage') : 'open';
         $term = trim((string) $request->query('q'));
+        $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
 
         /*
          * ⓘ `whereHas('challan')` — চালানের কোম্পানি ও শাখার ছাঁকনি দুইটাই
@@ -62,6 +63,8 @@ class DeliveryStageController extends Controller implements HasMiddleware
             ->inTab($tab)
             ->whereHas('challan', fn (Builder $q) => $q->search($term === '' ? null : $term))
             ->with(['challan.customer.location.parent', 'challan.customer.branch', 'challan.vehicle'])
+            ->when($f['from'] ?? null, fn ($query, $d) => $query->whereDate('stage_at', '>=', $d))
+            ->when($f['to'] ?? null, fn ($query, $d) => $query->whereDate('stage_at', '<=', $d))
             ->orderByDesc('stage_at')
             ->orderByDesc('id');
 

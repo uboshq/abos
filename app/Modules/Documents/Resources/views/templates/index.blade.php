@@ -1,9 +1,18 @@
 {{--
     ছাঁচের তালিকা (§২ Document Templates; সপ্তম ধাপ, ৯ অক্টোবর ২০২৬) — প্রতিটা ছাঁচ, ভরে কাগজ বানানো, বা বদল।
 --}}
+@php
+    // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('doc_type', __('documents::field.doc_type'), $choices->types(true)),
+        \App\Core\ListFilter\Facets::pick('folder', __('documents::field.folder'), $choices->folders(true)),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('documents::menu.templates') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('documents::menu.templates')" :subtitle="__('documents::message.templates_subtitle')">
             <x-slot:actions>
@@ -13,8 +22,23 @@
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+    @endunless
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form id="list-form" method="GET" class="contents">
+            @if ($abosHead)
+                <x-ui.toolbar :title="__('documents::menu.templates')" :info="__('documents::message.templates_subtitle')" :search="false" :export="false" :share="false" :facets="$facetPanel">
+                    <x-slot:actions>
+                        @can('documents.templates')
+                            <x-ui.button tone="primary" icon="plus" :href="route('documents.templates.create')">{{ __('documents::action.new_template') }}</x-ui.button>
+                        @endcan
+                    </x-slot:actions>
+                </x-ui.toolbar>
+            @else
+                <x-ui.filter-bar :facets="$facetPanel" />
+            @endif
+        </form>
         <table class="ui-list w-full border-collapse text-sm">
             <thead>
                 <tr>
@@ -56,4 +80,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
