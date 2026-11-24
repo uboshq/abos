@@ -70,9 +70,6 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
 
         // ── প্রতিষ্ঠানের নিজের সাজানো, আর সাজানো জিনিস গোনা যায় ────────
         'App\Modules\MasterData\Http\Controllers\NumberSeriesController' => 'প্রতি কাগজের ধরনে একটা সিরিজ — সংখ্যাটা ধরনের সংখ্যায় বাঁধা।',
-        'App\Modules\SystemAdmin\Http\Controllers\CompanyController' => 'প্রতিষ্ঠানের কোম্পানি — হাতে গোনা।',
-        'App\Modules\SystemAdmin\Http\Controllers\CustomFieldController' => 'নিজের বানানো ঘর — ডজনখানেক।',
-        'App\Modules\SystemAdmin\Http\Controllers\LookController' => 'রূপের তালিকা কোডে লেখা, স্থির।',
         'App\Modules\SystemAdmin\Http\Controllers\RoleController' => 'ভূমিকা হাতে বানানো হয় — ডজনখানেক।',
         'App\Modules\Backup\Http\Controllers\DestinationController' => 'ব্যাকআপের গন্তব্য দুই-তিনটা; বেশি হলে সেটাই ভুল।',
 

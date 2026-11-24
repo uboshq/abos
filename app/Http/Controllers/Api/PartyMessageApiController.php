@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Core\Services\PaperTrail;
 use App\Core\Services\PartyMessageDispatcher;
 use App\Core\Services\PartyMessageGuard;
 use App\Core\Services\PartyMessageResender;
@@ -56,7 +57,7 @@ final class PartyMessageApiController extends Controller
     public function compose(Request $request): JsonResponse
     {
         $channel = $request->validate(['channel' => ['required', Rule::in(PartyMessageTemplate::CHANNELS)]])['channel'];
-        [$document, $share] = $this->authorizedPaper($request);
+        [$document, $share] = $this->paper($request);
 
         $party = $this->messages->partyOf($document);
         $phones = array_map(fn (array $p) => ['number' => $p['phone'], 'shown' => $p['shown'], 'label' => $p['label']],
@@ -91,7 +92,7 @@ final class PartyMessageApiController extends Controller
     {
         abort_unless($this->dispatcher->wameOn(), 403);
 
-        [$document, $share] = $this->authorizedPaper($request);
+        [$document, $share] = $this->paper($request);
         [$template, $phone, $locale] = $this->guard->choice($request->all(), $document, $share, PartyMessageTemplate::WHATSAPP);
 
         $message = $this->messages->record($document, $share, $template, $locale, $phone);
@@ -110,7 +111,7 @@ final class PartyMessageApiController extends Controller
      */
     public function sms(Request $request): JsonResponse
     {
-        [$document, $share] = $this->authorizedPaper($request);
+        [$document, $share] = $this->paper($request);
         [$template, $phone, $locale] = $this->guard->choice($request->all(), $document, $share, PartyMessageTemplate::SMS);
 
         if (! PartyMessageDispatcher::isBangladeshMobile($phone)) {
@@ -133,7 +134,7 @@ final class PartyMessageApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        [$document, , $documentType] = $this->authorizedPaper($request, withShare: false);
+        [$document, , $documentType] = $this->paper($request, withShare: false);
 
         $rows = PartyMessage::query()
             ->where('document_type', $documentType)
@@ -162,6 +163,14 @@ final class PartyMessageApiController extends Controller
 
         if (PartyMessageResender::isPaper($row)) {
             $this->moduleOfPaperIsOn((string) $row->document_type);
+
+            $abilities = PaperTrail::abilitiesFor((string) $row->document_type);
+
+            abort_if($abilities === [], 403);
+
+            foreach ($abilities as $ability) {
+                $this->authorize($ability);
+            }
         } else {
             $this->authorize('notification.party_messages');
         }
@@ -179,7 +188,7 @@ final class PartyMessageApiController extends Controller
      *
      * @return array{0: Model, 1: ?DocumentShare, 2: string} [কাগজ, লিংক, ছাপার তালিকার ধরন]
      */
-    private function authorizedPaper(Request $request, bool $withShare = true): array
+    private function paper(Request $request, bool $withShare = true): array
     {
         $data = $request->validate([
             'type' => ['required', 'string', 'max:60'],
@@ -193,6 +202,14 @@ final class PartyMessageApiController extends Controller
         $phone->refuseUnlessReachable($phone->moduleOfClass($class)?->code);
 
         // ⛔ ওয়েবের পাঠানোর পাহারা — ছাপার চাবি (৪০৩), ছাপার দরজার চোখে নাগাল (৪০৪)
+        $abilities = PaperTrail::abilitiesFor($documentType);
+
+        abort_if($abilities === [], 403);
+
+        foreach ($abilities as $ability) {
+            $this->authorize($ability);
+        }
+
         $document = $this->guard->paper($documentType, (int) $found->getKey());
 
         return [$document, $withShare ? $this->guard->shareFor($documentType, $document) : null, $documentType];

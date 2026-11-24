@@ -53,7 +53,7 @@ class LookController extends Controller implements HasMiddleware
     {
         return view('system_admin::looks.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'skins' => LookSkin::query()->orderBy('name')->get(),
+            'skins' => LookSkin::query()->orderBy('name')->orderBy('id')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'parents' => $this->parentChoices(new LookSkin),
             'previewing' => LookPreview::skin(),
         ]);

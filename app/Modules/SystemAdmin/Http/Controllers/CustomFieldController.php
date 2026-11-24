@@ -46,8 +46,7 @@ class CustomFieldController extends Controller implements HasMiddleware
                 ->orderBy('entity')
                 ->orderBy('sort')
                 ->orderBy('id')
-                ->get()
-                ->groupBy('entity'),
+                ->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
         ]);
     }
 

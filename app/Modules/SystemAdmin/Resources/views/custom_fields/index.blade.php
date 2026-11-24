@@ -94,7 +94,7 @@
         </form>
 
         {{-- যা আছে --}}
-        @forelse ($fields as $entity => $rows)
+        @forelse ($fields->getCollection()->groupBy('entity') as $entity => $rows)
             <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card)">
                 <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
@@ -159,5 +159,8 @@
         @empty
             <x-ui.empty-state :message="__('core.custom_field.none')" />
         @endforelse
+
+        <x-ui.pager :rows="$fields" />
+        <x-ui.list-totals :rows="$fields" />
     </div>
 </x-layouts.app>

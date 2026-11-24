@@ -67,7 +67,7 @@
                  ⓘ খোঁজা কোড আর দুই ভাষার নামে (CompanyController::index);
                  গোনাটা খোঁজার পরের সংখ্যা, তাই তালিকার সাথে মেলে। --}}
             <x-ui.toolbar :title="__('system_admin::menu.companies')"
-                          :count="trans_choice('core.count.records', $companies->count(), ['count' => $companies->count()])"
+                          :count="trans_choice('core.count.records', $companies->total(), ['count' => $companies->total()])"
                           :search-placeholder="__('system_admin::message.company_search')"
                           :columns="$columns">
                 <x-slot:actions>
@@ -84,4 +84,7 @@
             :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />
     </div>
+
+    <x-ui.pager :rows="$companies" />
+    <x-ui.list-totals :rows="$companies" />
 </x-layouts.app>

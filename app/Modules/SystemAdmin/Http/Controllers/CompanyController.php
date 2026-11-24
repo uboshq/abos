@@ -113,7 +113,8 @@ class CompanyController extends Controller implements HasMiddleware
                         ->orWhere('name_bn', 'like', $like));
                 })
                 ->orderBy('name_en')
-                ->get(),
+                ->orderBy('id')
+                ->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
         ]);
     }
 
