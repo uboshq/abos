@@ -243,8 +243,23 @@ final class MessengerPresenter
         $uid = (int) $user->id;
 
         if (! array_key_exists($uid, $this->branches)) {
-            $id = DB::table('company_user')->where('company_id', CompanyContext::id())->where('user_id', $uid)->value('default_branch_id');
-            $this->branches[$uid] = $id === null ? null : Branch::query()->find($id)?->name();
+            /*
+             * ⭐ The messenger spans the group (owner, 24 Nov 2026) — a colleague of a sister company shows "company · branch",
+             * so two people of the same name are told apart. Someone in the open company shows the branch alone, as before.
+             */
+            $here = DB::table('company_user')->where('company_id', CompanyContext::id())->where('user_id', $uid)->first(['default_branch_id']);
+
+            if ($here !== null) {
+                $this->branches[$uid] = $here->default_branch_id === null ? null : Branch::query()->find($here->default_branch_id)?->name();
+            } else {
+                $row = DB::table('company_user')->where('user_id', $uid)->where('is_active', true)->orderBy('company_id')
+                    ->first(['company_id', 'default_branch_id']);
+                $company = $row === null ? '' : (string) DB::table('companies')->where('id', $row->company_id)->value('name');
+                $branch = $row?->default_branch_id === null ? null
+                    : Branch::query()->withoutGlobalScopes()->whereKey($row->default_branch_id)->first()?->name();
+
+                $this->branches[$uid] = trim($company.($company !== '' && $branch ? ' · ' : '').($branch ?? '')) ?: null;
+            }
         }
 
         return (string) ($this->branches[$uid] ?? '');
