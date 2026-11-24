@@ -48,7 +48,10 @@ final class AModulePackageFollowsUntilAHandChangesItTest extends TestCase
         $this->post(route('system_admin.module.packages.store'), ['name_en' => 'Shop', 'modules' => ['sales', 'customer', 'inventory']])->assertRedirect();
         $package = ModulePackage::query()->sole();
 
-        $this->post(route('system_admin.module.packages.assign', $package), ['branches' => [$a->id, $b->id]])->assertRedirect();
+        $html = (string) $this->post(route('system_admin.module.packages.assign', $package), ['branches' => [$a->id, $b->id]])->assertOk()->getContent();
+        $this->assertSame(0, BranchModule::query()->count(), '⛔ দেখাতেই লেখা হয়ে গেছে।');
+        preg_match('/name="stamp" value="([^"]+)"/', $html, $m);
+        $this->post(route('system_admin.module.packages.assign', $package), ['branches' => [$a->id, $b->id], 'stamp' => $m[1]])->assertRedirect();
         $off = app(ModuleBoard::class)->branchOff([$a->id, $b->id]);
         $this->assertContains('hr', $off[$a->id]);
         $this->assertNotContains('sales', $off[$a->id]);

@@ -768,9 +768,10 @@
                             $panelRows = collect($activeModule['groups'])->flatten(1)->values();
                             if ($panelSections !== []) {
                                 $rank = array_flip($panelSections);
-                                $panelRows = $panelRows->map(fn ($row, $at) => [$rank[$row['section'] ?? ''] ?? PHP_INT_MAX, $at, $row])
-                                    ->sort(fn ($x, $y) => [$x[0], $x[1]] <=> [$y[0], $y[1]])
-                                    ->map(fn ($x) => $x[2])->values();
+                                $rowOrder = \App\Core\Navigation\MenuLook::rowOrder((string) $activeModule['code']);
+                                $panelRows = $panelRows->map(fn ($row, $at) => [$rank[$row['section'] ?? ''] ?? PHP_INT_MAX, $rowOrder[$row['key'] ?? ''] ?? PHP_INT_MAX, $at, $row])
+                                    ->sort(fn ($x, $y) => [$x[0], $x[1], $x[2]] <=> [$y[0], $y[1], $y[2]])
+                                    ->map(fn ($x) => $x[3])->values();
                             }
                             // ⭐ এক করা মডিউলের সারি তার দলের ক্রমে ([[MenuLook::arrange()]]; মালিক, ২০ নভেম্বর ২০২৬) — ক্রম না দেওয়া মডিউলে কিছুই নড়ে না
                             if ($panelSections === []) {

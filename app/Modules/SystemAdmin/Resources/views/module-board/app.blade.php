@@ -23,13 +23,16 @@
         @csrf
         @method('PUT')
     </form>
-    <x-ui.filter-layout :filters="$facets" form="list-form" :report="true">
+    <x-ui.filter-layout :filters="$facets" form="list-form">
         <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-            <form id="list-form" method="GET" class="contents" data-report>
+            <form id="list-form" method="GET" class="contents" data-no-swap>
                 <x-ui.toolbar :title="$title" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])"
-                              :columns="$columns" :facets="$facets" :report="true"
+                              :columns="$columns" :facets="$facets" :quiet="['company']"
                               :sort="['label' => __('core.table.name'), 'on' => __('core.table.status')]"
                               :search-placeholder="__('system_admin::module_board.module')">
+                    <x-slot:picker>
+                        @include('system_admin::module-board.partials.company', ['companies' => [$company], 'chosen' => $company->id])
+                    </x-slot:picker>
                     <x-slot:actions>
                         <x-ui.button type="submit" form="board-form" tone="primary">{{ __('core.action.save') }}</x-ui.button>
                     </x-slot:actions>

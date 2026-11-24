@@ -96,13 +96,20 @@ final class ModulePackages
             return 0;
         }
 
+        $plan = $this->plan($package, array_fill_keys($branchIds, ''));
+
+        return $plan['changes'] === [] ? 0 : $this->board->writeBranches($plan['changes'], $userId, byHand: false);
+    }
+
+    /** @param  array<int, string>  $names */
+    public function plan(ModulePackage $package, array $names): array
+    {
         $off = $this->offIn($package);
         $wanted = [];
         foreach (array_keys($this->registry->all()) as $code) {
             $wanted[$code] = ! in_array($code, $off, true);
         }
-        $plan = $this->board->plan(array_fill_keys($branchIds, ''), $this->board->branchOff($branchIds), $wanted);
 
-        return $plan['changes'] === [] ? 0 : $this->board->writeBranches($plan['changes'], $userId, byHand: false);
+        return $this->board->plan($names, $this->board->branchOff(array_keys($names)), $wanted);
     }
 }

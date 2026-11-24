@@ -77,6 +77,8 @@ class ModuleScreenController extends Controller implements HasMiddleware
         }
 
         return view('system_admin::module-board.screens', [
+            // ⓘ লেখা চলতি কোম্পানিতেই (কন্ট্রোল প্যানেলের দরজা), তাই ঘরে কেবল সেটাই
+            'company' => \App\Models\Company::query()->findOrFail(\App\Core\Support\CompanyContext::id()),
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $rows,
             'open' => $open,
@@ -107,6 +109,8 @@ class ModuleScreenController extends Controller implements HasMiddleware
         $all = ($request->query('sort') === 'on' ? $all->sortByDesc('on') : $all->sortBy('label'))->values();
 
         return view('system_admin::module-board.app', [
+            // ⓘ লেখা চলতি কোম্পানিতেই (কন্ট্রোল প্যানেলের দরজা), তাই ঘরে কেবল সেটাই
+            'company' => \App\Models\Company::query()->findOrFail(\App\Core\Support\CompanyContext::id()),
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $this->paged($all, $request),
             'facets' => Facets::panel([

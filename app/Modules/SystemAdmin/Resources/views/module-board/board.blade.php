@@ -42,32 +42,26 @@
         <p role="status" class="mb-4 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2 text-sm text-(--color-badge-pending-ink)">{{ __('system_admin::module_board.copied', ['name' => $copied]) }}</p>
     @endif
 
-    <x-ui.filter-layout :filters="$facets" form="list-form" :report="true">
+    <x-ui.filter-layout :filters="$facets" form="list-form">
         <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-            <form id="list-form" method="GET" action="{{ route($here) }}" class="contents" data-report>
-                @if ($isBranch)
-                    <input type="hidden" name="company" value="{{ $company->id }}">
-                @endif
+            <form id="list-form" method="GET" action="{{ route($here) }}" class="contents" data-no-swap>
                 @foreach (array_diff($ids, $pageIds) as $elsewhere)
                     <input type="hidden" name="pick[]" value="{{ $elsewhere }}">
                 @endforeach
                 <x-ui.toolbar :title="$title" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])"
-                              :columns="$columns" :facets="$facets" :report="true" :quiet="['pick', 'company', 'copy_from']"
+                              :columns="$columns" :facets="$facets" :quiet="['pick', 'company', 'copy_from']"
                               :sort="['name' => __('core.table.name'), 'off' => __('system_admin::module_board.off')]"
                               :search-placeholder="$isBranch ? __('core.company.branch') : __('core.table.name')">
+                    @if ($isBranch)
+                    <x-slot:picker>
+                        @include('system_admin::module-board.partials.company', ['companies' => $companies, 'chosen' => $company->id])
+                    </x-slot:picker>
+                    @endif
                     <x-slot:actions>
                         <x-ui.button type="submit" form="board-form" tone="primary">{{ __('core.action.save') }}</x-ui.button>
                     </x-slot:actions>
                 </x-ui.toolbar>
             </form>
-            @if ($isBranch && count($companies) > 1)
-                <nav class="flex flex-wrap gap-2 border-t border-(--color-border) px-3 py-2 text-sm" data-company-picker aria-label="{{ __('system_admin::module_board.companies') }}">
-                    @foreach ($companies as $one)
-                        <a href="{{ route($here, ['company' => $one->id]) }}" @if ($one->id === $company->id) aria-current="page" @endif
-                           class="{{ $one->id === $company->id ? 'font-semibold text-(--color-ink)' : 'text-(--color-link) hover:underline' }}">{{ $one->name() }}</a>
-                    @endforeach
-                </nav>
-            @endif
         </div>
 
         <div class="grid items-start gap-4 xl:grid-cols-3">

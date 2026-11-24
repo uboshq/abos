@@ -90,13 +90,28 @@ class ModulePackageController extends Controller implements HasMiddleware
         return redirect()->route('system_admin.module.packages.edit', $package)->with('saved', __('system_admin::module_board.package_saved', ['count' => $count]));
     }
 
-    public function assign(Request $request, ModulePackage $package): RedirectResponse
+    public function assign(Request $request, ModulePackage $package): View|RedirectResponse
     {
         $data = $request->validate(['branches' => ['required', 'array', 'min:1'], 'branches.*' => ['integer']]);
         $asked = array_values(array_unique(array_map('intval', $data['branches'])));
-        $mine = $this->board->branches()->whereIn('id', $asked)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $names = $this->board->branches()->whereIn('id', $asked)->get()->mapWithKeys(fn (Branch $b) => [(int) $b->id => $b->name()])->all();
+        $mine = array_keys($names);
         // ⛔ অন্য কোম্পানির বা বন্ধ শাখা মিশলে কিছুই নয়
         abort_if(count($mine) !== count($asked), 404);
+
+        // ⭐ আগে যা বদলাবে তার তালিকা, নিশ্চিত করলে তবেই লেখা; দেখার পরে কেউ বদলালে তালিকা আবার
+        $plan = $this->packages->plan($package, $names);
+        $stamp = $this->board->stamp($plan['changes']);
+        if ($request->input('stamp') !== $stamp) {
+            return view('system_admin::module-board.preview', [
+                'menu' => $this->menu->forUser($request->user()),
+                'kind' => 'package', 'plan' => $plan, 'board' => $this->board, 'stamp' => $stamp,
+                'apply' => route('system_admin.module.packages.assign', $package),
+                'back' => route('system_admin.module.packages.edit', $package),
+                'payload' => ['branches' => $mine],
+                'stale' => $request->filled('stamp'),
+            ]);
+        }
 
         $count = $this->packages->assign($package, $mine, (int) $request->user()->id);
 

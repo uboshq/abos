@@ -129,6 +129,16 @@ final class MenuLook
     }
 
     /**
+     * ভাগে সাজানো মেনুর ভাগের ভিতরের ক্রম — তালিকার (`modules`) লেখা ক্রম; নেই এমন সারি শেষে, আগের ক্রমে।
+     *
+     * @return array<string, int>
+     */
+    public static function rowOrder(string $module): array
+    {
+        return array_flip(array_keys(self::data()['modules'][$module] ?? []));
+    }
+
+    /**
      * ⭐ ভাগের মাথার টাইল — রং আর চিহ্ন (`menu-look.php`-এর `sections`); তালিকায় না থাকা ভাগ নিরপেক্ষ রঙে, যাতে টাইল ছাড়া মাথা না থাকে।
      *
      * @return array{colour: string, icon: string}
