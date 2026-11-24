@@ -102,7 +102,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
             {{-- খাতাটা নিজে রপ্তানি হয় না — রপ্তানির খাতার একই কারণে --}}
-            <x-ui.toolbar :title="__('governance::menu.login_history')" :info="\App\Core\Support\AbosHead::on() ? __('governance::message.login_why') : null" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :search="false" :facets="$facetPanel">
+            <x-ui.toolbar :title="__('governance::menu.login_history')" :info="\App\Core\Support\AbosHead::on() ? __('governance::message.login_why') : null" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :print="false" :share="false" :search="false" :facets="$facetPanel">
             </x-ui.toolbar>
         </form>
 

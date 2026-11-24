@@ -40,7 +40,7 @@
     <div data-executive-history class="flex flex-col gap-3">
         <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: var(--exec-bar)">
-            <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::history.title') }}</h1>
+            <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::history.title') }}@if (\App\Core\Support\AbosHead::on())<x-ui.page-info :text="__('executive::history.as_kept', ['date' => \App\Core\Engines\Dashboard\DateRange::label($date, $date)])" />@endif</h1>
             <form method="GET" action="{{ route('executive.history') }}" class="flex flex-wrap items-center gap-2">
                 <label for="hist-date" class="text-sm text-(--color-ink-muted)">{{ __('executive::history.date') }}</label>
                 <x-ui.date id="hist-date" name="date" :value="$date" :max="now()->toDateString()" />
@@ -56,9 +56,11 @@
 
         <section data-history-grid class="flex min-h-0 flex-col overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)"
                  style="max-height: 420px">
+            @unless (\App\Core\Support\AbosHead::on())
             <p class="border-b border-(--color-border) px-4 py-2 text-2xs text-(--color-ink-muted)">
                 {{ __('executive::history.as_kept', ['date' => \App\Core\Engines\Dashboard\DateRange::label($date, $date)]) }}
             </p>
+            @endunless
             <div class="min-h-0 flex-1 overflow-auto">
                 <table class="ui-grid w-full text-sm">
                     <thead class="sticky top-0 bg-(--color-surface-card)">
