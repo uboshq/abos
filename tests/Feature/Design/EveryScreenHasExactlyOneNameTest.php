@@ -79,8 +79,10 @@ final class EveryScreenHasExactlyOneNameTest extends TestCase
         $this->assertSame([], $wrong, "⛔ এই পাতাগুলোয় মূল শিরোনাম ঠিক একটা নয়:\n  ".implode("\n  ", $wrong));
     }
 
+    /** ⓘ দুই শিরোনাম এখন কেবল ABOS-এর বাইরের রূপে; তিন ABOS রূপে মাথা এক সারি (মালিক, ২৪ নভেম্বর ২০২৬) — নিচের দাবিটা দেখুন */
     public function test_the_second_heading_keeps_its_words_as_an_h2(): void
     {
+        $this->wear('tiles');
         $html = (string) $this->get(route('sales.lead.index'))->assertOk()->getContent();
 
         $this->assertSame(1, preg_match_all('/<h1[\s>]/i', $html));
@@ -88,6 +90,26 @@ final class EveryScreenHasExactlyOneNameTest extends TestCase
         $this->assertMatchesRegularExpression('/<h2[\s>]/i', $html, '⛔ দ্বিতীয় শিরোনামটা h2 হলো না');
         $this->assertGreaterThanOrEqual(2, substr_count($html, e(__('sales::crm.leads'))),
             '⛔ দ্বিতীয় শিরোনামের লেখা হারিয়ে গেল');
+    }
+
+    /** ⭐ তিন ABOS রূপে নামটা একবারই, আর সেটাই h1 — বারের নিজের নাম */
+    public function test_in_the_abos_looks_the_bars_name_is_the_only_heading(): void
+    {
+        foreach (['rose', 'navy', 'blue'] as $look) {
+            $this->wear($look);
+            $html = (string) $this->get(route('sales.lead.index'))->assertOk()->getContent();
+
+            $this->assertSame(1, preg_match_all('/<h1[\s>]/i', $html), "⛔ {$look}: h1 ঠিক একটা নয়");
+            $this->assertMatchesRegularExpression('/<h1[^>]*data-view-selector[^>]*>\s*'.preg_quote(e(__('sales::crm.leads')), '/').'/u', $html,
+                "⛔ {$look}: বারের নাম পাতার h1 নয়");
+        }
+    }
+
+    private function wear(string $look): void
+    {
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $owner->forceFill(['ui' => $look])->save();
+        $this->actingAs($owner);
     }
 
     public function test_one_request_does_not_use_up_the_next_ones_h1(): void
