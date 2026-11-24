@@ -143,6 +143,7 @@ final class EveryListAndReportHasTheFilterPanelTest extends TestCase
      * @param  array<string, mixed>  $params
      * @param  list<string>  $keys
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('pages')]
     public function test_the_page_has_the_right_panel_and_keeps_every_old_filter(string $route, array $params, array $keys, string $look): void
     {
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();

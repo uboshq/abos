@@ -74,6 +74,8 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
         'facility_id' => ['facility_id' => 987640],
         'batch_id' => ['batch_id' => 987639],
         'direction' => ['direction' => 'received'],
+        // ⓘ টাকা আসার ধরন (accounts.inflow; নগদ · ব্যাংক · MFS — [[CoreReports::MONEY_KINDS]]), ১.৩.১১
+        'kind' => [['kind' => 'cash'], ['kind' => 'bank'], ['kind' => 'mfs']],
         'month' => ['month' => '1997-04'],
         'period' => ['period' => 'week'],
         'status' => [['status' => 'bounced'], ['status' => 'slow'], ['status' => 'negative']],
