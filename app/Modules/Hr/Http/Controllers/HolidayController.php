@@ -157,13 +157,15 @@ class HolidayController extends Controller implements HasMiddleware
         $year = $request->integer('year', $editing->exists ? $editing->holiday_date->year : (int) now()->year);
         $year = $year >= 2000 && $year <= 2100 ? $year : (int) now()->year;
         $view = $this->reach->viewing($request->user());
+        $find = is_string($request->query('q')) ? trim($request->query('q')) : '';
 
         $holidays = Holiday::query()
             ->with('branch')
             ->whereBetween('holiday_date', [$year.'-01-01', $year.'-12-31'])
             // ⓘ সব-শাখার ছুটি সবসময়; শাখার ছুটি কেবল দেখার শাখায় ([[BranchReach::viewing()]])
             ->when($view !== null, fn ($q) => $q->where(fn ($w) => $w->whereNull('branch_id')->orWhereIn('branch_id', $view['ids'])))
-            ->orderBy('holiday_date')
+            ->when($find !== '', fn ($q) => $q->where('name', 'like', '%'.addcslashes($find, '%_\\').'%'))
+            ->orderBy('holiday_date', $request->query('sort') === 'newest' ? 'desc' : 'asc')
             ->orderBy('id')
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();

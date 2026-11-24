@@ -19,6 +19,12 @@
         ['key' => 'actions', 'label' => '—', 'width' => '8rem',
          'render' => fn ($s) => view('hr::overtime.partials.sign', ['sheet' => $s, 'may' => $overtime->maySign(auth()->user(), $s)])],
     ];
+    // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::month('month', __('hr::field.month'), $month->format('Y-m')),
+        \App\Core\ListFilter\Facets::pick('status', __('hr::field.status'), ['signed' => __('hr::kind.ot_signed'), 'waiting' => __('hr::kind.ot_waiting')]),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -66,13 +72,17 @@
         <p class="mt-1 text-2xs text-(--color-ink-muted)" data-worker-note>{{ __('hr::message.worker_note') }}</p>
     </div>
 
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('hr::menu.overtime') . ' · ' . $month->format('M Y')" :columns="$columns" :search="false"
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :title="__('hr::menu.overtime') . ' · ' . $month->format('M Y')" :columns="$columns" :search="$abosHead" :search-placeholder="__('hr::field.employee')" :facets="$facetPanel"
+                          :sort="$abosHead ? ['employee' => __('hr::field.employee'), 'hours' => __('hr::field.ot_hours'), 'days' => __('hr::field.ot_days')] : []"
                           :info="__($enabled ? 'hr::message.ot_on_note' : 'hr::message.ot_off_note', ['hours' => $dailyHours, 'types' => $eligible === '' ? '—' : $eligible])
                               .' '.__('hr::message.ot_formula_note').' '.__('hr::message.worker_note')">
+                @unless ($abosHead)
                 <x-ui.month name="month" :value="$month->format('Y-m')"
                             class="rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1.5 text-sm" />
+                @endunless
                 @can('hr.attendance.manage')
                     <x-slot:actions>
                         <x-ui.button type="submit" form="ot-prepare" tone="primary">{{ __('hr::action.ot_prepare') }}</x-ui.button>
@@ -92,4 +102,5 @@
         <x-ui.pager :rows="$sheets" />
         <x-ui.list-totals :rows="$sheets" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

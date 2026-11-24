@@ -20,6 +20,11 @@
         ['key' => 'status', 'label' => __('hr::field.status'), 'width' => '8rem',
          'render' => fn ($r) => __('core.status.' . $r->status)],
     ];
+    // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::month('month', __('hr::field.month')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -33,12 +38,13 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         {{-- ⭐ শিরোনাম, "নতুন রান" আর খোঁজা — সব এক বাক্সে, বাকি তালিকার মতো।
              মালিক, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('hr::menu.payroll')"
-                :columns="$columns"
+                :columns="$columns" :facets="$facetPanel" :sort="$abosHead ? ['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')] : []"
                 :search-placeholder="__('hr::message.payroll_search')">
                 <x-slot:actions>
                     {{-- ⭐ দেওয়ার অপেক্ষায় বকেয়া মজুরি (fe, ২১ অক্টোবর ২০২৬) --}}
@@ -63,4 +69,5 @@
 
     <div class="mt-4">{{ $runs->links() }}</div>
     <x-ui.list-totals :rows="$runs" :grand="$grand ?? []" :columns="$columns" />
+    </x-ui.filter-layout>
 </x-layouts.app>

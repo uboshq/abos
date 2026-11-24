@@ -15,6 +15,11 @@
         ['key' => 'actions', 'label' => '—', 'width' => '10rem',
          'render' => fn ($h) => view('hr::holiday.partials.actions', ['holiday' => $h])],
     ];
+    // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::text('year', __('hr::field.year')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -43,18 +48,22 @@
     {{-- ⭐ ব্যাখ্যার লাইন নয় — লেখাটা নামের পাশে ⓘ-এ (মালিক, ১৯ নভেম্বর ২০২৬ রাত: "no description line on any screen");
          `data-page-subtitle` লাইনটা কেবল "ABOS" আর "Dynamic"-এ লুকায়, বাকি রূপে আগের মতো ([[ui/page-info]]) --}}
     <p data-page-subtitle class="mb-4 text-sm text-(--color-ink-muted)">{{ __('hr::message.holiday_note', ['weekly' => $weeklyOff]) }}</p>
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div class="grid gap-4 lg:grid-cols-[1fr_20rem]">
         <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-            <form method="GET" class="contents">
-                <x-ui.toolbar :title="__('hr::menu.holidays').' · '.$year" :columns="$columns" :search="false"
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :title="__('hr::menu.holidays').' · '.$year" :columns="$columns" :search="$abosHead" :search-placeholder="__('hr::field.holiday_name')" :facets="$facetPanel"
+                              :sort="$abosHead ? ['oldest' => __('core.notify.sort.oldest'), 'newest' => __('core.notify.sort.newest')] : []"
                               :info="__('hr::message.holiday_note', ['weekly' => $weeklyOff])">
+                    @unless ($abosHead)
                     <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
                         {{ __('hr::field.year') }}
                         <input type="number" name="year" value="{{ $year }}" min="2000" max="2100"
                                class="h-(--spacing-field) w-24 rounded-(--radius-field) border border-(--color-border)
                                       bg-(--color-surface-card) px-2">
                     </label>
+                    @endunless
                 </x-ui.toolbar>
             </form>
 
@@ -139,4 +148,5 @@
             </section>
         @endcan
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

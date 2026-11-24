@@ -79,7 +79,11 @@ class PayrollController extends Controller implements HasMiddleware
                     fn ($w) => $w->where('document_no', 'like', "%{$term}%")
                         ->orWhere('narration', 'like', "%{$term}%"),
                 ))
-                ->orderByDesc('month')->orderByDesc('id');
+                ->when(preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) (is_string($request->query('month')) ? $request->query('month') : '')) === 1,
+                    fn ($q) => $q->whereDate('month', '>=', $request->query('month').'-01')
+                        ->whereDate('month', '<=', \Illuminate\Support\Carbon::parse($request->query('month').'-01')->endOfMonth()->toDateString()))
+                ->orderBy('month', $request->query('sort') === 'oldest' ? 'asc' : 'desc')
+                ->orderBy('id', $request->query('sort') === 'oldest' ? 'asc' : 'desc');
 
         return view('hr::payroll.index', [
             'menu' => $this->menu->forUser($request->user()),

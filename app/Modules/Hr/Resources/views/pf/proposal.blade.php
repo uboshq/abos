@@ -32,7 +32,8 @@
     <x-slot:title>{{ __('hr::menu.pf_proposal') }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="__('hr::menu.pf_proposal')" />
+        <x-ui.page-header :title="__('hr::menu.pf_proposal')"
+            :info="__($enabled ? 'hr::message.pf_on_note' : 'hr::message.pf_off_note', ['employee' => $percent($employeePercent), 'employer' => $percent($employerPercent)]).' '.__('hr::message.pf_proposal_note')" />
     </x-slot:header>
 
     @if (session('saved'))
@@ -63,10 +64,10 @@
     @endif
 
     <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-        <p class="mb-2 text-sm">
+        <p data-page-subtitle class="mb-2 text-sm">
             {{ __($enabled ? 'hr::message.pf_on_note' : 'hr::message.pf_off_note', ['employee' => $percent($employeePercent), 'employer' => $percent($employerPercent)]) }}
         </p>
-        <p class="mb-3 text-2xs text-(--color-ink-muted)">{{ __('hr::message.pf_proposal_note') }}</p>
+        <p data-page-subtitle class="mb-3 text-2xs text-(--color-ink-muted)">{{ __('hr::message.pf_proposal_note') }}</p>
 
         <form method="GET" action="{{ route('hr.pf.proposal') }}" class="grid gap-3 sm:grid-cols-[14rem_1fr] sm:items-end">
             <x-ui.field name="on" type="date" :label="__('hr::field.effective_from')" :value="$on->toDateString()" required />

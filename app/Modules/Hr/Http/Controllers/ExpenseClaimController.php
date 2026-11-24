@@ -55,7 +55,8 @@ class ExpenseClaimController extends Controller implements HasMiddleware
                 fn ($q) => $q->where('requested_by', $request->user()->id),
             )
             ->when(in_array($request->query('status'), ExpenseClaim::STATES, true), fn ($q) => $q->where('status', $request->query('status')))
-            ->orderByDesc('id');
+            ->when(is_string($request->query('q')) && trim($request->query('q')) !== '', fn ($q) => $q->where('document_no', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%'))
+            ->orderBy('id', $request->query('sort') === 'oldest' ? 'asc' : 'desc');
 
         $employee = $this->claims->employeeOf($request->user());
 
