@@ -100,6 +100,9 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
     private const CHECKS = [
+        // ⓘ শ্রম আইনের দুই পাঠক (২৫ নভেম্বর ২০২৬)
+        'app/Modules/Hr/Services/HeldWages.php' => 'বাতিল ভাউচার খাতায় কখনো বসেছিল কি না — একটা ভাউচারের নিজের সারি, গোটা কোম্পানি; আধা দেখলে মজুরি দুইবার ছাড়া হত',
+        'app/Modules/Hr/Services/WppfService.php' => 'তহবিলের ভিত্তির মুনাফা — আইনে গোটা কোম্পানির; শাখায় সীমিত মানুষ পর্দাটাই পান না (seesTheWholeCompany)',
         'app/Modules/Accounts/Services/NoteService.php' => 'নোট বাতিলের আগে মেলায়: নোটের (source_type, source_id) ধরে খাতায় সারি আছে কি না ↔ নোটের অবস্থা "পোস্ট" — দুটোই হলে উল্টায়; কেবল মাল ফেরতের নোটে নিজের সারি থাকে না। গোটা কোম্পানি: শাখা ছাঁকলে দাখিলা না পেয়ে না উল্টেই বাতিল হত',
         'app/Modules/Accounts/Services/TradeVoucherService.php' => 'ভাউচার উল্টানোর আগে মেলায়: ভাউচারের (source_type, source_id) ধরে খাতায় সারি আছে কি না ↔ ভাউচারের অবস্থা "পোস্ট" — দুটোই হলে উল্টায়। গোটা কোম্পানি, একই কারণ',
         'app/Modules/Accounts/Services/NetWorthStatement.php' => 'মালিকের নিট সম্পদ — প্রতিটা কোম্পানির গোটা খাতা, সব শাখা মিলিয়ে; মালিকের প্রশ্ন "সব বিক্রি-আদায় করে সব দেনা শোধ করলে কী থাকে", শাখার ভাগ নয় (ড্যা-৮, ২৫ অক্টোবর ২০২৬)',

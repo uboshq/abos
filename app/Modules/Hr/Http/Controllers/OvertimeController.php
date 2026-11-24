@@ -35,6 +35,7 @@ class OvertimeController extends Controller implements HasMiddleware
     {
         return [
             // ⓘ তালিকার দরজা নীতিতে ([[OvertimeSheetPolicy::viewAny()]]) — হাজিরার চাবি, বা নিজের দল থাকা ব্যবস্থাপক
+            new Middleware('can:viewAny,'.OvertimeSheet::class, only: ['index']),
             new Middleware('can:hr.attendance.manage', only: ['store']),
         ];
     }
@@ -45,8 +46,6 @@ class OvertimeController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
-        $this->authorize('viewAny', OvertimeSheet::class);
-
         $month = $this->monthFrom((string) $request->query('month'));
         $user = $request->user();
         $team = app(LeaveSigner::class)->teamOf($user);
@@ -61,7 +60,7 @@ class OvertimeController extends Controller implements HasMiddleware
             ->with(['employee', 'signer'])
             ->whereDate('hr_overtime_sheets.month', $month->toDateString())
             ->orderBy('hr_overtime_sheets.id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('hr::overtime.index', [

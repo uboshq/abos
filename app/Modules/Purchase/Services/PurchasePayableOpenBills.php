@@ -66,4 +66,9 @@ final class PurchasePayableOpenBills implements PayableOpenBills
 
         return $open;
     }
+
+    public function partyType(): string
+    {
+        return 'supplier';
+    }
 }

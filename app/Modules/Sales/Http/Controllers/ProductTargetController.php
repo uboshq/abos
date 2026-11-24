@@ -36,12 +36,15 @@ class ProductTargetController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $month = $this->targets->readMonth($request->query('month'));
+        $month = $this->targets->readMonth(is_string($request->query('month')) ? $request->query('month') : null);
+        $q = is_string($request->query('q')) ? trim($request->query('q')) : '';
 
         return view('sales::product-target.index', [
             'menu' => $this->menu->forUser($request->user()),
             'month' => $month,
-            'rows' => $this->targets->board($month),
+            'q' => $q,
+            'rows' => $this->targets->board($month, $q),
+            'sum' => $this->targets->monthTotals($month),
         ]);
     }
 
@@ -59,7 +62,8 @@ class ProductTargetController extends Controller implements HasMiddleware
         $this->targets->setForMonth($month, $data['target'] ?? []);
 
         return redirect()
-            ->route('sales.product_target.index', ['month' => $month->format('Y-m')])
+            ->route('sales.product_target.index', array_filter(['month' => $month->format('Y-m'),
+                'q' => is_string($request->input('q')) ? $request->input('q') : null, 'page' => $request->integer('page') > 1 ? $request->integer('page') : null]))
             ->with('saved', __('sales::product_target.saved'));
     }
 }

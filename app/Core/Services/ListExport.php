@@ -309,6 +309,11 @@ class ListExport
      */
     public function picked(): ?array
     {
+        // ⓘ no HTTP request (a command, a queued export, a unit claim) — nothing was picked, every row goes as before
+        if (! app()->bound('request')) {
+            return null;
+        }
+
         $request = request();
 
         if (! $request->boolean('picked') || ! is_array($ids = $request->query('ids'))) {

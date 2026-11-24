@@ -96,8 +96,23 @@ final class AttendanceService
      */
     public function markDay(string $date, array $rows): int
     {
+        return $this->markSheet($date, $rows)['marked'];
+    }
+
+    /**
+     * দিনের খাতার সারিগুলো — কেবল যা মানুষটা বদলেছেন (২৫ নভেম্বর ২০২৬, মালিকের অনুমোদন)।
+     *
+     * ⓘ সারির সাথে `was` এলে: পাঠানো ঘর `was`-এর সমান → বদলাননি, ছোঁয়া হয় না; বদলেছেন, আর এর মধ্যে অন্য কেউও বদলেছেন → লেখা হয় না,
+     * নাম ফেরে। ⛔ আগে পাতার প্রতিটা সারি আবার লেখা হত — ফোনে বা ছুটিতে এর মধ্যে বসা হাজিরা পুরনো মানে চাপা পড়ত। `was` না এলে আগের নিয়ম।
+     *
+     * @param  array<int|string, array<string, mixed>>  $rows
+     * @return array{marked: int, conflicts: list<array{employee_id: int, name: string, status: ?string, remarks: ?string}>}
+     */
+    public function markSheet(string $date, array $rows): array
+    {
         return DB::transaction(function () use ($date, $rows) {
             $marked = 0;
+            $conflicts = [];
 
             $employees = Employee::query()->whereKey(array_keys($rows))->get()->keyBy('id');
 
@@ -112,11 +127,27 @@ final class AttendanceService
                     continue;
                 }
 
+                if (is_string($row['was'] ?? null) && $row['was'] !== '') {
+                    if (hash_equals($row['was'], Attendance::stampOf((string) $row['status'], (bool) ($row['is_late'] ?? false), $row['remarks'] ?? null))) {
+                        continue;
+                    }
+
+                    // ⓘ [[mark()]]-এর একই তালা, আগে — মেলানো আর লেখার মাঝে কেউ ঢুকতে পারে না
+                    Employee::query()->withoutGlobalScopes()->whereKey($employee->id)->lockForUpdate()->first();
+                    $now = Attendance::query()->where('employee_id', $employee->id)->whereDate('work_date', Carbon::parse($date)->toDateString())->lockForUpdate()->first();
+
+                    if (! hash_equals($row['was'], Attendance::stampOfRow($now))) {
+                        $conflicts[] = ['employee_id' => (int) $employee->id, 'name' => $employee->name(), 'status' => $now?->status, 'remarks' => $now?->remarks];
+
+                        continue;
+                    }
+                }
+
                 $this->mark($employee, $date, $row['status'], $row);
                 $marked++;
             }
 
-            return $marked;
+            return ['marked' => $marked, 'conflicts' => $conflicts];
         });
     }
 

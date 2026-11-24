@@ -157,7 +157,8 @@ final class AnOldPayrollRequestHidesItsNetInTheAuditTest extends TestCase
         $user->companies()->attach($this->company->id, ['is_active' => true]);
 
         CompanyContext::forCompany($this->company->id, function () use ($user, $more) {
-            foreach (['governance.audit.view', 'governance.export.view', ...$more] as $key) {
+            // ⓘ তালিকা নামানোর চাবি আলাদা (১৭ নভেম্বর ২০২৬, [[ExportListing]]) — এই দাবি ফাইলের ভিতরের অঙ্ক মাপে, দরজা নয়
+            foreach (['governance.audit.view', 'governance.export.view', 'system_admin.list.export', ...$more] as $key) {
                 $user->givePermissionTo(Permission::findOrCreate($key, 'web'));
             }
         });

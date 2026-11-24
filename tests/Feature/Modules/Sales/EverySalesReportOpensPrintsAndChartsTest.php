@@ -121,7 +121,7 @@ final class EverySalesReportOpensPrintsAndChartsTest extends TestCase
         $this->assertSame('pair', $chart['type']);
         $this->assertCount(min(12, count($result->rows)), $chart['labels']);
         $this->assertSame(
-            array_map(fn (array $r) => (float) $r['net_sales'], array_slice($result->rows, 0, 12)),
+            array_map(fn (array $r) => bccomp((string) $r['net_sales'], '0', 4) === 0 ? '0' : bcadd((string) $r['net_sales'], '0', 4), array_slice($result->rows, 0, 12)),
             $chart['series'][0]['values'], '⛔ গ্রাফের নিট বিক্রি টেবিলের সারির অঙ্ক নয়।');
 
         // ⭐ প্যানেলের বাছাই — টাকার মাধ্যম, ঘোষণা থেকে
@@ -135,6 +135,43 @@ final class EverySalesReportOpensPrintsAndChartsTest extends TestCase
             ['from' => '2026-11-01', 'to' => '2026-11-03']);
         $this->assertSame('900', $summary['value']);
         $this->assertSame(['500', '300', '100', '300.00'], array_column($summary['lines'], 'value'), '⛔ সারাংশের মাধ্যম বা দিনের গড় ভুল।');
+    }
+
+    public function test_a_bars_chart_of_zeros_or_exponent_numbers_still_draws(): void
+    {
+        $like = app(ReportEngine::class)->run(AreaSalesReports::BRANCH, ['from' => now()->toDateString(), 'to' => now()->toDateString()], byBranch: true);
+        $definition = new \App\Core\Engines\Report\ReportDefinition(
+            key: 'test.zero_bars', title: 'sales::money_in.menu', permission: 'sales.report', query: $like->report->query,
+            columns: [['key' => 'name', 'label' => 'sales::money_in.branch'],
+                ['key' => 'v', 'label' => 'sales::money_in.total', 'type' => \App\Core\Engines\Report\ReportColumn::MONEY]],
+            chart: ['type' => 'bars', 'label' => 'name', 'series' => ['v'], 'title' => 'sales::money_in.total'],
+        );
+
+        foreach ([['0.0000', '0.0000'], ['0', '0'], ['0.00001', '0'], ['125.5000', '0.0000']] as $values) {
+            $chart = ReportChart::for($this->resultWith($like, $definition, $values), $definition->columns);
+            $html = \Illuminate\Support\Facades\Blade::render('<x-dashboard.board-chart :chart="$chart" />', ['chart' => $chart]);
+            $this->assertStringContainsString('hb-bars', $html, '⛔ সব বার শূন্য হলে গ্রাফ ভাঙে।');
+        }
+
+        // ⓘ সূচক-লেখা সংখ্যা (শতাংশের ঘর float হতে পারে) — bcmath ছোড়ে না
+        $value = (new \ReflectionMethod(ReportChart::class, 'value'))->invoke(null, 1.0E-5);
+        $this->assertSame('0', $value);
+    }
+
+    /** আসল ফলের বাকি ঘর রেখে কেবল সংজ্ঞা আর সারি বদলানো — গ্রাফ এ দুটোই পড়ে */
+    private function resultWith(\App\Core\Engines\Report\ReportResult $like, \App\Core\Engines\Report\ReportDefinition $definition, array $values): \App\Core\Engines\Report\ReportResult
+    {
+        $args = [];
+
+        foreach ((new \ReflectionMethod($like, '__construct'))->getParameters() as $p) {
+            $args[$p->getName()] = match ($p->getName()) {
+                'report' => $definition,
+                'rows' => array_map(fn ($v) => ['name' => 'x', 'v' => $v], $values),
+                default => $like->{$p->getName()},
+            };
+        }
+
+        return new \App\Core\Engines\Report\ReportResult(...$args);
     }
 
     /** @return list<string> */

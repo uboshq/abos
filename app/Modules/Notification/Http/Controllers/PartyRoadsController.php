@@ -60,7 +60,8 @@ class PartyRoadsController extends Controller
             'hasSecret' => $config?->secret('app_secret') !== null,
             'verifyToken' => $config?->secret('verify_token'),
             'webhookUrl' => $companyPublicId === '' ? null : route('api.notification.whatsapp_webhook', $companyPublicId),
-            'phones' => $tab === 'roads' ? SmsGatewayPhone::query()->orderByDesc('is_active')->orderBy('name')->orderBy('id')->paginate(\App\Core\Support\PerPage::of())->withQueryString() : collect(),
+            'phones' => $tab === 'roads' ? SmsGatewayPhone::query()->orderByDesc('is_active')->orderBy('name')->orderBy('id')
+                ->paginate(\App\Core\Support\PerPage::of())->withQueryString() : collect(),
             'cost' => $tab === 'cost' ? $this->cost() : null,
         ]);
     }

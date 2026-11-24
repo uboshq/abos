@@ -140,6 +140,9 @@ final class ASalaryChangeNeedsASecondHandTest extends TestCase
             'amounts' => [$this->basic->id => self::RAISED_BASIC],
         ])->assertRedirect(route('hr.employee.salary', $this->employee))->assertSessionHasNoErrors();
 
+        $this->assertSame(['2026-01-15' => self::PAID_BASIC], $this->rowsByDate(), '⛔ অনুমোদনের আগেই বদল বসল।');
+        $this->signTheSalaryChange($this->salaries()->waitingChange($this->employee));
+
         $this->assertSame(['2026-01-15' => self::PAID_BASIC, '2026-09-01' => self::RAISED_BASIC], $this->rowsByDate(),
             '⛔ ভিন্ন তারিখের বদলে পুরনো সারি হারাল, বা নতুনটা বসল না।');
     }

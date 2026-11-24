@@ -45,9 +45,7 @@
             // ⓘ অর্থবছরে "সব" নেই (আগের ঘরেও ছিল না) — চলতিটা শুরুতে বাছা
             \App\Core\ListFilter\Facets::one('year_id', __('accounts::fs.ytb.year'), $years->mapWithKeys(fn ($fy) => [(string) $fy->id => __('accounts::fs.ytb.year_range', [
                 'name' => $fy->name, 'from' => $day((string) $fy->starts_on), 'to' => $day((string) $fy->ends_on)])])->all(), (string) $y['year']->id),
-            $branches->count() > 1
-                ? \App\Core\ListFilter\Facets::pick('branch_id', __('core.company.branch'), $branches->mapWithKeys(fn ($b) => [(string) $b->id => $b->name()])->all(), __('accounts::field.all_branches'))->look('blue', '🏬')
-                : null,
+            \App\Core\ListFilter\Facets::branch($branches, __('accounts::field.all_branches')),
         ]);
     @endphp
     <x-ui.filter-layout :filters="$panel" form="list-form" :report="true">

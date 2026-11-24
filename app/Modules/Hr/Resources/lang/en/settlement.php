@@ -65,4 +65,7 @@ return [
     'not_pending' => 'This settlement is no longer awaiting approval.',
     'another_hand' => 'Whoever prepared the settlement cannot approve it.',
     'owner_only' => 'Only the owner approves a final settlement.',
+    'sort_recent' => 'Newest first',
+    'sort_oldest' => 'Oldest first',
+    'sort_largest' => 'Largest first',
 ];

@@ -51,6 +51,7 @@ use Tests\TestCase;
 final class APayrollRunNeedsASecondHandEvenWithApprovalsOffTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SeesTheOwnersOwnMark;
     use SignsMoneyOff;
     use SignsTheSecondHand;
 
@@ -188,23 +189,24 @@ final class APayrollRunNeedsASecondHandEvenWithApprovalsOffTest extends TestCase
      * ⛔ যিনি চাইলেন তিনি কখনো দ্বিতীয় সই নন — মালিকও নন (fe, ২১ অক্টোবর ২০২৬; [[ApprovalEngine::twoHands()]])। ⓘ মালিক অন্যের চাওয়ায়
      * দ্বিতীয় সইকারী হতে পারেন। ⛔ `owner_self_signed` এই তিন কাজে আর বসে না।
      */
-    public function test_the_owner_cannot_sign_his_own_run_but_may_sign_a_clerks(): void
+    public function test_the_owner_signs_his_own_run_with_the_mark_and_a_clerks_without_it(): void
     {
         $run = app(PayrollService::class)->build('2026-08-01');
         $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
         $own = $this->pendingFor($run);
         $this->assertSame((int) $this->owner->id, (int) $own->requested_by);
 
+        // ⭐ মালিক, ২০ নভেম্বর ২০২৬ — তাঁর উপরে কেউ নেই; নিজের রানে নিজে, দাগ আর রিপোর্টসহ
         $engine = app(ApprovalEngine::class);
-        $this->assertFalse($engine->canDecide($own->fresh(), $this->owner->fresh()), '⛔ মালিক নিজের রানে নিজেই দ্বিতীয় সই।');
-        $this->assertFalse($engine->pendingQueryFor($this->owner->fresh())->whereKey($own->id)->exists(), '⛔ মালিকের নিজের রান তাঁর ইনবক্সে।');
-        $this->as($this->owner)->post(route('approval.inbox.approve', $own->id));
-        $this->assertSame(Approval::PENDING, (string) $own->fresh()->status, '⛔ মালিকের নিজের সই পড়ল।');
-        $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
-        $this->assertSame(DocumentStatus::DRAFT, (string) $run->fresh()->status);
+        $this->assertTrue($engine->canDecide($own->fresh(), $this->owner->fresh()), '⛔ মালিক নিজের রানে অনুমোদন দিতে পারলেন না।');
+        $this->assertTrue($engine->pendingQueryFor($this->owner->fresh())->whereKey($own->id)->exists(), '⛔ মালিকের নিজের রান তাঁর ইনবক্সে নেই।');
+        $this->as($this->owner)->post(route('approval.inbox.approve', $own->id))->assertRedirect();
+        $this->assertOwnerSelfMarked($own);
+        $this->assertSame(DocumentStatus::CONFIRMED, (string) app(PayrollService::class)->confirm($run->fresh())->status);
+        $this->as($this->owner)->get(route('hr.payroll.show', $run))->assertOk()->assertSee('data-owner-self-mark', false);
 
-        // ⓘ মালিক ফিরিয়ে নিলেন; কেরানি চাইলেন — মালিক এবার দ্বিতীয় সই
-        $engine->cancel($own->fresh(), $this->owner->fresh());
+        // ⓘ কেরানি চাইলেন — মালিকের অনুমোদনে দাগ নেই
+        $run = app(PayrollService::class)->build('2026-09-01');
         $clerk = $this->payrollClerk();
         $this->as($clerk);
         $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
@@ -213,8 +215,7 @@ final class APayrollRunNeedsASecondHandEvenWithApprovalsOffTest extends TestCase
 
         $this->as($this->owner)->post(route('approval.inbox.approve', $asked->id))->assertRedirect();
         $this->assertSame(Approval::APPROVED, (string) $asked->fresh()->status, '⛔ অন্যের চাওয়ায় মালিক দ্বিতীয় সই দিতে পারলেন না।');
-        $this->assertFalse(AuditTrail::query()->where('action', SalaryStructureService::OWNER_SELF_SIGNED)->exists(),
-            '⛔ বেতনের তিন কাজে "নিজে-সই" চিহ্ন বসল — পথটাই থাকার কথা নয়।');
+        $this->assertNotOwnerSelfMarked($asked);
         $this->assertSame(DocumentStatus::CONFIRMED, (string) app(PayrollService::class)->confirm($run->fresh())->status);
     }
 
@@ -270,7 +271,9 @@ final class APayrollRunNeedsASecondHandEvenWithApprovalsOffTest extends TestCase
         app(\App\Core\Engines\Approval\DelegationService::class)->grant($this->owner->fresh(), $friend, '2026-09-01', '2026-09-30');
 
         $this->assertFalse(app(ApprovalEngine::class)->canDecide($own->fresh(), $friend->fresh()),
-            '⛔ মালিকের ভারপ্রাপ্ত মালিকের নিজের রানে সই দিতে পারেন — দুই হাত আসলে একজনের।');
+            '⛔ মালিকের ভারপ্রাপ্ত মালিকের নিজের রানে সই দিতে পারেন — দাগ ছাড়া।');
+        $this->assertFalse(app(ApprovalEngine::class)->pendingQueryFor($friend->fresh())->whereKey($own->id)->exists(),
+            '⛔ সই দিতে পারেন না, তবু তাঁর ইনবক্সে।');
     }
 
     /** ⛔ একজন দুইবার সই দিয়ে "দুইজন" হন না — দুইজনের সই লাগে এমন ধাপে একই মানুষের দ্বিতীয় চাপ ফেরে */
@@ -363,26 +366,24 @@ final class APayrollRunNeedsASecondHandEvenWithApprovalsOffTest extends TestCase
         $this->assertSame((int) $maker->id, (int) $row->created_by, '⛔ সারিটা যিনি চেয়েছিলেন তাঁর নামে নয়।');
     }
 
-    public function test_the_owner_cannot_sign_his_own_structure_change_but_may_sign_a_clerks(): void
+    public function test_the_owner_signs_his_own_structure_change_with_the_mark_and_a_clerks_without_it(): void
     {
         $approval = app(SalaryStructureService::class)->change($this->employee, '2026-09-01', [$this->basic->id => self::RAISED]);
         $this->assertInstanceOf(Approval::class, $approval, '⛔ মালিকের বদলও সাথে সাথে বসল — দ্বিতীয় সই চাওয়াই হলো না।');
 
-        $this->assertFalse(app(ApprovalEngine::class)->canDecide($approval->fresh(), $this->owner->fresh()), '⛔ মালিক নিজের বদলে নিজেই সই।');
-        $this->as($this->owner)->post(route('approval.inbox.approve', $approval->id));
-        $this->assertFalse($this->landed(), '⛔ মালিকের নিজের সইয়ে বদলটা বসল।');
+        $this->as($this->owner)->post(route('approval.inbox.approve', $approval->id))->assertRedirect();
+        $this->assertTrue($this->landed(), '⛔ মালিক নিজের বদলে অনুমোদন দিতে পারলেন না।');
+        $this->assertOwnerSelfMarked($approval);
 
-        app(ApprovalEngine::class)->cancel($approval->fresh(), $this->owner->fresh());
         $clerk = $this->salaryClerk();
         $this->as($clerk)->post(route('hr.employee.salary.store', $this->employee), [
-            'effective_from' => '2026-09-01', 'amounts' => [$this->basic->id => self::RAISED],
+            'effective_from' => '2026-10-01', 'amounts' => [$this->basic->id => '46789.50'],
         ])->assertSessionHasNoErrors();
         $asked = app(SalaryStructureService::class)->waitingChange($this->employee);
 
         $this->as($this->owner)->post(route('approval.inbox.approve', $asked->id))->assertRedirect();
-        $this->assertTrue($this->landed(), '⛔ কেরানির চাওয়ায় মালিক দ্বিতীয় সই দিতে পারলেন না।');
-        $this->assertFalse(AuditTrail::query()->forRecord(Employee::class, (int) $this->employee->id)
-            ->where('action', SalaryStructureService::OWNER_SELF_SIGNED)->exists(), '⛔ "নিজে-সই" চিহ্ন বসল।');
+        $this->assertSame(Approval::APPROVED, (string) $asked->fresh()->status, '⛔ কেরানির চাওয়ায় মালিক দ্বিতীয় সই দিতে পারলেন না।');
+        $this->assertFalse(app(\App\Core\Engines\Approval\OwnerSelfApproval::class)->ofApproval($asked->fresh()), '⛔ কেরানির চাওয়ায় মালিকের দাগ।');
     }
 
     // ── সই দেওয়ার কেউ নেই ──────────────────────────────────────────────

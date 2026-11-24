@@ -101,7 +101,9 @@ final class TheInboxReadsAloudAndAnswersTheKeysTest extends TestCase
                     "⛔ দফা ২০: {$where}-এ \"{$named->item(0)?->textContent}\" পপ-আপে ফোকাসের পাহারা নেই — খুললে ফোকাস পেছনে থাকে।");
             }
 
-            foreach (['//*[@data-ask="reject"]', '//*[@data-ask="fix"]', '//*[@data-signing-sheet]//button[@data-opens-dialog]'] as $opener) {
+            // ⓘ the board's "দেখুন" stands among the decision's buttons (owner's sample, 24 Nov 2026); on cards it is on the sheet itself
+            foreach (['//*[@data-ask="reject"]', '//*[@data-ask="fix"]',
+                '//*[@data-signing-sheet]//button[@data-opens-dialog] | //*[contains(concat(" ", @class, " "), " inbox-board-actions ")]//button[@data-opens-dialog]'] as $opener) {
                 $button = $page->query($opener)->item(0);
                 $this->assertInstanceOf(DOMElement::class, $button, "প্রস্তুতিটাই ভুল — {$where}-এ {$opener} নেই।");
                 $this->assertSame('dialog', $button->getAttribute('aria-haspopup'),

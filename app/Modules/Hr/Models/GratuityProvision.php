@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Models\Branch;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -21,6 +22,7 @@ class GratuityProvision extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    use SharedAcrossCompaniesWhenAsked;
 
     protected $table = 'hr_gratuity_provisions';
 

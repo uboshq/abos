@@ -104,6 +104,8 @@ final class TheSalesAnalysisReportsAgreeWithEachOtherTest extends TestCase
     public function test_a_first_bill_makes_a_new_customer_and_an_old_last_bill_makes_a_sleeping_then_a_lost_one(): void
     {
         $fresh = (int) Customer::query()->create(['code' => 'AN-NEW', 'name_en' => 'AN New Dealer', 'is_active' => true])->id;
+        // ⓘ নতুন ডিলারের সীমা শূন্য — বাকিতে বিক্রি ফিরত; এখানে প্রশ্ন সীমার নয়
+        Customer::query()->whereKey($fresh)->update(['credit_limit' => '1000000']);
         $this->customer = $fresh;
         $invoice = $this->sell('3');
 

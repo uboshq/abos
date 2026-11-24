@@ -633,7 +633,7 @@
     @if ($nothing)
         @php
             $why = match (true) {
-                $menu !== [] => __('core.dashboard.nothing_to_show'),
+                $hasWork ?? $menu !== [] => __('core.dashboard.nothing_to_show'),
                 ($roleLivesIn ?? []) !== [] => __('core.dashboard.role_lives_elsewhere', ['companies' => implode(', ', $roleLivesIn)]),
                 default => __('core.dashboard.no_module_at_all'),
             };

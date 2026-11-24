@@ -286,7 +286,8 @@ final class AnEmptySearchBoxShowedNothingTest extends TestCase
             $create = substr($show, 0, -strlen('.show')).'.create';
             $route = Route::getRoutes()->getByName($create);
 
-            if ($route === null || $route->parameterNames() !== [] || $switches->refuses($create)) {
+            // ⓘ পুরনো ঠিকানা (কেবল পাঠায়) প্রস্তাব নয় ([[StartingPoints::creatable()]])
+            if ($route === null || $route->parameterNames() !== [] || $switches->refuses($create) || str_starts_with($route->getActionMethod(), 'legacy')) {
                 continue;
             }
 

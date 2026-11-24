@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 return [
+    'bank_unpaid_asked' => '"ব্যাংক দেয়নি" জানানো হলো',
+    'bank_unpaid_released' => '"ব্যাংক দেয়নি" অনুমোদিত, মজুরি ছাড়া হলো',
+    'bank_unpaid_refused' => '"ব্যাংক দেয়নি" প্রত্যাখ্যাত',
+    'bank_unpaid_withdrawn' => '"ব্যাংক দেয়নি" তুলে নেওয়া',
+    'maternity_delivery' => 'প্রসবের তারিখ অনুমোদিত',
+    'payment_change_withdrawn' => 'বেতনের পথ বদলের আবেদন তুলে নেওয়া',
     'created' => 'তৈরি',
     'updated' => 'সম্পাদনা',
     'edited' => 'বদলে অনুমোদন',
@@ -166,6 +172,11 @@ return [
     'salary_change_late' => 'বেতন-বদল অনুমোদিত হয়েও বসেনি',
     // ⭐ বেতন-বদলের সই · চাকরি ছাড়ায় লগইন বন্ধ (a6)
     'salary_change_signed' => 'বেতন-বদল অনুমোদিত',
+    'held_wage_released' => 'আটকানো মজুরি আবার দেওয়ার তালিকায়',
+    'pf_rate_applied' => 'ভবিষ্য তহবিলের হার বসল',
+    'pf_rate_asked' => 'ভবিষ্য তহবিলের হার চাওয়া হলো',
+    'pf_enrolled' => 'ভবিষ্য তহবিলে যোগ',
+    'pf_enrol_asked' => 'ভবিষ্য তহবিলে যোগ চাওয়া হলো',
     'leaver_login_closed' => 'চাকরি ছাড়ায় লগইন বন্ধ',
     // ⭐ বেতনের সইয়ের রোল — এক কোম্পানির Manager-দের হাতে ([[GrantPayrollSigners]], মালিক, ২১ অক্টোবর ২০২৬)
     'payroll_signer_made' => 'বেতনের অনুমোদনকারীর রোল তৈরি',

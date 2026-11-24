@@ -233,6 +233,7 @@ return [
     ],
 
     'settings_group' => [
+        'loss' => 'Expected loss rates (ECL)',
         'entry' => 'Entry rules',
         'model' => 'Copilot model',
         'risk' => 'Risk points',

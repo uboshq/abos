@@ -184,8 +184,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        <x-ui.pager :rows="$phones" />
-                        <x-ui.list-totals :rows="$phones" />
                     </section>
                 </div>
 
@@ -214,6 +212,9 @@
                     </div>
                 </section>
             </form>
+            {{-- ⓘ ফোনের টেবিল উপরের ফর্মের ভিতরে, আর পেজারের নিজের ফর্ম আছে — তাই ফর্মের বাইরে --}}
+            <x-ui.pager :rows="$phones" />
+            <x-ui.list-totals :rows="$phones" />
         @else
             {{-- ── খরচ — এই মাসে কোন পথে কয়টা; হার বসানো থাকলে Cloud-এর গোনা × হার ── --}}
             <section class="{{ $card }}" data-road-cost aria-labelledby="road-cost-h">

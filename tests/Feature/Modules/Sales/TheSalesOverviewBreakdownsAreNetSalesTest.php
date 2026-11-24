@@ -53,6 +53,8 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
 
     private User $owner;
 
+    private User $sr;
+
     private Warehouse $warehouse;
 
     protected function setUp(): void
@@ -76,6 +78,13 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
 
         Customer::acrossDealers()->whereIn('name_en', ['Rahim Traders'])->get()
             ->each(fn (Customer $c) => $c->forceFill(['credit_limit' => '100000000', 'credit_days' => 60])->save());
+        // ⓘ বিক্রি দায়িত্বের মানুষের, বিল যিনি কাটেন তাঁর নয় (২৩ নভেম্বর ২০২৬; [[SalesResponsibility]]) — দায়িত্ব এই SR-এর; বিল কাটেন মালিক, তাঁর ঘরে কিছু নয়
+        $rahimId = (int) Customer::acrossDealers()->where('name_en', 'Rahim Traders')->value('id');
+        $this->sr = User::factory()->create(['name' => 'Net Sales SR', 'current_company_id' => $this->company->id, 'is_active' => true]);
+        $this->sr->companies()->attach($this->company->id, ['is_active' => true]);
+        \App\Modules\Customer\Models\DealerBinding::query()->where('customer_id', $rahimId)->delete();
+        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $this->sr->id, 'customer_id' => $rahimId, 'starts_on' => now()->subYear()->toDateString()]);
+        app(\App\Modules\Sales\Services\SalesResponsibility::class)->forget();
     }
 
     public function test_every_breakdown_of_the_overview_grows_by_the_net_sale_only(): void
@@ -94,6 +103,7 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
         // ── প্রতিটা ভাগ ঠিক নিট বিক্রি বাড়ে, বিলের মোট (১,১০,০০০) নয় ──
         $this->assertSame('90000.0000', $d('branch'), '⛔ শাখার ঘর VAT বা ফেরত বাদ দেয় না।');
         $this->assertSame('90000.0000', $d('seller'), '⛔ বিক্রেতার ঘর VAT বা ফেরত বাদ দেয় না — ফেরত মূল বিলের মানুষের ঘর থেকে কমেনি।');
+        $this->assertSame($before['biller'], $after['biller'], '⛔ বিল যিনি কেটেছেন তাঁর ঘরও নড়ল — বিক্রি দায়িত্বের SR-এর।');
         $this->assertSame('90000.0000', $d('territory'), '⛔ এরিয়ার ঘরগুলো VAT বা ফেরত বাদ দেয় না।');
         $this->assertSame('90000.0000', $d('customer'), '⛔ সেরা ক্রেতার ঘর VAT বা ফেরত বাদ দেয় না।');
         $this->assertSame('90000.0000', $d('product'), '⛔ সেরা পণ্যের ঘর VAT বা ফেরত বাদ দেয় না।');
@@ -287,11 +297,14 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
                 'name_en' => "NS2A Buyer {$i}", 'name_bn' => "এনএস২এ ক্রেতা {$i}", 'credit_limit' => '0', 'credit_days' => 30,
             ]);
             $customer->forceFill(['credit_limit' => '100000000'])->save();
-            $paper = $this->billTo((int) $customer->id, '1', (string) (1000 + $i));
 
-            // ⓘ প্রতিটা বিল আলাদা মানুষের কাটা — বিক্রেতা ধরে তালিকা ২০ ছাড়ায়
+            // ⓘ প্রতিটা ক্রেতা আলাদা মানুষের দায়িত্বে — বিক্রেতা ধরে তালিকা ২০ ছাড়ায়
             $seller = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
-            DB::table('sal_invoices')->where('id', $paper->id)->update(['created_by' => $seller->id]);
+            $seller->companies()->attach($this->company->id, ['is_active' => true]);
+            \App\Modules\Customer\Models\DealerBinding::query()->where('customer_id', $customer->id)->delete();
+            \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $seller->id, 'customer_id' => $customer->id, 'starts_on' => now()->subYear()->toDateString()]);
+            app(\App\Modules\Sales\Services\SalesResponsibility::class)->forget();
+            $this->billTo((int) $customer->id, '1', (string) (1000 + $i));
         }
 
         $this->web($this->owner);
@@ -392,7 +405,8 @@ final class TheSalesOverviewBreakdownsAreNetSalesTest extends TestCase
             'net' => bcadd((string) collect($response->viewData('cards'))->firstWhere('key', 'sales.overview.net')['raw'], '0', 4),
             'branch' => bcadd((string) ($branch['amount'] ?? '0'), '0', 4),
             'branch_share' => $branch['share'] ?? null,
-            'seller' => bcadd((string) ($row($panels['by_seller'], 'id', (int) $this->owner->id)['amount'] ?? '0'), '0', 4),
+            'seller' => bcadd((string) ($row($panels['by_seller'], 'id', (int) $this->sr->id)['amount'] ?? '0'), '0', 4),
+            'biller' => bcadd((string) ($row($panels['by_seller'], 'id', (int) $this->owner->id)['amount'] ?? '0'), '0', 4),
             'territory' => $sum($panels['by_territory']['rows']),
             'customer' => bcadd((string) ($customer['amount'] ?? '0'), '0', 4),
             'customer_share' => $customer['share'] ?? null,

@@ -113,7 +113,9 @@ final class ThePayrollListShowsOnlyMyPeopleTest extends TestCase
             $page->assertDontSee(Money::format($amount));
         }
 
-        $csv = (string) $this->actingAs($viewer)->get(route('hr.payroll.index', ['export' => 'csv']))->getContent();
+        // ⓘ তালিকা নামানোর চাবি আলাদা ([[ExportListing]]) — দাবি ফাইলের অঙ্ক নিয়ে
+        $viewer->givePermissionTo(\Spatie\Permission\Models\Permission::findOrCreate('system_admin.list.export', 'web'));
+        $csv = (string) $this->actingAs($viewer->fresh())->get(route('hr.payroll.index', ['export' => 'csv']))->getContent();
         $this->assertStringContainsString('PAY-ALL', $csv);
         $this->assertStringNotContainsString('88,888', $csv, '⛔ তালিকার ফাইলে বেতনের অঙ্ক।');
         $this->assertStringNotContainsString('88888', $csv, '⛔ তালিকার ফাইলে বেতনের অঙ্ক।');

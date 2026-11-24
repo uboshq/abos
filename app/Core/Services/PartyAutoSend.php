@@ -366,7 +366,7 @@ final class PartyAutoSend
             return [];
         }
 
-        $branches = $this->parties->branchesOf(array_map(fn (int $id) => ['customer', $id], $ids));
+        $branches = $this->parties->branchesOf(array_map(fn (int $id) => [$this->billed(), $id], $ids));
         $sentToday = $this->partiesMessagedSince($today, PartyMessage::DUE_REMINDER, $ids, countFailed: true);
         $anyToday = $this->partiesMessagedSince($today, null, $ids, countFailed: false);
         $bills = app(PartyOpenBills::class);
@@ -378,7 +378,7 @@ final class PartyAutoSend
 
             if (! $rules[self::DUE_ON] || ! self::dayAllowed($now, $rules)
                 || isset($sentToday[$id]) || ($rules[self::ONCE_A_DAY] && isset($anyToday[$id]))
-                || ($rules[self::OPTOUT] && PartyMessageOptout::covers('customer', $id))) {
+                || ($rules[self::OPTOUT] && PartyMessageOptout::covers($this->billed(), $id))) {
                 continue;
             }
 
@@ -389,7 +389,7 @@ final class PartyAutoSend
                 continue;
             }
 
-            $open = array_values(array_filter($bills->openBills('customer', $id, self::BILLS), fn (array $b) => ($b['kind'] ?? 'invoice') === 'invoice'));
+            $open = array_values(array_filter($bills->openBills($this->billed(), $id, self::BILLS), fn (array $b) => ($b['kind'] ?? 'invoice') === 'invoice'));
 
             if ($open === []) {
                 continue;
@@ -397,13 +397,13 @@ final class PartyAutoSend
 
             $late = max(array_map(fn (array $b) => (int) $b['days_late'], $open));
             // ⓘ মোট বাকি = পক্ষের খাতা, হিসাব বিবরণী আর {due}-এর একই অঙ্ক ([[PartyMessages::dueOf()]]) — দ্বিতীয় কোনো সূত্র নয়
-            $due = $this->messages->dueOf('customer', $id) ?? '0';
+            $due = $this->messages->dueOf($this->billed(), $id) ?? '0';
 
             if ($late < $rules[self::DUE_AFTER] || bccomp($due, (string) $rules[self::DUE_MIN], 4) < 0) {
                 continue;
             }
 
-            $facts = $this->parties->paperFacts('customer', $id);
+            $facts = $this->parties->paperFacts($this->billed(), $id);
             $phone = PartyMessages::phone($facts['phone'] ?? null);
 
             if ($facts === null || $phone === null) {
@@ -413,7 +413,7 @@ final class PartyAutoSend
             $template = $this->templateFor(PartyMessage::DUE_REMINDER, $rules);
 
             $out[] = [
-                'party_type' => 'customer',
+                'party_type' => $this->billed(),
                 'party_id' => $id,
                 'branch_id' => $branch,
                 'name' => (string) $facts['name'],
@@ -757,16 +757,16 @@ final class PartyAutoSend
         }
 
         $id = (int) $first['customer_id'];
-        $open = array_values(array_filter(app(PartyOpenBills::class)->openBills('customer', $id, self::BILLS), fn (array $b) => ($b['kind'] ?? 'invoice') === 'invoice'));
+        $open = array_values(array_filter(app(PartyOpenBills::class)->openBills($this->billed(), $id, self::BILLS), fn (array $b) => ($b['kind'] ?? 'invoice') === 'invoice'));
 
         if ($open === []) {
             return null;
         }
 
         return [
-            'party_type' => 'customer',
+            'party_type' => $this->billed(),
             'party_id' => $id,
-            'due' => $this->messages->dueOf('customer', $id) ?? '0',
+            'due' => $this->messages->dueOf($this->billed(), $id) ?? '0',
             'oldest' => $open[0],
         ];
     }
@@ -780,7 +780,7 @@ final class PartyAutoSend
     private function partiesMessagedSince(Carbon $since, ?string $rule, array $ids, bool $countFailed): array
     {
         return PartyMessage::query()->withoutGlobalScope('user-branch')
-            ->where('party_type', 'customer')->whereIn('party_id', $ids ?: [0])
+            ->where('party_type', $this->billed())->whereIn('party_id', $ids ?: [0])
             ->where('created_at', '>=', $since)
             ->when($rule !== null, fn ($q) => $q->where('rule', $rule))
             ->when(! $countFailed, fn ($q) => $q->where(fn ($w) => $w->whereNull('status')->orWhere('status', '!=', PartyMessage::FAILED)))
@@ -831,5 +831,11 @@ final class PartyAutoSend
     private static function render(string $text, array $values): string
     {
         return PartyMessages::render($text, $values);
+    }
+
+    /** যে ধরনের পক্ষের খোলা বিল থাকে — বিলের মালিক মডিউল বলে ([[PartyOpenBills::partyType()]]), কোর জানে না */
+    private function billed(): string
+    {
+        return app(PartyOpenBills::class)->partyType();
     }
 }

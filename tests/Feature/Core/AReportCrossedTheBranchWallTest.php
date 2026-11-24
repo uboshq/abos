@@ -197,15 +197,16 @@ final class AReportCrossedTheBranchWallTest extends TestCase
      */
     public function test_the_branch_dropdown_offers_only_the_clerks_branches_until_the_limit_is_lifted(): void
     {
-        $option = fn (Branch $branch): string => '<option value="'.$branch->id.'"';
+        // ⓘ শাখার ঘর ডান পাশের ছাঁকনির প্যানেলে, গোল বোতামে (২৩ নভেম্বর ২০২৬, [[ReportPanel]]); নামার তালিকা হলেও একই মান
+        $offers = fn (string $html, Branch $branch): bool => preg_match('~(?:name="branch_id"\s+value|<option value)="'.$branch->id.'"~', $html) === 1;
 
-        $html = $this->web()->assertOk()->getContent();
-        $this->assertStringContainsString($option($this->mymensingh), $html, 'নিজের শাখাই তালিকায় নেই — দাবিটা কিছু মাপছে না।');
-        $this->assertStringNotContainsString($option($this->netrakona), $html, '⛔ নাগালের বাইরের শাখা তালিকায় দেখানো হয়েছে।');
+        $html = (string) $this->web()->assertOk()->getContent();
+        $this->assertTrue($offers($html, $this->mymensingh), 'নিজের শাখাই তালিকায় নেই — দাবিটা কিছু মাপছে না।');
+        $this->assertFalse($offers($html, $this->netrakona), '⛔ নাগালের বাইরের শাখা তালিকায় দেখানো হয়েছে।');
 
         $this->liftClerksLimit();
 
-        $this->assertStringContainsString($option($this->netrakona), $this->web()->assertOk()->getContent());
+        $this->assertTrue($offers((string) $this->web()->assertOk()->getContent(), $this->netrakona));
     }
 
     // ── ফোন ──────────────────────────────────────────────────────────────

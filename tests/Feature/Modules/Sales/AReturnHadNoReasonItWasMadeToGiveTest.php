@@ -406,7 +406,8 @@ final class AReturnHadNoReasonItWasMadeToGiveTest extends TestCase
         $this->actingAs($user->fresh())
             ->get($this->reportUrl())
             ->assertOk()
-            ->assertSee(__('sales::return_reason.any_customer'))
+            // ⓘ দোকানের ঘর এখন লিখে-খোঁজা (ডান পাশের প্যানেল, ২৩ নভেম্বর ২০২৬) — "সব গ্রাহক" লেখা নেই, ঘরটা আছে
+            ->assertSee('data-filter-section="customer_id"', false)
             ->assertSee($this->reason('QUALITY')->name());
 
         // অচেনা স্লাগ — দরজা আছে, রিপোর্ট নেই

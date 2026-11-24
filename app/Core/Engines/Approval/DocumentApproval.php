@@ -57,6 +57,9 @@ final class DocumentApproval
         array $fields = [],
         // ⭐ সই চাওয়ার মুহূর্তের তথ্য — শেষ সইয়ে কাজটা ঠিক এগুলো দিয়েই শেষ হয় (৪ অক্টোবর ২০২৬; [[AccountsSignature]])
         array $payload = [],
+        // ⓘ ডাকার মুহূর্তের ছাপ — মাঝে কাগজ বদলালে থামে, পুরনো অঙ্কে নতুন কাগজের অনুরোধ বসে না
+        ?string $since = null,
+        string $field = 'status',
     ): ?Approval {
         /*
          * ⭐ ঘরগুলো কাগজ থেকেই — ২৪ সেপ্টেম্বর ২০২৬।
@@ -117,6 +120,10 @@ final class DocumentApproval
          * খাটে কি না দেখতে, আর নতুন অনুরোধে বসাতে।
          */
         $hash = app(DocumentFingerprint::class)->of($document);
+
+        if ($since !== null && ! hash_equals($since, $hash)) {
+            throw PaperChangedWhileChecking::withMessages([$field => __('core.approval.changed_while_posting')]);
+        }
 
         if ($latest?->status === Approval::APPROVED) {
             /*
@@ -257,7 +264,7 @@ final class DocumentApproval
         // ⓘ যাচাইয়ের মুহূর্তের ছাপ — ফেরত যায়, তালার পরে আবার মেলানোর জন্য ([[assertUnchangedSince()]])
         $print = app(DocumentFingerprint::class)->of($document);
 
-        $stopping = $this->stopping($document, $module, $action, $amount, $reason, $fields, $payload);
+        $stopping = $this->stopping($document, $module, $action, $amount, $reason, $fields, $payload, $print, $field);
 
         if ($stopping === null) {
             return $print;

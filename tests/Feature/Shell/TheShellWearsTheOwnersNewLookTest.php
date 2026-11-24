@@ -123,6 +123,9 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
      */
     public function test_the_inbox_keeps_its_live_layout_and_only_gains_colour(): void
     {
+        // ⓘ তিন ABOS রূপে বোর্ড (মালিক, ২৩-২৪ নভেম্বর ২০২৬; [[TheInboxBoardIsOnlyInTheAbosLooksTest]]) — ৭ নভেম্বরের সাজানো বাকি রূপগুলোয়
+        $this->owner->forceFill(['ui' => 'tiles'])->save();
+        $this->owner = $this->owner->fresh();
         $html = (string) $this->actingAs($this->owner)->get(route('approval.inbox.index'))->assertOk()->getContent();
 
         $this->assertStringNotContainsString('data-inbox-board', $html, '⛔ ইনবক্সের মাথায় পাঁচ ঘর ফিরে এসেছে — মালিক লাইভের মতো চান (৮)।');

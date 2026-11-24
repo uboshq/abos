@@ -52,6 +52,8 @@
             @isset($header)
                 <div>{{ $header }}</div>
             @endisset
+            {{-- ⛔ a reason without a field reaches the list part too ([[ui.errors]]; AReasonWithNoFieldStillReachesThePageTest) --}}
+            <x-ui.errors :shown="$slot" />
             {{ $slot }}
         </main>
         <div data-list-foot-totals>@stack('list-totals')</div>

@@ -499,6 +499,12 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
                 if ($module->menu === []) {
                     continue;
                 }
+                // ⓘ `merged_only` মডিউল (বার্তা) ঘোষণাতেই কেবল আশ্রয়দাতার ভিতরে; যে রূপে মডিউল আলাদা থাকে সেখানে সে নেই — থাকলেই ভুল
+                if (($module->nav['merged_only'] ?? false) === true && Ui::keepsModulesApart($look)) {
+                    $this->assertNotContains($code, $covered, "রূপ {$look}: {$code} কেবল এক করা রূপের, অথচ এখানে মেনুতে");
+
+                    continue;
+                }
                 $this->assertContains($code, $covered, "রূপ {$look}: মডিউল {$code} মেনুর কোথাও নেই — না নিজে, না কারও ভিতরে");
             }
 
@@ -661,13 +667,15 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
             $this->user->forceFill(['ui' => $look])->save();
 
             /*
-             * পণ্যের তালিকা — কারণ এই পর্দাটার নিজের ছাঁকনি আছে।
+             * বিক্রয় আদেশের সইয়ের ট্যাব — কারণ এই পর্দাটার টুলবারে নিজের ছাঁকনি আছে ("কেবল আমার অপেক্ষায়"); বাকি তালিকার
+             * ছাঁকনি ডান পাশের প্যানেলে (২৩ নভেম্বর ২০২৬)।
              * ছাঁকনিহীন পর্দায় প্যানেলটাই আঁকা হয় না, তাই পরীক্ষাটা
              * সব রূপেই "বন্ধ" দেখত আর কিছুই প্রমাণ করত না।
              */
-            $body = (string) $this->get(route('inventory.product.index'))
+            $body = (string) $this->get(route('sales.order.index', ['tab' => 'awaiting']))
                 ->assertOk()
                 ->getContent();
+            $this->assertStringContainsString('data-only-mine', $body, 'প্রস্তুতিটাই ভুল — টুলবারে ছাঁকনির ঘর নেই, দাবি কিছু মাপছে না।');
 
             if (str_contains($body, 'filtersOpen: true')) {
                 $open[] = $look;

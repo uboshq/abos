@@ -105,13 +105,14 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
     /**
      * ⓘ মেনুর মডিউল আর তার ভিতরে বসা অতিথিরা — এক করা মডিউলে (হিসাব ও অর্থ, বিক্রয়, ক্রয়; মালিক, ২০ নভেম্বর ২০২৬) অর্থ বা গ্রাহকের
      * নিজের ঘর নেই, তাদের সারি আশ্রয়দাতার ঘরে, প্রতিটা সারি নিজের মডিউল বলে (`module`)।
+     * ⓘ ঘরের নাম নয়, সারির মডিউল: ফোনে নোটিফিকেশন বন্ধ আর বার্তা চালু হলে "যোগাযোগ" ঘরটা কেবল বার্তার সারি নিয়ে আসে ([[MeController::phoneRows()]]) — বন্ধ মডিউলের নিজের একটা সারিও নয়।
      *
      * @param  list<array<string, mixed>>  $menu
      * @return list<string>
      */
     private static function modulesIn(array $menu): array
     {
-        $codes = array_column($menu, 'code');
+        $codes = [];
 
         foreach ($menu as $module) {
             foreach ($module['groups'] ?? [] as $rows) {
@@ -138,7 +139,9 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
 
         $this->assertEqualsCanonicalizing(
             ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control',
-                'finance', 'documents', 'promotion', 'hr', 'assistant'],
+                'finance', 'documents', 'promotion', 'hr', 'assistant',
+                // ⭐ বার্তা ও কল — মালিক "ok", ২১ নভেম্বর ২০২৬ ([[PhoneModules::ON_BY_DEFAULT]])
+                'messaging'],
             $body['phoneModules'],
         );
 

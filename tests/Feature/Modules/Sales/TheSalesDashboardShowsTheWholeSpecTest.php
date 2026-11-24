@@ -38,7 +38,7 @@ use Tests\TestCase;
  *   ১. টার্গেট — অর্জন বাড়ে ঠিক বিলের লাইনের (দাম − ভ্যাট) যোগফল, বাকি কমে ততটাই; লক্ষ্য = বসানো টার্গেটের যোগ
  *   ২. মোট লাভ — বিক্রয় বাড়ে বিলের `total`, ব্যয় বাড়ে বিলের `cost_of_goods`, লাভ তাদের ফারাক;
  *      শতাংশ = এ মাসের পাকা বিলের (মোট − ব্যয়) ÷ ব্যয়
- *   ৩. বিক্রেতা আর এরিয়া — যিনি বিল কাটলেন তাঁর দণ্ড বাড়ে বিলের মোট; এরিয়ার দণ্ডের যোগফলও
+ *   ৩. বিক্রেতা আর এরিয়া — যাঁর দায়িত্বে দোকান তাঁর দণ্ড বাড়ে বিলের মোট; এরিয়ার দণ্ডের যোগফলও
  *   ৪. ফানেল — খসড়া DO কিছু বাড়ায় না, সই পেরোনো DO এক বাড়ায়; খসড়া আদায় কিছু নয়, পাকা আদায় এক
  *   ৫. ফেরতের কারণ — "ক্ষতিগ্রস্ত" দণ্ড বাড়ে ঠিক ফেরতের মোট
  *   ৬. সুইচ বন্ধে নতুন চার্টের একটাও নেই — একই মালিক, একই কাগজ, চালু করলে আবার আছে
@@ -48,6 +48,8 @@ final class TheSalesDashboardShowsTheWholeSpecTest extends TestCase
     use RefreshDatabase;
 
     private User $owner;
+
+    private User $sr;
 
     private Customer $customer;
 
@@ -63,11 +65,17 @@ final class TheSalesDashboardShowsTheWholeSpecTest extends TestCase
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
-        // ⓘ ডিলারের দেয়াল এই দাবির প্রশ্ন নয় — ডেমোতে চালু (⛔১৬, 758f2a11), তখন অর্জন যায় ডিলারে বাঁধা SR-এর কাছে; বন্ধে বিল লেখকের
+        // ⓘ ডিলারের দেয়াল এই দাবির প্রশ্ন নয় — ডেমোতে চালু (⛔১৬, 758f2a11)
         app(\App\Core\Services\SettingsService::class)->set('customer.dealer_scope_enabled', false);
         $this->actingAs($this->owner);
 
         $this->customer = Customer::query()->where('name_en', 'Rahim Traders')->firstOrFail();
+        // ⓘ বিক্রি দায়িত্বের মানুষের, বিল যিনি কাটেন তাঁর নয় (২৩ নভেম্বর ২০২৬; [[SalesResponsibility]]) — দায়িত্ব এই SR-এর; বিল কাটেন মালিক, তাঁর ঘরে কিছু নয়
+        $this->sr = User::factory()->create(['name' => 'Net Sales SR', 'current_company_id' => $company->id, 'is_active' => true]);
+        $this->sr->companies()->attach($company->id, ['is_active' => true]);
+        \App\Modules\Customer\Models\DealerBinding::query()->where('customer_id', $this->customer->id)->delete();
+        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $company->id, 'user_id' => $this->sr->id, 'customer_id' => $this->customer->id, 'starts_on' => now()->subYear()->toDateString()]);
+        app(\App\Modules\Sales\Services\SalesResponsibility::class)->forget();
         $this->warehouse = Warehouse::query()->where('is_default', true)->firstOrFail();
         $this->product = Product::query()->where('name_en', 'Cosmos Biscuit 40gm')->firstOrFail();
 
@@ -77,9 +85,9 @@ final class TheSalesDashboardShowsTheWholeSpecTest extends TestCase
     public function test_target_profit_seller_and_area_move_by_exactly_the_new_bill(): void
     {
         // ⓘ লক্ষ্যটা অনেক বড় — যাতে এই বিলে লক্ষ্য না ছাড়ায় আর "বাকি" শূন্যে আটকে না যায়
-        SalesTarget::query()->forMonth(Carbon::today())->where('user_id', $this->owner->id)->delete();
+        SalesTarget::query()->forMonth(Carbon::today())->where('user_id', $this->sr->id)->delete();
         SalesTarget::query()->create([
-            'user_id' => $this->owner->id,
+            'user_id' => $this->sr->id,
             'month' => Carbon::today()->startOfMonth()->toDateString(),
             'amount' => '900000000',
         ]);
@@ -143,10 +151,12 @@ final class TheSalesDashboardShowsTheWholeSpecTest extends TestCase
         $billNet = bcsub(bcsub((string) $invoice->total, (string) $invoice->tax, 4), (string) $invoice->freight_charge, 4);
         $sellerAfter = $this->parts('by_seller');
         $this->assertSame(
-            Money::round(bcadd($seller[$this->owner->name] ?? '0', $billNet, 4)),
-            Money::round($sellerAfter[$this->owner->name] ?? '0'),
-            '⛔ বিল কাটা মানুষের দণ্ড বিলের নিট বিক্রি ধরে বাড়েনি।',
+            Money::round(bcadd($seller[$this->sr->name] ?? '0', $billNet, 4)),
+            Money::round($sellerAfter[$this->sr->name] ?? '0'),
+            '⛔ দায়িত্বের SR-এর দণ্ড বিলের নিট বিক্রি ধরে বাড়েনি।',
         );
+        $this->assertSame(Money::round($seller[$this->owner->name] ?? '0'), Money::round($sellerAfter[$this->owner->name] ?? '0'),
+            '⛔ বিল যিনি কেটেছেন তাঁর দণ্ডও নড়ল — বিক্রি দায়িত্বের SR-এর।');
 
         $areaAfter = $this->parts('by_territory');
         $this->assertLessThan(8, count($areaAfter), 'ⓘ এরিয়া আটের কম ধরে নেওয়া — নাহলে যোগফলের দাবি কাটা সারি দেখত না।');

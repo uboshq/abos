@@ -15,8 +15,11 @@ use App\Modules\Hr\Listeners\FinishThePaymentChangeOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheBankUnpaidLineOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
 use App\Modules\Hr\Listeners\FinishTheFinalSettlementOnTheLastSignature;
+use App\Modules\Hr\Models\BankUnpaidLine;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
+use App\Modules\Hr\Models\FinalSettlement;
+use App\Modules\Hr\Models\HeldWagePayment;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
@@ -351,7 +354,7 @@ return [
         ],
         /*
          * ⛔ "ব্যাংক এই লাইন দেয়নি" — মজুরি আবার দেওয়ার তালিকায় ফেরে, তাই বেতনের রানের অবিকল নিয়ম: `hr.payroll.manage` + `hr.salary.view`
-         * থাকা আরেকজন, যিনি চাইলেন তিনি কখনো নন — মালিকও নন (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬; [[HeldWages::finishBankUnpaid()]])।
+         * থাকা আরেকজন, যিনি চাইলেন তিনি নন, মালিক ছাড়া (মালিক, ২০ নভেম্বর ২০২৬; fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬; [[HeldWages::finishBankUnpaid()]])।
          *
          * ⓘ কেন `moves_money`-তে নেই: সেই তালিকার প্রতিটা কাজে [[MoneyFlowDefaults]] প্রতিটা কোম্পানিতে একটা সইয়ের ছক বসায় — সব সই বন্ধ
          * রাখা কোম্পানিতেও (UB) ছক জন্মাত, মালিকের "সই বন্ধ মানে বন্ধ" নিয়ম ভাঙত। দুই হাত এমনিতেই নিশ্চিত — উপরের `second_hand`, ছক
@@ -835,6 +838,22 @@ return [
             'gross_total' => 'hr.salary.view',
             'deduction_total' => 'hr.salary.view',
             'net_total' => 'hr.salary.view',
+        ],
+        // ⛔ একজনের বেতনের টাকা — নিরীক্ষার সাধারণ পর্দায়ও চাবিতে (২৫ নভেম্বর ২০২৬)
+        HeldWagePayment::class => [
+            'amount' => 'hr.salary.view',
+        ],
+        BankUnpaidLine::class => [
+            'amount' => 'hr.salary.view',
+        ],
+        FinalSettlement::class => [
+            'wages' => 'hr.salary.view',
+            'leave_encashment' => 'hr.salary.view',
+            'gratuity' => 'hr.salary.view',
+            'provident_fund' => 'hr.salary.view',
+            'advance_recovered' => 'hr.salary.view',
+            'net' => 'hr.salary.view',
+            'details' => 'hr.salary.view',
         ],
     ],
 

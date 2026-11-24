@@ -41,6 +41,7 @@ final class TheSignerSeesThePrintedPaperTest extends TestCase
 
         $voucher = Voucher::query()->create([
             'company_id' => $company->id, 'branch_id' => $company->defaultBranch()?->id, 'type' => Voucher::RECEIPT,
+            'financial_year_id' => \App\Models\FinancialYear::forDate(now()->toDateString())?->id,
             'document_no' => 'RCV-LOOK-1', 'trx_date' => now()->toDateString(), 'amount' => '500', 'status' => 'draft', 'created_by' => $owner->id,
         ]);
         $approval = Approval::create(['company_id' => $company->id, 'approvable_type' => Voucher::class, 'approvable_id' => $voucher->id,

@@ -165,7 +165,7 @@ class HolidayController extends Controller implements HasMiddleware
             ->when($view !== null, fn ($q) => $q->where(fn ($w) => $w->whereNull('branch_id')->orWhereIn('branch_id', $view['ids'])))
             ->orderBy('holiday_date')
             ->orderBy('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('hr::holiday.index', [

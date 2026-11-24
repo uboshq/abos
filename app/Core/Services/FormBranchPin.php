@@ -107,6 +107,8 @@ final class FormBranchPin
         'sales.pos.return',                   // কাউন্টারে ফেরত — ফেরতের কাগজ আর টিল থেকে টাকা
         'sales.shift.open',                   // ক্যাশিয়ারের পালা খোলা — খোলার নগদ
         'inventory.stock.opening.cart',       // অনেক পণ্যের প্রারম্ভিক মজুদ — মজুদ আর খাতার সারি
+        'credit_control.loss.provision',      // সম্ভাব্য ক্ষতির ভাতার জাবেদা — ভাউচার
+        'credit_control.loss.write_off',      // অনাদায়ী পাওনা বাদ — ভাউচারের খসড়া
         'purchase.payment_schedule.propose',  // সরবরাহকারীর পরিশোধের প্রস্তাব — পরিশোধের খসড়া
         'accounts.voucher.bulk_post',         // বাছাই করা খসড়া ভাউচার একসাথে পোস্ট বা অনুমোদনে — খাতার সারি
         'assistant.draft.reorder',            // কোপাইলটের খসড়া — ক্রয়ের চাহিদাপত্র (খসড়া), মানুষের চাপে

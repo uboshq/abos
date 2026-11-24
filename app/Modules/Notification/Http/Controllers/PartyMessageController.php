@@ -140,6 +140,14 @@ class PartyMessageController extends Controller
         return view('notification::party.messages', [
             'menu' => $this->menu->forUser($request->user()),
             'title' => $title,
+            // ⓘ today's four cards — key => [gradient from, to, icon]; the colours live here, not in the Blade
+            //   (EveryScreenObeysTheThemeTest: no hand-written colour on a screen), as the other list cards do
+            'todayCards' => [
+                'sent' => ['#2346d8', '#3b82f6', 'send'],
+                'delivered' => ['#059669', '#10b981', 'check'],
+                'waiting' => ['#b45309', '#f59e0b', 'clock'],
+                'failed' => ['#be123c', '#f43f5e', 'alert-triangle'],
+            ],
             'rows' => $rows,
             'tab' => $tab,
             'tabs' => array_map(fn (string $key) => [

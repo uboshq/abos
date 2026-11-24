@@ -103,6 +103,7 @@ class AttendanceController extends Controller implements HasMiddleware
             'rows.*.status' => ['nullable', Rule::in(Attendance::STATUSES)],
             'rows.*.is_late' => ['nullable', 'boolean'],
             'rows.*.remarks' => ['nullable', 'string', 'max:191'],
+            'rows.*.was' => ['nullable', 'string', 'max:64'],
         ]);
 
         /*
@@ -114,11 +115,21 @@ class AttendanceController extends Controller implements HasMiddleware
             ->count();
         abort_unless($reachable === count($data['rows']), 403);
 
-        $marked = $this->attendance->markDay($data['work_date'], $data['rows']);
+        $done = $this->attendance->markSheet($data['work_date'], $data['rows']);
+        $back = redirect()->route('hr.attendance.index', ['date' => $data['work_date']]);
 
-        return redirect()
-            ->route('hr.attendance.index', ['date' => $data['work_date']])
-            ->with('saved', __('hr::message.attendance_saved', ['count' => $marked]));
+        if ($done['conflicts'] === []) {
+            return $back->with('saved', __('hr::message.attendance_saved', ['count' => $done['marked']]));
+        }
+
+        // ⓘ যা লেখা হয়েছিল ঘরে থাকে; `was` বাদ — এবার মানুষটা এখনকারটা জেনেই আবার চাপবেন
+        return $back
+            ->withInput(['rows' => array_map(fn (array $row): array => \Illuminate\Support\Arr::except($row, ['was']), $data['rows'])])
+            ->with('saved', $done['marked'] > 0 ? __('hr::message.attendance_saved', ['count' => $done['marked']]) : null)
+            ->withErrors(['rows' => array_map(fn (array $c): string => __('hr::message.attendance_changed_meanwhile', [
+                'name' => $c['name'],
+                'now' => $c['status'] === null ? __('hr::message.attendance_not_marked') : __('hr::kind.'.$c['status']).(filled($c['remarks']) ? ' · '.$c['remarks'] : ''),
+            ]), $done['conflicts'])]);
     }
 
     /**

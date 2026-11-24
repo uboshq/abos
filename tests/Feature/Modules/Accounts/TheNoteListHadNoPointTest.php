@@ -55,7 +55,9 @@ final class TheNoteListHadNoPointTest extends TestCase
         $this->assertGreaterThan($party, $point, '⛔ পয়েন্ট "কাকে"-র পরে নয়।');
         $this->assertStringContainsString('Zeta Bazar Point', $html, '⛔ সারিতে গ্রাহকের পয়েন্ট নেই।');
         $this->assertStringContainsString('>'.__('core.print.date').'<', $html, '⛔ তারিখের ঘরের শিরোনাম তারিখ নয়।');
-        $this->assertSame(1, mb_substr_count($html, '>'.__('accounts::note.reason').'<'), '⛔ "কারণ" শিরোনাম দুইবার।');
+        // ⓘ তালিকার মাথা ধরে — ডান পাশের ছাঁকনির প্যানেলেও "কারণ" আছে (২৩ নভেম্বর ২০২৬)
+        preg_match('~<thead\b.*?</thead>~s', $html, $head);
+        $this->assertSame(1, preg_match_all('~>\s*'.preg_quote(__('accounts::note.reason'), '~').'\s*<~u', $head[0] ?? ''), '⛔ "কারণ" শিরোনাম দুইবার।');
         unset($omega);
     }
 
@@ -87,8 +89,8 @@ final class TheNoteListHadNoPointTest extends TestCase
 
     public function test_the_create_menu_offers_both_notes_only_with_the_key(): void
     {
-        $debit = route('accounts.note.create', ['direction' => 'debit']);
-        $credit = route('accounts.note.create', ['direction' => 'credit']);
+        $debit = route('accounts.note.dn.create');
+        $credit = route('accounts.note.cn.create');
 
         $this->get(route('dashboard'))->assertOk()->assertSee($debit, false)->assertSee($credit, false);
 

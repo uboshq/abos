@@ -65,6 +65,8 @@ final class TheBillTagWroteThousandsAndTheCustodyPageReadTwiceTest extends TestC
             ]);
         }
 
+        // ⓘ মাঝখানের পপআপ নিজের অঙ্ক পড়ে (পাঁচ মিনিটে একবার, [[shell.day-check]]) — এই দাবি কেবল পাতার নিজের পড়া গোনে
+        $this->withSession(['daycheck.snooze_until' => now()->addHour()->getTimestamp()]);
         $reads = 0;
         DB::listen(function ($query) use (&$reads): void {
             if (str_contains($query->sql, 'ledger_entries')) {

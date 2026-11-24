@@ -56,6 +56,11 @@ final class ProvidentFund
     /** ⓘ অডিটের চিহ্ন — তহবিলে যোগ দিলেন */
     public const ENROLLED = 'pf_enrolled';
 
+    /** অনুমোদনের অপেক্ষায় — বসলে সারি লেখে কাঠামো নিজে ([[SalaryStructureService::applySigned()]], `salary_change_signed`) */
+    public const RATE_ASKED = 'pf_rate_asked';
+
+    public const ENROL_ASKED = 'pf_enrol_asked';
+
     /** ⭐ প্রতিষ্ঠানের ভাগ প্রাপ্তির ধাপ (BLA ধারা ২৬৭) — খালি = বসানো নেই ([[vestingSteps()]]) */
     public const VESTING_STEPS = 'hr.pf.vesting_steps';
 
@@ -212,7 +217,9 @@ final class ProvidentFund
                 continue;
             }
 
-            $row['employee']->auditAction(self::RATE_APPLIED, __('hr::message.pf_rate_applied', [
+            // ⛔ অনুমোদনের অপেক্ষায় থাকলে "বসেছে" লেখা নয়
+            $asked = $waiting instanceof Approval;
+            $row['employee']->auditAction($asked ? self::RATE_ASKED : self::RATE_APPLIED, __($asked ? 'hr::message.pf_rate_asked' : 'hr::message.pf_rate_applied', [
                 'from' => self::shown((string) $row['current_percent']),
                 'to' => self::shown($row['proposed_percent']),
                 'date' => $from->toDateString(),
@@ -281,7 +288,7 @@ final class ProvidentFund
 
         $waiting = $this->salaries->change($employee, $from->toDateString(), [$head->id => $this->employeePercent()]);
 
-        $employee->auditAction(self::ENROLLED, __('hr::message.pf_enrolled', [
+        $employee->auditAction($waiting === null ? self::ENROLLED : self::ENROL_ASKED, __($waiting === null ? 'hr::message.pf_enrolled' : 'hr::message.pf_enrol_asked', [
             'rate' => self::shown($this->employeePercent()),
             'date' => $from->toDateString(),
         ]));

@@ -25,7 +25,7 @@
                     @if (($change->new_value ?? '') !== '' || ($change->old_value ?? '') !== '')
                         <p class="role-history-change">
                             <span>{{ \Illuminate\Support\Facades\Lang::has('system_admin::permission.history_field.'.$change->field) ? __('system_admin::permission.history_field.'.$change->field) : str_replace('_', ' ', $change->field) }}:</span>
-                            {{ \Illuminate\Support\Str::limit(trim(($change->old_value ?? '').' → '.($change->new_value ?? ''), ' →'), 400) }}
+                            {{ \App\Core\Security\FieldSecurity::show(\Spatie\Permission\Models\Role::class, $change->field, \Illuminate\Support\Str::limit(trim(($change->old_value ?? '').' → '.($change->new_value ?? ''), ' →'), 400)) }}
                         </p>
                     @endif
                 @endforeach

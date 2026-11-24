@@ -154,7 +154,7 @@ final class PartyMessages
             ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
             ->value('net') ?? '0');
 
-        $due = $type === 'supplier' ? bcsub('0', $net, 4) : bcadd($net, '0', 4);
+        $due = $type === app(\App\Core\Contracts\PayableOpenBills::class)->partyType() ? bcsub('0', $net, 4) : bcadd($net, '0', 4);
 
         return bccomp($due, '0', 4) > 0 ? $due : '0';
     }

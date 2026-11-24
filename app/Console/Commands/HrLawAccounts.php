@@ -51,7 +51,7 @@ class HrLawAccounts extends Command
 
             // ⭐ আছে, অথচ সিস্টেমের নয় — চিহ্ন দেওয়া (কেবল চিহ্ন; বাকি সারি যেমন ছিল)
             $unmarked = CompanyContext::forCompany($company->id, fn () => Account::query()
-                ->whereIn('code', $system)->where('is_system', false)->orderBy('code')->get());
+                ->whereIn('code', $system)->where('is_group', false)->where('is_system', false)->orderBy('code')->get());
 
             if ($unmarked->isEmpty()) {
                 continue;

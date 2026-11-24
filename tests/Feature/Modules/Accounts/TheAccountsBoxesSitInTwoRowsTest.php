@@ -40,7 +40,10 @@ final class TheAccountsBoxesSitInTwoRowsTest extends TestCase
     {
         $html = $this->get(route('module.dashboard', ['module' => 'accounts']))->assertOk()->getContent();
 
-        $this->assertStringNotContainsString('data-stat-grid', $html, '⛔ পুরনো নয়টা বাক্স আবার পাতায় — মালিকের চূড়ান্ত নমুনায় নেই।');
+        // ⓘ গ্রাফ যা দেখায় না সেই কয়টা সংখ্যা গ্রাফের নিচে (২৩ নভেম্বর ২০২৬: "কিছু হারাবে না"); পুরনো নয়টা বাক্স মাথায় নয়
+        $cards = strpos($html, 'data-stat-grid');
+        $this->assertTrue($cards === false || $cards > (int) strpos($html, 'data-viz-board'), '⛔ সংখ্যার বাক্স গ্রাফের উপরে।');
+        $this->assertStringContainsString('data-viz-board', $html, '⛔ পাতার মাথায় গ্রাফ নেই।');
         $this->assertStringContainsString('data-acc-problems', $html, '⛔ পাতার মাথায় সমস্যা কেন্দ্র নেই।');
     }
 

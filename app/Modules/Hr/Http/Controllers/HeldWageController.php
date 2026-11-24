@@ -53,8 +53,10 @@ class HeldWageController extends Controller implements HasMiddleware
                 'bank' => Account::query()->money()->where('money_kind', Account::BANK)->where('is_group', false)->orderBy('code')->get(),
                 'mfs' => Account::query()->money()->where('money_kind', Account::MFS)->where('is_group', false)->orderBy('code')->get(),
             ],
-            'papers' => HeldWagePayment::query()->whereNotNull('voucher_id')->with('voucher')->latest('id')->get()
-                ->unique('voucher_id')->take(20)->values(),
+            'papers' => HeldWagePayment::query()->with('voucher')
+                // ⓘ ভাউচার প্রতি একটা, পাতায় পাতায় — গোটা টেবিল তুলে পরে কাটা নয় (আগে কুড়িটার পরেরগুলো নামানোই যেত না)
+                ->whereIn('id', HeldWagePayment::query()->whereNotNull('voucher_id')->selectRaw('MAX(id)')->groupBy('voucher_id'))
+                ->latest('id')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
         ]);
     }
 
@@ -87,7 +89,7 @@ class HeldWageController extends Controller implements HasMiddleware
         return redirect()->to(route('hr.payroll.held.index').'#bank-awaiting')->with('saved', __('hr::payroll.bank_unpaid_asked_ok'));
     }
 
-    /** ⭐ দ্বিতীয় সই — যিনি চাইলেন তিনি নন, মালিকও নন; ইনবক্সের একই ইঞ্জিন */
+    /** ⭐ দ্বিতীয় সই — যিনি চাইলেন তিনি নন, মালিক ছাড়া; ইনবক্সের একই ইঞ্জিন */
     public function signBankUnpaid(Request $request, BankUnpaidLine $line): RedirectResponse
     {
         abort_unless(app(BranchReach::class)->reaches($request->user(), $line->employee), 404);

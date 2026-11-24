@@ -78,7 +78,10 @@ class Payslip extends Model
     /** @return HasMany<PayslipLine, $this> */
     public function lines(): HasMany
     {
-        return $this->hasMany(PayslipLine::class)->orderBy('kind')->orderBy('sort_order');
+        return $this->hasMany(PayslipLine::class)
+            // ⛔ আয় আগে, তারপর কর্তন, শেষে প্রতিষ্ঠানের অংশ — নামের বর্ণক্রমে 'deduction' আগে পড়ত (ফোনের চুক্তি; APayslipSaysWhetherItIsSalaryOrBonusTest)
+            ->orderByRaw('CASE kind WHEN ? THEN 0 WHEN ? THEN 1 ELSE 2 END', [SalaryHead::EARNING, SalaryHead::DEDUCTION])
+            ->orderBy('sort_order');
     }
 
     /** @return HasMany<PayslipLine, $this> */

@@ -68,7 +68,7 @@
     <x-slot:title>{{ $title }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="$title" class="tv-head tv-tone-{{ $tone }}" data-note-head>
+        <x-ui.page-header :title="$title" :subtitle="__('accounts::note.hint_'.$type)" class="tv-head tv-tone-{{ $tone }}" data-note-head>
             <x-slot:actions>
                 @if (filled($chip))
                     <span class="tv-chip tv-chip-doc num" data-number-preview>{{ $chip }}</span>
@@ -144,7 +144,7 @@
                     <label class="tv-label" for="tv-bill">{{ $sells ? __('accounts::note_form.bill_sale') : __('accounts::note_form.bill_purchase') }}</label>
                     <div class="tv-box">
                         <input id="tv-bill" type="text" name="against_no" maxlength="64" x-model="billNo"
-                               x-on:keydown.enter.prevent="fetchBill()"
+                               x-on:keydown.enter.prevent="fetchBill()" title="{{ __('accounts::note.against_hint') }}"
                                placeholder="{{ __('accounts::note_form.bill_placeholder') }}" data-against-no>
                         <button type="button" class="tv-mini" x-on:click="fetchBill()" :disabled="billBusy" data-fetch-bill>
                             <span x-show="! billBusy">{{ __('accounts::note_form.fetch_bill') }}</span>

@@ -271,7 +271,8 @@ class NoteController extends Controller implements HasMiddleware
             $paper = app(\App\Modules\Accounts\Services\AccountsReversalService::class)
                 ->reverseNote($note, $request->user(), $data['cancel_reason']);
 
-            return back()->with('saved', __('accounts::reversal.saved', ['no' => $note->document_no, 'rev' => $paper->document_no]));
+            return back()->with('saved', $paper === null ? __('accounts::reversal.awaiting', ['no' => $note->document_no])
+                : __('accounts::reversal.saved', ['no' => $note->document_no, 'rev' => $paper->document_no]));
         }
 
         $this->notes->cancel($note, $data['cancel_reason']);
@@ -305,7 +306,7 @@ class NoteController extends Controller implements HasMiddleware
         }
 
         $rows = app(NotePosting::class)->lines($note, $control);
-        $names = \App\Modules\Accounts\Models\Account::query()->whereIn('id', array_column($rows, 'account_id'))->get()->keyBy('id');
+        $names = \App\Modules\Accounts\Models\Account::query()->whereKey(array_column($rows, 'account_id'))->get()->keyBy('id');
 
         return array_map(fn (array $r) => [
             'code' => (string) ($names[$r['account_id']]->code ?? ''),

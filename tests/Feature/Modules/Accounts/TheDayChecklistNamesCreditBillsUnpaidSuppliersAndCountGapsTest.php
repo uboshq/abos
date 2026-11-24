@@ -101,7 +101,7 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
     public function test_a_gap_in_a_posted_cash_count_is_on_the_list_and_a_clean_count_is_not(): void
     {
         $count = CashCount::query()->forceCreate([
-            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'document_no' => 'CC-T-1', 'trx_date' => self::DAY,
+            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'financial_year_id' => \App\Models\FinancialYear::forDate(self::DAY)?->id, 'document_no' => 'CC-T-1', 'trx_date' => self::DAY,
             'counted_amount' => '9500', 'expected_amount' => '10000', 'difference' => '-500', 'status' => DocumentStatus::CONFIRMED,
         ]);
 
@@ -117,7 +117,7 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
     public function test_the_new_rows_never_block_the_day_closing_page(): void
     {
         CashCount::query()->forceCreate([
-            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'document_no' => 'CC-T-2', 'trx_date' => self::DAY,
+            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'financial_year_id' => \App\Models\FinancialYear::forDate(self::DAY)?->id, 'document_no' => 'CC-T-2', 'trx_date' => self::DAY,
             'counted_amount' => '100', 'expected_amount' => '300', 'difference' => '-200', 'status' => DocumentStatus::CONFIRMED,
         ]);
 
@@ -141,6 +141,8 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
      */
     private function paper(string $table, array $set, array $not = []): object
     {
+        $this->draftOf($table);
+
         $row = DB::table($table)->where('company_id', $this->company->id)->whereNull('deleted_at')
             ->whereNotIn('id', $not ?: [0])->orderBy('id')->first();
         $this->assertNotNull($row, "⛔ ডেমোতে {$table}-এর কাগজ নেই — পরীক্ষাটা কিছুই দেখছে না");
@@ -148,6 +150,25 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
         DB::table($table)->where('id', $row->id)->update([...$set, 'status' => DocumentStatus::CONFIRMED, 'branch_id' => $this->a->id]);
 
         return DB::table($table)->where('id', $row->id)->first();
+    }
+
+    /** ⓘ ডেমোতে এই কাগজ নেই — একটা খসড়া, মডিউলের নিজের পথে (২৪ নভেম্বর ২০২৬) */
+    private function draftOf(string $table): void
+    {
+        $warehouse = \App\Modules\Inventory\Models\Warehouse::query()->where('is_default', true)->value('id');
+        $product = \App\Modules\Inventory\Models\Product::query()->where('is_active', true)->orderBy('id')->value('id');
+
+        if ($table === 'sal_invoices') {
+            app(\App\Modules\Sales\Services\SalesInvoiceService::class)->create([
+                'customer_id' => \App\Modules\Customer\Models\Customer::query()->orderBy('id')->value('id'), 'warehouse_id' => $warehouse, 'trx_date' => self::DAY,
+            ], [['product_id' => $product, 'qty' => '1', 'rate' => '100']]);
+
+            return;
+        }
+
+        app(\App\Modules\Purchase\Services\PurchaseBillService::class)->create([
+            'supplier_id' => \App\Modules\Supplier\Models\Supplier::query()->orderBy('id')->value('id'), 'warehouse_id' => $warehouse, 'trx_date' => self::DAY,
+        ], [['product_id' => $product, 'qty' => '1', 'rate' => '100']]);
     }
 
     /**
@@ -159,6 +180,11 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
         $this->app->instance($contract, new class($side, $rows) implements PartyOpenBills, PayableOpenBills
         {
             public function __construct(private string $side, private array $rows) {}
+
+            public function partyType(): string
+            {
+                return $this->side;
+            }
 
             public function openBills(string $partyType, int $partyId, int $limit = 50, bool $withNotes = false): array
             {

@@ -17,7 +17,8 @@
 
 @php
     // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে; মাস ছাঁকনির প্যানেলে, সংরক্ষণ বারে (মালিক, ২৪ নভেম্বর ২০২৬)
-    // ⓘ খোঁজা কেবল সারি লুকায়, পাতা আবার খোলে না, লুকানো সারিও জমা হয় — বসানো লক্ষ্য হারায় না ([[day-sheet.js]])
+    // ⓘ পাতায় পাতায়; খোঁজা সব পণ্যে, Enter-এ (লিখতে লিখতে নয়)। না-সংরক্ষিত লেখা থাকলে খোঁজা, পাতা বা মাস বদলের আগে ব্রাউজার জিজ্ঞেস করে
+    //   ([[day-sheet.js]]); সংরক্ষণ কেবল এই পাতার সারি ছোঁয় ([[ProductTargetService::setForMonth()]])
     $abosHead = \App\Core\Support\AbosHead::on();
     $facetPanel = \App\Core\ListFilter\Facets::panel($abosHead ? [\App\Core\ListFilter\Facets::month('month', __('sales::product_target.month'), $month->format('Y-m'))] : []);
 @endphp
@@ -32,6 +33,10 @@
                     <label class="text-sm">
                         <span class="sr-only">{{ __('sales::product_target.month') }}</span>
                         <x-ui.month name="month" :value="$month->format('Y-m')" :class="$input" />
+                    </label>
+                    <label class="text-sm">
+                        <span class="sr-only">{{ __('sales::product_target.product') }}</span>
+                        <input type="search" name="q" maxlength="60" value="{{ $q }}" placeholder="{{ __('sales::product_target.product') }}" class="{{ $input }}">
                     </label>
                     <x-ui.button type="submit" tone="secondary">{{ __('core.action.show') }}</x-ui.button>
                 </form>
@@ -58,11 +63,11 @@
         <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::product_target.title')" :search="false" :export="false" :print="false" :share="false" :refresh="false" :facets="$facetPanel">
                 <x-slot:find>
-                    <input type="search" x-model="term" x-on:input="narrow()" x-on:keydown.enter.prevent="narrow()" autocomplete="off"
+                    <input type="search" name="q" maxlength="60" value="{{ $q }}" autocomplete="off" enterkeyhint="search"
                            placeholder="{{ __('sales::product_target.product') }}" aria-label="{{ __('sales::product_target.product') }}" data-target-find
                            class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
                 </x-slot:find>
-                @if ($canManage && count($rows) > 0)
+                @if ($canManage && $rows->isNotEmpty())
                     <x-slot:actions>
                         <x-ui.button type="submit" form="target-form" tone="primary">{{ __('core.action.save') }}</x-ui.button>
                     </x-slot:actions>
@@ -73,6 +78,8 @@
     <form id="target-form" @if ($errors->any()) data-unsaved @endif @if ($abosHead) x-on:submit="saved()" @endif method="POST" action="{{ route('sales.product_target.store') }}">
         @csrf
         <input type="hidden" name="month" value="{{ $month->toDateString() }}">
+        <input type="hidden" name="q" value="{{ $q }}">
+        <input type="hidden" name="page" value="{{ $rows->currentPage() }}">
 
         <div data-boxed class="overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <table class="ui-grid w-full text-sm" data-product-targets>
@@ -95,7 +102,7 @@
                             $amountRate = $rate($row['sold_amount'], $row['amount']);
                             $shown = fn (?string $v) => $v !== null && bccomp($v, '0', 4) !== 0 ? rtrim(rtrim($v, '0'), '.') : '';
                         @endphp
-                        <tr class="border-b border-(--color-border)" data-target-row="{{ $p->code }}" @if ($abosHead) data-day-row data-find="{{ $p->code.' '.$p->name_en.' '.$p->name_bn }}" @endif>
+                        <tr class="border-b border-(--color-border)" data-target-row="{{ $p->code }}" @if ($abosHead) data-day-row @endif>
                             <td>{{ $p->code }} · {{ $p->name() }}</td>
                             <td class="text-end">
                                 @if ($canManage)
@@ -127,14 +134,9 @@
                     @endforelse
                 </tbody>
 
-                {{-- ⭐ সর্বমোট — টাকার দুই ঘর আর তার হার; পরিমাণ যোগ হয় না (ভিন্ন পণ্যের ভিন্ন একক) --}}
-                @if ($rows !== [])
+                {{-- ⭐ সর্বমোট — গোটা মাসের, পাতা বা খোঁজা যা-ই হোক ([[ProductTargetService::monthTotals()]]); টাকার দুই ঘর আর তার হার; পরিমাণ যোগ হয় না (ভিন্ন পণ্যের ভিন্ন একক) --}}
+                @if ($rows->isNotEmpty())
                     @php
-                        $sum = ['amount' => '0', 'sold' => '0'];
-                        foreach ($rows as $r) {
-                            $sum['sold'] = bcadd($sum['sold'], $r['sold_amount'], 4);
-                            $sum['amount'] = bcadd($sum['amount'], (string) ($r['amount'] ?? '0'), 4);
-                        }
                         $sumRate = $rate($sum['sold'], $sum['amount']);
                     @endphp
                     <tfoot data-grand-total>
@@ -152,7 +154,7 @@
             </table>
         </div>
 
-        @if ($canManage && $rows !== [])
+        @if ($canManage && $rows->isNotEmpty())
             @unless ($abosHead)
             <div class="mt-3">
                 <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
@@ -160,6 +162,8 @@
             @endunless
         @endif
     </form>
+    <x-ui.pager :rows="$rows" />
+    <x-ui.list-totals :rows="$rows" />
     </x-ui.filter-layout>
     </div>
 </x-layouts.app>
