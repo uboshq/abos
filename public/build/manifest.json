@@ -5,8 +5,12 @@
     "src": "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs",
     "isDynamicEntry": true
   },
+  "_preload-helper-B6JZccWF.js": {
+    "file": "assets/preload-helper-B6JZccWF.js",
+    "name": "preload-helper"
+  },
   "resources/css/app.css": {
-    "file": "assets/app-GjdtALde.css",
+    "file": "assets/app-D5dCZVGN.css",
     "name": "app",
     "names": [
       "app.css"
@@ -15,29 +19,54 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-BfXh5FB4.js",
+    "file": "assets/app-BB4JPbh9.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
+    "imports": [
+      "_preload-helper-B6JZccWF.js"
+    ],
     "dynamicImports": [
       "resources/js/messenger-call.js",
-      "resources/js/messenger-share.js"
+      "resources/js/messenger-share.js",
+      "resources/js/messenger-meeting.js"
     ]
   },
-  "resources/js/messenger-call.js": {
-    "file": "assets/messenger-call-DdPcbRye.js",
-    "name": "messenger-call",
-    "src": "resources/js/messenger-call.js",
-    "isDynamicEntry": true,
+  "resources/js/meeting-page.js": {
+    "file": "assets/meeting-page-DWEW3nX2.js",
+    "name": "meeting-page",
+    "src": "resources/js/meeting-page.js",
+    "isEntry": true,
     "imports": [
-      "resources/js/app.js"
+      "_preload-helper-B6JZccWF.js"
     ],
     "dynamicImports": [
       "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs"
     ]
   },
+  "resources/js/messenger-call.js": {
+    "file": "assets/messenger-call-BxXGtP4R.js",
+    "name": "messenger-call",
+    "src": "resources/js/messenger-call.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_preload-helper-B6JZccWF.js"
+    ],
+    "dynamicImports": [
+      "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs"
+    ]
+  },
+  "resources/js/messenger-meeting.js": {
+    "file": "assets/messenger-meeting-E5lloSPt.js",
+    "name": "messenger-meeting",
+    "src": "resources/js/messenger-meeting.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/messenger-call.js"
+    ]
+  },
   "resources/js/messenger-page.js": {
-    "file": "assets/messenger-page-DfYWZwEa.js",
+    "file": "assets/messenger-page-CX_gcrMN.js",
     "name": "messenger-page",
     "src": "resources/js/messenger-page.js",
     "isEntry": true,
@@ -46,7 +75,7 @@
     ]
   },
   "resources/js/messenger-share.js": {
-    "file": "assets/messenger-share-BW4M7QbA.js",
+    "file": "assets/messenger-share-JPVON3qb.js",
     "name": "messenger-share",
     "src": "resources/js/messenger-share.js",
     "isDynamicEntry": true,
