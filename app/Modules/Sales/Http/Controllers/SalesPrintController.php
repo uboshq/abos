@@ -9,6 +9,7 @@ use App\Core\Engines\Print\PrintableDocument;
 use App\Core\Engines\Print\PrintEngine;
 use App\Core\Engines\Print\PrintProfile;
 use App\Core\Services\BranchSettings;
+use App\Core\Services\PaperPreview;
 use App\Core\Services\PaperTrail;
 use App\Core\Services\SettingsService;
 use App\Core\Support\AmountInWords;
@@ -141,14 +142,17 @@ class SalesPrintController extends Controller implements HasMiddleware
          *
          * ⓘ বোতামটা পাতায় লুকানো; এটা ঠিকানা টাইপ করে আসার পাহারা।
          */
-        if ($invoice->isNotFinalYet()) {
+        // ⓘ দেখা ছাপা নয় ([[PaperPreview]]; মালিক, ২৪ নভেম্বর ২০২৬) — কাগজে "খসড়া" থাকে
+        if ($invoice->isNotFinalYet() && ! PaperPreview::looking()) {
             throw ValidationException::withMessages([
                 'status' => __('sales::validation.held_no_print', ['no' => $invoice->document_no]),
             ]);
         }
 
         // ⭐ গাড়ি ভাড়া বসানো বাকি থাকলে বিল ছাপা হয় না (মালিক, ৭ নভেম্বর ২০২৬, নমুনা "ok"; [[FarePayment::owesAnAmount()]])
-        app(\App\Modules\Sales\Services\FarePayment::class)->assertInvoiceFareSet($invoice);
+        if (! PaperPreview::looking()) {
+            app(\App\Modules\Sales\Services\FarePayment::class)->assertInvoiceFareSet($invoice);
+        }
 
         /*
          * ⚠️ `lines.challanLine` — নইলে ছাপার পাতা ৫০০ দেয়।
@@ -988,7 +992,7 @@ class SalesPrintController extends Controller implements HasMiddleware
      */
     private function assertNotAnUnfinishedCounterSale(DeliveryChallan $challan): void
     {
-        if ($challan->status !== DocumentStatus::DRAFT) {
+        if ($challan->status !== DocumentStatus::DRAFT || PaperPreview::looking()) {
             return;
         }
 
@@ -1486,6 +1490,8 @@ class SalesPrintController extends Controller implements HasMiddleware
     {
         return match (true) {
             $document instanceof DeliveryChallan, $document instanceof SalesOrder => ($document->status ?? null) === DocumentStatus::DRAFT,
+            // ⓘ খসড়া বিল ছাপাই হয় না, কেবল দেখা যায় — তখনও গায়ে "খসড়া"
+            $document instanceof SalesInvoice => PaperPreview::looking() && $document->isNotFinalYet(),
             $document instanceof GatePass => ($document->challan()->value('status') ?? null) === DocumentStatus::DRAFT,
             default => false,
         };
@@ -2238,7 +2244,8 @@ class SalesPrintController extends Controller implements HasMiddleware
          */
         $draftPrint = $this->isDraftMoney($document) || $this->isDraftPaper($document);
 
-        $job = $type === null || $draftPrint ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
+        // ⓘ দেখায় সারি, সীমা আর DUPLICATE নেই — ওগুলো ছাপার
+        $job = $type === null || $draftPrint || PaperPreview::looking() ? null : $this->queue->queue($type, (int) $id, $paper, $documentNo);
 
         /*
          * ⭐ কাগজের ভাষা — যাঁর জন্য কাগজ তাঁর (গ্রাহকের "কাগজের ভাষা"), এবারের বাছাই আগে; কোম্পানির ভাষা শেষে
