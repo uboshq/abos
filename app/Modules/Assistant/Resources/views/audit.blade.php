@@ -37,7 +37,7 @@
         <x-ui.filter-layout :filters="$facetPanel" form="list-form">
         <div class="space-y-4" data-assistant-audit>
             <form id="list-form" method="GET" class="contents">
-                <x-ui.toolbar :title="__('assistant::audit.title', ['name' => $name])" :info="__('assistant::audit.note')" :search-placeholder="__('assistant::audit.search')" :export="false" :share="false" :columns="$columns" :facets="$facetPanel" />
+                <x-ui.toolbar :title="__('assistant::audit.title', ['name' => $name])" :info="__('assistant::audit.note')" :search-placeholder="__('assistant::audit.search')" :export="false" :print="false" :share="false" :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]" :columns="$columns" :facets="$facetPanel" />
             </form>
 
             @include('assistant::partials.audit-rows')

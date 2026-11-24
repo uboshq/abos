@@ -138,7 +138,7 @@ class AssistantController extends Controller
 
         $rows = DB::query()->fromSub($union, 't')
             ->when($f['q'] ?? null, fn ($q, $s) => $q->where(fn ($w) => $w->where('what', 'like', '%'.$s.'%')->orWhere('page', 'like', '%'.$s.'%')))
-            ->orderByDesc('at')
+            ->orderBy('at', $request->query('sort') === 'oldest' ? 'asc' : 'desc')
             ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))
             ->withQueryString();
 
