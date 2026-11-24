@@ -25,21 +25,31 @@
     ], $sheet['columns']);
     $rows = $sheet['rows'];
     $hiddenRows = max(0, count($rows) - $preview);
+    $boardSheet ??= false;
+    $pageColumns = $columns;
+    if ($boardSheet) {
+        // ⓘ a narration column that only repeats the paper's own narration says nothing new — it is in the tile above
+        $own = collect($sheet['facts'])->firstWhere('label', __('core.table.narration'))['value'] ?? null;
+        $same = collect($rows)->every(fn (array $r) => blank($r['narration'] ?? null) || (string) $r['narration'] === (string) $own);
+        $pageColumns = $same ? array_values(array_filter($columns, fn (array $c) => $c['key'] !== 'narration')) : $columns;
+    }
 @endphp
 
-<div x-data="{ open: false }" data-signing-sheet
+<div x-data="{ open: false }" x-on:open-paper.window="open = true" data-signing-sheet
      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
     <div class="flex items-start justify-between gap-4">
-        <h2 class="text-sm font-semibold">{{ __('approval::field.sheet') }}</h2>
+        <h2 class="text-sm font-semibold">{{ $boardSheet && array_key_exists('debit', $sheet['totals'] ?? []) ? __('approval::field.board_ledger') : __('approval::field.sheet') }}</h2>
 
+        @unless ($boardSheet)
         <button type="button" x-on:click="open = true" data-opens-dialog aria-haspopup="dialog"
                 class="rounded-(--radius-field) bg-(--color-brand-600) px-3 py-1 text-xs font-semibold text-white
                        hover:bg-(--color-brand-700)">
             {{ __('approval::action.view_whole_paper') }}
         </button>
+        @endunless
     </div>
 
-    @include('approval::inbox.partials.sheet-body', ['rows' => array_slice($rows, 0, $preview)])
+    @include('approval::inbox.partials.sheet-body', ['rows' => array_slice($rows, 0, $preview), 'columns' => $pageColumns, 'hideFacts' => $boardSheet])
 
     @if ($hiddenRows > 0)
         <p class="mt-2 text-2xs text-(--color-ink-muted)">
@@ -65,7 +75,7 @@
                 </button>
             </div>
 
-            @include('approval::inbox.partials.sheet-body', ['rows' => $rows])
+            @include('approval::inbox.partials.sheet-body', ['rows' => $rows, 'hideFacts' => false])
         </div>
     </div>
 </div>

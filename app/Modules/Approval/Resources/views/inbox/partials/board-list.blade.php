@@ -38,12 +38,13 @@
     @if ($bulkable !== [])
         {{-- ⓘ the pick bar — how many and how much is picked, and the one "together" button (the existing bulk review) --}}
         <div class="inbox-board-pickbar" data-board-pickbar>
-            {{-- ⓘ the count is on the button itself ([[approval-keys.js]]); here only how much — never the count twice --}}
-            <span class="text-sm text-(--color-ink-muted)">{{ __('approval::field.board_picked') }}</span>
-            <span class="num text-sm font-semibold" data-board-picked-sum>৳0.00</span>
-            <x-ui.button type="submit" tone="primary" form="bulk-form" data-bulk-button class="ms-auto"
-                         data-label="{{ __('approval::action.bulk_picked', ['count' => '__N__']) }}">
-                {{ __('approval::action.bulk_picked', ['count' => 0]) }}
+            {{-- ⓘ the sample's bar: tick all · how many · how much · one green button --}}
+            <input type="checkbox" class="inbox-board-ck" data-board-pick-all aria-label="{{ __('approval::field.board_pick_all') }}">
+            <b class="num" data-board-picked-count data-label="{{ __('approval::field.board_picked_count', ['count' => '__N__']) }}">{{ __('approval::field.board_picked_count', ['count' => 0]) }}</b>
+            <span class="num text-sm font-semibold" data-board-picked-sum></span>
+            <x-ui.button type="submit" tone="primary" form="bulk-form" data-bulk-button class="inbox-board-go ms-auto"
+                         data-label="{{ __('approval::action.board_bulk') }}">
+                {{ __('approval::action.board_bulk') }}
             </x-ui.button>
         </div>
     @endif
@@ -79,7 +80,7 @@
                         <th scope="rowgroup" colspan="8">
                             <span class="inbox-board-headline">
                                 @if ($pickable->isNotEmpty())
-                                    <input type="checkbox" class="size-4" data-board-group-pick="{{ $kind }}"
+                                    <input type="checkbox" class="inbox-board-ck" data-board-group-pick="{{ $kind }}"
                                            aria-label="{{ __('approval::field.board_pick_group', ['kind' => $kindName]) }}">
                                 @endif
                                 <span class="inbox-board-kind">{{ $kindName }}</span>
@@ -97,17 +98,12 @@
                             $partyName = $fact['party_name'] ?? null;
                             $partyShown = $partyName ?? ($fact['party'] ?? ($fact['about'] ?? null));
                             $deadline = $deadlines[$approval->id] ?? null;
-                            // ⭐ nothing the cards showed is lost (owner): the step "ধাপ 1 / 2" beside the number, and a passed or
-                            //   near deadline ("শেষ সময় পেরিয়েছে 3 ঘণ্টা") in place of the plain wait
-                            $step = $steps[$approval->id] ?? null;
-                            $dueShown = $approval->status === \App\Models\Approval::PENDING
-                                && in_array($deadline['tone'] ?? null, ['danger', 'warning'], true);
                         @endphp
                         <tr @class(['inbox-board-row', 'is-even' => $loop->even, 'is-open' => $isOpen]) data-inbox-card="{{ $approval->id }}"
                             data-board-open="{{ $openUrl }}" @if ($isOpen) aria-current="true" @endif>
                             <td class="inbox-board-tick">
                                 @if (isset($canPick[$approval->id]))
-                                    <input type="checkbox" name="ids[]" value="{{ $approval->id }}" form="bulk-form" class="size-4"
+                                    <input type="checkbox" name="ids[]" value="{{ $approval->id }}" form="bulk-form" class="inbox-board-ck"
                                            data-inbox-pick data-board-in="{{ $kind }}" data-amount="{{ (string) ($approval->amount ?? '0') }}"
                                            aria-label="{{ __('approval::field.pick') }} {{ $fact['no'] ?? '#'.$approval->id }}">
                                 @endif
@@ -121,9 +117,6 @@
                                 @endif
                                 @if ($approval->payload['supersedes'] ?? null)
                                     <span class="inbox-board-changed">{{ __('approval::message.changed_short') }}</span>
-                                @endif
-                                @if ($step !== null)
-                                    <span class="inbox-board-step" data-card-step>{{ __('approval::field.step_at', ['at' => $step['at'], 'of' => $step['of']]) }}</span>
                                 @endif
                             </td>
                             <td class="inbox-board-cut">
@@ -152,14 +145,8 @@
                                     {{ \App\Core\Support\Money::format($approval->amount) }}
                                 @endif
                             </td>
-                            <td @class(['num', 'inbox-board-late' => ($deadline['tone'] ?? null) === 'danger', 'inbox-board-near' => $dueShown && ($deadline['tone'] ?? null) === 'warning'])
-                                title="{{ $dueShown ? $waited($approval->requested_at) : ($deadline['text'] ?? '') }}">
-                                @if ($dueShown)
-                                    <span data-card-deadline>{{ $deadline['text'] }}</span>
-                                @else
-                                    {{ $waited($approval->requested_at) }}
-                                @endif
-                            </td>
+                            {{-- ⓘ the sample: a wait of a day or more in red --}}
+                            <td @class(['num', 'inbox-board-late' => $approval->requested_at !== null && $approval->requested_at->diffInDays(now()) >= 1])>{{ $waited($approval->requested_at) }}</td>
                         </tr>
                     @endforeach
 
@@ -171,5 +158,20 @@
                 </tbody>
             @endforeach
         </table>
+    </div>
+
+    {{-- ⓘ the sample's one footer line; with more than one page the page's own total and the pager stand under it --}}
+    <div class="inbox-board-foot" data-inbox-totals>
+        <p class="inbox-board-total">
+            <span>{{ __('approval::field.board_total', ['count' => $visibleTotal]) }}</span>
+            <span class="num" data-all-total>{{ \App\Core\Support\Money::format($sumAll) }}</span>
+        </p>
+        @if ($approvals->hasPages())
+            <p class="inbox-board-pagetotal">
+                <span>{{ __('approval::field.page_total', ['count' => $rows->count()]) }}</span>
+                <span class="num" data-page-total>{{ \App\Core\Support\Money::format($sumPage) }}</span>
+            </p>
+            <x-ui.pager :rows="$approvals" />
+        @endif
     </div>
 </div>

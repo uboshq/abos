@@ -175,4 +175,10 @@ return [
     'board_waited_hours' => ':count h',
     'board_waited_now' => 'just now',
     'board_count' => ':count',
+    'board_pick_all' => 'Pick all',
+    'board_picked_count' => ':count picked',
+    'board_total' => 'Total of :count waiting',
+    'board_tx' => 'Transaction no.',
+    'board_stand_in' => 'On behalf of',
+    'board_ledger' => 'What the ledger will get',
 ];

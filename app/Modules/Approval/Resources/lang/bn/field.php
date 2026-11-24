@@ -178,4 +178,10 @@ return [
     'board_waited_hours' => ':count ঘণ্টা',
     'board_waited_now' => 'এইমাত্র',
     'board_count' => ':count টা',
+    'board_pick_all' => 'সব বাছুন',
+    'board_picked_count' => 'বাছাই :countটা',
+    'board_total' => 'সর্বমোট :countটা অপেক্ষায়',
+    'board_tx' => 'লেনদেন নং',
+    'board_stand_in' => 'কার হয়ে',
+    'board_ledger' => 'খাতায় যা উঠবে',
 ];

@@ -135,6 +135,7 @@
             </form>
 
             {{-- ⭐ দুই মোট আর পাতা বদল — দফা ৬ --}}
+            @unless ($board ?? false)
             <div class="mt-2 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)" data-inbox-totals>
                 <p class="flex justify-between gap-2 border-b border-(--color-border) px-3 py-2 text-sm font-semibold">
                     <span>{{ __('approval::field.page_total', ['count' => $rows->count()]) }}</span>
@@ -146,8 +147,9 @@
                 </p>
                 <x-ui.pager :rows="$approvals" />
             </div>
+            @endunless
 
-            @if ($bulkable !== [])
+            @if ($bulkable !== [] && ! ($board ?? false))
                 <p class="mt-2 text-2xs text-(--color-ink-muted)">{{ __('approval::message.bulk_only_paper') }}</p>
             @endif
 
