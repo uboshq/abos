@@ -46,5 +46,4 @@ return [
     'board_bulk' => '✓ Approve together',
     'board_view' => 'View',
     'board_remark' => 'Remark',
-    'board_new_tab' => 'New tab',
 ];
