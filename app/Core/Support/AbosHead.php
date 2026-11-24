@@ -1,5 +1,4 @@
 <?php
-ndeclare(strict_types=1);
 
 namespace App\Core\Support;
 
