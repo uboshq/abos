@@ -33,7 +33,7 @@
     };
 @endphp
 
-<div class="space-y-1">
+<div @class(['space-y-1' => $required && ! $isSelf, 'flex items-center gap-2 whitespace-nowrap' => ! ($required && ! $isSelf)])>
     <span data-two-step-state
           class="inline-block rounded-(--radius-field) bg-(--color-badge-{{ $tone }}-bg)
                  px-2 py-0.5 text-2xs text-(--color-badge-{{ $tone }}-ink)">

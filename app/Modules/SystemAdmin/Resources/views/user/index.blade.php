@@ -87,6 +87,7 @@
              * ঘরটা বলে তিনি আর কোথায় ঢুকতে পারেন — সেটা এক কথা নয়।
              */
             'key' => 'companies',
+            'wrap' => true,
             'label' => __('core.company.company'),
             'render' => fn ($u) => $u->companies->map(fn ($c) => $c->code)->implode(', ') ?: '—',
         ],
@@ -112,6 +113,7 @@
         ],
         [
             'key' => 'remarks',
+            'wrap' => true,
             'label' => __('core.table.remarks'),
             'render' => fn ($u) => $u->remarks ?: '',
         ],
