@@ -112,12 +112,12 @@
                             {{-- $loop->parent — ভেতরের লুপটা কলামের,
                                  বাইরেরটা সারির, আর ক্রম নম্বর চাই
                                  সারিরটাই --}}
-                            @php $value = $cell($row, $column, $loop->parent->index); @endphp
+                            @php $value = $cellHtml($row, $column, $loop->parent->index); @endphp
                             {{-- ⓘ ফোনের কার্ডে ফাঁকা ঘর আঁকা হয় না — কেবল "পক্ষ", "ক্রেডিট" নাম আর পাশে কিছু নেই, প্রতিটা কার্ডে দুই-তিন লাইন
                                  বাজে জায়গা (জাবেদার লাইন, ৩০ অক্টোবর ২০২৬, দফা ২১)। টেবিলে (md+) ঘরটা থাকে, নাহলে কলাম সরে যেত। --}}
                             <td data-label="{{ $column['label'] }}"
                                 @if ($column['wrap'] ?? false) data-wrap @endif
-                                @if (trim((string) $value) === '') data-empty @endif
+                                @if ($value->blank) data-empty @endif
                                 @class(['num' => $column['numeric']])>
                                 {{ $value }}
                             </td>

@@ -335,6 +335,25 @@ class Table extends Component
      *
      * @param  array{key: string, render: ?\Closure}  $column
      */
+    /**
+     * ঘরের লেখা — একবার আঁকা, তারপর দুই জায়গায় সেই লেখাটাই (২৪ নভেম্বর ২০২৬)।
+     *
+     * ⛔ আগে ব্লেড ঘরটা দুবার ছুঁত: "খালি কি না" (`(string)`) আর ছাপা (`{{ }}`) — ঘরটা একটা ভিউ হলে দুবারই আঁকা হত (পণ্যের ৫০ সারিতে
+     * ১০০টা মেনু)। ⓘ লেখা হুবহু `{{ $value }}`-এরই ([[e()]]); খালির মাপও আগেরটাই।
+     */
+    public function cellHtml(mixed $row, array $column, int $index = 0): CellHtml
+    {
+        $value = $this->cell($row, $column, $index);
+
+        if ($value instanceof \Illuminate\Contracts\Support\Htmlable) {
+            $html = (string) $value->toHtml();
+
+            return new CellHtml($html, trim($html) === '');
+        }
+
+        return new CellHtml(e($value), trim((string) $value) === '');
+    }
+
     public function cell(mixed $row, array $column, int $index = 0): mixed
     {
         if ($column['render'] instanceof \Closure) {
