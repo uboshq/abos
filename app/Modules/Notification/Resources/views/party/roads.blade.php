@@ -184,8 +184,6 @@
                                 </tbody>
                             </table>
                         </div>
-                        <x-ui.pager :rows="$phones" />
-                        <x-ui.list-totals :rows="$phones" />
                     </section>
                 </div>
 
