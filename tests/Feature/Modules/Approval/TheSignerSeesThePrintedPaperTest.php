@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Modules\Approval;
 
 use App\Core\Services\PaperPreview;
+use App\Core\Services\PaperTrail;
+use App\Core\Services\PhonePaperDoor;
 use App\Core\Support\CompanyContext;
 use App\Models\Approval;
 use App\Models\Company;
@@ -13,6 +15,10 @@ use App\Models\User;
 use App\Modules\Accounts\Models\Voucher;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Route;
+use ReflectionMethod;
 use Tests\TestCase;
 
 /**
@@ -54,5 +60,37 @@ final class TheSignerSeesThePrintedPaperTest extends TestCase
 
         $this->assertSame('accounts_voucher', app(PaperPreview::class)->typeOf($voucher));
         $this->assertNull(app(PaperPreview::class)->typeOf($company), '⛔ a record with no printed paper offers a preview.');
+    }
+
+    /** ⓘ The one-action controller (voucher, transfer) was called by a method it does not have (demo 500, 24 Nov 2026). */
+    public function test_every_printed_paper_has_an_action_the_preview_can_call_and_that_returns_a_response(): void
+    {
+        $printable = app(PhonePaperDoor::class)->printable();
+        $this->assertGreaterThan(5, count($printable), 'The list is empty — the claim looks at nothing.');
+
+        $broken = [];
+        foreach ($printable as $name => [$type, $class]) {
+            $route = Route::getRoutes()->getByName(PaperTrail::DOCUMENT_ROUTES[$type]);
+            $controller = $route->getController();
+            // ⓘ the same choice [[PaperPreview::render()]] makes
+            $method = method_exists($controller, $route->getActionMethod()) ? $route->getActionMethod() : '__invoke';
+
+            if (! method_exists($controller, $method) || ! (new ReflectionMethod($controller, $method))->isPublic()) {
+                $broken[] = "{$name}: {$type} has no public action {$method}";
+
+                continue;
+            }
+
+            $action = new ReflectionMethod($controller, $method);
+            $takes = array_map(fn ($p) => (string) $p->getType(), $action->getParameters());
+            if ($action->getNumberOfRequiredParameters() !== 2 || ! is_a($takes[0] ?? '', Request::class, true) || ($takes[1] ?? '') !== $class) {
+                $broken[] = "{$name}: {$type} wants (".implode(', ', $takes).'), the preview gives (Request, '.class_basename($class).')';
+            }
+            if (! is_a((string) $action->getReturnType(), Response::class, true)) {
+                $broken[] = "{$name}: {$type} returns ".$action->getReturnType().', not a Response';
+            }
+        }
+
+        $this->assertSame([], $broken, "⛔ the signer's preview cannot open:\n".implode("\n", $broken));
     }
 }

@@ -93,9 +93,9 @@ final class CallsTest extends TestCase
         $this->assertNotSame('', (string) $data['token']);
 
         // ⛔ the ring push goes out at once, never via the once-a-minute queue (owner, 24 Nov 2026: a ring took ~30 s)
-        Queue::assertPushedOn('sync', SendPushToUser::class);
-
+        // ⓘ the CONNECTION is sync ([[CallService::now()]]); assertPushedOn() would look at the queue's name
         Queue::assertPushed(SendPushToUser::class, fn (SendPushToUser $job): bool => $job->userId === (int) $this->callee->id
+            && $job->connection === 'sync'
             && $job->title === 'Caller One'
             && $job->data['type'] === 'call'
             && $job->data['call_id'] === $call->public_id

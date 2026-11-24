@@ -237,7 +237,8 @@ class ShellTest extends TestCase
         $stranger->companies()->attach($this->company(), ['is_active' => true]);
         $stranger->forceFill(['current_company_id' => $this->company()->id])->save();
 
-        $this->assertSame([], $this->menuOf($stranger->fresh()));
+        // ⓘ বার্তা সবার — চালু অ্যাকাউন্ট হলেই (মালিক, ২৪ নভেম্বর ২০২৬: "রেস্ট্রিকশান নেই এবং থাকবেও না"); আর কিছু নয়
+        $this->assertSame(['messaging'], array_column($this->menuOf($stranger->fresh()), 'code'));
     }
 
     /**
