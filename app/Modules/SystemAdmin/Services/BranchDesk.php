@@ -34,6 +34,8 @@ final class BranchDesk
         'code' => ['required', 'string', 'max:16', 'alpha_dash'],
         'name_en' => ['required', 'string', 'max:160'],
         'name_bn' => ['nullable', 'string', 'max:160'],
+        // ⭐ ধরন — স্থির তালিকা, খালি মানে দেওয়া নেই ([[Branch::TYPES]])
+        'type' => ['nullable', 'string', 'in:shop,depot,warehouse,office'],
         'address_en' => ['nullable', 'string', 'max:500'],
         'phone' => ['nullable', 'string', 'max:32'],
         // ⭐ তালিকায় কোথায় বসবে — মালিক, ৫ অক্টোবর ২০২৬; ০ বা খালি মানে নামের বর্ণক্রমে

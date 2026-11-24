@@ -74,7 +74,7 @@ class BranchModuleController extends Controller implements HasMiddleware
         return CompanyContext::forCompany((int) $company->id, function () use ($request, $menu, $companies, $company): View {
             $q = is_string($request->query('q')) ? trim($request->query('q')) : '';
             $state = is_string($request->query('state')) ? $request->query('state') : '';
-            $query = $this->board->branches($q, $state);
+            $query = $this->board->branches($q, $state, Branch::typesFrom($request->query('type')));
             $allowed = (clone $query)->pluck('id')->map(fn ($id) => (int) $id)->all();
 
             if ($request->query('sort') === 'off') {
@@ -114,6 +114,7 @@ class BranchModuleController extends Controller implements HasMiddleware
                 'company' => $company,
                 'facets' => Facets::panel([
                     Facets::pick('state', __('core.table.status'), ['diff' => __('system_admin::module_board.differs'), 'same' => __('system_admin::module_board.like_company')]),
+                    Facets::many('type', __('core.branch_type.label'), Branch::typeOptions(withNone: true)),
                 ]),
             ]);
         });
@@ -225,7 +226,8 @@ class BranchModuleController extends Controller implements HasMiddleware
             return;
         }
 
-        $columns = [['key' => 'name', 'label' => __('core.company.branch'), 'render' => null]];
+        $columns = [['key' => 'name', 'label' => __('core.company.branch'), 'render' => null],
+            ['key' => 'branch_type', 'label' => __('core.branch_type.label'), 'render' => null]];
         foreach ($this->board->groups() as $group) {
             foreach ($group['codes'] as $code) {
                 $columns[] = ['key' => $code, 'label' => $this->board->label($code), 'render' => null];
@@ -233,11 +235,11 @@ class BranchModuleController extends Controller implements HasMiddleware
         }
 
         $this->export->describe(['title' => __('system_admin::module_board.branches'), 'facts' => [$company->name()]]);
-        $this->export->capture($columns, $rows, fn (Branch $b, array $col) => $col['key'] === 'name' ? $b->name() : __(match (true) {
+        $this->export->capture($columns, $rows, fn (Branch $b, array $col) => $col['key'] === 'name' ? $b->name() : ($col['key'] === 'branch_type' ? $b->typeLabel() : __(match (true) {
             $this->board->locked($col['key']) => 'system_admin::module_board.on',
             in_array($col['key'], $wall, true) => 'system_admin::branch_module.company_off',
             in_array($col['key'], $off[(int) $b->id] ?? [], true) => 'system_admin::module_board.off',
             default => 'system_admin::module_board.on',
-        }));
+        })));
     }
 }

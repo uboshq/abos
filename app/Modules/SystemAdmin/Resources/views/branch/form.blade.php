@@ -41,6 +41,8 @@
                     :value="old('name_en', $branch->name_en)" required />
         <x-ui.field name="name_bn" :label="__('system_admin::field.branch_name_bn')"
                     :value="old('name_bn', $branch->name_bn)" />
+        <x-ui.select name="type" :label="__('core.branch_type.label')" :options="\App\Models\Branch::typeOptions()"
+                     :placeholder="__('core.branch_type.none')" :selected="old('type', $branch->type)" />
         <x-ui.field name="phone" :label="__('core.print.phone')"
                     :value="old('phone', $branch->phone)" />
         {{-- ⭐ শাখার ক্রম — মালিক, ৫ অক্টোবর ২০২৬ --}}

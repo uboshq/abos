@@ -10,7 +10,7 @@
     $here = $isBranch ? 'system_admin.module.branches' : 'system_admin.module.companies';
     $title = __('system_admin::module_board.'.($isBranch ? 'branches' : 'companies'));
     $keep = $isBranch ? ['company' => $company->id] : [];
-    $filters = array_filter(request()->only(['q', 'state', 'sort']), fn ($v) => filled($v));
+    $filters = array_filter(request()->only(['q', 'state', 'sort', 'type']), fn ($v) => filled($v));
     $pageIds = collect($rows->items())->pluck('id')->map(fn ($id) => (int) $id)->all();
 
     $columns = array_values(array_filter([
@@ -23,6 +23,7 @@
         $isBranch ? ['key' => 'package', 'label' => __('system_admin::module_board.package'),
             'render' => fn ($r) => isset($packages[(int) $r->id])
                 ? ($packages[(int) $r->id]['custom'] ? __('system_admin::module_board.package_custom', ['name' => $packages[(int) $r->id]['name']]) : $packages[(int) $r->id]['name']) : '—'] : null,
+        $isBranch ? ['key' => 'type', 'label' => __('core.branch_type.label'), 'render' => fn ($r) => $r->typeLabel() ?: '—'] : null,
         ['key' => 'off', 'label' => __('system_admin::module_board.off'), 'numeric' => true, 'width' => '4rem',
             'render' => fn ($r) => ($off[(int) $r->id] ?? []) === [] ? '' : (string) count($off[(int) $r->id])],
     ]));
@@ -87,7 +88,9 @@
                         <span class="flex-1"></span>
                         <form method="GET" action="{{ route($here) }}" class="flex items-center gap-2" data-copy-form>
                             @foreach ([...$keep, ...$filters] as $k => $v)
-                                <input type="hidden" name="{{ $k }}" value="{{ is_scalar($v) ? $v : '' }}">
+                                @foreach ((array) $v as $one)
+                                    <input type="hidden" name="{{ $k }}{{ is_array($v) ? '[]' : '' }}" value="{{ is_scalar($one) ? $one : '' }}">
+                                @endforeach
                             @endforeach
                             @foreach ($ids as $id)
                                 <input type="hidden" name="pick[]" value="{{ $id }}">
