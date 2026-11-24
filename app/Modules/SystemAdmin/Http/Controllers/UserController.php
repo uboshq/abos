@@ -200,7 +200,7 @@ class UserController extends Controller implements HasMiddleware
         $this->assertRolesWithinReach($request, new User, $data);
         $this->assertOwnershipRules(new User, $data);
 
-        $user = DB::transaction(function () use ($data, $reach) {
+        $user = DB::transaction(function () use ($data, $reach, $request) {
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -217,6 +217,11 @@ class UserController extends Controller implements HasMiddleware
 
                 'mobile' => $data['mobile'] ?? null,
                 'remarks' => $data['remarks'] ?? null,
+                // ⭐ the person's own title, bn + en — only the owner sets it (owner, 24 Nov 2026); an HR employee's designation wins
+                ...($request->user()?->hasRole('super_admin') ? [
+                    'designation' => blank($data['designation'] ?? null) ? null : trim((string) $data['designation']),
+                    'designation_bn' => blank($data['designation_bn'] ?? null) ? null : trim((string) $data['designation_bn']),
+                ] : []),
 
                 'password' => $data['password'],
                 'locale' => $data['locale'],
@@ -361,7 +366,7 @@ class UserController extends Controller implements HasMiddleware
             ]);
         }
 
-        DB::transaction(function () use ($user, $data, $reach) {
+        DB::transaction(function () use ($user, $data, $reach, $request) {
             $user->update([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -371,6 +376,11 @@ class UserController extends Controller implements HasMiddleware
 
                 'mobile' => $data['mobile'] ?? null,
                 'remarks' => $data['remarks'] ?? null,
+                // ⭐ the person's own title, bn + en — only the owner sets it (owner, 24 Nov 2026); an HR employee's designation wins
+                ...($request->user()?->hasRole('super_admin') ? [
+                    'designation' => blank($data['designation'] ?? null) ? null : trim((string) $data['designation']),
+                    'designation_bn' => blank($data['designation_bn'] ?? null) ? null : trim((string) $data['designation_bn']),
+                ] : []),
 
                 'locale' => $data['locale'],
                 'is_active' => filter_var($data['is_active'] ?? false, FILTER_VALIDATE_BOOL),
@@ -1133,6 +1143,8 @@ class UserController extends Controller implements HasMiddleware
              */
             'mobile' => LoginMobile::rules($user?->id),
             'remarks' => ['nullable', 'string', 'max:255'],
+            'designation' => ['nullable', 'string', 'max:100'],
+            'designation_bn' => ['nullable', 'string', 'max:100'],
 
             /*
              * নতুন ব্যবহারকারীতে পাসওয়ার্ড লাগে, সম্পাদনায় নয়।

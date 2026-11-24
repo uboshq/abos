@@ -229,6 +229,25 @@ final class MessengerPresenter
 
     private function designationOf(User $user): string
     {
+        /*
+         * ⭐ Owner, 24 Nov 2026: an HR employee shows the HR designation; someone who is not an employee (a director, Starline's
+         * DSM or area manager) shows the title the owner gave the account (bn or en, by the reader's language); else the role.
+         */
+        $hr = DB::table('hr_employees')->whereNull('hr_employees.deleted_at')->where('hr_employees.user_id', $user->id)
+            ->join('mdm_designations', 'mdm_designations.id', '=', 'hr_employees.designation_id')
+            ->orderByDesc('hr_employees.is_active')->first(['mdm_designations.name_en', 'mdm_designations.name_bn']);
+        $bn = app()->getLocale() === 'bn';
+
+        if ($hr !== null && filled($bn ? ($hr->name_bn ?: $hr->name_en) : ($hr->name_en ?: $hr->name_bn))) {
+            return (string) ($bn ? ($hr->name_bn ?: $hr->name_en) : ($hr->name_en ?: $hr->name_bn));
+        }
+
+        $own = $bn ? ($user->designation_bn ?: $user->designation) : ($user->designation ?: $user->designation_bn);
+
+        if (filled($own)) {
+            return (string) $own;
+        }
+
         try {
             $role = $user->getRoleNames()->first();
         } catch (\Throwable) {

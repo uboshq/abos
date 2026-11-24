@@ -48,6 +48,8 @@ return [
     'status_active' => 'সক্রিয়',
     'status_inactive' => 'নিষ্ক্রিয়',
     'filter_all' => 'সব',
+    'designation' => 'পদবি — ইংরেজি (Designation)',
+    'designation_bn' => 'পদবি — বাংলা',
     'identity_and_login' => 'পরিচয় ও লগইন',
     'two_step' => 'দুই ধাপ',
     'two_step_on' => 'চালু',
