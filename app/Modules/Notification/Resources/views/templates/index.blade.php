@@ -1,16 +1,28 @@
 {{--
     ⭐ টেমপ্লেটের তালিকা — কোড, নাম, শ্রেণি, প্রকাশিত সংস্করণ (মালিকের স্পেক §৪ "Templates", §৯গ; ধাপ ৩)।
 --}}
+@php
+    // ⓘ ব্যাখ্যা নামের পাশে ⓘ-এ, "নতুন" মাথার সারিতে — কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $abosHead = \App\Core\Support\AbosHead::on();
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::template.title') }}</x-slot:title>
 
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::template.title')" :search-placeholder="__('notification::template.search')" :export="false" :share="false" />
+        <x-ui.toolbar :title="__('notification::template.title')" :info="__('notification::template.note')" :search-placeholder="__('notification::template.search')" :export="false" :share="false" >
+            @if ($abosHead)
+                <x-slot:actions>
+                    <x-ui.button tone="primary" icon="plus" :href="route('notification.templates.create')">{{ __('notification::template.new') }}</x-ui.button>
+                </x-slot:actions>
+            @endif
+        </x-ui.toolbar>
 
-        <div class="flex items-center justify-between gap-2">
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::template.note') }}</p>
-            <a href="{{ route('notification.templates.create') }}" class="shrink-0 rounded-(--radius-field) bg-(--color-brand-500) px-3 py-1.5 text-sm text-white">{{ __('notification::template.new') }}</a>
-        </div>
+        @unless ($abosHead)
+            <div class="flex items-center justify-between gap-2">
+                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::template.note') }}</p>
+                <a href="{{ route('notification.templates.create') }}" class="shrink-0 rounded-(--radius-field) bg-(--color-brand-500) px-3 py-1.5 text-sm text-white">{{ __('notification::template.new') }}</a>
+            </div>
+        @endunless
 
         @include('notification::partials.flash')
 

@@ -22,14 +22,14 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::center.title')"
+        <x-ui.toolbar :title="__('notification::center.title')" :info="__('notification::center.note')"
                       :search-placeholder="__('notification::center.search')"
                       :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest'), 'priority' => __('core.notify.sort.priority'), 'recipients' => __('notification::center.sort_recipients')]"
                       :export="false" :share="false" :facets="$facetPanel">
         </x-ui.toolbar>
         </form>
 
-        <p class="text-sm text-(--color-ink-muted)">{{ __('notification::center.note') }}</p>
+        <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::center.note') }}</p>
 
         @if (session('saved'))
             <p role="status" class="rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)">{{ session('saved') }}</p>
