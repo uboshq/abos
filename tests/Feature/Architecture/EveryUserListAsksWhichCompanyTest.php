@@ -162,14 +162,13 @@ class EveryUserListAsksWhichCompanyTest extends TestCase
 
         /*
          * ⓘ বার্তা ও কল (২১ নভেম্বর ২০২৬): যাকে লেখা/ডাকা হবে, তাকে id ধরে তোলা — তালিকা নয়, পর্দায় কোনো নাম যায় না।
-         * ⛔ দেয়ালটা ঠিক পরের ধাপে, এক জায়গায়: [[MessengerAccess::mayTalk()]] — দুইজনই এই কোম্পানির সক্রিয় সদস্য না হলে
-         * ৪০৩। ⚠️ এখানে ছাঁকলে অন্য কোম্পানির মানুষ ৪০৩-এর বদলে ৪০৪ পেত, আর দেয়ালের দাবিটা
-         * (MessengerThreadsTest::test_a_person_of_another_company_is_never_reached…) ঐ ৪০৩-ই দেখে।
+         * ⛔ দেয়ালটা ঠিক পরের ধাপে, এক জায়গায়: [[MessengerAccess::mayTalk()]] — ⭐ ২৪ নভেম্বর ২০২৬ থেকে গোটা গ্রুপ (মালিক: "যে
+         * কোনো কোম্পানি থেকে যে কোনো ব্রাঞ্চে গ্রুপ অফ কোম্পানিতে"): গ্রুপের কোনো কোম্পানির সক্রিয় সদস্য আর `messaging.use` না
+         * থাকলে ৪০৩। এই ইনস্টলেশনটা মালিকের নিজের গ্রুপ — ভাড়ার ABOS আলাদা ইনস্টলেশনে, তাই "গ্রুপ" কখনো দুই গ্রাহক মেশায় না।
          */
         "->find((int) \$data['person'])" => 'বার্তা: একজনের সাথে চ্যাট — id ধরে একজন; দেয়াল MessengerAccess::mayTalk (৪০৩)',
         '->find((int) $person)' => 'কল: যাঁকে ডাকা হবে — id ধরে একজন; দেয়াল MessengerAccess::mayTalk (৪০৩)',
-        "->whereIn('id', array_map('intval', \$data['people']))" => 'বার্তা: দলে যাঁদের যোগ করা হবে — প্রত্যেকে MessengerAccess::mayTalk পেরোয়, নইলে গোটা অনুরোধ ৪০৩',
-    ];
+        "->whereIn('id', array_map('intval', \$data['people']))" => 'বার্তা: দলে যাঁদের যোগ করা হবে — প্রত্যেকে MessengerAccess::mayTalk পেরোয়, নইলে গোটা অনুরোধ ৪০৩',    ];
 
     /**
      * ছাঁকনিবিহীন `Model::query()` খোঁজা।

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Messaging;
 
-use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Modules\Messaging\Models\Member;
 use App\Modules\Messaging\Models\Message;
@@ -260,9 +259,14 @@ final class MessengerThreadsTest extends TestCase
         $this->assertFalse($this->byId($people, (string) $b->id)['online'] ?? null, '⛔ দুই মিনিট পরেও অনলাইন / still online after 2 minutes');
     }
 
-    // ── the company wall ─────────────────────────────────────────────────
+    // ── the group, and the wall that stays ─────────────────────────────────
 
-    public function test_a_person_of_another_company_is_never_reached_and_never_sees_this_companys_threads(): void
+    /**
+     * ⭐ Owner, 23–24 Nov 2026: "যে কোনো কোম্পানি থেকে যে কোনো ব্রাঞ্চে গ্রুপ অফ কোম্পানিতে" — a colleague of a sister company is
+     * reachable (found, written to, called). ⛔ The wall that stays is the person: someone outside a chat never sees it.
+     * ⓘ This claim used to say the opposite (a person of another company is never reached) — the owner's decision replaced it.
+     */
+    public function test_a_person_of_a_sister_company_is_reached_but_never_sees_a_chat_they_are_not_in(): void
     {
         $other = Company::query()->where('code', 'FMART')->firstOrFail();
         $a = $this->person('Asif');
@@ -272,19 +276,14 @@ final class MessengerThreadsTest extends TestCase
         $thread = $this->direct($a, $b);
         $this->say($a, $thread, 'TDEPOT only');
 
-        $status = $this->phone($a, 'POST', '/api/v1/messenger/direct', ['person' => (string) $x->id])->getStatusCode();
-        $this->assertContains($status, [403, 404], '⛔ অন্য কোম্পানির মানুষের সাথে কথোপকথন খুলেছে / reached a person of another company');
-
         $people = array_column($this->phone($a, 'GET', '/api/v1/messenger/people')->assertOk()->json('data'), 'id');
-        $this->assertNotContains((string) $x->id, $people);
+        $this->assertContains((string) $x->id, $people, '⛔ বোন-কোম্পানির সহকর্মী তালিকায় নেই / the sister company colleague is not listed');
 
-        /* ⓘ Xenia's own door works — the empties below are the wall */
-        $this->phone($x, 'GET', '/api/v1/messenger/threads')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('unread_total', 0);
+        $this->phone($a, 'POST', '/api/v1/messenger/direct', ['person' => (string) $x->id])->assertSuccessful();
+
+        /* ⛔ Xenia is not in Asif ↔ Bina — she never sees it, whichever company is open */
         $this->phone($x, 'GET', "/api/v1/messenger/threads/{$thread}/messages")->assertNotFound();
-        $this->phone($x, 'POST', '/api/v1/messenger/direct', ['person' => (string) $a->id])->assertForbidden();
-
-        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
-        $this->assertSame(1, Thread::query()->count(), '⛔ অন্য কোম্পানির সাথে কথোপকথন তৈরি / a cross-company thread was made');
-        $this->assertSame(0, Thread::query()->withoutGlobalScopes()->where('company_id', $other->id)->count());
+        $this->assertNotContains($thread, array_column($this->phone($x, 'GET', '/api/v1/messenger/threads')->assertOk()->json('data'), 'id'),
+            '⛔ a chat Xenia is not in shows in her list');
     }
 }
