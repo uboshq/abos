@@ -7,6 +7,21 @@
     মালিক আগে কেবল সার্ভারের লগে পেতেন।
 --}}
 @php
+    $check = fn ($run) => $run->verifications->sortByDesc('verified_at')->first();
+    $columns = [
+        ['key' => 'when', 'label' => __('backup::screen.col_when'), 'width' => '11rem',
+         'render' => fn ($run) => \App\Core\Support\DateFormat::formatWithTime($run->started_at)],
+        ['key' => 'how', 'label' => __('backup::screen.col_how'), 'width' => '9rem',
+         'render' => fn ($run) => $run->triggered_by === 'schedule' ? __('backup::screen.trigger_schedule') : __('backup::screen.trigger_manual')],
+        ['key' => 'result', 'label' => __('backup::screen.col_result'), 'wrap' => true,
+         'render' => fn ($run) => view('backup::partials.run-result', ['run' => $run, 'seesRawErrors' => $seesRawErrors])],
+        ['key' => 'check', 'label' => __('backup::screen.col_check'), 'wrap' => true,
+         'render' => fn ($run) => view('backup::partials.run-check', ['check' => $check($run), 'seesRawErrors' => $seesRawErrors])],
+    ];
+    $rowAttributes = fn ($run) => [
+        'class' => $run->status === 'failed' || $check($run)?->status === 'failed' ? 'bg-(--color-badge-danger-bg)' : '',
+        'data-run-status' => $run->status,
+    ];
     $abosHead = \App\Core\Support\AbosHead::on();
     $sinceLine = $since
         ? __('backup::screen.records_since', ['date' => \App\Core\Support\DateFormat::format(\Illuminate\Support\Carbon::parse($since))])
@@ -41,60 +56,13 @@
     @if ($abosHead)
         <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('backup::screen.verify_title')" :info="__('backup::screen.verify_subtitle').' '.$sinceLine"
-                          :search="false" :export="false" :share="false" :facets="$facetPanel" />
+                          :search="false" :export="false" :share="false" :columns="$columns" :facets="$facetPanel" />
         </form>
     @endif
 
     @if ($runs->isNotEmpty())
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <div class="overflow-x-auto">
-                <table class="ui-list w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-(--color-border) text-start text-2xs uppercase tracking-wide text-(--color-ink-muted)">
-                            <th class="text-start">{{ __('backup::screen.col_when') }}</th>
-                            <th class="text-start">{{ __('backup::screen.col_how') }}</th>
-                            <th class="text-start">{{ __('backup::screen.col_result') }}</th>
-                            <th class="text-start">{{ __('backup::screen.col_check') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($runs as $run)
-                            @php
-                                $check = $run->verifications->sortByDesc('verified_at')->first();
-                                $bad = $run->status === 'failed' || $check?->status === 'failed';
-                            @endphp
-                            <tr @class(['border-b border-(--color-border)/50', 'bg-(--color-badge-danger-bg)' => $bad])
-                                data-run-status="{{ $run->status }}">
-                                <td class="num whitespace-nowrap text-2xs">
-                                    {{ \App\Core\Support\DateFormat::formatWithTime($run->started_at) }}
-                                </td>
-                                <td class="text-2xs">
-                                    {{ $run->triggered_by === 'schedule' ? __('backup::screen.trigger_schedule') : __('backup::screen.trigger_manual') }}
-                                </td>
-                                <td @class(['text-2xs', 'font-semibold text-(--color-badge-danger-ink)' => $run->status === 'failed'])>
-                                    {{ __('backup::screen.status_'.$run->status) }}
-                                    @if ($run->error)
-                                        {{-- ⛔ কাঁচা কারণ কেবল গোটা-ডাটাবেসের মানুষের জন্য (১ অক্টোবর ২০২৬) --}}
-                                        <span class="mt-0.5 block font-mono text-2xs break-all">{{ $seesRawErrors ? $run->error : __('backup::message.failed_detail_hidden') }}</span>
-                                    @endif
-                                </td>
-                                <td @class(['text-2xs', 'font-semibold text-(--color-badge-danger-ink)' => $check?->status === 'failed'])>
-                                    @if ($check === null)
-                                        <span class="text-(--color-ink-muted)">{{ __('backup::screen.check_none') }}</span>
-                                    @elseif ($check->sawSomething())
-                                        {{ __('backup::screen.check_passed', ['tables' => $check->detail['tables'] ?? 0]) }}
-                                    @else
-                                        {{ __('backup::screen.check_failed') }}
-                                        @if (! empty($check->detail['error']))
-                                            <span class="mt-0.5 block font-mono break-all">{{ $seesRawErrors ? $check->detail['error'] : __('backup::message.failed_detail_hidden') }}</span>
-                                        @endif
-                                    @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+            <x-ui.table :rows="$runs" :columns="$columns" :row-attributes="$rowAttributes" />
 
             <x-ui.pager :rows="$runs" />
         </section>
