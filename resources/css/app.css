@@ -1648,6 +1648,17 @@ input[type='number'] {
         flex: 0 0 auto;
     }
 
+    /* ⓘ and the bar fits a 390 px phone: ☰ · logo · search · + · four icons · me came to ~460 px, so the logo slid under the
+       search icon. The bar's buttons are 36 px here (44 elsewhere) and sit closer — nothing is dropped. */
+    .topbar {
+        --spacing-touch: 36px;
+        column-gap: 4px;
+    }
+
+    .topbar [data-shell-actions] {
+        column-gap: 0;
+    }
+
     [data-shell-search][data-expanded="true"] {
         position: fixed;
         inset-inline: 0;
