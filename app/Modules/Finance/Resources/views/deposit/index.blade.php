@@ -81,6 +81,7 @@
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
     // ⓘ "কোন প্রতিষ্ঠানে" ট্যাব যোগফলের ছক, তালিকা নয় — সেখানে ছাঁকনি নেই
+    $abosHead = \App\Core\Support\AbosHead::on();
     $facetPanel = \App\Core\ListFilter\Facets::panel($tab === 'institution' ? [] : [
         \App\Core\ListFilter\Facets::pick('kind_id', __('finance::field.deposit_kind'), $kindChoices),
         \App\Core\ListFilter\Facets::pick('institution_id', __('finance::field.institution'), $institutionChoices),
@@ -106,7 +107,10 @@
     @endif
 
     {{-- ⓘ ট্যাব ABOS রূপে মাথার সারিতে নামের পাশে বসে ([[compactPageHead]]) --}}
-    <x-ui.list-tabs :label="__('finance::menu.deposits')" :tabs="collect($tabs)->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'url' => route('finance.deposit.index', array_filter(['issuer' => $issuer, 'tab' => $key === 'active' ? null : $key, 'within' => $key === 'maturing' && $within !== 30 ? $within : null])), 'active' => $tab === $key, 'count' => $counts[$key]])->values()->all()" />
+    {{-- ⛔ কেবল ABOS Smart, Navy, Blue-এ — বাকি রূপ হুবহু আগের মতো ([[AbosHead]]) --}}
+    @if ($abosHead)
+        <x-ui.list-tabs :label="__('finance::menu.deposits')" :tabs="collect($tabs)->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'url' => route('finance.deposit.index', array_filter(['issuer' => $issuer, 'tab' => $key === 'active' ? null : $key, 'within' => $key === 'maturing' && $within !== 30 ? $within : null])), 'active' => $tab === $key, 'count' => $counts[$key]])->values()->all()" />
+    @endif
 
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
@@ -165,6 +169,29 @@
         </nav>
 
         {{-- ট্যাবের সারি — চালু · শেষ, পাশে গোনা --}}
+        @unless ($abosHead)
+        <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
+             aria-label="{{ __('finance::menu.deposit_'.($issuer === 'national_savings' ? 'savings' : $issuer)) }}">
+            @foreach ($tabs as $key => $label)
+                <a href="{{ route('finance.deposit.index', array_filter([
+                        'issuer' => $issuer,
+                        'tab' => $key === 'active' ? null : $key,
+                        // ⓘ মেয়াদের জানালাটা ট্যাব বদলালেও সাথে যায়
+                        'within' => $key === 'maturing' && $within !== 30 ? $within : null,
+                    ])) }}"
+                   @if ($tab === $key) aria-current="page" @endif
+                   class="-mb-px flex min-h-(--spacing-touch) items-center gap-2 border-b-2 px-3
+                          {{ $tab === $key
+                              ? 'border-(--color-brand-500) font-semibold text-(--color-ink)'
+                              : 'border-transparent text-(--color-ink-muted) hover:text-(--color-ink)' }}">
+                    {{ $label }}
+                    <span class="rounded-full bg-(--color-surface-sunken) px-2 text-2xs text-(--color-ink-muted)">
+                        {{ $counts[$key] }}
+                    </span>
+                </a>
+            @endforeach
+        </nav>
+        @endunless
 
         {{-- ⭐ কত দিনের ভিতরে — মেয়াদের ট্যাবে কেবল (মানচিত্র §১৪ক)।
              ⓘ তিনটা জানালা: এক মাস, দুই মাস, তিন মাস। ⚠️ FDR নবায়নের সিদ্ধান্ত

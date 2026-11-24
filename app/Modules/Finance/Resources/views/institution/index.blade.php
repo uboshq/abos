@@ -46,6 +46,7 @@
     ];
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    $abosHead = \App\Core\Support\AbosHead::on();
     $facetPanel = \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::pick('state', __('finance::institution.state'), ['active' => __('finance::institution.active'), 'inactive' => __('finance::institution.inactive')]),
     ]);
@@ -54,13 +55,52 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::institution.title') }}</x-slot:title>
 
+    {{-- ⛔ কেবল ABOS Smart, Navy, Blue-এ — বাকি রূপ হুবহু আগের মতো ([[AbosHead]]) --}}
+    @unless ($abosHead)
+    <x-slot:header>
+        <x-ui.page-header :title="__('finance::institution.title')"
+                          :subtitle="__('finance::institution.subtitle')">
+            <x-slot:actions>
+                @can('finance.institution.manage')
+                    <x-ui.button tone="primary" icon="plus"
+                                 :href="route('finance.institution.create', $kind ? ['kind' => $kind] : [])">
+                        {{ __('finance::institution.new') }}
+                    </x-ui.button>
+                @endcan
+            </x-slot:actions>
+        </x-ui.page-header>
+    </x-slot:header>
+    @endunless
+
     @if (session('saved'))
         <p role="status" class="mb-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2
                                 text-sm text-(--color-badge-success-ink)">{{ session('saved') }}</p>
     @endif
 
     {{-- ⓘ ট্যাব ABOS রূপে মাথার সারিতে নামের পাশে বসে ([[compactPageHead]]) --}}
-    <x-ui.list-tabs :label="__('finance::institution.title')" :tabs="collect($tabs)->map(fn ($label, $key) => ['key' => $key === '' ? 'all' : $key, 'label' => $label, 'url' => route('finance.institution.index', $key === '' ? [] : ['kind' => $key]), 'active' => (string) $kind === (string) $key, 'count' => $key === '' ? $counts->sum() : ($counts[$key] ?? 0)])->values()->all()" />
+    @if ($abosHead)
+        <x-ui.list-tabs :label="__('finance::institution.title')" :tabs="collect($tabs)->map(fn ($label, $key) => ['key' => $key === '' ? 'all' : $key, 'label' => $label, 'url' => route('finance.institution.index', $key === '' ? [] : ['kind' => $key]), 'active' => (string) $kind === (string) $key, 'count' => $key === '' ? $counts->sum() : ($counts[$key] ?? 0)])->values()->all()" />
+    @endif
+
+    @unless ($abosHead)
+    <nav class="mb-3 flex flex-wrap gap-1 border-b border-(--color-border) text-sm"
+         aria-label="{{ __('finance::institution.title') }}">
+        @foreach ($tabs as $key => $label)
+            @php $on = (string) $kind === (string) $key; @endphp
+            <a href="{{ route('finance.institution.index', $key === '' ? [] : ['kind' => $key]) }}"
+               @if ($on) aria-current="page" @endif
+               class="-mb-px flex min-h-(--spacing-touch) items-center gap-2 border-b-2 px-3
+                      {{ $on
+                          ? 'border-(--color-brand-500) font-semibold text-(--color-ink)'
+                          : 'border-transparent text-(--color-ink-muted) hover:text-(--color-ink)' }}">
+                {{ $label }}
+                <span class="rounded-full bg-(--color-surface-sunken) px-2 text-2xs text-(--color-ink-muted)">
+                    {{ $key === '' ? $counts->sum() : ($counts[$key] ?? 0) }}
+                </span>
+            </a>
+        @endforeach
+    </nav>
+    @endunless
 
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
@@ -68,9 +108,10 @@
             @if ($kind)
                 <input type="hidden" name="kind" value="{{ $kind }}">
             @endif
-            <x-ui.toolbar :title="__('finance::institution.title')" :subtitle="__('finance::institution.subtitle')"
+            <x-ui.toolbar :title="$abosHead ? __('finance::institution.title') : null" :info="$abosHead ? __('finance::institution.subtitle') : null"
                           :count="trans_choice('core.count.records', $institutions->total(), ['count' => $institutions->total()])"
                           :columns="$columns" :search-placeholder="__('finance::institution.name_en')" :quiet="['kind']" :facets="$facetPanel">
+                @if ($abosHead)
                 <x-slot:actions>
                     @can('finance.institution.manage')
                         <x-ui.button tone="primary" icon="plus"
@@ -79,6 +120,7 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
+                @endif
             </x-ui.toolbar>
         </form>
 

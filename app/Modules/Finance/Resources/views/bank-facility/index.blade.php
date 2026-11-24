@@ -88,6 +88,7 @@
     ];
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    $abosHead = \App\Core\Support\AbosHead::on();
     $facetPanel = \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::pick('kind', __('finance::field.facility_kind'), collect(\App\Modules\Finance\Models\BankFacility::KINDS)->mapWithKeys(fn ($v) => [$v => __('finance::field.facility_'.$v)])->all()),
         \App\Core\ListFilter\Facets::dates(__('finance::field.renews_on'), bar: false),
@@ -115,7 +116,10 @@
     @endif
 
     {{-- ⓘ ট্যাব ABOS রূপে মাথার সারিতে নামের পাশে বসে ([[compactPageHead]]) --}}
-    <x-ui.list-tabs :label="__('finance::menu.bank_facility')" :tabs="collect($tabs)->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'url' => route('finance.bank_facility.index', $key === 'active' ? [] : ['tab' => $key]), 'active' => $tab === $key, 'count' => $counts[$key]])->values()->all()" />
+    {{-- ⛔ কেবল ABOS Smart, Navy, Blue-এ — বাকি রূপ হুবহু আগের মতো ([[AbosHead]]) --}}
+    @if ($abosHead)
+        <x-ui.list-tabs :label="__('finance::menu.bank_facility')" :tabs="collect($tabs)->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'url' => route('finance.bank_facility.index', $key === 'active' ? [] : ['tab' => $key]), 'active' => $tab === $key, 'count' => $counts[$key]])->values()->all()" />
+    @endif
 
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
@@ -170,6 +174,24 @@
         @endcan
 
         {{-- ট্যাবের সারি — চালু · বন্ধ, পাশে গোনা --}}
+        @unless ($abosHead)
+        <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
+             aria-label="{{ __('finance::menu.bank_facility') }}">
+            @foreach ($tabs as $key => $label)
+                <a href="{{ route('finance.bank_facility.index', $key === 'active' ? [] : ['tab' => $key]) }}"
+                   @if ($tab === $key) aria-current="page" @endif
+                   class="-mb-px flex min-h-(--spacing-touch) items-center gap-2 border-b-2 px-3
+                          {{ $tab === $key
+                              ? 'border-(--color-brand-500) font-semibold text-(--color-ink)'
+                              : 'border-transparent text-(--color-ink-muted) hover:text-(--color-ink)' }}">
+                    {{ $label }}
+                    <span class="rounded-full bg-(--color-surface-sunken) px-2 text-2xs text-(--color-ink-muted)">
+                        {{ $counts[$key] }}
+                    </span>
+                </a>
+            @endforeach
+        </nav>
+        @endunless
 
         {{--
             ⭐ নবায়নের তালিকা — উপরে, আলাদা করে।
