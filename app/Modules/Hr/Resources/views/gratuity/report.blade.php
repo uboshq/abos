@@ -13,14 +13,18 @@
         ['key' => 'basic', 'label' => __('hr::field.gratuity_basic'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($r) => $money($r['basic'])],
         ['key' => 'obligation', 'label' => __('hr::field.gratuity_obligation'), 'numeric' => true, 'width' => '10rem', 'render' => fn ($r) => $money($r['obligation'])],
     ];
+
+    // ⓘ নিরীক্ষকের লাইন (IAS 19), চালু/বন্ধ আর সূত্র — আলাদা লাইনে নয়, নামের পাশের ⓘ-তে (মালিক, ২৩ নভেম্বর ২০২৬)
+    $note = implode(' ', [__('hr::message.gratuity_ias19'), __($enabled ? 'hr::message.gratuity_on_note' : 'hr::message.gratuity_off_note'), __('hr::message.gratuity_formula_note')]);
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::day('on', __('hr::field.as_of'), $on->toDateString()),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('hr::menu.report_gratuity') }}</x-slot:title>
-
-    <x-slot:header>
-        <x-ui.page-header :title="__('hr::menu.report_gratuity')" />
-    </x-slot:header>
 
     @if (session('saved'))
         <div role="status"
@@ -42,29 +46,30 @@
         </div>
     @endif
 
-    {{-- ⭐ নিরীক্ষকের জন্য এক লাইন — IAS 19-এর সরলীকরণ (fe, ২১ অক্টোবর ২০২৬) --}}
-    <p class="mb-2 text-2xs text-(--color-ink-muted)" data-ias19-note>{{ __('hr::message.gratuity_ias19') }}</p>
+    {{-- ⓘ খাতায় বসানোর ফর্ম আলাদা — ছাঁকনির ফর্মের ভিতরে ফর্ম চলে না; বোতামটা মাথার সারিতে `form=` দিয়ে --}}
+    @can('hr.payroll.manage')
+        <form id="gratuity-book" method="POST" action="{{ route('hr.gratuity.store') }}" class="hidden">
+            @csrf
+            <input type="hidden" name="month" value="{{ $on->format('Y-m') }}">
+        </form>
+    @endcan
 
-    <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-        <p class="mb-2 text-sm">{{ __($enabled ? 'hr::message.gratuity_on_note' : 'hr::message.gratuity_off_note') }}</p>
-        <p class="mb-3 text-2xs text-(--color-ink-muted)">{{ __('hr::message.gratuity_formula_note') }}</p>
-
-        <form method="GET" action="{{ route('hr.gratuity.report') }}" class="grid gap-3 sm:grid-cols-[14rem_1fr] sm:items-end">
-            <x-ui.field name="on" type="date" :label="__('hr::field.as_of')" :value="$on->toDateString()" required />
-            <x-ui.button type="submit">{{ __('hr::action.pf_preview') }}</x-ui.button>
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form" :report="true">
+    <div data-boxed data-ias19-note class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form id="list-form" method="GET" class="contents" data-report>
+            <x-ui.toolbar :title="__('hr::menu.report_gratuity')" :subtitle="$note" :search="false" :report="true" :columns="$columns" :facets="$facetPanel">
+                @can('hr.payroll.manage')
+                    <x-slot:actions>
+                        <x-ui.button type="submit" form="gratuity-book" tone="primary">{{ __('hr::action.gratuity_book', ['month' => $on->format('M Y')]) }}</x-ui.button>
+                    </x-slot:actions>
+                @endcan
+            </x-ui.toolbar>
         </form>
 
-        @can('hr.payroll.manage')
-            <form method="POST" action="{{ route('hr.gratuity.store') }}" class="mt-3">
-                @csrf
-                <input type="hidden" name="month" value="{{ $on->format('Y-m') }}">
-                <x-ui.button type="submit" tone="primary">{{ __('hr::action.gratuity_book', ['month' => $on->format('M Y')]) }}</x-ui.button>
-            </form>
-        @endcan
+        <x-ui.table :rows="$rows" :columns="$columns" :empty="__('core.empty.no_results')"
+                    :totals="['obligation' => $money($total)]" :totalsLabel="__('core.print.total')" />
     </div>
-
-    <x-ui.table :rows="$rows" :columns="$columns" :empty="__('core.empty.no_results')"
-                :totals="['obligation' => $money($total)]" :totalsLabel="__('core.print.total')" />
+    </x-ui.filter-layout>
 
     <p class="mt-3 text-sm" data-gratuity-booked>
         {{ __('hr::message.gratuity_booked_so_far', ['booked' => $money($booked), 'total' => $money($total)]) }}
