@@ -45,8 +45,20 @@ class InstitutionController extends Controller implements HasMiddleware
     {
         $kind = in_array($request->query('kind'), Institution::KINDS, true) ? $request->query('kind') : null;
 
-        $institutions = Institution::query()
+        $term = trim((string) $request->query('q'));
+        $state = $request->query('state');
+
+        // ⓘ ধরন (ট্যাব), অবস্থা আর খোঁজা — তালিকা আর সর্বমোট একই ছাঁকা কোয়েরি থেকে
+        $filtered = fn () => Institution::query()
             ->ofKind($kind)
+            ->when($state === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($state === 'inactive', fn ($q) => $q->where('is_active', false))
+            ->when($term !== '', fn ($q) => $q->where(fn ($w) => $w->where('name_en', 'like', "%{$term}%")
+                ->orWhere('name_bn', 'like', "%{$term}%")->orWhere('short_code', 'like', "%{$term}%")
+                ->orWhere('branch_name', 'like', "%{$term}%")->orWhere('contact_person', 'like', "%{$term}%")
+                ->orWhere('phone', 'like', "%{$term}%")));
+
+        $institutions = $filtered()
             ->orderByDesc('is_active')
             ->orderBy('name_en')
             ->paginate(\App\Core\Support\PerPage::of())
@@ -64,7 +76,7 @@ class InstitutionController extends Controller implements HasMiddleware
 
             // ⓘ সর্বমোট — গোটা ছাঁকনির নিট, কেবল এই পাতার নয়; টেবিলের নিচে আর মোটের পট্টিতে একই সংখ্যা
             // (প্রতিষ্ঠান হাতে গোনা কয়েকটা, তাই সবগুলো গোনা চলে)
-            'grand' => ['net' => Institution::query()->ofKind($kind)->get()
+            'grand' => ['net' => $filtered()->get()
                 ->reduce(fn (string $sum, Institution $i) => bcadd($sum, app(InstitutionPosition::class)->of($i)['net'], 4), '0')],
         ]);
     }

@@ -7,6 +7,13 @@
     অন্যদিকে তিন হাজার দেনা, অথচ সত্যিটা দুই হাজার। চিহ্নটাই ভাগ করে
     দেয়, আর যোগফল দুইটা উপরে আলাদা করে বলা থাকে।
 --}}
+@php
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('state', __('finance::field.state'), ['open' => __('finance::field.hl_state_open'), 'settled' => __('finance::field.hl_state_settled')]),
+    ]);
+@endphp
+
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::menu.hand_loan') }}</x-slot:title>
 
@@ -58,9 +65,13 @@
         ];
     @endphp
 
+    {{-- ⓘ ট্যাব ABOS রূপে মাথার সারিতে নামের পাশে বসে ([[compactPageHead]]) --}}
+    <x-ui.list-tabs :label="__('finance::menu.hand_loan')" :tabs="collect(['people' => __('finance::field.hl_tab_people'), 'all' => __('finance::field.hl_tab_all'), 'they' => __('finance::message.hand_loan_they_owe'), 'we' => __('finance::message.hand_loan_we_owe'), 'due' => __('finance::field.hl_tab_due')])->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'url' => route('finance.hand_loan.index', array_filter(['tab' => $key === 'people' ? null : $key, 'q' => request('q')])), 'active' => $tab === $key, 'count' => $counts[$key]])->values()->all()" />
+
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             {{-- ⓘ খোঁজা বা ঘনত্ব বদলালেও ট্যাবটা থাকে --}}
             @if ($tab !== 'people')
                 <input type="hidden" name="tab" value="{{ $tab }}">
@@ -71,7 +82,7 @@
                           :subtitle="__('finance::message.hand_loan_note')"
                           :columns="$hlColumns"
                           :search-placeholder="__('finance::message.hand_loan_search')"
-                          :quiet="['tab']">
+                          :facets="$facetPanel" :quiet="['tab']">
                 <x-slot:actions>
                     @can('finance.hand_loan.create')
                         <x-ui.button tone="primary" icon="plus" :href="route('finance.hand_loan.create')">
@@ -103,31 +114,6 @@
         </div>
 
         {{-- ⭐ ট্যাবের সারি — মূলধনের পাতার হুবহু গড়ন (মালিকের নমুনা, ১৯ সেপ্টেম্বর ২০২৬) --}}
-        <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
-             aria-label="{{ __('finance::menu.hand_loan') }}">
-            {{-- ⭐ ব্যক্তির তালিকা প্রথমে, আর সেটাই পাতা খুললে — মালিক, ৫ অক্টোবর ২০২৬ (হিসাব ধরে তালিকাগুলো পাশে) --}}
-            @foreach (['people' => __('finance::field.hl_tab_people'),
-                       'all' => __('finance::field.hl_tab_all'),
-                       'they' => __('finance::message.hand_loan_they_owe'),
-                       'we' => __('finance::message.hand_loan_we_owe'),
-                       /* ⭐ মনে করিয়ে দেওয়া — তারিখ পেরোনো বা ত্রিশ দিনের ভিতরে (§১৪খ) */
-                       'due' => __('finance::field.hl_tab_due')] as $key => $label)
-                <a href="{{ route('finance.hand_loan.index', array_filter([
-                        'tab' => $key === 'people' ? null : $key,
-                        'q' => request('q'),
-                    ])) }}"
-                   @if ($tab === $key) aria-current="page" @endif
-                   class="-mb-px flex min-h-(--spacing-touch) items-center gap-2 border-b-2 px-3
-                          {{ $tab === $key
-                              ? 'border-(--color-brand-500) font-semibold text-(--color-ink)'
-                              : 'border-transparent text-(--color-ink-muted) hover:text-(--color-ink)' }}">
-                    {{ $label }}
-                    <span class="rounded-full bg-(--color-surface-sunken) px-2 text-2xs text-(--color-ink-muted)">
-                        {{ $counts[$key] }}
-                    </span>
-                </a>
-            @endforeach
-        </nav>
 
         @if ($tab === 'people')
             @include('finance::hand-loan.partials.people', ['people' => $people])
@@ -139,4 +125,5 @@
         @endif
     </div>
 
+    </x-ui.filter-layout>
 </x-layouts.app>

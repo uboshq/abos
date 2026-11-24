@@ -96,7 +96,7 @@ class BankFacilityController extends Controller implements HasMiddleware
 
         $term = trim((string) $request->query('q'));
 
-        $facilities = $this->facilityList($tab, $term);
+        $facilities = $this->facilityList($tab, $term, $request);
 
         return view('finance::bank-facility.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -125,7 +125,7 @@ class BankFacilityController extends Controller implements HasMiddleware
             // ⭐ বাকি সুদ — মাঝপথে শোধের চার্জের একই হিসাব ([[BankFacilityService::interestLeft()]]; মালিক, ৫ অক্টোবর ২০২৬)
             'interest' => $facilities->getCollection()
                 ->mapWithKeys(fn (BankFacility $f) => [(int) $f->id => $this->facilities->interestLeft($f)])->all(),
-            'grand' => $this->grandTotals($this->facilityQuery($tab, $term), ['limit_amount' => 't.limit_amount']),
+            'grand' => $this->grandTotals($this->facilityQuery($tab, $term, $request), ['limit_amount' => 't.limit_amount']),
             'renewals' => $this->facilities->dueForRenewal(),
         ]);
     }
@@ -136,14 +136,23 @@ class BankFacilityController extends Controller implements HasMiddleware
      * ⓘ আলাদা মেথডে, কারণ সারিগুলো [[standingOf()]]-এরও লাগে, আর দুইবার
      * কোয়েরি চালানো মানে একদিন দুইটা আলাদা তালিকা।
      */
-    private function facilityList(string $tab, string $term): LengthAwarePaginator
+    private function facilityList(string $tab, string $term, Request $request): LengthAwarePaginator
     {
-        return $this->facilityQuery($tab, $term)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
+        return $this->facilityQuery($tab, $term, $request)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
     }
 
     /** ⓘ তালিকার কোয়েরি, পাতা ভাঙার আগে — সর্বমোটও ঠিক এটাই যোগ করে ([[GrandTotals]]) */
-    private function facilityQuery(string $tab, string $term): Builder
+    private function facilityQuery(string $tab, string $term, Request $request): Builder
     {
+        // ⓘ ভুল তারিখ ছাঁকনি নয়, ৫০০-ও নয়
+        $day = function (string $key) use ($request): ?string {
+            try {
+                return filled($request->query($key)) ? \Illuminate\Support\Carbon::parse((string) $request->query($key))->toDateString() : null;
+            } catch (\Throwable) {
+                return null;
+            }
+        };
+
         return BankFacility::query()->inViewedBranch()
             // ⓘ তালিকায় প্রতিষ্ঠানের কলাম আছে — নাহলে প্রতি সারিতে একটা কোয়েরি
             ->with('institution')
@@ -162,6 +171,10 @@ class BankFacilityController extends Controller implements HasMiddleware
                     ->orWhere('document_no', 'like', "%{$term}%")
                     ->orWhere('note', 'like', "%{$term}%"),
             ))
+            // ⭐ প্যানেলের ছাঁকনি — ধরন আর নবায়নের তারিখ
+            ->when(in_array($request->query('kind'), BankFacility::KINDS, true), fn ($q) => $q->where('kind', $request->query('kind')))
+            ->when($day('from'), fn ($q, $d) => $q->whereDate('renews_on', '>=', $d))
+            ->when($day('to'), fn ($q, $d) => $q->whereDate('renews_on', '<=', $d))
             ->latest('id');
     }
 

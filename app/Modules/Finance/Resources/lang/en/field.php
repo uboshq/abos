@@ -356,4 +356,7 @@ return [
     // Vouchers named for the loan — audit 4 Oct 2026
     'facility_pay_instalment' => 'Pay an instalment',
     'facility_draw' => 'Loan money received',
+    // ⓘ হাতধারের ছাঁকনি (২৪ নভেম্বর ২০২৬)
+    'hl_state_open' => 'Outstanding',
+    'hl_state_settled' => 'Settled',
 ];

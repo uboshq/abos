@@ -153,7 +153,20 @@ class DepositController extends Controller implements HasMiddleware
 
         $term = trim((string) $request->query('q'));
 
+        // ⓘ ভুল তারিখ ছাঁকনি নয়, ৫০০-ও নয়
+        $day = function (string $key) use ($request): ?string {
+            try {
+                return filled($request->query($key)) ? \Illuminate\Support\Carbon::parse((string) $request->query($key))->toDateString() : null;
+            } catch (\Throwable) {
+                return null;
+            }
+        };
+
         return view('finance::deposit.index', [
+            'kindChoices' => DepositKind::query()->where('issuer', $issuer)->orderBy('sort')->orderBy('code')->get()
+                ->mapWithKeys(fn (DepositKind $k) => [(string) $k->id => $k->name()])->all(),
+            'institutionChoices' => \App\Modules\Finance\Models\Institution::query()->orderBy('name_en')->get()
+                ->mapWithKeys(fn ($i) => [(string) $i->id => $i->label()])->all(),
             'menu' => $this->menu->forUser($request->user()),
             'issuer' => $issuer,
             'standing' => $this->deposits->standing($issuer),
@@ -246,6 +259,11 @@ class DepositController extends Controller implements HasMiddleware
                         ->orWhereHas('person', fn ($p) => $p->where('name_en', 'like', "%{$term}%")
                             ->orWhere('name_bn', 'like', "%{$term}%")),
                 ))
+                // ⭐ প্যানেলের ছাঁকনি — জমার ধরন, প্রতিষ্ঠান, মেয়াদ শেষ
+                ->when(ctype_digit((string) $request->query('kind_id')), fn ($q) => $q->where('kind_id', (int) $request->query('kind_id')))
+                ->when(ctype_digit((string) $request->query('institution_id')), fn ($q) => $q->where('institution_id', (int) $request->query('institution_id')))
+                ->when($day('from'), fn ($q, $d) => $q->whereDate('matures_on', '>=', $d))
+                ->when($day('to'), fn ($q, $d) => $q->whereDate('matures_on', '<=', $d))
                 ->with(['kind', 'movements', 'person', 'pledgedToLoan'])
                 ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [Deposit::ACTIVE])
                 ->orderByRaw('matures_on IS NULL')

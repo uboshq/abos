@@ -59,6 +59,10 @@ class DepositKindController extends Controller implements HasMiddleware
                     ->orWhere('name_en', 'like', "%{$term}%")
                     ->orWhere('name_bn', 'like', "%{$term}%"),
             ))
+            // ⭐ প্যানেলের ছাঁকনি — ধরন আর অবস্থা
+            ->when(in_array($request->query('shape'), DepositKind::SHAPES, true), fn ($q) => $q->where('shape', $request->query('shape')))
+            ->when($request->query('state') === 'active', fn ($q) => $q->where('is_active', true))
+            ->when($request->query('state') === 'inactive', fn ($q) => $q->where('is_active', false))
             ->withCount('deposits')
             ->orderBy('issuer')
             ->orderBy('sort')

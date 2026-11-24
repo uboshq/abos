@@ -166,6 +166,24 @@ class HandLoanController extends Controller implements HasMiddleware
             )));
         }
 
+        /*
+         * ⭐ প্যানেলের ছাঁকনি — বাকি আছে / মিটে গেছে (জের শূন্য)। ⓘ ব্যক্তির তালিকার নিচের মোটও ছাঁকা সারির, যাতে সারি আর মোট একই কথা বলে।
+         */
+        $state = $request->query('state');
+
+        if (in_array($state, ['open', 'settled'], true)) {
+            $wanted = fn (array $row) => ($sideOf($row) !== 0) === ($state === 'open');
+            $rows = array_values(array_filter($rows, $wanted));
+
+            if ($people !== null) {
+                $people['rows'] = array_values(array_filter($people['rows'], $wanted));
+
+                foreach (['given', 'taken', 'balance', 'books'] as $key) {
+                    $people[$key] = array_reduce($people['rows'], fn (string $sum, array $r) => bcadd($sum, (string) $r[$key], 4), '0');
+                }
+            }
+        }
+
         if (! in_array($tab, ['all', 'people'], true)) {
             $rows = array_values(array_filter($rows, match ($tab) {
                 'they' => fn ($r) => $sideOf($r) > 0,

@@ -48,6 +48,12 @@
     foreach (\App\Modules\Finance\Models\DepositKind::ISSUERS as $each) {
         $tabs[$each] = __('finance::menu.deposit_'.($each === 'national_savings' ? 'savings' : $each));
     }
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('shape', __('finance::field.kind_shape'), collect(\App\Modules\Finance\Models\DepositKind::SHAPES)->mapWithKeys(fn ($v) => [$v => __('finance::field.shape_'.$v)])->all()),
+        \App\Core\ListFilter\Facets::pick('state', __('finance::field.state'), ['active' => __('finance::institution.active'), 'inactive' => __('finance::institution.inactive')]),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -60,9 +66,13 @@
 
     <x-ui.errors />
 
+    {{-- ⓘ ট্যাব ABOS রূপে মাথার সারিতে নামের পাশে বসে ([[compactPageHead]]) --}}
+    <x-ui.list-tabs :label="__('finance::menu.deposit_kinds')" :tabs="collect($tabs)->map(fn ($label, $key) => ['key' => $key, 'label' => $label, 'url' => route('finance.deposit_kind.index', array_filter(['tab' => $key === 'all' ? null : $key, 'q' => request('q')])), 'active' => $tab === $key, 'count' => $counts[$key] ?? 0])->values()->all()" />
+
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             @if ($tab !== 'all')
                 <input type="hidden" name="tab" value="{{ $tab }}">
             @endif
@@ -71,7 +81,7 @@
                           :subtitle="__('finance::message.kind_note')"
                           :columns="$columns"
                           :search-placeholder="__('finance::message.kind_search')"
-                          :quiet="['tab']">
+                          :facets="$facetPanel" :quiet="['tab']">
                 <x-slot:actions>
                     @can('finance.deposit_kind.manage')
                         <x-ui.button tone="primary" icon="plus" :href="route('finance.deposit_kind.create')">
@@ -82,25 +92,6 @@
             </x-ui.toolbar>
         </form>
 
-        <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
-             aria-label="{{ __('finance::menu.deposit_kinds') }}">
-            @foreach ($tabs as $key => $label)
-                <a href="{{ route('finance.deposit_kind.index', array_filter([
-                        'tab' => $key === 'all' ? null : $key,
-                        'q' => request('q'),
-                    ])) }}"
-                   @if ($tab === $key) aria-current="page" @endif
-                   class="-mb-px flex min-h-(--spacing-touch) items-center gap-2 border-b-2 px-3
-                          {{ $tab === $key
-                              ? 'border-(--color-brand-500) font-semibold text-(--color-ink)'
-                              : 'border-transparent text-(--color-ink-muted) hover:text-(--color-ink)' }}">
-                    {{ $label }}
-                    <span class="rounded-full bg-(--color-surface-sunken) px-2 text-2xs text-(--color-ink-muted)">
-                        {{ $counts[$key] ?? 0 }}
-                    </span>
-                </a>
-            @endforeach
-        </nav>
 
         <x-ui.table :rows="$kinds"
                     :columns="$columns"
@@ -110,4 +101,5 @@
 
     <div class="mt-3">{{ $kinds->links() }}</div>
     <x-ui.list-totals :rows="$kinds" />
+    </x-ui.filter-layout>
 </x-layouts.app>

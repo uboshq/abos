@@ -129,6 +129,15 @@ class CapitalController extends Controller implements HasMiddleware
         $owner = $owners->owner();
         $personId = $request->integer('person') ?: null;
 
+        // ⓘ ভুল তারিখ ছাঁকনি নয়, ৫০০-ও নয়
+        $day = function (string $key) use ($request): ?string {
+            try {
+                return filled($request->query($key)) ? \Illuminate\Support\Carbon::parse((string) $request->query($key))->toDateString() : null;
+            } catch (\Throwable) {
+                return null;
+            }
+        };
+
         return view('finance::capital.index', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
@@ -144,6 +153,11 @@ class CapitalController extends Controller implements HasMiddleware
             // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
             'grand' => $this->grandTotals($list = CapitalEntry::query()->inViewedBranch()->with(['account', 'person'])
                 ->when($personId, fn ($q, $id) => $q->where('person_id', $id))
+                // ⭐ প্যানেলের ছাঁকনি — তারিখ, কে, কী
+                ->when($day('from'), fn ($q, $d) => $q->whereDate('trx_date', '>=', $d))
+                ->when($day('to'), fn ($q, $d) => $q->whereDate('trx_date', '<=', $d))
+                ->when(in_array($request->query('who'), CapitalEntry::WHO, true), fn ($q) => $q->where('contributor_type', $request->query('who')))
+                ->when(in_array($request->query('type'), CapitalEntry::KINDS, true), fn ($q) => $q->where('entry_type', $request->query('type')))
                 /*
                  * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
                  *
