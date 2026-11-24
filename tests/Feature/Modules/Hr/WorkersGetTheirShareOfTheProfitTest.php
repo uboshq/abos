@@ -226,6 +226,22 @@ final class WorkersGetTheirShareOfTheProfitTest extends TestCase
         $this->assertSame(0, LedgerEntry::query()->where('source_type', WppfProvision::SOURCE_TYPE)->count());
     }
 
+    /** ⭐ খাতার সারি নিজের বছরের পাতা খোলে (মালিকের লিংকের নিয়ম, ২৩ নভেম্বর ২০২৬); চাবি ছাড়া নয় */
+    public function test_the_ledger_row_opens_the_years_page_and_not_without_the_key(): void
+    {
+        $this->switchOn();
+        app(WppfService::class)->provision($this->year, $this->owner);
+        $row = WppfProvision::query()->sole();
+        $this->assertTrue(LedgerEntry::query()->where('source_type', WppfProvision::SOURCE_TYPE)->where('source_id', $row->id)->exists(), 'প্রস্তুতি — জাবেদা নেই।');
+
+        $target = app(\App\Core\Engines\Drill\DrillResolver::class)->describe(WppfProvision::SOURCE_TYPE, $row->id);
+        $this->assertTrue($target['resolved'], '⛔ খাতার সারি থেকে তহবিলের কাগজ মেলে না।');
+        $this->assertSame(route('hr.wppf.show', ['year' => $this->year->id]), route($target['route'][0], $target['route'][1]));
+        $this->get(route($target['route'][0], $target['route'][1]))->assertOk()->assertViewHas('year', fn ($y) => (int) $y->id === (int) $this->year->id);
+
+        $this->as($this->person(['hr.employee.view', 'accounts.report']))->get(route($target['route'][0], $target['route'][1]))->assertForbidden();
+    }
+
     // ── যন্ত্রপাতি ──
 
     private function switchOn(): void

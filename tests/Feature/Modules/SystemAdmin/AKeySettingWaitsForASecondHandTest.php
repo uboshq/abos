@@ -103,6 +103,13 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
         $this->assertTrue(app(OwnerSelfApproval::class)->ofPaper($change->fresh()), '⛔ দাগ নেই।');
         $this->get(route('system_admin.control-panel'))->assertOk()->assertSee('data-owner-self-mark', false);
 
+        // ⛔ দাগ কেবল ওই বদলের সারিতে — একই মুহূর্তের একই চাবির আরেক বদলে নয়
+        app(SettingsService::class)->set(self::KEY, (string) ((int) $wanted + 1));
+        $history = (string) $this->get(route('system_admin.control-panel'))->assertOk()->getContent();
+        $this->assertSame(1, substr_count($history, 'data-owner-self-mark'), '⛔ দাগ ভুল সারিতে, বা একাধিক সারিতে।');
+        $first = \Illuminate\Support\Str::between($history, 'data-control-history', '</li>');
+        $this->assertStringNotContainsString('data-owner-self-mark', $first, '⛔ পরের সাধারণ বদলে দাগ।');
+
         $rows = $this->reportRows();
         $this->assertCount(1, $rows, '⛔ মাসের রিপোর্টে সারি নেই।');
         $this->assertSame(app(SignedSettings::class)->labelOf(self::KEY), (string) ((array) $rows->first())['document_no']);

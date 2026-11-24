@@ -151,6 +151,26 @@ final class GratuityIsBookedToTheObligationTest extends TestCase
         $this->actingAs($clerk->fresh())->get(route('hr.gratuity.report'))->assertForbidden();
     }
 
+    /** ⭐ খাতার সারি সেই মাসের গ্র্যাচুইটির পাতা খোলে (মালিকের লিংকের নিয়ম, ২৩ নভেম্বর ২০২৬); চাবি ছাড়া নয় */
+    public function test_the_ledger_row_opens_that_months_page_and_not_without_the_key(): void
+    {
+        $this->staff();
+        $made = collect(app(Gratuity::class)->accrue(Carbon::parse('2026-07-01')))->firstOrFail();
+        $this->assertTrue(LedgerEntry::query()->where('source_type', Gratuity::SOURCE_TYPE)->where('source_id', $made->id)->exists(), 'প্রস্তুতি — জাবেদা নেই।');
+
+        $target = app(\App\Core\Engines\Drill\DrillResolver::class)->describe(Gratuity::SOURCE_TYPE, $made->id);
+        $this->assertTrue($target['resolved'], '⛔ খাতার সারি থেকে গ্র্যাচুইটির কাগজ মেলে না।');
+        $url = route($target['route'][0], $target['route'][1]);
+        $this->assertSame(route('hr.gratuity.report', ['on' => '2026-07-31']), $url, '⛔ লিংক অন্য মাসের।');
+        $this->get($url)->assertOk()->assertSee(\App\Core\Support\Money::format('712222.07'));
+
+        $keyless = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+        $keyless->companies()->attach($this->company->id, ['is_active' => true]);
+        CompanyContext::forCompany($this->company->id, fn () => $keyless->givePermissionTo(Permission::findOrCreate('accounts.report', 'web')));
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->actingAs($keyless->fresh())->get($url)->assertForbidden();
+    }
+
     // ── সাহায্য ──────────────────────────────────────────────────────────
 
     /** @return list<Employee> ক, খ, গ, ঘ */

@@ -239,13 +239,14 @@ class ControlPanelController extends Controller implements HasMiddleware
 
         $keys = \App\Models\Setting::query()->whereIn('id', $trails->pluck('auditable_id'))->pluck('key', 'id');
 
-        // ⭐ মালিক নিজে চেয়ে নিজে অনুমোদন দিলে দাগ — বদলটা একই লেনদেনে বসেছে, তাই চাবি, মানুষ আর মুহূর্ত ধরে মেলে ([[SignedSettings::sign()]])
-        $marks = app(\App\Core\Engines\Approval\OwnerSelfApproval::class);
-        $own = $trails->isEmpty() ? collect() : \App\Models\SettingChange::query()
-            ->where('status', \App\Models\SettingChange::SIGNED)
-            ->whereColumn('requested_by', 'decided_by')
-            ->where('decided_at', '>=', $trails->min('created_at'))
-            ->get()->filter(fn (\App\Models\SettingChange $c): bool => $marks->ofPaper($c));
+        // ⭐ মালিক নিজে চেয়ে নিজে অনুমোদন দিলে দাগ — অনুমোদনের অডিট-সারি বলে কোন সারিটা তার ([[SignedSettings::sign()]])
+        $own = \App\Models\AuditFieldChange::query()
+            ->where('field', \App\Core\Services\SignedSettings::ROW)
+            ->whereIn('new_value', $trails->pluck('id')->map(fn ($id) => (string) $id))
+            ->whereIn('audit_trail_id', \App\Models\AuditTrail::query()
+                ->where('auditable_type', \App\Models\SettingChange::class)
+                ->where('action', \App\Core\Services\SignedSettings::OWN)->select('id'))
+            ->pluck('new_value')->map(fn ($id) => (int) $id)->all();
 
         return $trails->map(function (\App\Models\AuditTrail $trail) use ($definitions, $keys, $own): array {
             $value = $trail->changes->firstWhere('field', 'value');
@@ -258,8 +259,7 @@ class ControlPanelController extends Controller implements HasMiddleware
                 'label' => $label !== '' ? $label : '—',
                 'from' => $value?->old_value,
                 'to' => $value?->new_value,
-                'self' => $own->contains(fn (\App\Models\SettingChange $c): bool => $c->key === $key
-                    && (int) $c->decided_by === (int) $trail->user_id && abs($c->decided_at->diffInSeconds($trail->created_at)) <= 5),
+                'self' => in_array((int) $trail->id, $own, true),
             ];
         })->all();
     }
