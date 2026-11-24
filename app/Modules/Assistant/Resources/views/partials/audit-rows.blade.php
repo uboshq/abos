@@ -74,3 +74,6 @@
         @endif
 
         <x-ui.pager :rows="$rows" />
+        @if (\App\Core\Support\AbosHead::on())
+            <x-ui.list-totals :rows="$rows" />
+        @endif

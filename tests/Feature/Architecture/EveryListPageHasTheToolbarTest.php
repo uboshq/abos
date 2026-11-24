@@ -20,13 +20,11 @@ final class EveryListPageHasTheToolbarTest extends TestCase
     /** বসানো বাকি (৩ অক্টোবর ২০২৬) — বসলে নাম কাটা */
     private const PENDING = [
         'Accounts/Resources/views/inter-company/index.blade.php',
-        'Accounts/Resources/views/period/index.blade.php',
         'Approval/Resources/views/limit/index.blade.php',
         'Finance/Resources/views/account-analysis/index.blade.php',
         'Finance/Resources/views/budget/index.blade.php',
         'Finance/Resources/views/carrier-labour/index.blade.php',
         'Finance/Resources/views/profit/index.blade.php',
-        'Sales/Resources/views/target/index.blade.php',
     ];
 
     /** তালিকা নয় — কারণসহ */
@@ -67,6 +65,10 @@ final class EveryListPageHasTheToolbarTest extends TestCase
         $this->assertTrue($this->hasToolbar("<x-ui.toolbar :title=\"\$t\" />\n".$bare));
         // ⚠️ মন্তব্যে লেখা নাম টুলবার নয়
         $this->assertFalse($this->hasToolbar('{{-- <x-ui.toolbar> পরে --}}'.$bare));
+        // ⚠️ মন্তব্যে রাখা বা না-থাকা টুকরা পাতাকে টুলবার দেয় না
+        $this->assertFalse($this->hasToolbar($this->withItsParts("{{-- @include('purchase::cost-report.partials.head') --}}".$bare)));
+        $this->assertFalse($this->hasToolbar($this->withItsParts("@include('purchase::no.such.part')".$bare)));
+        $this->assertTrue($this->hasToolbar($this->withItsParts("@include('purchase::cost-report.partials.head')".$bare)));
         $this->assertFalse($this->hasToolbar('<x-ui.toolbar-lite />'.$bare), '⛔ অন্য নামের কম্পোনেন্টকে টুলবার ধরা হলো।');
     }
 
@@ -85,11 +87,26 @@ final class EveryListPageHasTheToolbarTest extends TestCase
             $src = (string) file_get_contents($file->getPathname());
 
             if (str_contains($this->code($src), '<x-ui.table')) {
-                $found[substr(str_replace('\\', '/', $file->getPathname()), strlen($root))] = $src;
+                $found[substr(str_replace('\\', '/', $file->getPathname()), strlen($root))] = $this->withItsParts($src);
             }
         }
 
         return $found;
+    }
+
+    /** ⓘ পাতা + নিজের ডাকা টুকরা (`@include('module::path')`), এক ধাপ — মাথা টুকরায় থাকলেও পাতারই অংশ */
+    private function withItsParts(string $src): string
+    {
+        $code = $this->code($src);
+        preg_match_all("/@include\\('([a-z_]+::[a-z0-9_.-]+)'/", $code, $parts);
+
+        foreach ($parts[1] as $name) {
+            if (view()->exists($name)) {
+                $code .= "\n".$this->code((string) file_get_contents(view()->getFinder()->find($name)));
+            }
+        }
+
+        return $code;
     }
 
     private function hasToolbar(string $src): bool
