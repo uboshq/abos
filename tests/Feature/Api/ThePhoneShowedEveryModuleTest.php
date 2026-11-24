@@ -138,7 +138,9 @@ final class ThePhoneShowedEveryModuleTest extends TestCase
 
         $this->assertEqualsCanonicalizing(
             ['accounts', 'customer', 'inventory', 'sales', 'purchase', 'approval', 'system_admin', 'executive', 'credit_control',
-                'finance', 'documents', 'promotion', 'hr', 'assistant'],
+                'finance', 'documents', 'promotion', 'hr', 'assistant',
+                // ⭐ বার্তা ও কল — মালিক "ok", ২১ নভেম্বর ২০২৬ ([[PhoneModules::ON_BY_DEFAULT]])
+                'messaging'],
             $body['phoneModules'],
         );
 
