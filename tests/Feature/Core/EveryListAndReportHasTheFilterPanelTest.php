@@ -62,7 +62,7 @@ final class EveryListAndReportHasTheFilterPanelTest extends TestCase
             'accounts: payments' => ['accounts.voucher.index', ['type' => 'payment'], ['from', 'to', 'party', 'account', 'method', 'state', 'by', 'min', 'max']],
             'accounts: voucher list' => ['accounts.voucher.list', [], ['from', 'to']],
             'approval: inbox' => ['approval.inbox.index', [], ['module', 'amount']],
-            'assistant: audit' => ['assistant.audit', [], ['from', 'to', 'kind', 'user_id', 'q', 'ip']],
+            'assistant: audit' => ['assistant.audit', [], ['from', 'to', 'kind', 'user_id', 'ip', 'bar:q']],
             'customer: binding' => ['customer.binding.index', [], ['ended', 'user_id']],
             'documents: centre' => ['documents.index', [], ['doc_type', 'status', 'date_from', 'date_to']],
             'finance: account analysis' => ['finance.account_analysis.index', [], ['account_id', 'from', 'to']],
@@ -157,6 +157,15 @@ final class EveryListAndReportHasTheFilterPanelTest extends TestCase
 
         $panel = $this->panelOf($html);
         foreach ($keys as $key) {
+            // ⓘ `bar:` — ঘরটা প্যানেল থেকে বারে উঠেছে (এক সারির মাথা, ২৪ নভেম্বর ২০২৬): বারে ঠিক একবার, প্যানেলে আর নয়
+            if (str_starts_with($key, 'bar:')) {
+                $name = preg_quote(substr($key, 4), '/');
+                $this->assertSame(1, preg_match_all('/<input type="search" name="'.$name.'"/', $html), "⛔ {$route} ({$look}): বারে খোঁজার ঘর ঠিক একটা নয়।");
+                $this->assertDoesNotMatchRegularExpression('/\bname="'.$name.'"/', $panel, "⛔ {$route} ({$look}): একই ঘর দুই জায়গায়।");
+
+                continue;
+            }
+
             $this->assertMatchesRegularExpression('/\bname="'.preg_quote($key, '/').'(\[\])?"/', $panel,
                 "⛔ {$route} ({$look}): পুরোনো ছাঁকনি '{$key}' প্যানেলে নেই — ঘরটা হারাল।");
         }

@@ -25,6 +25,9 @@ final class NoDescriptionLineUnderThePageTitleTest extends TestCase
 {
     use RefreshDatabase;
 
+    /** ⓘ তিন ABOS রূপে এই পাতার মাথা এক সারি, লাইন নেই (মালিক, ২৪ নভেম্বর ২০২৬); বাকি রূপে আগের চিহ্নওয়ালা লাইন — নিচের দাবি */
+    private const NO_LINE_AT_ALL = 'App\\Modules\\Assistant\\Http\\Controllers\\AssistantController@audit';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -73,7 +76,14 @@ final class NoDescriptionLineUnderThePageTitleTest extends TestCase
         $html = $this->get('/'.ltrim($route->uri(), '/'))->assertOk()->getContent();
 
         $this->assertMatchesRegularExpression('/<(h1|h2)[^>]*>(?:(?!<\/\1>).)*data-page-info/s', $html, "⛔ {$action}: শিরোনামে ⓘ নেই");
-        $this->assertStringContainsString('data-page-subtitle', $html, "⛔ {$action}: ব্যাখ্যার লাইনে চিহ্ন নেই — ABOS-এ লাইনটা দেখা যাবে");
+
+        if ($action === self::NO_LINE_AT_ALL) {
+            // ⓘ এক সারির মাথায় লাইনটা আঁকাই হয় না (চিহ্ন দিয়ে লুকানোর চেয়ে কড়া): লেখাটা কেবল ⓘ-এর title আর aria-label-এ
+            $bare = (string) preg_replace('/\b(?:title|aria-label)="[^"]*"/u', '', $html);
+            $this->assertStringNotContainsString(e(__($note)), $bare, "⛔ {$action}: ABOS-এ ব্যাখ্যার লাইন আঁকা হয়েছে");
+        } else {
+            $this->assertStringContainsString('data-page-subtitle', $html, "⛔ {$action}: ব্যাখ্যার লাইনে চিহ্ন নেই — ABOS-এ লাইনটা দেখা যাবে");
+        }
 
         if ($note !== null) {
             $text = e(__($note));
@@ -84,6 +94,17 @@ final class NoDescriptionLineUnderThePageTitleTest extends TestCase
                 "⛔ {$action}: চিহ্ন ছাড়া ব্যাখ্যার লাইন রয়ে গেছে",
             );
         }
+    }
+
+    public function test_the_copilot_journal_keeps_its_marked_line_outside_the_abos_looks(): void
+    {
+        $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
+        $owner->forceFill(['ui' => 'tiles'])->save();
+
+        $html = (string) $this->actingAs($owner)->get(route('assistant.audit'))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<p data-page-subtitle[^>]*>\s*'.preg_quote(e(__('assistant::audit.note')), '/').'/u', $html,
+            '⛔ বাকি রূপে খাতার চিহ্নওয়ালা লাইন হারাল');
     }
 
     /** ⓘ ⓘ-এর ছাঁচ নিজে — লেখা না থাকলে কিছুই আঁকে না; থাকলে বাকি রূপে `hidden` (পিক্সেল নেয় না) */
