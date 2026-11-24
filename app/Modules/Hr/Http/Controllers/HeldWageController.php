@@ -53,9 +53,9 @@ class HeldWageController extends Controller implements HasMiddleware
                 'bank' => Account::query()->money()->where('money_kind', Account::BANK)->where('is_group', false)->orderBy('code')->get(),
                 'mfs' => Account::query()->money()->where('money_kind', Account::MFS)->where('is_group', false)->orderBy('code')->get(),
             ],
-            'papers' => HeldWagePayment::query()->with('voucher')
+            'papers' => HeldWagePayment::query()->where('company_id', \App\Core\Support\CompanyContext::id())->with('voucher')
                 // ⓘ ভাউচার প্রতি একটা, পাতায় পাতায় — গোটা টেবিল তুলে পরে কাটা নয় (আগে কুড়িটার পরেরগুলো নামানোই যেত না)
-                ->whereIn('id', HeldWagePayment::query()->whereNotNull('voucher_id')->selectRaw('MAX(id)')->groupBy('voucher_id'))
+                ->whereIn('id', HeldWagePayment::query()->where('company_id', \App\Core\Support\CompanyContext::id())->whereNotNull('voucher_id')->selectRaw('MAX(id)')->groupBy('voucher_id'))
                 ->when(is_string($request->query('q')) && trim($request->query('q')) !== '', fn ($q) => $q->whereHas('voucher',
                     fn ($v) => $v->where('document_no', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%')))
                 ->when(in_array($request->query('channel'), ['bank', 'mfs'], true), fn ($q) => $q->where('channel', $request->query('channel')))

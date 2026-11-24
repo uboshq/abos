@@ -159,6 +159,53 @@ final class TheHrListsPageAndTotalOnlyFinalPapersTest extends TestCase
         }
     }
 
+    /**
+     * ⛔ এক কর্মী-খাতার সুইচেও রান কেবল নিজের কোম্পানির কর্মীর, আর এক কোম্পানির ব্যাংক অন্য কোম্পানির বকেয়া মজুরি দেয় না — তালিকায় নেই,
+     * হাতে পাঠানো স্লিপেও না (২৫ নভেম্বর ২০২৬)।
+     */
+    public function test_one_companys_bank_never_pays_another_companys_wage(): void
+    {
+        app(MasterListService::class)->installDefaults();
+        app(SalaryHeadService::class)->installDefaults();
+        Employee::query()->delete();
+        $basic = SalaryHead::query()->where('code', 'BASIC')->firstOrFail();
+        $ours = $this->employee('HW-O', 'Our Held');
+        app(SalaryStructureService::class)->set($ours, $basic, now()->subYear()->startOfMonth()->toDateString(), '10000');
+        $run = app(PayrollService::class)->build(now()->startOfMonth()->toDateString());
+        $slip = $run->payslips()->firstOrFail();
+        $slip->forceFill(['payment_method' => PayrollService::HELD])->saveQuietly();
+        $run->forceFill(['status' => \App\Core\Support\DocumentStatus::CONFIRMED])->saveQuietly();
+        $ours->forceFill(['payment_method' => 'bank', 'bank_account_no' => '0012345', 'bank_name' => 'Demo Bank'])->saveQuietly();
+
+        $held = fn (): array => app(\App\Modules\Hr\Services\HeldWages::class)->ready()->map(fn (array $r) => (int) $r['payslip']->id)->all();
+        $this->assertContains((int) $slip->id, $held(), 'প্রস্তুতিটাই ভুল — নিজের কোম্পানিতেও স্লিপটা দেওয়ার তালিকায় নেই।');
+
+        $other = Company::query()->whereKeyNot($this->company->id)->firstOrFail();
+        app(\App\Core\Services\SettingsService::class)->set('hr.shared_across_companies', true);
+        CompanyContext::set($other->id, $other->defaultBranch()?->id);
+        $this->assertNotNull(Employee::query()->find($ours->id), 'প্রস্তুতিটাই ভুল — এক খাতার সুইচ চালু হয়নি।');
+
+        $this->assertNotContains((int) $slip->id, $held(), '⛔ অন্য কোম্পানির বকেয়া মজুরি এই কোম্পানির দেওয়ার তালিকায়।');
+
+        app(StandardChart::class)->install();
+        $bank = Account::query()->postable()->whereNull('money_kind')->firstOrFail()->replicate(['public_id']);
+        $bank->forceFill(['code' => 'BANK-HW', 'name_en' => 'BANK-HW', 'name_bn' => 'BANK-HW', 'money_kind' => Account::BANK])->save();
+        try {
+            app(\App\Modules\Hr\Services\HeldWages::class)->pay([(int) $slip->id], (int) $bank->id, $this->owner);
+            $this->fail('⛔ এই কোম্পানির ব্যাংক অন্য কোম্পানির মজুরি দিল।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertSame([__('hr::payroll.held_pay_none')], $e->errors()['payslips'] ?? null);
+        }
+
+        try {
+            $theirs = app(PayrollService::class)->build(now()->startOfMonth()->toDateString());
+            $this->assertNotContains((int) $ours->id, $theirs->payslips()->pluck('employee_id')->map(fn ($id) => (int) $id)->all(), '⛔ রানে অন্য কোম্পানির কর্মী।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // ⓘ অন্য কোম্পানিতে নিজের কেউ না থাকলে রানই হয় না — সেটাও ঠিক উত্তর; অন্য কোনো কারণে থামলে দাবি লাল
+            $this->assertSame([__('hr::validation.nobody_on_payroll')], $e->errors()['month'] ?? null);
+        }
+    }
+
     public function test_the_owners_own_report_never_shows_the_workers_profit_fund_amount(): void
     {
         $amount = new \ReflectionMethod(\App\Core\Engines\Approval\OwnerSelfApproval::class, 'approvedAmountOf');
