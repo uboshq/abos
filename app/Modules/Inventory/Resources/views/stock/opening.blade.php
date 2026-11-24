@@ -12,15 +12,27 @@
     <x-slot:title>{{ __('inventory::menu.opening') }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="__('inventory::menu.opening')" />
+        @if (\App\Core\Support\AbosHead::on())
+            {{-- ⭐ তিন ABOS রূপ: ব্যাখ্যা ⓘ-এ, দুই লিংক শিরোনামের সারিতে (মালিক, ১৯ ও ২৪ নভেম্বর ২০২৬) --}}
+            <x-ui.page-header :title="__('inventory::menu.opening')" :info="__('inventory::message.opening_note')">
+                <x-slot:actions>
+                    <a href="{{ route('inventory.stock.opening.principal') }}" class="text-sm text-(--color-brand-600) hover:underline" data-opening-principal-link>{{ __('inventory::message.opening_principal_link') }}</a>
+                    <a href="{{ route('system_admin.import.index') }}" class="ms-3 text-sm text-(--color-brand-600) hover:underline" data-opening-import>{{ __('inventory::message.opening_cart_import') }}</a>
+                </x-slot:actions>
+            </x-ui.page-header>
+        @else
+            <x-ui.page-header :title="__('inventory::menu.opening')" />
+        @endif
     </x-slot:header>
 
     {{-- ⭐ আগে বসানো খোলা মজুদে প্রিন্সিপাল বসানোর পাতা (মালিক, ৬ অক্টোবর ২০২৬) --}}
+    @unless (\App\Core\Support\AbosHead::on())
     <p class="mb-3 text-sm">
         <a href="{{ route('inventory.stock.opening.principal') }}" class="text-(--color-brand-600) hover:underline" data-opening-principal-link>
             {{ __('inventory::message.opening_principal_link') }}
         </a>
     </p>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -78,12 +90,14 @@
         @endphp
         <section data-boxed data-opening-cart class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             <h2 class="mb-1 font-semibold">{{ __('inventory::message.opening_cart_title') }}</h2>
+            @unless (\App\Core\Support\AbosHead::on())
             <p class="mb-3 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
                 {{ __('inventory::message.opening_note') }}
                 <a href="{{ route('system_admin.import.index') }}" class="ms-2 text-(--color-brand-600) hover:underline" data-opening-import>
                     {{ __('inventory::message.opening_cart_import') }}
                 </a>
             </p>
+            @endunless
 
             @if ($bad !== [])
                 <p role="alert" class="mb-3 text-sm font-medium text-(--color-badge-danger-ink)">{{ __('inventory::message.opening_cart_row_error') }}</p>
