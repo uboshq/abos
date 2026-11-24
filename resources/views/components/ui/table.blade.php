@@ -85,7 +85,7 @@
 
             <tbody>
                 @foreach ($items as $row)
-                    <tr class="border-b border-(--color-border)">
+                    <tr {{ (new \Illuminate\View\ComponentAttributeBag(($rowAttributes ?? null) ? $rowAttributes($row) : []))->merge(['class' => 'border-b border-(--color-border)']) }}>
                         @foreach ($normalised as $column)
                             {{-- data-label ছাড়া মোবাইলে এই ঘরটা অর্থহীন হয়ে যায় --}}
                             {{-- উচ্চতা, প্যাডিং ও রং এখানে নেই — সবটা
