@@ -29,4 +29,7 @@ interface PartyOpenBills
      * @return list<array{kind: string, against_type: string, id: int, no: string, date: string, age: int, outstanding: string, due_date: string, days_late: int, total: string, public_id: string}>
      */
     public function openBills(string $partyType, int $partyId, int $limit = 50, bool $withNotes = false): array;
+
+    /** যে ধরনের পক্ষের বিল এখানে থাকে ([[PartyRegistry]]-এর ধরন); কেউ না থাকলে খালি লেখা */
+    public function partyType(): string;
 }

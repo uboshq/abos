@@ -121,7 +121,7 @@ final class EveryReportHasAPrintViewTest extends TestCase
         $html = $this->paperHtml(route('accounts.equity_statement', ['from' => '2026-07-01', 'to' => '2026-11-23']));
 
         $this->assertStringContainsString(__('accounts::menu.equity_statement'), $html);
-        $this->assertStringContainsString('01-07-2026', $html, '⛔ কাগজে সময়কাল নেই');
+        $this->assertStringContainsString(\App\Core\Support\DateFormat::format('2026-07-01').' – '.\App\Core\Support\DateFormat::format('2026-11-23'), $html, '⛔ কাগজে সময়কাল নেই');
         $this->assertStringContainsString(__('accounts::field.equity_closing'), $html, '⛔ শেষের জের কাগজে নেই');
         $this->assertStringContainsString('{PAGENO} / {nbpg}', $html);
     }

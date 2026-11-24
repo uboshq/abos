@@ -195,7 +195,10 @@ class ThePickerCouldNotFindItsOwnPartyTest extends TestCase
             foreach (['name_en', 'name_bn'] as $field) {
                 $this->assertGreaterThanOrEqual(
                     2,
-                    substr_count($normalised, "(x.{$field} || '').toLowerCase().includes(t)"),
+                    substr_count($normalised, "(x.{$field} || '').toLowerCase().includes(t)")
+                        // ⓘ গ্রাহকের ঘর এখন শব্দ ধরে, সব ঘর জোড়া এক লেখায় খোঁজে (২৩ নভেম্বর ২০২৬) — নামটা ঐ লেখায় থাকতে হবে, আর লেখাটা সত্যিই খোঁজা হতে হবে
+                        + (str_contains($normalised, 'words.every(w => haystack.includes(w))')
+                            ? preg_match_all('~haystack = \[[^\]]*\b[a-z]\.'.$field.'\b~', $normalised) : 0),
                     "{$what} — দুইটা ছাঁকনির অন্তত একটায় `{$field}` দেখা হয় না।\n"
                     ."নামটা পর্দায় পৌঁছেছে, কিন্তু খোঁজা হচ্ছে না — ফল একই, আর বোঝা আরও কঠিন।\n"
                     .'⚠️ পক্ষের ঘরটা ঠিক করে পণ্যের ঘরটা ভুলে যাওয়া সবচেয়ে সহজ ভুল।',

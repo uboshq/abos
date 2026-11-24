@@ -241,6 +241,8 @@ final class SalesListsActOnPickedPapersTest extends TestCase
         $this->assertNotNull($approval, 'প্রস্তুতিটাই ভুল — আদেশ সইয়ে যায়নি।');
         $draft = $this->draft();
 
+        // ⓘ পরীক্ষার ঘরে নিয়মটা বন্ধ থাকে ([[TestCase]]) — যে দাবি এটা মাপে, সে নিজে চালু করে
+        config(['abos.branch_pin.all_branches_read_only' => true]);
         $this->post(route('branch.switch'), ['branch_id' => 'all'])->assertRedirect();
         app(DataScope::class)->forget();
         $this->app->forgetScopedInstances();

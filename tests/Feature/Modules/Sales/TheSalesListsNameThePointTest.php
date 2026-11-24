@@ -290,10 +290,17 @@ final class TheSalesListsNameThePointTest extends TestCase
     /** @return list<string> নম্বরটা যে যে সারিতে (ড্যাশবোর্ডে একই বিল একাধিক তালিকায় থাকতে পারে) */
     private function rowsWith(string $html, string $no): array
     {
-        preg_match_all('~<tr\b(?:(?!</tr>).)*?'.preg_quote(e($no), '~').'(?:(?!</tr>).)*</tr>~su', $html, $match);
-        $this->assertNotSame([], $match[0], "দৃশ্যটাই ভুল — তালিকায় {$no}-এর সারি নেই।");
+        // ⓘ লম্বা সারিতে PCRE-র সীমা পেরোলে ছাঁচ চুপচাপ "নেই" বলত — তাই ভেঙে দেখা, ছাঁচে নয়
+        $rows = [];
+        foreach (array_slice(explode('<tr', $html), 1) as $piece) {
+            $row = '<tr'.explode('</tr>', $piece)[0].'</tr>';
+            if (str_contains($row, e($no))) {
+                $rows[] = $row;
+            }
+        }
+        $this->assertNotSame([], $rows, "দৃশ্যটাই ভুল — তালিকায় {$no}-এর সারি নেই।");
 
-        return $match[0];
+        return $rows;
     }
 
     /** পাতা আঁকতে গ্রাহক আর জায়গার টেবিলে কয়টা প্রশ্ন গেল */

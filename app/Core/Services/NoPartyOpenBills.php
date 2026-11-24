@@ -11,6 +11,11 @@ use App\Core\Contracts\PartyOpenBills;
  */
 final class NoPartyOpenBills implements PartyOpenBills
 {
+    public function partyType(): string
+    {
+        return '';
+    }
+
     public function openBills(string $partyType, int $partyId, int $limit = 50, bool $withNotes = false): array
     {
         return [];

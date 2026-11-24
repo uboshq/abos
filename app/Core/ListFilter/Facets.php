@@ -59,6 +59,18 @@ final class Facets
     }
 
     /**
+     * শাখার বাছাই — এক শাখার কোম্পানিতে ঘরটাই নেই (`null`; [[panel()]] বাদ দেয়)।
+     *
+     * @param  \Illuminate\Support\Collection<int, \App\Models\Branch>  $branches
+     */
+    public static function branch(\Illuminate\Support\Collection $branches, string $any): ?Facet
+    {
+        return $branches->count() > 1
+            ? self::pick('branch_id', __('core.company.branch'), $branches->mapWithKeys(fn ($b) => [(string) $b->id => $b->name()])->all(), $any)->look('blue', '🏬')
+            : null;
+    }
+
+    /**
      * একটা বাছাই — পুরোনো `<select name="status">`। ⓘ "সব" (খালি মান) শুরুতে বাছা থাকে আর চিপ হয় না।
      *
      * @param  array<int|string, string>  $options  মান => নাম, পুরোনো তালিকার মতোই (খালি "সব" ঘরটা বাদে)

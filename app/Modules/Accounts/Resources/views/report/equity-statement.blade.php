@@ -51,9 +51,7 @@
     @php
         $panel = \App\Core\ListFilter\Facets::panel([
             \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
-            $branches->count() > 1
-                ? \App\Core\ListFilter\Facets::pick('branch_id', __('core.company.branch'), $branches->mapWithKeys(fn ($b) => [(string) $b->id => $b->name()])->all(), __('accounts::field.all_branches'))->look('blue', '🏬')
-                : null,
+            \App\Core\ListFilter\Facets::branch($branches, __('accounts::field.all_branches')),
         ], shown: ['from' => (string) $statement['from'], 'to' => (string) $statement['to']]);
     @endphp
     <x-ui.filter-layout :filters="$panel" form="list-form" :report="true">

@@ -25,7 +25,7 @@
             <x-slot:actions>
                 {{-- ⭐ প্রিন্ট ভিউ (নতুন ট্যাবে, IAS 1 ছকের কাগজ) আর PDF — "তালিকা নামানো" চাবিতে (মালিক, ১৬ নভেম্বর ২০২৬) --}}
                 @can('system_admin.list.export')
-                    <x-ui.button tone="secondary" icon="print" target="_blank" rel="noopener" data-paper="print"
+                    <x-ui.button tone="secondary" icon="print" target="_blank" rel="noopener" data-paper="print" data-print-view
                                  :href="url()->current().'?'.http_build_query(request()->query() + ['export' => 'print'])">
                         {{ __('core.action.print') }}
                     </x-ui.button>
@@ -59,9 +59,7 @@
     @php
         $panel = \App\Core\ListFilter\Facets::panel([
             \App\Core\ListFilter\Facets::day('as_of', __('accounts::field.as_of'), (string) $sheet['as_of']),
-            $branches->count() > 1
-                ? \App\Core\ListFilter\Facets::pick('branch_id', __('core.company.branch'), $branches->mapWithKeys(fn ($b) => [(string) $b->id => $b->name()])->all(), __('accounts::field.all_branches'))->look('blue', '🏬')
-                : null,
+            \App\Core\ListFilter\Facets::branch($branches, __('accounts::field.all_branches')),
         ]);
     @endphp
     <x-ui.filter-layout :filters="$panel" form="list-form" :report="true">

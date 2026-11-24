@@ -25,9 +25,6 @@ use Illuminate\Support\Collection;
  */
 final class ReportPanel
 {
-    /** ⓘ রিপোর্টের পক্ষের চাবি => [[PartyRegistry]]-এর ধরন (খোঁজার লেখা — মোবাইল, ঠিকানা, পয়েন্ট — সেখান থেকে) */
-    private const PARTY_TYPES = ['customer_id' => 'customer', 'supplier_id' => 'supplier', 'person_id' => 'person'];
-
     /** ⓘ এর বেশি নাম হলে নিচে নামের তালিকার বদলে লিখে খোঁজার ঘর ([[Facets::search()]]) */
     private const FIND_UP_TO = 30;
 
@@ -69,7 +66,7 @@ final class ReportPanel
             // ⭐ পক্ষ লিখে খোঁজা — নাম, কোড, মোবাইল, ঠিকানা, পয়েন্ট; তালিকা আগের মতোই পাতার নিজের (মালিক, ২৩ নভেম্বর ২০২৬)
             ! empty($partyFilter)
                 ? Facets::search($partyFilter, __('accounts::party_ledger.pick_party'), Facets::partyRows(
-                    self::PARTY_TYPES[$partyFilter] ?? '',
+                    self::partyType($partyFilter),
                     collect($parties)->mapWithKeys(fn ($p) => [(string) $p->id => (string) $p->name])->all(),
                 ))->look('green', '👤')
                 : null,
@@ -120,8 +117,8 @@ final class ReportPanel
              *   পক্ষ হলে মোবাইল, ঠিকানা, পয়েন্ট দিয়েও (মালিক, ২৩ নভেম্বর ২০২৬)। ছোট তালিকা আগের মতো "কোড · নাম" লেখার ঘর।
              */
             $facets[] = count($options) > self::FIND_UP_TO
-                ? Facets::search($key, $name, isset(self::PARTY_TYPES[$key])
-                    ? Facets::partyRows(self::PARTY_TYPES[$key], $options)
+                ? Facets::search($key, $name, self::partyType($key) !== ''
+                    ? Facets::partyRows(self::partyType($key), $options)
                     : array_map(fn ($id, $label) => ['id' => (int) $id, 'label' => (string) $label], array_keys($options), $options))
                 : Facets::find($key, $name, $options, $name.' — '.__('core.report.filters.any'));
         }
@@ -174,5 +171,13 @@ final class ReportPanel
         }
 
         return $shown;
+    }
+
+    /** ⓘ রিপোর্টের পক্ষের চাবি (`…_id`) → মডিউলের ঘোষিত পক্ষের ধরন ([[PartyRegistry]]); পক্ষ না হলে খালি */
+    private static function partyType(string $key): string
+    {
+        $type = str_ends_with($key, '_id') ? substr($key, 0, -3) : '';
+
+        return $type !== '' && app(\App\Core\Services\PartyRegistry::class)->knows($type) ? $type : '';
     }
 }

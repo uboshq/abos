@@ -101,7 +101,7 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
     public function test_a_gap_in_a_posted_cash_count_is_on_the_list_and_a_clean_count_is_not(): void
     {
         $count = CashCount::query()->forceCreate([
-            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'document_no' => 'CC-T-1', 'trx_date' => self::DAY,
+            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'financial_year_id' => \App\Models\FinancialYear::forDate(self::DAY)?->id, 'document_no' => 'CC-T-1', 'trx_date' => self::DAY,
             'counted_amount' => '9500', 'expected_amount' => '10000', 'difference' => '-500', 'status' => DocumentStatus::CONFIRMED,
         ]);
 
@@ -117,7 +117,7 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
     public function test_the_new_rows_never_block_the_day_closing_page(): void
     {
         CashCount::query()->forceCreate([
-            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'document_no' => 'CC-T-2', 'trx_date' => self::DAY,
+            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'financial_year_id' => \App\Models\FinancialYear::forDate(self::DAY)?->id, 'document_no' => 'CC-T-2', 'trx_date' => self::DAY,
             'counted_amount' => '100', 'expected_amount' => '300', 'difference' => '-200', 'status' => DocumentStatus::CONFIRMED,
         ]);
 
@@ -159,6 +159,11 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
         $this->app->instance($contract, new class($side, $rows) implements PartyOpenBills, PayableOpenBills
         {
             public function __construct(private string $side, private array $rows) {}
+
+            public function partyType(): string
+            {
+                return $this->side;
+            }
 
             public function openBills(string $partyType, int $partyId, int $limit = 50, bool $withNotes = false): array
             {
