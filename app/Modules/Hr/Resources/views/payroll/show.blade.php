@@ -15,7 +15,9 @@
     <x-slot:header>
         <x-ui.page-header
             :title="$run->month->locale(app()->getLocale())->translatedFormat('F Y')"
-            :subtitle="$run->document_no . ' · ' . __('hr::kind.run_' . ($run->run_type ?? 'salary')) . ' · ' . __('core.status.' . $run->status)">
+            :subtitle="$run->document_no . ' · ' . __('hr::kind.run_' . ($run->run_type ?? 'salary')) . ' · ' . __('core.status.' . $run->status)"
+            :info="! \App\Core\Support\AbosHead::on() || ! auth()->user()?->can('hr.payroll.manage') ? null
+                : ($run->isDraft() ? __('hr::message.confirm_note') : ($run->isConfirmed() ? __('hr::message.bank_file_note', ['count' => $bankRows]) : null))">
             <x-slot:actions>
                 @can('hr.payroll.view')
                     <x-ui.button :href="route('hr.payroll.payslips', $run->id)">
@@ -96,9 +98,11 @@
             <aside class="rounded-(--radius-card) border border-(--color-border)
                           bg-(--color-surface-card) p-4">
                 @if ($run->isDraft())
+@unless (\App\Core\Support\AbosHead::on())
                     <p class="mb-3 text-2xs text-(--color-ink-muted)">
                         {{ __('hr::message.confirm_note') }}
                     </p>
+@endunless
 
                     <div class="flex flex-wrap gap-2">
                         <form method="POST" action="{{ route('hr.payroll.rebuild', $run->id) }}">
@@ -112,9 +116,11 @@
                         </form>
                     </div>
                 @elseif ($run->isConfirmed())
+@unless (\App\Core\Support\AbosHead::on())
                     <p class="mb-3 text-2xs text-(--color-ink-muted)">
                         {{ __('hr::message.bank_file_note', ['count' => $bankRows]) }}
                     </p>
+@endunless
                 @endif
 
                 @unless ($run->status === \App\Core\Support\DocumentStatus::CANCELLED)

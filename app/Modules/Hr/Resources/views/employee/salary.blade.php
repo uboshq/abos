@@ -22,7 +22,8 @@
     <x-slot:title>{{ $employee->name() }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="__('hr::action.salary')" :subtitle="$employee->label()">
+        <x-ui.page-header :title="__('hr::action.salary')" :subtitle="$employee->label()"
+            :info="\App\Core\Support\AbosHead::on() ? trim(__('hr::message.salary_note').' '.($waiting ? __('hr::message.salary_waiting_note') : '')) : null">
             <x-slot:actions>
                 <x-ui.button :href="route('hr.employee.show', $employee)">
                     {{ __('hr::action.back_to_employee') }}
@@ -68,7 +69,9 @@
                     </x-ui.button>
                 @endif
             </div>
+@unless (\App\Core\Support\AbosHead::on())
             <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('hr::message.salary_waiting_note') }}</p>
+@endunless
             <dl class="space-y-1 text-sm">
                 @foreach ($waiting['lines'] as $line)
                     <div class="flex items-center justify-between gap-2">
@@ -105,7 +108,9 @@
                         <x-ui.field name="effective_from" type="date"
                                     :label="__('hr::field.effective_from')"
                                     :value="old('effective_from', now()->toDateString())" required />
+@unless (\App\Core\Support\AbosHead::on())
                         <p class="text-2xs text-(--color-ink-muted)">{{ __('hr::message.salary_note') }}</p>
+@endunless
                     </div>
 
         <x-ui.table :rows="$heads"

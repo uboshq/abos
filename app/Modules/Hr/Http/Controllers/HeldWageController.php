@@ -56,7 +56,10 @@ class HeldWageController extends Controller implements HasMiddleware
             'papers' => HeldWagePayment::query()->with('voucher')
                 // ⓘ ভাউচার প্রতি একটা, পাতায় পাতায় — গোটা টেবিল তুলে পরে কাটা নয় (আগে কুড়িটার পরেরগুলো নামানোই যেত না)
                 ->whereIn('id', HeldWagePayment::query()->whereNotNull('voucher_id')->selectRaw('MAX(id)')->groupBy('voucher_id'))
-                ->latest('id')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
+                ->when(is_string($request->query('q')) && trim($request->query('q')) !== '', fn ($q) => $q->whereHas('voucher',
+                    fn ($v) => $v->where('document_no', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%')))
+                ->when(in_array($request->query('channel'), ['bank', 'mfs'], true), fn ($q) => $q->where('channel', $request->query('channel')))
+                ->orderBy('id', $request->query('sort') === 'oldest' ? 'asc' : 'desc')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
         ]);
     }
 

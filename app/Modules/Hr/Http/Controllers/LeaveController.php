@@ -228,7 +228,13 @@ class LeaveController extends Controller implements HasMiddleware
 
     public function types(Request $request): View
     {
-        $types = LeaveType::query()->orderBy('code')->get();
+        $find = is_string($request->query('q')) ? '%'.addcslashes(trim($request->query('q')), '%_\\').'%' : '%%';
+        $types = LeaveType::query()
+            ->when($find !== '%%', fn ($q) => $q->where(fn ($w) => $w->where('code', 'like', $find)->orWhere('name_en', 'like', $find)->orWhere('name_bn', 'like', $find)))
+            ->when(in_array($request->query('paid'), ['yes', 'no'], true), fn ($q) => $q->where('is_paid', $request->query('paid') === 'yes'))
+            ->when($request->query('sort') === 'name', fn ($q) => $q->orderBy('name_en'))
+            ->when($request->query('sort') === 'days', fn ($q) => $q->orderByDesc('days_per_year'))
+            ->orderBy('code')->get();
 
         return view('hr::leave.types', [
             'menu' => $this->menu->forUser($request->user()),
