@@ -27,6 +27,14 @@ final class CallService
 {
     public const LOG = 50;
 
+    /** the most rows one history page gives, and the most people one totals answer gives */
+    public const PAGE_MAX = 100;
+
+    public const PEOPLE_MAX = 200;
+
+    /** what a history page can be narrowed to */
+    public const KINDS = ['missed', 'in', 'out'];
+
     public function __construct(
         private readonly MessengerAccess $access,
         private readonly MessengerService $messenger,
@@ -176,6 +184,110 @@ final class CallService
             ->get();
 
         return $calls->map(fn (Call $call): array => $this->row($call, $user))->values()->all();
+    }
+
+    /**
+     * One page of my own call history, newest first — the same row as [[log()]].
+     *
+     * ⓘ `missed` = someone called me and I did not answer (a call I declined, or one I made that nobody took, is not it);
+     *   `in` / `out` = every call to me / from me. The cursor is the last row's time and id, so a call that comes in
+     *   while someone scrolls never repeats or skips a row.
+     *
+     * @return array{data: list<array<string, mixed>>, next: ?string}
+     */
+    public function history(User $user, ?string $kind, ?int $personId, ?string $cursor, int $limit, string $q = ''): array
+    {
+        $this->sweep();
+
+        $limit = max(1, min(self::PAGE_MAX, $limit));
+        $me = (int) $user->id;
+        $after = $cursor === null ? null : self::cursor($cursor);
+
+        /** @var Collection<int, Call> $calls */
+        $calls = Call::query()
+            // ⛔ the wall first, in its own brackets: nothing below can widen it
+            ->where(fn ($q) => $q->where('caller_id', $me)->orWhere('callee_id', $me))
+            ->when($kind === 'missed', fn ($q) => $q->where('callee_id', $me)->where('status', Call::MISSED))
+            ->when($kind === 'in', fn ($q) => $q->where('callee_id', $me))
+            ->when($kind === 'out', fn ($q) => $q->where('caller_id', $me))
+            ->when($personId !== null, fn ($q) => $q->where(fn ($w) => $w->where('caller_id', $personId)->orWhere('callee_id', $personId)))
+            // ⓘ the OTHER side's name — my own name would match every call
+            ->when($q !== '', function ($query) use ($me, $q): void {
+                $named = User::query()->select('id')->where('name', 'like', '%'.addcslashes($q, '%_\\').'%');
+                $query->where(fn ($w) => $w->where(fn ($o) => $o->where('caller_id', $me)->whereIn('callee_id', clone $named))
+                    ->orWhere(fn ($i) => $i->where('callee_id', $me)->whereIn('caller_id', clone $named)));
+            })
+            ->when($after !== null, fn ($q) => $q->where(fn ($w) => $w->where('created_at', '<', $after[0])
+                ->orWhere(fn ($s) => $s->where('created_at', $after[0])->where('id', '<', $after[1]))))
+            ->with(['caller', 'callee'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($limit + 1)
+            ->get();
+
+        $more = $calls->count() > $limit;
+        $page = $calls->take($limit)->values();
+        $this->presenter->warm($page->map(fn (Call $call): User => $this->peerOf($call, $user))->all());
+        $last = $page->last();
+
+        return [
+            'data' => $page->map(fn (Call $call): array => $this->row($call, $user))->all(),
+            'next' => $more && $last instanceof Call ? $last->created_at->getTimestamp().'.'.$last->id : null,
+        ];
+    }
+
+    /**
+     * My calls added up per colleague, the latest talked-to first.
+     *
+     * ⓘ answered = picked up by either side; missed = they called, I did not answer; seconds = talking time only.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function people(User $user, ?int $personId = null): array
+    {
+        $this->sweep();
+
+        $me = (int) $user->id;
+        $rows = Call::query()
+            ->where(fn ($q) => $q->where('caller_id', $me)->orWhere('callee_id', $me))
+            ->when($personId !== null, fn ($q) => $q->where(fn ($w) => $w->where('caller_id', $personId)->orWhere('callee_id', $personId)))
+            ->selectRaw('CASE WHEN caller_id = ? THEN callee_id ELSE caller_id END AS peer_id', [$me])
+            ->selectRaw('COUNT(*) AS calls')
+            ->selectRaw('SUM(CASE WHEN answered_at IS NOT NULL THEN 1 ELSE 0 END) AS answered')
+            ->selectRaw('SUM(CASE WHEN callee_id = ? AND status = ? THEN 1 ELSE 0 END) AS missed', [$me, Call::MISSED])
+            ->selectRaw('COALESCE(SUM(duration_s), 0) AS seconds')
+            ->selectRaw('MAX(id) AS last_id')
+            ->groupBy('peer_id')
+            ->orderByDesc('last_id')
+            ->orderBy('peer_id')
+            ->limit(self::PEOPLE_MAX)
+            ->toBase()
+            ->get();
+
+        $users = User::query()->whereIn('id', $rows->pluck('peer_id')->all())->get()->keyBy('id');
+        $this->presenter->warm($users->values());
+        // ⓘ the latest call with each — one more question for all of them; a call's id grows with its time
+        $lasts = Call::query()->whereIn('id', $rows->pluck('last_id')->all())->with(['caller', 'callee'])->get()->keyBy('id');
+
+        return $rows->filter(fn ($row): bool => $users->has($row->peer_id))->map(fn ($row): array => [
+            'peer' => $this->presenter->person($users->get($row->peer_id)),
+            'calls' => (int) $row->calls,
+            'answered' => (int) $row->answered,
+            'missed' => (int) $row->missed,
+            'seconds' => (int) $row->seconds,
+            'last_at' => $lasts->get($row->last_id)?->created_at?->toIso8601String(),
+            'last' => $lasts->has($row->last_id) ? $this->row($lasts->get($row->last_id), $user) : null,
+        ])->values()->all();
+    }
+
+    /** @return array{0: \Illuminate\Support\Carbon, 1: int} — a cursor that is not ours is a 422, never a silent first page */
+    private static function cursor(string $cursor): array
+    {
+        if (preg_match('/^(\d{1,11})\.(\d{1,19})$/', $cursor, $m) !== 1) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['cursor' => __('validation.regex', ['attribute' => 'cursor'])]);
+        }
+
+        return [\Illuminate\Support\Carbon::createFromTimestamp((int) $m[1], config('app.timezone')), (int) $m[2]];
     }
 
     /**

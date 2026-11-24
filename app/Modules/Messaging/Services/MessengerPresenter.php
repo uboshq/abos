@@ -275,6 +275,48 @@ final class MessengerPresenter
             ->keyBy('user_id')->all();
     }
 
+    /**
+     * Fills what {@see person()} needs for a whole page of people — three queries and the roles, never some per person.
+     * ⓘ The same rules as [[branchOf()]]; someone already known is left as is.
+     *
+     * @param  iterable<User>  $users
+     */
+    public function warm(iterable $users): void
+    {
+        $users = \Illuminate\Database\Eloquent\Collection::make($users)->unique('id')->values();
+        $ids = $users->pluck('id')->map(fn ($id): int => (int) $id)->reject(fn (int $id): bool => array_key_exists($id, $this->branches))->values()->all();
+
+        if ($ids === []) {
+            return;
+        }
+
+        $users->loadMissing('roles');
+
+        $company = (int) CompanyContext::id();
+        $rows = DB::table('company_user')->whereIn('user_id', $ids)->orderBy('company_id')
+            ->get(['company_id', 'user_id', 'default_branch_id', 'is_active'])->groupBy('user_id');
+        $branches = Branch::query()->withoutGlobalScopes()->whereIn('id', $rows->flatten(1)->pluck('default_branch_id')->filter()->unique()->all())->get()->keyBy('id');
+        $companies = \App\Models\Company::query()->whereIn('id', $rows->flatten(1)->pluck('company_id')->unique()->all())->get()->keyBy('id');
+
+        foreach ($ids as $id) {
+            $mine = $rows->get($id, collect());
+            $here = $mine->first(fn ($r): bool => (int) $r->company_id === $company);
+
+            if ($here !== null) {
+                $branch = $here->default_branch_id === null ? null : $branches->get($here->default_branch_id);
+                // ⓘ as Branch::find() would: this company's, not deleted
+                $this->branches[$id] = $branch !== null && (int) $branch->company_id === $company && $branch->deleted_at === null ? $branch->name() : null;
+
+                continue;
+            }
+
+            $row = $mine->first(fn ($r): bool => (bool) $r->is_active);
+            $name = $row === null ? '' : (string) $companies->get($row->company_id)?->name();
+            $branch = $row?->default_branch_id === null ? null : $branches->get($row->default_branch_id)?->name();
+            $this->branches[$id] = trim($name.($name !== '' && $branch ? ' · ' : '').($branch ?? '')) ?: null;
+        }
+    }
+
     private function branchOf(User $user): string
     {
         $uid = (int) $user->id;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Sales;
 
+use App\Core\Services\PaperPreview;
 use App\Core\Engines\Approval\ApprovalEngine;
 use App\Core\Services\DataScope;
 use App\Core\Services\SettingsService;
@@ -32,7 +33,11 @@ use App\Modules\Sales\Services\HeldCounterSaleFinisher;
 use App\Modules\Sales\Services\SalesOrderService;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\View;
+use RuntimeException;
+use Tests\Concerns\PrintsTheStandardPaper;
 use Tests\TestCase;
 
 /**
@@ -44,6 +49,7 @@ use Tests\TestCase;
  */
 final class AHeldSaleFinishesInItsOwnBranchTest extends TestCase
 {
+    use PrintsTheStandardPaper;
     use RefreshDatabase;
 
     private Company $company;
@@ -99,6 +105,57 @@ final class AHeldSaleFinishesInItsOwnBranchTest extends TestCase
 
         $this->assertSame('confirmed', SalesInvoice::acrossBranches()->findOrFail($invoice->id)->status,
             '⛔ হেডারে অন্য শাখা — সইয়ের পরেও বিক্রি শেষ হলো না ("No query results for model SalesInvoice")');
+    }
+
+    /**
+     * ⭐ দেখা ছাপা নয় (মালিক, ২৪ নভেম্বর ২০২৬) — রাখা বিক্রির চালান আর বিল সইকারী দেখেন, গায়ে "খসড়া"; ছাপার দরজা তখনো আটকায়।
+     * ⛔ "দেখছি" অবস্থা কখনো পড়ে থাকে না — কাগজ আঁকতে গিয়ে ভাঙলেও নয়; নইলে পরের ছাপা পাহারা ছাড়াই বেরোত ([[PaperPreview::looking()]])।
+     */
+    public function test_a_held_sale_is_looked_at_as_a_draft_while_its_print_doors_still_refuse(): void
+    {
+        $this->printTheStandardPaper();
+        $this->flow(VoucherApproval::MODULE, VoucherApproval::COUNTER_DEPOSIT);
+        $invoice = $this->heldSale();
+        $challan = DeliveryChallan::query()->findOrFail($invoice->lines()->with('challanLine')->firstOrFail()->challanLine->delivery_challan_id);
+        $this->assertSame('draft', $challan->status, 'দৃশ্যটাই বানানো যায়নি — চালান খসড়া থাকার কথা');
+        $this->actingAs($this->maker);
+
+        $notice = null;
+        $broken = false;
+        View::composer('print.*', function ($view) use (&$notice, &$broken): void {
+            if ($broken) {
+                throw new RuntimeException('the paper breaks while it is drawn');
+            }
+            $doc = $view->getData()['doc'] ?? null;
+            if (is_object($doc) && property_exists($doc, 'notice')) {
+                $notice = (string) $doc->notice;
+            }
+        });
+
+        foreach (['sales.print.challan' => $challan, 'sales.print.invoice' => $invoice] as $route => $paper) {
+            $notice = null;
+            $looked = app(PaperPreview::class)->render($paper->fresh());
+            $this->assertSame(200, $looked->getStatusCode(), "⛔ {$route}: দেখা আটকাল — ".$looked->getContent());
+            $this->assertStringStartsWith('%PDF', (string) $looked->getContent(), "⛔ {$route}: দেখার কাগজ PDF নয়");
+            $this->assertStringContainsString(__('core.print.draft_paper_notice'), (string) $notice, "⛔ {$route}: দেখার কাগজে \"খসড়া\" নেই");
+            $this->assertFalse(PaperPreview::looking(), '⛔ দেখার পরে "দেখছি" অবস্থা পড়ে আছে');
+
+            $this->get(route($route, $paper))->assertSessionHasErrors('status');
+        }
+
+        $level = DB::transactionLevel();
+        $broken = true;
+        try {
+            app(PaperPreview::class)->render($challan->fresh());
+            $this->fail('প্রস্তুতিটাই ভুল — কাগজ ভাঙেনি।');
+        } catch (\Throwable $e) {
+            $this->assertStringContainsString('the paper breaks', $e->getMessage());
+        }
+        $broken = false;
+
+        $this->assertFalse(PaperPreview::looking(), '⛔ ভাঙার পরে "দেখছি" অবস্থা পড়ে আছে — পরের ছাপা পাহারা ছাড়াই বেরোবে');
+        $this->assertSame($level, DB::transactionLevel(), '⛔ ভাঙার পরে লেনদেন খোলা');
+        $this->get(route('sales.print.challan', $challan))->assertSessionHasErrors('status');
     }
 
     public function test_a_stuck_sale_returns_to_draft_from_another_branchs_header(): void

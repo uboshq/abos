@@ -29,6 +29,8 @@
         'delete' => route('messaging.x.message.delete', ['message' => 987654321]),
         'info' => route('messaging.x.message.info', ['message' => 987654321]),
         'page' => route('messaging.index'),
+        'calls' => route('messaging.x.calls'),
+        'call_people' => route('messaging.x.calls.people'),
     ];
     $msgrUser = auth()->user();
     $msgrMe = [
@@ -59,15 +61,27 @@
                 <button type="button" class="newb" data-act="new">
                     <svg aria-hidden="true"><use href="#mg-pencil"/></svg>{{ __('messaging::web.new_message') }}
                 </button>
+                @if ($callsOn ?? false)
+                    <button type="button" class="newb" data-act="new-call" hidden>＋ {{ __('messaging::web.calls.new') }}</button>
+                @endif
             </div>
             <label class="msrch">
                 <svg aria-hidden="true"><use href="#mg-search"/></svg>
                 <input type="search" data-list-q autocomplete="off" placeholder="{{ __('messaging::web.search_list') }}" aria-label="{{ __('messaging::web.search_list') }}">
             </label>
-            <div class="mchips" role="tablist">
+            <div class="mchips" role="tablist" data-msg-chips>
                 <button type="button" role="tab" class="on" aria-selected="true" data-filter="all">{{ __('messaging::web.chip_all') }}</button>
                 <button type="button" role="tab" aria-selected="false" data-filter="unread">{{ __('messaging::web.chip_unread') }} <b class="n" data-unread-total></b></button>
                 <button type="button" role="tab" aria-selected="false" data-filter="groups">{{ __('messaging::web.chip_groups') }}</button>
+                <button type="button" role="tab" aria-selected="false" data-act="calls">{{ __('messaging::web.calls.chip') }} <b class="n red" data-calls-new></b></button>
+            </div>
+            {{-- ⭐ the call list's own chips (sample VxwPoxm77whS6ToNqsyZPU tab ১); the first goes back to the messages --}}
+            <div class="mchips" role="tablist" data-call-chips hidden>
+                <button type="button" data-act="calls-x" aria-label="{{ __('messaging::web.calls.back') }}" title="{{ __('messaging::web.calls.back') }}">‹</button>
+                <button type="button" role="tab" data-act="calls-kind" data-call-kind="all">{{ __('messaging::web.calls.all') }}</button>
+                <button type="button" role="tab" data-act="calls-kind" data-call-kind="missed">{{ __('messaging::web.calls.missed') }} <b class="n red" data-calls-missed></b></button>
+                <button type="button" role="tab" data-act="calls-kind" data-call-kind="in">{{ __('messaging::web.calls.in') }}</button>
+                <button type="button" role="tab" data-act="calls-kind" data-call-kind="out">{{ __('messaging::web.calls.out') }}</button>
             </div>
             <div class="mrows" data-rows role="list"></div>
         </section>
@@ -78,6 +92,9 @@
                 <svg class="wall" aria-hidden="true"><rect width="100%" height="100%" fill="url(#mg-doodle)"/></svg>
                 <p>{{ __('messaging::web.pick_chat') }}</p>
             </div>
+
+            {{-- ⭐ one person's calls: totals and log (sample tab ১) — drawn by messenger-calls.js --}}
+            <div class="mcalls" data-call-pane hidden></div>
 
             <div class="wh" data-head hidden>
                 <button type="button" class="hb back" data-act="back" aria-label="{{ __('messaging::web.back') }}"><svg><use href="#mg-back"/></svg></button>

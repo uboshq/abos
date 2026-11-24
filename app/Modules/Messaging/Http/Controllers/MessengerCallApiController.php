@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Validation\Rule;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
@@ -77,10 +78,42 @@ final class MessengerCallApiController extends Controller implements HasMiddlewa
         return response()->noContent();
     }
 
-    /** GET /messenger/calls → { data: [call row] }, newest first, 50 */
+    /**
+     * GET /messenger/calls → { data: [call row] }, newest first, 50 — exactly as before while no history parameter is sent.
+     *
+     * With any of `kind` (missed | in | out), `person` (user id), `q` (the other side's name), `cursor` (the answer's `next`) or `limit` (1–100, 50 if not
+     * said) → { data: [call row], next: string|null }, only my own calls.
+     */
     public function log(Request $request): JsonResponse
     {
-        return response()->json(['data' => $this->calls->log($this->me($request))]);
+        if (! $request->hasAny(['kind', 'person', 'cursor', 'limit', 'q'])) {
+            return response()->json(['data' => $this->calls->log($this->me($request))]);
+        }
+
+        $data = $request->validate([
+            'kind' => ['sometimes', 'nullable', 'string', Rule::in(CallService::KINDS)],
+            'person' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'cursor' => ['sometimes', 'nullable', 'string', 'max:40'],
+            'limit' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.CallService::PAGE_MAX],
+            'q' => ['sometimes', 'nullable', 'string', 'max:100'],
+        ]);
+
+        return response()->json($this->calls->history(
+            $this->me($request),
+            $data['kind'] ?? null,
+            isset($data['person']) ? (int) $data['person'] : null,
+            $data['cursor'] ?? null,
+            (int) ($data['limit'] ?? CallService::LOG),
+            trim((string) ($data['q'] ?? '')),
+        ));
+    }
+
+    /** GET /messenger/calls/people[?person=] → { data: [{ peer, calls, answered, missed, seconds, last_at, last }] }, only my own calls */
+    public function people(Request $request): JsonResponse
+    {
+        $data = $request->validate(['person' => ['sometimes', 'nullable', 'integer', 'min:1']]);
+
+        return response()->json(['data' => $this->calls->people($this->me($request), isset($data['person']) ? (int) $data['person'] : null)]);
     }
 
     private function me(Request $request): User

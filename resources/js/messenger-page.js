@@ -14,6 +14,8 @@ import '../css/messenger.css'
 
 /* ⓘ the page starts at the END of this file — the module's constants (pad, GRADS, EMOJI…) must exist first */
 
+import { callHistory, takeBefore } from './messenger-calls.js'
+
 function parse(s, fallback) {
     try {
         return JSON.parse(s || '')
@@ -194,6 +196,9 @@ export function start(root) {
         shared: [],
     }
 
+    /* ── calls (messenger-calls.js) — set before the page starts ── */
+    let calls = null
+
     /* ── formatting (English digits) ── */
     function dateOf(iso) {
         const d = iso ? new Date(iso) : null
@@ -354,12 +359,16 @@ export function start(root) {
         const un = sel ? 0 : Number(t.unread) || 0
         const badge = un ? `<span class="badge" aria-label="${esc(w('unread_badge', { count: un }))}">${un}</span>` : ''
         const muted = t.muted ? ic('belloff', 'mutei') : ''
-        return `<button type="button" class="crow${un ? ' un' : ''}${sel ? ' sel' : ''}" role="listitem" data-tid="${esc(t.id)}">${threadAvatar(t, 49)}<div class="tx"><div class="l1"><b>${esc(t.title)}</b><time>${esc(listTime(t.last_at || t.last?.at))}</time></div><small>${esc(t.subtitle)}</small><div class="l3"><span class="last">${lastLine(t)}</span>${muted}${badge}</div></div></button>`
+        const cl = calls?.lastFor(t) ?? null
+        const missed = cl && calls.isMissed(cl) ? ' miss' : ''
+        return `<button type="button" class="crow${un ? ' un' : ''}${sel ? ' sel' : ''}${missed}" role="listitem" data-tid="${esc(t.id)}">${threadAvatar(t, 49)}<div class="tx"><div class="l1"><b>${esc(t.title)}</b><time>${esc(listTime(cl ? cl.at : t.last_at || t.last?.at))}</time></div><small>${esc(t.subtitle)}</small><div class="l3"><span class="last">${cl ? calls.lastHtml(cl) : lastLine(t)}</span>${muted}${badge}</div></div></button>`
     }
     function renderList() {
-        const focused = document.activeElement?.closest?.('.crow')?.dataset.tid
-        el.rows.innerHTML = S.threads.length ? S.threads.map(rowHtml).join('') : `<p class="none">${esc(w('empty_list'))}</p>`
         el.unreadTotal.textContent = S.unreadTotal ? String(S.unreadTotal) : ''
+        if (calls?.on) return // ⓘ the rows are the call list now
+        const focused = document.activeElement?.closest?.('.crow')?.dataset.tid
+        const threads = calls ? calls.sorted(S.threads) : S.threads
+        el.rows.innerHTML = threads.length ? threads.map(rowHtml).join('') : `<p class="none">${esc(w('empty_list'))}</p>`
         if (focused) $(`.crow[data-tid="${CSS.escape(focused)}"]`)?.focus()
     }
     async function loadList() {
@@ -384,13 +393,17 @@ export function start(root) {
     function scheduleList() {
         clearTimeout(S.listTimer)
         S.listTimer = setTimeout(async () => {
-            if (!document.hidden) await loadList()
+            if (!document.hidden) {
+                await loadList()
+                await calls?.refresh()
+                await calls?.pollChat()
+            }
             scheduleList()
         }, 10000)
     }
 
     el.rows.addEventListener('click', (e) => {
-        const row = e.target.closest('.crow')
+        const row = e.target.closest('.crow[data-tid]')
         if (row) openThread(row.dataset.tid)
     })
     $$('.mchips [data-filter]').forEach((b) =>
@@ -407,8 +420,10 @@ export function start(root) {
     el.listQ.addEventListener('input', () => {
         clearTimeout(listQTimer)
         listQTimer = setTimeout(() => {
+            if (calls?.on) return calls.search(el.listQ.value.trim())
             S.q = el.listQ.value.trim()
             loadList()
+            return undefined
         }, 300)
     })
 
@@ -500,6 +515,8 @@ export function start(root) {
             for (const msg of m.data || []) putMsg(msg)
             S.hasMore = !!m.meta?.has_more
             applyMeta(m.meta)
+            await calls?.openChat(S.cur)
+            if (seq !== S.openSeq) return
             renderAll()
             toBottom()
             markRead()
@@ -688,14 +705,29 @@ export function start(root) {
     function renderAll() {
         let html = S.hasMore ? `<span class="more" data-more${S.loadingOlder ? '' : ' hidden'}>${esc(w('loading'))}</span>` : ''
         let prev = null
+        let day = ''
+        const daySep = (at) => {
+            const d = dateOf(at)
+            if (!d || dayKey(d) === day) return ''
+            day = dayKey(d)
+            return `<span class="dsep">${esc(dayLabel(d))}</span>`
+        }
+        const queue = calls ? calls.drawn() : []
+        const putCalls = (until) => {
+            for (const c of takeBefore(queue, until)) {
+                html += daySep(c.at) + calls.bubbleHtml(c)
+                prev = null
+            }
+        }
         for (const id of S.order) {
             const m = S.msgs.get(id)
             if (!m) continue
-            const d = dateOf(m.at)
-            if (d && dayKey(d) !== dayKey(dateOf(prev?.at))) html += `<span class="dsep">${esc(dayLabel(d))}</span>`
+            putCalls(dateOf(m.at)?.getTime() ?? 0)
+            html += daySep(m.at)
             html += msgHtml(m, !sameRun(prev, m))
             prev = m
         }
+        putCalls(Infinity)
         el.msgs.innerHTML = html
     }
     function appendMsg(m) {
@@ -706,7 +738,8 @@ export function start(root) {
         const d = dateOf(m.at)
         let html = ''
         if (d && dayKey(d) !== dayKey(dateOf(prev?.at))) html += `<span class="dsep">${esc(dayLabel(d))}</span>`
-        html += msgHtml(m, !sameRun(prev, m))
+        // ⓘ a call drawn last breaks the run
+        html += msgHtml(m, !!el.msgs.lastElementChild?.dataset.call || !sameRun(prev, m))
         el.msgs.insertAdjacentHTML('beforeend', html)
         return undefined
     }
@@ -738,6 +771,8 @@ export function start(root) {
             const top = el.scroll.scrollTop
             for (const m of d.data || []) putMsg(m)
             S.hasMore = !!d.meta?.has_more && (d.data || []).length > 0
+            await calls?.older()
+            if (seq !== S.openSeq) return false
             S.loadingOlder = false
             renderAll()
             el.scroll.scrollTop = top + (el.scroll.scrollHeight - before)
@@ -1895,6 +1930,7 @@ export function start(root) {
                 closeDialog()
                 break
             default:
+                calls?.act(act, actEl)
                 break
         }
     })
@@ -1918,11 +1954,18 @@ export function start(root) {
         if (S.menuFor) closeMenus()
     })
 
+    calls = callHistory({
+        root, $, $$, S, R, w, ic, esc, api, withQuery, avatar, dateOf, hm, dialog, closeDialog, toast, renderAll, renderList, loadList, toBottom, store,
+        atBottom: nearBottom,
+        leaveChat: closeChat,
+    })
+
     /* ── start ── */
     showChat(false)
     updateSend()
     loadList().then(() => {
         if (root.dataset.open) openThread(root.dataset.open)
+        calls.refresh(true)
     })
     scheduleList()
 }
