@@ -20,14 +20,22 @@
         @if ($abosHead)
             <form id="list-form" method="GET" class="contents">
                 <x-ui.toolbar :title="__('executive::links.title')" :info="__('executive::links.explain')" :search="false" :export="false" :share="false"
-                              :facets="$facetPanel" :quiet="['company']" />
+                              :facets="$facetPanel" :quiet="['company']">
+                    <x-slot:picker>
+                        <select name="company" aria-label="{{ __('executive::links.company') }}" data-action="submit-form"
+                                class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                            @foreach ($owning as $company)
+                                <option value="{{ $company['id'] }}" @selected($chosen === $company['id'])>{{ $company['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </x-slot:picker>
+                </x-ui.toolbar>
             </form>
         @endif
+        @unless ($abosHead)
         <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: var(--exec-bar)">
-            @unless ($abosHead)
                 <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::links.title') }}</h1>
-            @endunless
             <form method="GET" action="{{ route('executive.links') }}" class="flex flex-wrap items-center gap-2">
                 <label for="ln-company" class="text-sm text-(--color-ink-muted)">{{ __('executive::links.company') }}</label>
                 <select id="ln-company" name="company" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
@@ -39,6 +47,7 @@
                 <x-ui.button type="submit">{{ __('executive::today.show') }}</x-ui.button>
             </form>
         </div>
+        @endunless
 
         @if (session('saved'))
             <div role="status" class="rounded-(--radius-card) bg-(--color-badge-success-bg) px-4 py-2 text-sm text-(--color-badge-success-ink)">{{ session('saved') }}</div>

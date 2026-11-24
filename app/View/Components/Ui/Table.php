@@ -109,6 +109,12 @@ class Table extends Component
          * "দেখুন" আর "প্রিভিউ" মেনুর ভেতরেই। কলামটা ডানে আটকে থাকে, পাশে স্ক্রল করলেও (`[data-row-menu]`, app.css)।
          */
         public ?\Closure $rowMenu = null,
+
+        /*
+         * সারির নিজের শ্রেণি আর data-ঘর — সারি => ['class' => …, 'data-…' => …] (ব্যর্থ রাতের লাল সারি; ২৪ নভেম্বর ২০২৬)।
+         * ⓘ না দিলে সারি হুবহু আগের মতো আঁকা হয়।
+         */
+        public ?\Closure $rowAttributes = null,
     ) {
         foreach ($columns as $index => $column) {
             if (is_string($column)) {

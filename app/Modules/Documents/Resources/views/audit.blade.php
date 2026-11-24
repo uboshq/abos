@@ -8,6 +8,17 @@
     use App\Models\AuditTrail;
 
     // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $columns = [
+        ['key' => 'when', 'label' => __('documents::field.when'), 'width' => '11rem', 'render' => fn ($r) => DateFormat::formatWithTime($r->created_at)],
+        ['key' => 'who', 'label' => __('documents::field.who'), 'render' => fn ($r) => $r->user?->name ?? '—'],
+        ['key' => 'what', 'label' => __('documents::field.what'), 'render' => fn ($r) => AuditTrail::actionInWords($r->action)],
+        ['key' => 'document_no', 'label' => __('documents::field.document_no'), 'width' => '9rem', 'render' => fn ($r) => (string) $r->document_no],
+        ['key' => 'name', 'label' => __('documents::field.name'), 'wrap' => true, 'render' => fn ($r) => (string) $r->label],
+        ['key' => 'note', 'label' => __('documents::field.note'), 'wrap' => true, 'render' => fn ($r) => (string) $r->reason],
+        ['key' => 'ip', 'label' => __('documents::field.ip'), 'width' => '9rem', 'render' => fn ($r) => $r->ip_address ?? '—'],
+        ['key' => 'device', 'label' => __('documents::field.device'), 'render' => fn ($r) => new \Illuminate\Support\HtmlString(
+            '<span class="block max-w-[14rem] truncate text-2xs text-(--color-ink-muted)" title="'.e($r->user_agent).'">'.e($r->user_agent ?? '—').'</span>')],
+    ];
     $abosHead = \App\Core\Support\AbosHead::on();
     $facetPanel = \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
@@ -29,7 +40,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         @if ($abosHead)
         <form id="list-form" method="GET" class="contents">
-                <x-ui.toolbar :title="__('documents::menu.audit')" :info="__('documents::message.audit_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :export="false" :share="false" :facets="$facetPanel"></x-ui.toolbar>
+                <x-ui.toolbar :title="__('documents::menu.audit')" :info="__('documents::message.audit_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :export="false" :share="false" :columns="$columns" :facets="$facetPanel"></x-ui.toolbar>
         </form>
         @endif
         @unless ($abosHead)
@@ -43,6 +54,9 @@
         </form>
         @endunless
 
+        @if ($abosHead)
+        <x-ui.table :rows="$rows" :columns="$columns" :empty="__('core.empty.no_results')" :row-attributes="fn ($r) => ['data-audit' => $r->action]" />
+        @else
         <div class="overflow-x-auto">
             <table class="ui-list w-full border-collapse text-sm">
                 <thead>
@@ -75,6 +89,7 @@
                 </tbody>
             </table>
         </div>
+        @endif
 
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />

@@ -12,6 +12,10 @@
     ];
     $field = 'h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm';
 
+    $columns = array_map(fn ($cell) => ['key' => $cell, 'label' => __('assistant::audit.'.$cell), 'wrap' => in_array($cell, ['what', 'page'], true),
+        'render' => fn ($r) => view('assistant::partials.audit-cell', ['cell' => $cell, 'row' => $r, 'who' => $who, 'name' => $name, 'tone' => $tone, 'pages' => $pages, 'branches' => $branches])],
+        ['when', 'who', 'kind', 'what', 'page', 'how', 'where', 'outcome']);
+
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
     $facetPanel = \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
@@ -33,7 +37,7 @@
         <x-ui.filter-layout :filters="$facetPanel" form="list-form">
         <div class="space-y-4" data-assistant-audit>
             <form id="list-form" method="GET" class="contents">
-                <x-ui.toolbar :title="__('assistant::audit.title', ['name' => $name])" :info="__('assistant::audit.note')" :search-placeholder="__('assistant::audit.search')" :export="false" :share="false" :facets="$facetPanel" />
+                <x-ui.toolbar :title="__('assistant::audit.title', ['name' => $name])" :info="__('assistant::audit.note')" :search-placeholder="__('assistant::audit.search')" :export="false" :share="false" :columns="$columns" :facets="$facetPanel" />
             </form>
 
             @include('assistant::partials.audit-rows')

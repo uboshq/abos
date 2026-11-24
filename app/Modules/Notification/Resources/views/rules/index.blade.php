@@ -13,6 +13,15 @@
 @php
     // ⓘ ব্যাখ্যা নামের পাশে ⓘ-এ, "নতুন" মাথার সারিতে — কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $abosHead = \App\Core\Support\AbosHead::on();
+    $columns = [
+        ['key' => 'name', 'label' => __('notification::rule.name'), 'render' => fn ($r) => new \Illuminate\Support\HtmlString('<a href="'.e(route('notification.rules.edit', $r)).'" class="hover:underline">'.e($r->name).'</a>')],
+        ['key' => 'event', 'label' => __('notification::rule.event'), 'wrap' => true, 'render' => fn ($r) => \App\Core\Support\NotificationKinds::sourceLabel($r->module).' · '.__(\App\Core\Support\NotificationKinds::all()[$r->event] ?? $r->event)],
+        ['key' => 'conditions', 'label' => __('notification::rule.conditions'), 'render' => fn ($r) => (string) count((array) $r->conditions)],
+        ['key' => 'priority', 'label' => __('notification::rule.priority'), 'render' => fn ($r) => $r->priority ? __('core.notify.priority.'.$r->priority) : __('notification::rule.as_module')],
+        ['key' => 'template', 'label' => __('notification::rule.template'), 'render' => fn ($r) => $r->template?->name ?? __('notification::rule.as_module')],
+        ['key' => 'state', 'label' => __('notification::rule.state'), 'render' => fn ($r) => __('notification::rule.states.'.($r->is_active ? 'active' : 'inactive'))],
+        ['key' => 'version', 'label' => __('notification::rule.version'), 'numeric' => true, 'render' => fn ($r) => 'v'.$r->version],
+    ];
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::rule.title') }}</x-slot:title>
@@ -20,7 +29,7 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::rule.title')" :info="__('notification::rule.note')" :search-placeholder="__('notification::rule.search')" :export="false" :share="false" :facets="$facetPanel">
+        <x-ui.toolbar :title="__('notification::rule.title')" :info="__('notification::rule.note')" :search-placeholder="__('notification::rule.search')" :export="$abosHead" :share="false" :columns="$abosHead ? $columns : []" :facets="$facetPanel">
             @if ($abosHead)
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('notification.rules.create')">{{ __('notification::rule.new') }}</x-ui.button>
@@ -39,10 +48,17 @@
         @include('notification::partials.flash')
 
         {{-- ⓘ ABOS রূপে তালিকার সাদা কার্ড, বাকি তালিকার মতো --}}
-        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead, 'p-3' => $abosHead && $rows->isEmpty()]) @if ($abosHead) data-boxed @endif>
+        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead]) @if ($abosHead) data-boxed @endif>
         @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::rule.empty') }}</p>
+            @if ($abosHead)
+                <x-ui.empty-state :message="__('notification::rule.empty')" />
+            @else
+                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::rule.empty') }}</p>
+            @endif
         @else
+            @if ($abosHead)
+            <x-ui.table :rows="$rows" :columns="$columns" :row-attributes="fn ($r) => ['data-rule' => $r->id]" />
+            @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">
                     <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
@@ -74,6 +90,7 @@
                     </tbody>
                 </table>
             </div>
+            @endif
         @endif
         </div>
 

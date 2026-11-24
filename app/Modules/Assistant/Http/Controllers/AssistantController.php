@@ -81,6 +81,9 @@ class AssistantController extends Controller
     /** ⭐ খোঁজা ও কোপাইলটের খাতা — কেবল মালিকের চাবি (`assistant.audit`) */
     public function audit(Request $request): View
     {
+        // ⛔ খাতা নামানো যায় না — সব রূপে, ঠিকানাতেও ([[ListExport::refuse()]])
+        app(\App\Core\Services\ListExport::class)->refuse();
+
         $f = $request->validate([
             'from' => ['nullable', 'date'],
             'to' => ['nullable', 'date'],

@@ -4,6 +4,13 @@
 @php
     // ⓘ ব্যাখ্যা নামের পাশে ⓘ-এ, "নতুন" মাথার সারিতে — কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $abosHead = \App\Core\Support\AbosHead::on();
+    $columns = [
+        ['key' => 'code', 'label' => __('notification::template.code'), 'width' => '12rem', 'render' => fn ($r) => (string) $r->code],
+        ['key' => 'name', 'label' => __('notification::template.name'), 'render' => fn ($r) => new \Illuminate\Support\HtmlString('<a href="'.e(route('notification.templates.edit', $r)).'" class="hover:underline">'.e($r->name).'</a>')],
+        ['key' => 'category', 'label' => __('notification::template.category'), 'render' => fn ($r) => __('core.notify.category.'.$r->category)],
+        ['key' => 'published', 'label' => __('notification::template.published'), 'render' => fn ($r) => $r->published ? 'v'.$r->published->version : __('notification::template.draft_only')],
+        ['key' => 'versions', 'label' => __('notification::template.versions'), 'numeric' => true, 'render' => fn ($r) => (string) $r->versions_count],
+    ];
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $facetPanel = \App\Core\ListFilter\Facets::panel([
@@ -17,7 +24,7 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::template.title')" :info="__('notification::template.note')" :search-placeholder="__('notification::template.search')" :export="false" :share="false" :facets="$facetPanel">
+        <x-ui.toolbar :title="__('notification::template.title')" :info="__('notification::template.note')" :search-placeholder="__('notification::template.search')" :export="$abosHead" :share="false" :columns="$abosHead ? $columns : []" :facets="$facetPanel">
             @if ($abosHead)
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('notification.templates.create')">{{ __('notification::template.new') }}</x-ui.button>
@@ -36,10 +43,17 @@
         @include('notification::partials.flash')
 
         {{-- ⓘ ABOS রূপে তালিকার সাদা কার্ড, বাকি তালিকার মতো --}}
-        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead, 'p-3' => $abosHead && $rows->isEmpty()]) @if ($abosHead) data-boxed @endif>
+        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead]) @if ($abosHead) data-boxed @endif>
         @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::template.empty') }}</p>
+            @if ($abosHead)
+                <x-ui.empty-state :message="__('notification::template.empty')" />
+            @else
+                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::template.empty') }}</p>
+            @endif
         @else
+            @if ($abosHead)
+            <x-ui.table :rows="$rows" :columns="$columns" :row-attributes="fn ($r) => ['data-template' => $r->id]" />
+            @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">
                     <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
@@ -64,6 +78,7 @@
                     </tbody>
                 </table>
             </div>
+            @endif
         @endif
         </div>
 

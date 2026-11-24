@@ -76,6 +76,9 @@ class RecoveryController extends Controller
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
+        // ⛔ এই খাতা নামানো যায় না — সব রূপে, ঠিকানাতেও (টুলবার কেবল ABOS রূপে; [[ListExport::refuse()]])
+        app(\App\Core\Services\ListExport::class)->refuse();
+
         return view('backup::verifications', [
             'menu' => $this->menu->forUser($request->user()),
             'runs' => $runs,

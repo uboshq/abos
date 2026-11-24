@@ -2,6 +2,15 @@
 @php
     // ⓘ ব্যাখ্যা নামের পাশে ⓘ-এ, "নতুন" মাথার সারিতে — কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $abosHead = \App\Core\Support\AbosHead::on();
+    $columns = [
+        ['key' => 'name', 'label' => __('notification::schedule.name'), 'render' => fn ($r) => new \Illuminate\Support\HtmlString('<a href="'.e(route('notification.schedules.edit', $r)).'" class="hover:underline">'.e($r->name).'</a>')],
+        ['key' => 'template', 'label' => __('notification::schedule.template'), 'render' => fn ($r) => $r->template?->name ?? '—'],
+        ['key' => 'group', 'label' => __('notification::schedule.group'), 'render' => fn ($r) => $r->group?->name ?? '—'],
+        ['key' => 'recurrence', 'label' => __('notification::schedule.recurrence'), 'render' => fn ($r) => __('notification::schedule.recurrences.'.$r->recurrence)],
+        ['key' => 'next', 'label' => __('notification::schedule.next'), 'render' => fn ($r) => $r->next_run_at ? $r->next_run_at->copy()->setTimezone($r->timezone)->format('d/m/Y H:i').' '.$r->timezone : '—'],
+        ['key' => 'runs', 'label' => __('notification::schedule.runs'), 'numeric' => true, 'render' => fn ($r) => (string) $r->runs],
+        ['key' => 'state', 'label' => __('notification::rule.state'), 'render' => fn ($r) => __('notification::rule.states.'.($r->is_active ? 'active' : 'inactive'))],
+    ];
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $facetPanel = \App\Core\ListFilter\Facets::panel([
@@ -17,7 +26,7 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::schedule.title')" :info="__('notification::schedule.note')" :search-placeholder="__('notification::schedule.name')" :export="false" :share="false" :facets="$facetPanel">
+        <x-ui.toolbar :title="__('notification::schedule.title')" :info="__('notification::schedule.note')" :search-placeholder="__('notification::schedule.name')" :export="$abosHead" :share="false" :columns="$abosHead ? $columns : []" :facets="$facetPanel">
             @if ($abosHead)
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('notification.schedules.create')">{{ __('notification::schedule.new') }}</x-ui.button>
@@ -36,10 +45,17 @@
         @include('notification::partials.flash')
 
         {{-- ⓘ ABOS রূপে তালিকার সাদা কার্ড, বাকি তালিকার মতো --}}
-        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead, 'p-3' => $abosHead && $rows->isEmpty()]) @if ($abosHead) data-boxed @endif>
+        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead]) @if ($abosHead) data-boxed @endif>
         @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::schedule.empty') }}</p>
+            @if ($abosHead)
+                <x-ui.empty-state :message="__('notification::schedule.empty')" />
+            @else
+                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::schedule.empty') }}</p>
+            @endif
         @else
+            @if ($abosHead)
+            <x-ui.table :rows="$rows" :columns="$columns" :row-attributes="fn ($r) => ['data-schedule' => $r->id]" />
+            @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">
                     <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
@@ -68,6 +84,7 @@
                     </tbody>
                 </table>
             </div>
+            @endif
         @endif
         </div>
 
