@@ -206,7 +206,8 @@ Route::middleware('auth')->prefix('hr')->group(function () {
     // ⭐ চূড়ান্ত পাওনা — এক কাগজ, মালিকের অনুমোদনে (মালিক, ২১ অক্টোবর ২০২৬; [[FinalSettlementController]])
     Route::prefix('final-settlements')->name('final_settlement.')->group(function () {
         Route::get('/', [FinalSettlementController::class, 'index'])->name('index');
-        Route::get('/create', [FinalSettlementController::class, 'create'])->name('create');
+        // ⓘ নাম `preview` — একজন বাছা কর্মীর হিসাব; `create` হলে খোঁজার ঘর একে "নতুন" বলে দিত, অথচ কর্মী ছাড়া পাতা নেই ([[StartingPoints::creatable()]])
+        Route::get('/create', [FinalSettlementController::class, 'create'])->name('preview');
         Route::post('/', [FinalSettlementController::class, 'store'])->name('store');
         Route::get('/{settlement}', [FinalSettlementController::class, 'show'])->name('show');
         Route::post('/{settlement}/approve', [FinalSettlementController::class, 'approve'])->name('approve');

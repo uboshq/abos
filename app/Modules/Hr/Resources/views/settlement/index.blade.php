@@ -33,7 +33,7 @@
 
     @can('hr.final_settlement.manage')
         @if ($leavers->isNotEmpty())
-            <form method="GET" action="{{ route('hr.final_settlement.create') }}" data-boxed data-settlement-leavers
+            <form method="GET" action="{{ route('hr.final_settlement.preview') }}" data-boxed data-settlement-leavers
                   class="mb-4 flex flex-wrap items-end gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <x-ui.select name="employee" :label="__('hr::settlement.leavers')"
                              :options="$leavers->mapWithKeys(fn ($e) => [$e->id => $e->label().' · '.$e->leaving_date->format('d M Y')])" />

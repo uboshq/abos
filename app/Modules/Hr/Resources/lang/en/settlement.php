@@ -68,4 +68,5 @@ return [
     'sort_recent' => 'Newest first',
     'sort_oldest' => 'Oldest first',
     'sort_largest' => 'Largest first',
+    'other_company' => 'This employee belongs to another company — make the final settlement in their own company.',
 ];

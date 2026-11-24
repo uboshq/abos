@@ -127,6 +127,46 @@ final class TheHrListsPageAndTotalOnlyFinalPapersTest extends TestCase
         $this->assertTrue((bool) Account::query()->whereKey($plain->id)->value('is_system'), '⛔ সাধারণ আইনি খাত চিহ্ন পেল না — দাবি কিছু মাপছে না।');
     }
 
+    /** ⭐ খোঁজার খালি ঘর: দরজার সব চাবি না থাকলে কাজটা প্রস্তাবে নয়, আর বাছা কর্মী ছাড়া যে পাতা নেই সেটা কারও প্রস্তাবে নয় */
+    public function test_the_search_box_offers_no_settlement_page_that_will_not_open(): void
+    {
+        $clerk = User::factory()->create(['current_company_id' => $this->company->id, 'is_active' => true]);
+        $clerk->companies()->attach($this->company->id, ['is_active' => true]);
+        $clerk->givePermissionTo(\Spatie\Permission\Models\Permission::findOrCreate('hr.salary.view', 'web'));
+
+        foreach ([$clerk->fresh(), $this->owner->fresh()] as $who) {
+            $this->actingAs($who);
+            $offered = array_column(app(\App\Core\Engines\Search\StartingPoints::class)->actions($who), 'url');
+            $this->assertNotContains(route('hr.final_settlement.preview'), $offered, '⛔ কর্মী ছাড়া খোলে না এমন পাতা প্রস্তাবে।');
+        }
+    }
+
+    public function test_a_settlement_is_never_made_in_another_companys_books(): void
+    {
+        $other = Company::query()->whereKeyNot($this->company->id)->firstOrFail();
+        $theirs = $this->employee('FS-X', 'Other Company Leaver');
+        $theirs->forceFill(['leaving_date' => now()->toDateString()])->save();
+        app(\App\Core\Services\SettingsService::class)->set('hr.shared_across_companies', true);
+
+        CompanyContext::set($other->id, $other->defaultBranch()?->id);
+        $this->assertNotNull(Employee::query()->find($theirs->id), 'প্রস্তুতিটাই ভুল — এক খাতার সুইচে অন্য কোম্পানির কর্মী দেখা যায় না।');
+
+        try {
+            app(\App\Modules\Hr\Services\FinalSettlements::class)->prepare($theirs, 'resignation', null, $this->owner);
+            $this->fail('⛔ অন্য কোম্পানির কর্মীর চূড়ান্ত পাওনা এই কোম্পানির খাতায়।');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertSame([__('hr::settlement.other_company')], $e->errors()['employee'] ?? null);
+        }
+    }
+
+    public function test_the_owners_own_report_never_shows_the_workers_profit_fund_amount(): void
+    {
+        $amount = new \ReflectionMethod(\App\Core\Engines\Approval\OwnerSelfApproval::class, 'approvedAmountOf');
+
+        $this->assertSame('NULL', $amount->invoke(app(\App\Core\Engines\Approval\OwnerSelfApproval::class), \App\Modules\Hr\Models\WppfProvision::class, ['amount', 'wppf']),
+            '⛔ হিসাবের রিপোর্টে তহবিলের অঙ্ক — ৫% থেকে গোটা মুনাফা জানা যায়।');
+    }
+
     private function employee(string $code, string $name): Employee
     {
         return app(EmployeeService::class)->create([

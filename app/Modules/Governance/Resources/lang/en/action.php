@@ -139,7 +139,7 @@ return [
     'bank_rejected' => 'Bank details change refused',
     'bank_withdrawn' => 'Bank details change withdrawn',
     // The owner signed an offer they created — a self-approved discount (PromotionApprovalChain::OWNER_SELF_SIGNED)
-    'owner_self_signed' => 'Owner approved their own offer',
+    'owner_self_signed' => 'Owner approved their own request',
     'obligation_done' => 'Obligation done',
     'obligation_cancelled' => 'Obligation cancelled',
     // ⓘ অফিসের SMS ফোনের চাবি বদল (১১ নভেম্বর ২০২৬; SmsPhoneController)

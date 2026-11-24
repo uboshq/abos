@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Hr\Models;
 
 use App\Core\Contracts\Drillable;
+use App\Core\Contracts\ShownInOwnerSelfReport;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * ⓘ `draft` — হিসাব বসেছে, "সই দিন" এখনো পড়েনি (বা কোম্পানির ছকে সইয়ের অপেক্ষায়); `posted` — জাবেদা খাতায়, আর বদলায় না।
  */
-class WppfProvision extends Model implements Drillable
+class WppfProvision extends Model implements Drillable, ShownInOwnerSelfReport
 {
     use BelongsToCompany;
     use HasPublicId;
@@ -70,6 +71,12 @@ class WppfProvision extends Model implements Drillable
     public static function drillSourceType(): string
     {
         return self::SOURCE_TYPE;
+    }
+
+    /** ⛔ মালিকের নিজে-অনুমোদিত কাগজের রিপোর্টে আসে, অঙ্ক ছাড়া — ৫% দেখলে গোটা মুনাফা জানা যায়, আর রিপোর্টের চাবি হিসাবের, WPPF-এর নয় */
+    public static function ownerSelfSource(): array
+    {
+        return [self::SOURCE_TYPE, 'id'];
     }
 
     public function drillDocumentNo(): string
