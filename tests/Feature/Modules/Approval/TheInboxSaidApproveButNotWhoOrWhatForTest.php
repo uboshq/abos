@@ -108,8 +108,9 @@ final class TheInboxSaidApproveButNotWhoOrWhatForTest extends TestCase
         $html = $this->get(route('approval.inbox.index'))->assertOk()->getContent();
 
         // ⓘ ২৭ অক্টোবর ২০২৬ থেকে সারি মানে কার্ড (অনুমোদন পর্দা ভাগ ২) — দাবি একই: কার্ডেই পক্ষ, কী বাবদ আর টাকা কোথায়
-        preg_match_all('/<li data-inbox-card[^>]*>(.*?)<\/li>/s', $html, $rows);
-        $row = collect($rows[1])->first(fn (string $r) => str_contains($r, 'INBOX-ROW'));
+        // ⓘ the ABOS looks show the paper as a board row (owner "ok", 23 Nov 2026), every other look as a card — the claim holds for both
+        preg_match_all('/<(li|tr)\b[^>]*\bdata-inbox-card[^>]*>(.*?)<\/\1>/s', $html, $rows);
+        $row = collect($rows[2])->first(fn (string $r) => str_contains($r, 'INBOX-ROW'));
 
         $this->assertNotNull($row, 'অপেক্ষমাণ সারিটা ইনবক্সে নেই।');
 

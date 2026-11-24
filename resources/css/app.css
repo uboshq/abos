@@ -2613,6 +2613,12 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
 }
 .inbox-board-link:hover { text-decoration-style: solid; }
 .inbox-board-late { color: var(--color-badge-danger-ink); font-weight: 600; }
+.inbox-board-near { color: var(--color-badge-pending-ink); font-weight: 600; }
+/* ⓘ the step of a two-step paper ("ধাপ 1 / 2") beside its number — the card's pill, kept on the board */
+.inbox-board-step {
+    margin-inline-start: 4px; border-radius: var(--radius-pill); padding: 0 6px; font-size: 10px; font-weight: 600;
+    background: var(--color-surface-sunken); color: var(--color-ink-muted); white-space: nowrap;
+}
 .inbox-board-changed {
     margin-inline-start: 4px; border-radius: var(--radius-pill); padding: 0 6px; font-size: 10px; font-weight: 700;
     background: var(--color-badge-danger-bg); color: var(--color-badge-danger-ink);

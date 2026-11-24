@@ -142,16 +142,17 @@ final class TheInboxReadsAloudAndAnswersTheKeysTest extends TestCase
             $page = $this->xpath($this->actingAs($this->signer)
                 ->get(route('approval.inbox.index', array_filter(['tab' => $query])))->assertOk()->getContent());
 
-            $nav = $page->query('//nav[@data-list-tabs]')->item(0);
+            // ⓘ the ABOS looks show the board (owner "ok", 23 Nov 2026) — its own tab row, read the same way
+            $nav = $page->query('//nav[@data-list-tabs or contains(@class, "inbox-board-tabs")]')->item(0);
             $this->assertInstanceOf(DOMElement::class, $nav, 'প্রস্তুতিটাই ভুল — ইনবক্সে ট্যাবের সারি নেই।');
             $this->assertSame(__('approval::field.tabs'), $nav->getAttribute('aria-label'), '⛔ দফা ২০: ট্যাবের সারির নাম নেই।');
 
-            $current = $page->query('//nav[@data-list-tabs]//a[@aria-current="page"]');
+            $current = $page->query('//nav[@data-list-tabs or contains(@class, "inbox-board-tabs")]//a[@aria-current="page"]');
             $this->assertSame(1, $current->length, "⛔ দফা ২০: \"{$tab}\" খোলা থাকতে ঠিক একটা ট্যাব \"এই পাতা\" বলে না।");
             $this->assertInstanceOf(DOMElement::class, $current->item(0));
-            $this->assertSame($tab, $current->item(0)->getAttribute('data-tab'), "⛔ দফা ২০: \"এই পাতা\" বলা ট্যাবটা খোলা ট্যাব নয়।");
+            $this->assertSame($tab, $current->item(0)->getAttribute('data-tab') ?: $current->item(0)->getAttribute('data-list-tab'), "⛔ দফা ২০: \"এই পাতা\" বলা ট্যাবটা খোলা ট্যাব নয়।");
 
-            $this->assertSame(0, $page->query('//nav[@data-list-tabs]//*[@role="tab" or @role="tablist"]')->length,
+            $this->assertSame(0, $page->query('//nav[@data-list-tabs or contains(@class, "inbox-board-tabs")]//*[@role="tab" or @role="tablist"]')->length,
                 '⛔ দফা ২০: লিংক-ট্যাব role="tab" সাজে — পর্দা-পাঠক ←/→ চাপতে বলে, অথচ ট্যাবগুলো আলাদা পাতা।');
         }
     }
