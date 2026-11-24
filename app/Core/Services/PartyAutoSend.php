@@ -624,8 +624,7 @@ final class PartyAutoSend
      */
     private function paidValues(Model $receipt, DocumentShare $share, string $locale, bool $withLink): array
     {
-        // ⓘ নিজে থেকে পাঠানোয় পাঠানোর মানুষ নেই — রসিদ যিনি পোস্ট করলেন তাঁর শাখার দেয়াল এখানে খাটে না, পার্টি গোটা বাকিটা পায় (মালিক, ২৪ নভেম্বর ২০২৬)
-        $values = $this->messages->values($receipt, $share, $locale, bySystem: true);
+        $values = $this->messages->values($receipt, $share, $locale);
 
         return array_merge($values, ['link' => $withLink ? $values['link'] : '']);
     }
