@@ -9,7 +9,7 @@
          'render' => fn ($r) => new \Illuminate\Support\HtmlString('<a class="underline" href="'.e(route('hr.final_settlement.show', $r)).'">'.e($r->employee?->label() ?? '—').'</a>')],
         ['key' => 'last_day', 'label' => __('hr::settlement.last_day'), 'width' => '8rem', 'render' => fn ($r) => $r->last_day->format('d M Y')],
         ['key' => 'separation', 'label' => __('hr::settlement.separation'), 'width' => '9rem', 'render' => fn ($r) => __('hr::settlement.separations.'.$r->separation)],
-        ['key' => 'net', 'label' => __('hr::settlement.net'), 'numeric' => true, 'width' => '10rem', 'render' => fn ($r) => $money($r->net)],
+        ['key' => 'net', 'total' => 'money', 'label' => __('hr::settlement.net'), 'numeric' => true, 'width' => '10rem', 'render' => fn ($r) => $money($r->net)],
         ['key' => 'status', 'label' => __('hr::settlement.status'), 'width' => '10rem', 'render' => fn ($r) => __('hr::settlement.statuses.'.$r->status)],
     ];
 @endphp
@@ -42,6 +42,14 @@
         @endif
     @endcan
 
-    <x-ui.table :rows="$rows" :columns="$columns" :empty="__('core.empty.no_results')" />
-    <div class="mt-3">{{ $rows->links() }}</div>
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form method="GET" class="contents">
+            <x-ui.toolbar :title="__('hr::settlement.title')" :columns="$columns" :sort="$sortOptions"
+                          :search-placeholder="__('hr::settlement.employee')" />
+        </form>
+        <x-ui.table :rows="$rows" :columns="$columns" :grand="$grand" :compact="\App\Core\Support\Ui::compact()"
+                    :view-url="fn ($r) => route('hr.final_settlement.show', $r)" :empty="__('core.empty.no_results')" />
+        <x-ui.pager :rows="$rows" />
+        <x-ui.list-totals :rows="$rows" :grand="$grand" :columns="$columns" />
+    </div>
 </x-layouts.app>
