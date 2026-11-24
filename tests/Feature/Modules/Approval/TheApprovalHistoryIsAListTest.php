@@ -109,8 +109,13 @@ final class TheApprovalHistoryIsAListTest extends TestCase
             '⛔ ছাঁকনি এখনো বাঁয়ের তালিকার ভেতরে — পুরো চওড়ায় উপরে থাকার কথা।');
         $this->assertGreaterThan(0, $waiting->query('.//*[contains(concat(" ", @class, " "), " toolbar-view ")]', $bar)->length,
             '⛔ অপেক্ষার ট্যাবে অন্য তালিকার টুলবার নেই — পুরনো আলাদা বাক্স।');
-        foreach (['q', 'sort', 'module', 'amount'] as $name) {
+        foreach (['q', 'sort'] as $name) {
             $this->assertGreaterThan(0, $waiting->query('.//*[@name="'.$name.'"]', $bar)->length, "⛔ টুলবারে \"{$name}\" ঘর নেই।");
+        }
+        // ⓘ কাজ আর অঙ্কের ঘর ডান পাশের ছাঁকনির প্যানেলে, একই ফর্মে জমা (২৩ নভেম্বর ২০২৬, [[Facets]])
+        $form = $bar->getAttribute('id');
+        foreach (['module', 'amount'] as $name) {
+            $this->assertGreaterThan(0, $waiting->query('//*[@name="'.$name.'" and (@form="'.$form.'" or ancestor::form[@id="'.$form.'"])]')->length, "⛔ ছাঁকনিতে \"{$name}\" ঘর নেই।");
         }
     }
 

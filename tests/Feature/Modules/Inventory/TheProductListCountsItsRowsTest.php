@@ -72,7 +72,8 @@ final class TheProductListCountsItsRowsTest extends TestCase
         $out = [];
 
         foreach ($xpath->query('//table//tbody/tr') as $tr) {
-            $td = $xpath->query('./td', $tr)->item(0);
+            // ⓘ বাছাইয়ের টিক-বাক্সের ঘর ক্রম নয় (২৩ নভেম্বর ২০২৬, [[BulkRun::pickColumn()]])
+            $td = $xpath->query('./td[not(.//input[@data-bulk-pick])]', $tr)->item(0);
 
             if ($td !== null) {
                 $out[] = trim($td->textContent);

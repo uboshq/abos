@@ -170,6 +170,8 @@ final class EveryDocumentNumberNamesItsPartyTest extends TestCase
     private function queriesOfTheCentre(): array
     {
         $this->actingAs($this->owner);
+        // ⓘ মাঝখানের পপআপ নিজের অঙ্ক পড়ে — এই দাবি কেবল পাতার নিজের প্রশ্ন গোনে
+        $this->withSession(['daycheck.snooze_until' => now()->addHour()->getTimestamp()]);
         DB::flushQueryLog();
         DB::enableQueryLog();
         $this->get(route('documents.index'))->assertOk();

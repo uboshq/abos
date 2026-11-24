@@ -141,6 +141,8 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
      */
     private function paper(string $table, array $set, array $not = []): object
     {
+        $this->draftOf($table);
+
         $row = DB::table($table)->where('company_id', $this->company->id)->whereNull('deleted_at')
             ->whereNotIn('id', $not ?: [0])->orderBy('id')->first();
         $this->assertNotNull($row, "⛔ ডেমোতে {$table}-এর কাগজ নেই — পরীক্ষাটা কিছুই দেখছে না");
@@ -148,6 +150,25 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
         DB::table($table)->where('id', $row->id)->update([...$set, 'status' => DocumentStatus::CONFIRMED, 'branch_id' => $this->a->id]);
 
         return DB::table($table)->where('id', $row->id)->first();
+    }
+
+    /** ⓘ ডেমোতে এই কাগজ নেই — একটা খসড়া, মডিউলের নিজের পথে (২৪ নভেম্বর ২০২৬) */
+    private function draftOf(string $table): void
+    {
+        $warehouse = \App\Modules\Inventory\Models\Warehouse::query()->where('is_default', true)->value('id');
+        $product = \App\Modules\Inventory\Models\Product::query()->where('is_active', true)->orderBy('id')->value('id');
+
+        if ($table === 'sal_invoices') {
+            app(\App\Modules\Sales\Services\SalesInvoiceService::class)->create([
+                'customer_id' => \App\Modules\Customer\Models\Customer::query()->orderBy('id')->value('id'), 'warehouse_id' => $warehouse, 'trx_date' => self::DAY,
+            ], [['product_id' => $product, 'qty' => '1', 'rate' => '100']]);
+
+            return;
+        }
+
+        app(\App\Modules\Purchase\Services\PurchaseBillService::class)->create([
+            'supplier_id' => \App\Modules\Supplier\Models\Supplier::query()->orderBy('id')->value('id'), 'warehouse_id' => $warehouse, 'trx_date' => self::DAY,
+        ], [['product_id' => $product, 'qty' => '1', 'rate' => '100']]);
     }
 
     /**

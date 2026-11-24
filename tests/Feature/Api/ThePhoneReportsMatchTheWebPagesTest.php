@@ -57,6 +57,8 @@ final class ThePhoneReportsMatchTheWebPagesTest extends TestCase
 
         $dates = ['from' => now()->startOfMonth()->subMonths(2)->toDateString(), 'to' => now()->toDateString()];
         $problems = [];
+        // ⓘ মিনিটে ৩০০ ডাকের সীমা এই দাবির বিষয় নয় — রিপোর্ট বাড়তেই শেষের কয়টা 429 পাচ্ছিল
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
         $checked = 0;
 
         foreach (self::CONTROLLERS as $controller => [$route, $module]) {
@@ -130,6 +132,10 @@ final class ThePhoneReportsMatchTheWebPagesTest extends TestCase
                 CompanyContext::set($company->id, $company->defaultBranch()?->id);
                 $fileRows = $file->status() === 200 ? count((array) (json_decode((string) $file->getContent(), true)['rows'] ?? [])) : -1;
                 $webRows = $narrowWeb instanceof \App\Core\Engines\Report\ReportResult ? $narrowWeb->totalRows : -2;
+                // ⓘ পাশ ফেরানো রিপোর্টে (শাখা ধরে বিক্রি) ফাইলের সারি হিসাব, পর্দার মতোই — প্রথম কলাম বাদে প্রতিটা কলাম এক সারি ([[ReportExport::transposed()]])
+                if ($result->report->transpose && $narrowWeb instanceof \App\Core\Engines\Report\ReportResult) {
+                    $webRows = count($narrowWeb->columnsFor($owner)) - 1;
+                }
                 if ($fileRows !== min($webRows, 100000)) {
                     $problems[] = "{$where}: রপ্তানির সারি {$fileRows}, ওয়েবে একই তারিখ".(isset($narrow['branch_id']) ? '-শাখায়' : '')." {$webRows}";
                 }
