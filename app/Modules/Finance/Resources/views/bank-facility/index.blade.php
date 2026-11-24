@@ -137,7 +137,7 @@
                  হাতধার আর ব্যাংক ঋণ এক জিনিস নয়। ⚠️ এক করে ফেললে সুদের
                  হিসাব, জামানত আর নবায়ন সব এক ছাঁচে পড়ত। --}}
             <x-ui.toolbar :title="__('finance::menu.bank_facility')"
-                          :subtitle="__('finance::field.facility_book_tag')"
+                          :subtitle="__('finance::field.facility_book_tag').($abosHead && auth()->user()?->can('finance.bank_facility.create') ? ' · '.__('finance::bank_loan_report.accrual_note') : '')"
                           :columns="$bfColumns"
                           :search-placeholder="__('finance::message.facility_search')"
                           :facets="$facetPanel" :quiet="['tab']">
@@ -169,7 +169,9 @@
                                 class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
                 </label>
                 <x-ui.button type="submit" tone="secondary">{{ __('finance::bank_loan_report.accrual_run') }}</x-ui.button>
+                @unless ($abosHead)
                 <span class="text-2xs text-(--color-ink-muted)">{{ __('finance::bank_loan_report.accrual_note') }}</span>
+                @endunless
             </form>
         @endcan
 

@@ -49,26 +49,9 @@
         </div>
     @endif
 
-    @if ($canInstallDefaults)
-        {{-- খালি তালিকা — এখান থেকেই শুরু। এই খাতগুলো ছাড়া কারও বেতনই
-             বসানো যায় না, তাই "নিজে বানান" বলাটা কাজ ঠেলে দেওয়া। --}}
-        <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
-                    bg-(--color-surface-card) p-8 text-center">
-            <h2 class="text-lg font-semibold">{{ __('hr::message.empty_heads') }}</h2>
-
-            @unless (\App\Core\Support\AbosHead::on())
-            <p class="mx-auto mt-2 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
-                {{ __('hr::message.empty_heads_note') }}
-            </p>
-            @endunless
-
-            <form method="POST" action="{{ route('hr.salary_head.install') }}" class="mt-4">
-                @csrf
-                <x-ui.button type="submit" tone="primary" :title="\App\Core\Support\AbosHead::on() ? __('hr::message.empty_heads_note') : null">
-                    {{ __('hr::action.install_defaults') }}
-                </x-ui.button>
-            </form>
-        </div>
+    @php $abosHead = \App\Core\Support\AbosHead::on(); @endphp
+    @if ($canInstallDefaults && ! $abosHead)
+        @include('hr::salary_head.partials.install')
     @endif
 
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
@@ -84,6 +67,12 @@
         </x-slot:actions>
             </x-ui.toolbar>
         </form>
+
+        @if ($canInstallDefaults && $abosHead)
+            <div class="px-3 pt-3">
+                @include('hr::salary_head.partials.install')
+            </div>
+        @endif
 
         <x-ui.table
             :empty="__('hr::message.no_heads')"

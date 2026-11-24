@@ -57,6 +57,14 @@ final class ComplianceObligationController extends Controller implements HasMidd
             ->when($term !== '', fn ($q) => $q->where(fn ($w) => $w
                 ->where('source_no', 'like', '%'.str_replace(['%', '_'], ['\\%', '\\_'], $term).'%')
                 ->orWhere('ref_no', 'like', '%'.str_replace(['%', '_'], ['\\%', '\\_'], $term).'%')))
+            // ⭐ প্যানেলের ছাঁকনি — কী করতে হবে (ধরন_বিষয়) আর শেষ তারিখ; সর্বমোটও এই একই প্রশ্ন থেকে
+            ->when(is_string($request->query('kind')) && preg_match('/^('.implode('|', ComplianceObligation::KINDS).')_([a-z]+)$/', $request->query('kind')) === 1,
+                function ($q) use ($request) {
+                    preg_match('/^('.implode('|', ComplianceObligation::KINDS).')_([a-z]+)$/', (string) $request->query('kind'), $m);
+                    $q->where('kind', $m[1])->where('subject', $m[2]);
+                })
+            ->when($this->day($request, 'from'), fn ($q, $day) => $q->whereDate('due_on', '>=', $day))
+            ->when($this->day($request, 'to'), fn ($q, $day) => $q->whereDate('due_on', '<=', $day))
             ->orderBy($tab === 'done' ? 'done_at' : 'due_on', $tab === 'done' ? 'desc' : 'asc')
             ->orderBy('id');
 
@@ -82,6 +90,14 @@ final class ComplianceObligationController extends Controller implements HasMidd
                 'active' => $key === $tab,
             ])->all(),
         ]);
+    }
+
+    /** ঠিকানার তারিখ, কেবল সত্যিকারের Y-m-d হলে */
+    private function day(Request $request, string $key): ?string
+    {
+        $value = $request->query($key);
+
+        return is_string($value) && ($d = \DateTimeImmutable::createFromFormat('!Y-m-d', $value)) !== false && $d->format('Y-m-d') === $value ? $value : null;
     }
 
     public function done(Request $request, int $obligation): RedirectResponse
