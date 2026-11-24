@@ -42,10 +42,17 @@ return new class extends Migration
 
     public function down(): void
     {
-        DB::table('accounts')
+        // ⛔ MySQL refuses a DELETE on `accounts` with a subquery on `accounts` itself (error 1093 — the "no child" check);
+        //   the ids are picked first, then deleted (Mac run of the 1.3.11 candidate, 24 Nov 2026: the rollback stopped here)
+        $ids = DB::table('accounts')
             ->whereIn('code', self::CODES)
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries')->whereColumn('ledger_entries.account_id', 'accounts.id'))
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('accounts as child')->whereColumn('child.parent_id', 'accounts.id'))
-            ->delete();
+            ->pluck('id')
+            ->all();
+
+        if ($ids !== []) {
+            DB::table('accounts')->whereIn('id', $ids)->delete();
+        }
     }
 };
