@@ -14,7 +14,7 @@ use App\Modules\Inventory\Models\Product;
  * খুঁজতেই দেয় না, তাই মডেল পর্যন্ত পৌঁছালে সেটা নিশ্চিতভাবেই চলতি
  * কোম্পানির।
  */
-class ProductPolicy
+class ProductPolicy implements \App\Core\Contracts\RowFreePolicy
 {
     public function viewAny(User $user): bool
     {

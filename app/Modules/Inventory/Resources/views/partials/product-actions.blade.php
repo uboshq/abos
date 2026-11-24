@@ -32,12 +32,15 @@
 @php
     $items = [];
 
+    // ⓘ পণ্যের নীতি সারি দেখে না ([[RowFreePolicy]]) — তালিকায় চাবির প্রশ্ন একবার, পঞ্চাশবার নয়
+    $may = fn (string $ability): bool => app(\App\Core\Services\GateMemo::class)->ofTheList(auth()->user(), $ability, $product);
+
     $items[] = [
         'label' => __('core.action.view'),
         'url' => route('inventory.product.show', $product),
     ];
 
-    if (auth()->user()?->can('update', $product)) {
+    if ($may('update')) {
         $items[] = [
             'label' => __('core.action.edit'),
             'url' => route('inventory.product.edit', $product),
@@ -50,7 +53,7 @@
      * দুইটাই একসাথে দেখালে ব্যবহারকারীকে ভাবতে হত কোনটা এখন খাটে,
      * আর নিষ্ক্রিয় পণ্যে "নিষ্ক্রিয় করুন" চাপলে কিছুই হত না।
      */
-    if (auth()->user()?->can('delete', $product)) {
+    if ($may('delete')) {
         $items[] = $product->is_active
             ? [
                 'label' => __('inventory::action.deactivate'),

@@ -20,7 +20,8 @@ use Spatie\Permission\PermissionRegistrar;
  * ── ⛔ Why it can never answer differently from the gate ───────────────────
  *   • Only inside a [[ReadWindow]] (a GET/HEAD request being built) — a read does not grant or take keys. Writes,
  *     console, queue and test code outside a request ask the gate every time, exactly as before.
- *   • Only abilities without arguments (permission keys). A policy with a record is never remembered.
+ *   • Only abilities without arguments (permission keys). A policy with a record is never remembered by the gate itself;
+ *     only a list may ask once, and only a policy that declares it never looks at the row ([[ofTheList()]]).
  *   • The key holds the user object, the company, the branch, the spatie team, and the identity of spatie's loaded
  *     permission list and of the user's loaded roles/permissions relations: when spatie forgets its cache (any grant
  *     or revoke) or the relations are reloaded, the old answers no longer match and the gate is asked again.
@@ -31,6 +32,9 @@ final class GateMemo
 {
     /** @var array<string, mixed> */
     private array $answers = [];
+
+    /** @var array<class-string, bool> */
+    private array $rowFree = [];
 
     private ?int $generation = null;
 
@@ -58,6 +62,31 @@ final class GateMemo
             // ⓘ null (nobody said yes) is a "no" at the gate; false gives the same deny, while null would mean "ask again"
             $this->answers[$key] = $result ?? false;
         }
+    }
+
+    /**
+     * One answer for a whole list — only where the policy declares that it never looks at the row ([[RowFreePolicy]]) and only
+     * inside the same read window and key as everything else here. ⓘ The gate itself is asked the first time, with a real
+     * row, so the dealer wall, the overrides and spatie all speak; any other policy is asked for every row, as before.
+     */
+    public function ofTheList(mixed $user, string $ability, Model $row): bool
+    {
+        if (! $user instanceof Model || ! $user instanceof Authorizable) {
+            return false;
+        }
+
+        $key = $this->isRowFree($row) ? $this->key($user, $ability.'@'.$row::class, []) : null;
+
+        if ($key === null) {
+            return (bool) $user->can($ability, $row);
+        }
+
+        return $this->answers[$key] ??= (bool) $user->can($ability, $row);
+    }
+
+    private function isRowFree(Model $row): bool
+    {
+        return $this->rowFree[$row::class] ??= \Illuminate\Support\Facades\Gate::getPolicyFor($row) instanceof \App\Core\Contracts\RowFreePolicy;
     }
 
     /** @param  array<int, mixed>  $arguments */

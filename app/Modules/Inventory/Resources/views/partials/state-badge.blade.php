@@ -30,7 +30,7 @@
     destroy রুটটা মোছে না, নিষ্ক্রিয় করে — যে পণ্যের নামে লেনদেন আছে
     তাকে মুছলে ওই লেনদেনগুলোর পণ্যটাই হারিয়ে যেত।
 --}}
-@can('delete', $record)
+@if (app(\App\Core\Services\GateMemo::class)->ofTheList(auth()->user(), 'delete', $record))
     <x-ui.state-toggle
         :active="$record->is_active"
         :size="$size"
@@ -41,4 +41,4 @@
         :aria-label="($record->is_active ? __('core.state.inactive') : __('core.state.active')).' — '.$record->name()" />
 @else
     <x-ui.state-toggle :active="$record->is_active" :size="$size" />
-@endcan
+@endif
