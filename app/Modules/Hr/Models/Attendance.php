@@ -138,6 +138,20 @@ class Attendance extends Model
      *
      * @param  array<string, mixed>  $values
      */
+    /**
+     * একটা সারির তিনটা ঘরের ছাপ — পাতা খোলার সময় কী ছিল, সংরক্ষণের সময় তাই আছে কি না মেলাতে (দিনের খাতা; ২৫ নভেম্বর ২০২৬)।
+     * ⓘ খালি আর null একই; সারি না থাকলে খালি ঘরের ছাপ।
+     */
+    public static function stampOf(?string $status, bool $late, ?string $remarks): string
+    {
+        return substr(hash('sha256', json_encode([(string) $status, $late ? 1 : 0, trim((string) $remarks)], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)), 0, 24);
+    }
+
+    public static function stampOfRow(?self $row): string
+    {
+        return self::stampOf($row?->status, (bool) $row?->is_late, $row?->remarks);
+    }
+
     public static function writeDay(int $employeeId, string $date, array $values): self
     {
         $key = ['employee_id' => $employeeId, 'work_date' => $date];

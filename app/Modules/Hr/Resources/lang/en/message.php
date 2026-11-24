@@ -32,6 +32,8 @@ return [
     'ledger_narration' => 'Salary for :month (:no)',
     'confirm_note' => 'Confirming puts the earnings into expense and the net into Salary Payable. No money has moved yet — that happens on a voucher.',
     'bank_file_note' => ':count salaries go through the bank. Cash and mobile-banking rows are not in the file.',
+    'attendance_changed_meanwhile' => ':name was changed after you opened the page — now: :now. Yours was not saved; save again if it still stands.',
+    'attendance_not_marked' => 'not marked',
     'attendance_saved' => 'Attendance saved for :count people.',
     'no_attendance_yet' => 'Nothing has been marked for this day yet.',
     'attendance_note' => 'A box left blank is simply not marked — anything already saved stays as it is.',
