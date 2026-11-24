@@ -41,7 +41,7 @@ final class CreditLossController extends Controller implements HasMiddleware
         return view('credit_control::loss', [
             'menu' => $this->menu->forUser($request->user()),
             'position' => $this->loss->position($asOf),
-            'customers' => Customer::query()->orderBy('name_en')->get(['id', 'code', 'name_en', 'name_bn']),
+            'customers' => Customer::query()->inViewedBranch()->with(Customer::PLACE)->orderBy('name_en')->get(),
         ]);
     }
 
@@ -66,7 +66,7 @@ final class CreditLossController extends Controller implements HasMiddleware
             'reason' => ['required', 'string', 'max:500'],
             'as_of' => ['required', 'date_format:Y-m-d'],
         ]);
-        $customer = Customer::query()->findOrFail((int) $data['customer_id']);
+        $customer = Customer::query()->inViewedBranch()->findOrFail((int) $data['customer_id']);
         $voucher = $this->loss->draftWriteOff($customer, (string) $data['amount'], (string) $data['reason'], $data['as_of']);
 
         // ⓘ 'warning' — ভাউচারের পাতা কেবল saved/warning দেখায়; খসড়া "হয়ে গেছে" নয়, তাই সবুজ নয়

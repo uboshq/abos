@@ -305,7 +305,7 @@ class NoteController extends Controller implements HasMiddleware
         }
 
         $rows = app(NotePosting::class)->lines($note, $control);
-        $names = \App\Modules\Accounts\Models\Account::query()->whereIn('id', array_column($rows, 'account_id'))->get()->keyBy('id');
+        $names = \App\Modules\Accounts\Models\Account::query()->whereKey(array_column($rows, 'account_id'))->get()->keyBy('id');
 
         return array_map(fn (array $r) => [
             'code' => (string) ($names[$r['account_id']]->code ?? ''),

@@ -137,7 +137,7 @@ class TradeVoucherController extends Controller implements HasMiddleware
         $pair = [[$voucher->party_type, (int) $voucher->party_id]];
         $key = $voucher->party_type.':'.$voucher->party_id;
         $rows = $this->vouchers->postingLines($voucher);
-        $names = Account::query()->whereIn('id', array_column($rows, 'account_id'))->get()->keyBy('id');
+        $names = Account::query()->whereKey(array_column($rows, 'account_id'))->get()->keyBy('id');
 
         return view('accounts::trade-voucher.show', [
             'menu' => $this->menu->forUser($request->user()),

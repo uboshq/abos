@@ -32,38 +32,38 @@
     @endif
 
     <section data-boxed class="mb-4 overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <table class="w-full text-sm">
+        <table class="ui-grid w-full text-sm">
             <thead class="bg-(--color-section-head)">
                 <tr>
-                    <th class="px-4 py-3 text-start font-semibold">{{ __('credit_control::loss.bucket') }}</th>
-                    <th class="px-4 py-3 text-end font-semibold">{{ __('credit_control::loss.due') }}</th>
-                    <th class="px-4 py-3 text-end font-semibold">{{ __('credit_control::loss.rate') }}</th>
-                    <th class="px-4 py-3 text-end font-semibold">{{ __('credit_control::loss.history') }}</th>
-                    <th class="px-4 py-3 text-end font-semibold">{{ __('credit_control::loss.loss') }}</th>
+                    <th class="text-start font-semibold">{{ __('credit_control::loss.bucket') }}</th>
+                    <th class="text-end font-semibold">{{ __('credit_control::loss.due') }}</th>
+                    <th class="text-end font-semibold">{{ __('credit_control::loss.rate') }}</th>
+                    <th class="text-end font-semibold">{{ __('credit_control::loss.history') }}</th>
+                    <th class="text-end font-semibold">{{ __('credit_control::loss.loss') }}</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($position['buckets'] as $bucket)
                     <tr data-bucket="{{ $bucket['key'] }}" class="border-t border-(--color-border)">
-                        <th scope="row" class="px-4 py-2 text-start font-medium">{{ __('credit_control::loss.'.$bucket['key']) }}</th>
-                        <td class="px-4 py-2 text-end tabular-nums">{{ $money($bucket['due']) }}</td>
-                        <td class="px-4 py-2 text-end tabular-nums">{{ rtrim(rtrim($bucket['rate'], '0'), '.') ?: '0' }}%</td>
+                        <th scope="row" class="text-start font-medium">{{ __('credit_control::loss.'.$bucket['key']) }}</th>
+                        <td class="text-end tabular-nums">{{ $money($bucket['due']) }}</td>
+                        <td class="text-end tabular-nums">{{ rtrim(rtrim($bucket['rate'], '0'), '.') ?: '0' }}%</td>
                         {{-- ⭐ ইতিহাসের হার — কেবল প্রস্তাব, হার বসায় না ([[ReceivableCreditLoss::history()]]; মালিক, ২১ অক্টোবর ২০২৬) --}}
-                        <td data-history class="px-4 py-2 text-end tabular-nums text-(--color-ink-muted)">{{ $bucket['history'] === null ? '—' : (rtrim(rtrim($bucket['history'], '0'), '.') ?: '0').'%' }}</td>
-                        <td class="px-4 py-2 text-end tabular-nums">{{ $money($bucket['loss']) }}</td>
+                        <td data-history class="text-end tabular-nums text-(--color-ink-muted)">{{ $bucket['history'] === null ? '—' : (rtrim(rtrim($bucket['history'], '0'), '.') ?: '0').'%' }}</td>
+                        <td class="text-end tabular-nums">{{ $money($bucket['loss']) }}</td>
                     </tr>
                 @endforeach
                 <tr class="border-t-2 border-(--color-border) font-semibold">
-                    <th scope="row" class="px-4 py-2 text-start" colspan="4">{{ __('credit_control::loss.target') }}</th>
-                    <td data-loss-target class="px-4 py-2 text-end tabular-nums">{{ $money($position['target']) }}</td>
+                    <th scope="row" class="text-start" colspan="4">{{ __('credit_control::loss.target') }}</th>
+                    <td data-loss-target class="text-end tabular-nums">{{ $money($position['target']) }}</td>
                 </tr>
                 <tr class="border-t border-(--color-border)">
-                    <th scope="row" class="px-4 py-2 text-start" colspan="4">{{ __('credit_control::loss.held') }}</th>
-                    <td data-loss-held class="px-4 py-2 text-end tabular-nums">{{ $money($position['held']) }}</td>
+                    <th scope="row" class="text-start" colspan="4">{{ __('credit_control::loss.held') }}</th>
+                    <td data-loss-held class="text-end tabular-nums">{{ $money($position['held']) }}</td>
                 </tr>
                 <tr class="border-t border-(--color-border) font-semibold">
-                    <th scope="row" class="px-4 py-2 text-start" colspan="4">{{ __('credit_control::loss.adjustment') }}</th>
-                    <td data-loss-adjustment class="px-4 py-2 text-end tabular-nums">{{ $money($position['adjustment']) }}</td>
+                    <th scope="row" class="text-start" colspan="4">{{ __('credit_control::loss.adjustment') }}</th>
+                    <td data-loss-adjustment class="text-end tabular-nums">{{ $money($position['adjustment']) }}</td>
                 </tr>
             </tbody>
         </table>
@@ -84,7 +84,7 @@
                 @csrf
                 <input type="hidden" name="as_of" value="{{ $position['as_of'] }}">
                 <x-ui.select name="customer_id" :label="__('credit_control::loss.customer')"
-                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->code.' · '.$c->name()])" />
+                             :options="$customers->mapWithKeys(fn ($c) => [$c->id => $c->code.' · '.$c->nameWithPoint()])" />
                 <x-ui.field name="amount" type="number" step="0.01" :label="__('credit_control::loss.amount')" />
                 <x-ui.field name="reason" :label="__('credit_control::loss.reason')" />
                 <div class="flex items-end">
