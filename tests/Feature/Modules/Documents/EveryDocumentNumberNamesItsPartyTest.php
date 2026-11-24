@@ -170,7 +170,8 @@ final class EveryDocumentNumberNamesItsPartyTest extends TestCase
     private function queriesOfTheCentre(): array
     {
         $this->actingAs($this->owner);
-        // ⓘ মাঝখানের পপআপ নিজের অঙ্ক পড়ে — এই দাবি কেবল পাতার নিজের প্রশ্ন গোনে
+        // ⓘ লালটা ছিল উল্টো দিকে: প্রথম খোলায় ২, পরেরটায় ১ (PHPUnit আগে পাওয়াটা বলে) — সারি ধরে বাড়ে না। বাড়তিটা মাঝখানের পপআপের
+        //   Copilot-লাইন ([[shell.day-check]]), পাঁচ মিনিটে একবার হোমের ঘর থেকে বানানো আর মনে রাখা। দাবি পাতার নিজের প্রশ্নের, তাই পপআপ চুপ
         $this->withSession(['daycheck.snooze_until' => now()->addHour()->getTimestamp()]);
         DB::flushQueryLog();
         DB::enableQueryLog();
