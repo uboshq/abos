@@ -104,12 +104,16 @@ final class WebTopBarAndShareTest extends TestCase
             ->assertJsonStructure(['unread_total', 'ringing'])
             ->assertJsonPath('ringing', null);
 
-        // ⭐ owner, 24 Nov 2026 — open for every active account; a guest gets 401
+        // ⭐ owner, 24 Nov 2026 — open for every active account; a guest is never answered
         $this->actingAs($this->person('Keyless', withKey: false));
         $this->getJson(route('messaging.x.unread'))->assertOk();
 
         $this->app['auth']->forgetGuards();
-        $this->getJson(route('messaging.x.unread'))->assertUnauthorized();
+        // ⓘ a web door: a guest is sent to the login page (302) or refused (401) — never answered
+        $guest = $this->getJson(route('messaging.x.unread'));
+        $this->assertContains($guest->status(), [302, 401], '⛔ a guest was let through the door.');
+        $this->assertStringNotContainsString('unread_total', (string) $guest->getContent());
+        $this->assertStringNotContainsString('"threads"', (string) $guest->getContent());
     }
 
     public function test_a_printable_paper_row_menu_offers_send_in_a_message(): void

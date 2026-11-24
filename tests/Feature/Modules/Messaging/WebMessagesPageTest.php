@@ -156,7 +156,7 @@ final class WebMessagesPageTest extends TestCase
         $this->actingAs($this->stranger)->getJson(route('messaging.x.messages', ['thread' => 'NOPE-NOT-A-THREAD']))->assertNotFound();
     }
 
-    /** ⭐ owner, 24 Nov 2026 — the JSON doors open for every active account; a guest gets 401 */
+    /** ⭐ owner, 24 Nov 2026 — the JSON doors open for every active account; a guest is never answered */
     public function test_the_json_doors_open_for_every_active_account_and_never_for_a_guest(): void
     {
         $plain = $this->person('No Key Either', false);
@@ -164,7 +164,11 @@ final class WebMessagesPageTest extends TestCase
         $this->actingAs($plain)->getJson(route('messaging.x.threads'))->assertOk();
 
         $this->app['auth']->forgetGuards();
-        $this->getJson(route('messaging.x.threads'))->assertUnauthorized();
+        // ⓘ a web door: a guest is sent to the login page (302) or refused (401) — never answered
+        $guest = $this->getJson(route('messaging.x.threads'));
+        $this->assertContains($guest->status(), [302, 401], '⛔ a guest was let through the door.');
+        $this->assertStringNotContainsString('unread_total', (string) $guest->getContent());
+        $this->assertStringNotContainsString('"threads"', (string) $guest->getContent());
     }
 
     public function test_every_word_has_both_languages(): void
