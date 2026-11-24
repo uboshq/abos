@@ -24,8 +24,8 @@ final class TheSystemMenuStandsInSectionsTest extends TestCase
 {
     use RefreshDatabase;
 
-    // ⓘ পরিকল্পনার ৭ ভাগ — সপ্তমটা "নিরীক্ষা" (বদলের ইতিহাস, নোটিশের রিপোর্ট), দফা ১ সম্পূর্ণ হলো ৭ নভেম্বর ২০২৬
-    private const ORDER = ['home', 'org', 'people', 'modules', 'comms', 'data', 'audit'];
+    // ⭐ মালিকের নতুন ক্রম (২৪ নভেম্বর ২০২৬, নমুনা system-plan-v4, "All ok") — আলাদা "নিরীক্ষা" ভাগ নেই, অতিথির "নিয়ন্ত্রণ ও নিরীক্ষা"-ই একমাত্র
+    private const ORDER = ['home', 'people', 'org', 'modules', 'control', 'comms', 'data'];
 
     // ⓘ on the panel: the host's seven, then the guests of the menu merge in menu order — Governance, Backup (owner, 23 Nov 2026; 2a2239ea9)
     private const DRAWN = [...self::ORDER, 'governance', 'backup'];
@@ -79,12 +79,46 @@ final class TheSystemMenuStandsInSectionsTest extends TestCase
         foreach ([
             'system_admin::menu.companies' => 'org',
             'system_admin::menu.users' => 'people',
-            'system_admin::menu.control_panel' => 'modules',
+            'system_admin::menu.control_panel' => 'control',
+            'master_data::menu.number_series' => 'control',
+            'core.custom_field.title' => 'control',
+            'core.look.title' => 'org',
+            'system_admin::branch_module.title' => 'modules',
             'system_admin::notice.title' => 'comms',
             'core.import.title' => 'data',
-            'core.notice.report_register' => 'audit',
+            'core.notice.report_register' => 'comms',
+            'core.notice.report_signatures' => 'comms',
         ] as $label => $section) {
             $this->assertSame($section, $under[__($label)] ?? null, '⛔ "'.__($label)."\" নিজের ভাগ \"{$section}\"-এর নিচে নেই।");
+        }
+    }
+
+    /** ⛔ সাজানো বদলালেও কিছু হারায়নি — আগের ৩৬টা সারি (আশ্রয়দাতা আর দুই অতিথি) সব আছে, মেনুতে আর ঠিকানায় */
+    public function test_none_of_the_thirty_six_rows_is_lost(): void
+    {
+        $before = [
+            'system_admin' => ['system_admin::dashboard.title', 'system_admin::menu.companies', 'system_admin::menu.branches', 'system_admin::menu.users',
+                'system_admin::menu.roles', 'system_admin::menu.login_security', 'system_admin::menu.ownership', 'core.notice.report_register',
+                'core.notice.report_signatures', 'system_admin::menu.report_schedules', 'core.import.title', 'system_admin::menu.control_panel',
+                'system_admin::branch_module.title', 'system_admin::notice.title', 'core.notice.analytics_title', 'core.notice.categories_title',
+                'core.notice.templates_title', 'master_data::menu.number_series', 'core.custom_field.title', 'core.look.title'],
+            'governance' => ['governance::dashboard.title', 'governance::menu.audit_trail', 'governance::audit_report.changes_title',
+                'governance::audit_report.backdated_title', 'governance::audit_report.periods_title', 'governance::menu.export_log',
+                'governance::menu.retention', 'governance::menu.login_history', 'governance::menu.error_log'],
+            'backup' => ['backup::dashboard.title', 'backup::menu.backups', 'backup::menu.destinations', 'backup::menu.policies',
+                'backup::menu.restore', 'backup::menu.verifications', 'backup::menu.disaster_recovery'],
+        ];
+        $this->assertSame(36, array_sum(array_map('count', $before)));
+
+        foreach ($before as $code => $labels) {
+            $now = [];
+            foreach (app(ModuleRegistry::class)->get($code)->menu as $items) {
+                foreach ($items as $item) {
+                    $now[] = $item['label'];
+                    $this->assertTrue(\Illuminate\Support\Facades\Route::has($item['route']), "⛔ {$item['label']}: ঠিকানা নেই");
+                }
+            }
+            $this->assertSame([], array_values(array_diff($labels, $now)), "⛔ {$code}: এই সারিগুলো মেনু থেকে হারিয়েছে");
         }
     }
 

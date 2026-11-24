@@ -17,13 +17,14 @@ return [
     'backup' => 'ব্যাকআপ',
 
     // ⭐ বাঁয়ের মেনুর ভাগ (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১)
-    'section_home' => 'সিস্টেমের হোম',
+    'section_home' => 'শুরু',
     'section_org' => 'প্রতিষ্ঠান',
     'section_people' => 'মানুষ ও প্রবেশাধিকার',
-    'section_modules' => 'মডিউল ও সেটিংস',
+    'section_modules' => 'মডিউল',
+    'section_control' => 'কন্ট্রোল প্যানেল',
     'section_comms' => 'যোগাযোগ',
     'section_audit' => 'নিরীক্ষা',
-    'section_data' => 'তথ্য',
+    'section_data' => 'তথ্য আনা',
     // ⭐ এক করা মডিউল (মালিক, ২৩ নভেম্বর ২০২৬) — নাম, আর অতিথিদের ভাগের নাম (তাদের নিজের নাম)
     'merged_title' => 'সিস্টেম ও প্রশাসন',
     'section_governance' => 'নিয়ন্ত্রণ ও নিরীক্ষা',

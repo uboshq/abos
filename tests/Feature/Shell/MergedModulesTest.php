@@ -307,7 +307,7 @@ final class MergedModulesTest extends TestCase
         $this->owner->forceFill(['ui' => 'rose'])->save();
         $entry = $this->entry($this->menu(), 'system_admin');
 
-        $this->assertSame(['home', 'org', 'people', 'modules', 'comms', 'data', 'audit', 'governance', 'backup'], $entry['panel_sections'],
+        $this->assertSame(['home', 'people', 'org', 'modules', 'control', 'comms', 'data', 'governance', 'backup'], $entry['panel_sections'],
             '⛔ সিস্টেম ও প্রশাসনের ভাগ: আশ্রয়দাতার সাতটা, তারপর নিরীক্ষা, তারপর ব্যাকআপ');
 
         foreach (collect($entry['groups'])->flatten(1) as $row) {

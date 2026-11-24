@@ -16,13 +16,14 @@ return [
     'report_schedules' => 'Scheduled Reports',
     'backup' => 'Backup',
     // ⭐ বাঁয়ের মেনুর ভাগ (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ১)
-    'section_home' => 'System home',
+    'section_home' => 'Start',
     'section_org' => 'Organisation',
     'section_people' => 'People and access',
-    'section_modules' => 'Modules and settings',
+    'section_modules' => 'Modules',
+    'section_control' => 'Control panel',
     'section_comms' => 'Communication',
     'section_audit' => 'Audit',
-    'section_data' => 'Data',
+    'section_data' => 'Bring data in',
     // ⭐ the merged module (owner, 23 Nov 2026) — its name, and the guests' parts (their own names)
     'merged_title' => 'System & Administration',
     'section_governance' => 'Governance',

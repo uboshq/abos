@@ -96,14 +96,14 @@ return [
      */
     'sections' => [
         'home' => ['#475569', 'house'],
-        'org' => ['#2563eb', 'building-2'],
-        'people' => ['#ea580c', 'users'],
-        'modules' => ['#0891b2', 'blocks'],
-        'comms' => ['#db2777', 'megaphone'],
+        'org' => ['#7c3aed', 'building-2'],
+        'people' => ['#db2777', 'users'],
+        'modules' => ['#ea580c', 'blocks'],
+        'control' => ['#0d9488', 'sliders-horizontal'],
+        'comms' => ['#0284c7', 'megaphone'],
         'data' => ['#65a30d', 'database'],
-        'audit' => ['#9333ea', 'scroll-text'],
-        'governance' => ['#ca8a04', 'shield-check'],
-        'backup' => ['#0d9488', 'database-backup'],
+        'governance' => ['#dc2626', 'shield-check'],
+        'backup' => ['#4f46e5', 'database-backup'],
     ],
     'order' => [
         'accounts' => ['start', 'daily', 'receivable', 'payable', 'bank_cash', 'loans_invest', 'fixed_assets', 'budget', 'reports_close'],

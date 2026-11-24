@@ -42,7 +42,7 @@ return [
      */
     // ⭐ এক করা মডিউল (মালিক, ২৩ নভেম্বর ২০২৬; D365 "System administration", SAP Basis): সিস্টেম প্রশাসন + নিয়ন্ত্রণ ও নিরীক্ষা + ব্যাকআপ —
     //   অতিথিরা বসলে নাম "সিস্টেম ও প্রশাসন"; তাদের সারি নিজের নিজের ভাগে, এই মডিউলের ভাগগুলোর পরে ([[MenuBuilder::settleGuestsIntoTheirHosts()]])
-    'nav' => ['section' => 'system', 'order' => 10, 'panel_sections' => ['home', 'org', 'people', 'modules', 'comms', 'data', 'audit'],
+    'nav' => ['section' => 'system', 'order' => 10, 'panel_sections' => ['home', 'people', 'org', 'modules', 'control', 'comms', 'data'],
         'merged_label' => 'system_admin::menu.merged_title'],
 
     /*
@@ -162,9 +162,9 @@ return [
          */
         'reports' => [
             /* নোটিশের দুইটা রিপোর্ট — স্পেক, ধারা ২৯ */
-            ['label' => 'core.notice.report_register', 'icon' => 'list', 'route' => 'system_admin.report.show', 'section' => 'audit',
+            ['label' => 'core.notice.report_register', 'icon' => 'list', 'route' => 'system_admin.report.show', 'section' => 'comms',
                 'route_params' => ['slug' => 'notice-register'], 'permission' => 'system_admin.notice.analytics'],
-            ['label' => 'core.notice.report_signatures', 'icon' => 'check_circle', 'route' => 'system_admin.report.show', 'section' => 'audit',
+            ['label' => 'core.notice.report_signatures', 'icon' => 'check_circle', 'route' => 'system_admin.report.show', 'section' => 'comms',
                 'route_params' => ['slug' => 'notice-signatures'], 'permission' => 'system_admin.notice.analytics'],
 
             ['label' => 'system_admin::menu.report_schedules', 'icon' => 'calendar', 'route' => 'system_admin.reports.schedule.index', 'section' => 'comms',
@@ -181,7 +181,7 @@ return [
              * জায়গাটা বদলাল। ⛔ দল বদলালে সেটিংসের পর্দায় সারিটা হারাত।
              */
             ['label' => 'system_admin::menu.control_panel', 'icon' => 'settings',
-                'route' => 'system_admin.control-panel', 'section' => 'modules', 'loose' => true,
+                'route' => 'system_admin.control-panel', 'section' => 'control', 'loose' => true,
                 'permission' => 'system_admin.settings.manage'],
 
             /*
@@ -322,10 +322,10 @@ return [
              * ⓘ ওটা ইচ্ছাকৃতভাবে ছোঁয়া হয়নি: কন্ট্রোলারের চাবি বদলানো
              * মানে কার হাতে ক্ষমতা যাবে সেই সিদ্ধান্ত, আর সেটা মালিকের।
              */
-            ['label' => 'master_data::menu.number_series', 'icon' => 'sort', 'route' => 'master_data.series.index', 'section' => 'modules',
+            ['label' => 'master_data::menu.number_series', 'icon' => 'sort', 'route' => 'master_data.series.index', 'section' => 'control',
                 'permission' => 'system_admin.settings.manage'],
-            ['label' => 'core.custom_field.title', 'route' => 'system_admin.custom_field.index', 'section' => 'modules', 'permission' => 'system_admin.settings.manage'],
-            ['label' => 'core.look.title', 'route' => 'system_admin.look.index', 'section' => 'modules', 'permission' => 'system_admin.look.manage'],
+            ['label' => 'core.custom_field.title', 'route' => 'system_admin.custom_field.index', 'section' => 'control', 'permission' => 'system_admin.settings.manage'],
+            ['label' => 'core.look.title', 'route' => 'system_admin.look.index', 'section' => 'org', 'permission' => 'system_admin.look.manage'],
             /* ব্যাকআপের সারি সরেছে — এখন নিজের মডিউলে ([[Backup/module.php]]) */
 
             /*
