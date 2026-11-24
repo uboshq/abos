@@ -122,6 +122,15 @@
                 <x-ui.field name="mobile" :label="__('core.profile.mobile')"
                             :value="old('mobile', $user->mobile)" />
 
+                {{-- ⭐ পদবি, বাংলা আর ইংরেজি — কেবল মালিক বসান (মালিক, ২৪ নভেম্বর ২০২৬): যিনি HR-এর কর্মী নন (স্টারলাইনের DSM,
+                     এরিয়া ম্যানেজার, পরিচালক) তাঁর পদবি এখানে; HR-এর কর্মী হলে HR-এর পদবিই দেখায়। খালি থাকলে রোল দেখায়। --}}
+                @if (auth()->user()?->hasRole('super_admin'))
+                    <x-ui.field name="designation_bn" :label="__('system_admin::field.designation_bn')"
+                                :value="old('designation_bn', $user->designation_bn)" />
+                    <x-ui.field name="designation" :label="__('system_admin::field.designation')"
+                                :value="old('designation', $user->designation)" />
+                @endif
+
                 {{-- ⓘ *"ছুটিতে আছেন"*, *"অক্টোবর থেকে বিক্রয়ে"* — যে কথাগুলো
                      কোনো ঘরে পড়ে না। ⛔ জায়গা না থাকলে মানুষ ওগুলো নামের
                      ঘরে লেখে, আর তখন নামটাই নষ্ট হয় (মাইগ্রেশনের টীকা)। --}}

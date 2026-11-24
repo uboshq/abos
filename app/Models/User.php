@@ -56,7 +56,7 @@ use Spatie\Permission\Traits\HasRoles;
  */
 #[Fillable([
     'name', 'email', 'password', 'locale', 'theme', 'ui', 'accent', 'is_active', 'compact_rows',
-    'login_id', 'mobile', 'remarks',
+    'login_id', 'mobile', 'remarks', 'designation', 'designation_bn',
 ])]
 /*
  * গোপন চাবি ও পুনরুদ্ধার কোড কোনো JSON বা লগে যায় না।

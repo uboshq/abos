@@ -40,6 +40,8 @@ return [
     'status_active' => 'Active',
     'status_inactive' => 'Inactive',
     'filter_all' => 'All',
+    'designation' => 'Designation — English',
+    'designation_bn' => 'Designation — Bengali',
     'identity_and_login' => 'Identity and login',
     'two_step' => '2FA',
     'two_step_on' => 'On',
