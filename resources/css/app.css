@@ -1641,6 +1641,13 @@ input[type='number'] {
         display: none;
     }
 
+    /* ⛔ live, 24 Nov 2026 (owner: "নেভি থিমে … মেনুগুলো খোলে না"): closed, the box shrank to 0 px on a full bar, and its
+       icon — pushed out to the left by `justify-end` — lay over the ☰ menu button; a tap on ☰ opened search instead.
+       Closed, the box now keeps its icon's width; the company name gives way instead (it truncates). */
+    [data-shell-search]:not([data-expanded="true"]) {
+        flex: 0 0 auto;
+    }
+
     [data-shell-search][data-expanded="true"] {
         position: fixed;
         inset-inline: 0;
