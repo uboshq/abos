@@ -54,7 +54,42 @@
         </form>
         @endunless
 
+        @if ($abosHead)
         <x-ui.table :rows="$rows" :columns="$columns" :empty="__('core.empty.no_results')" :row-attributes="fn ($r) => ['data-audit' => $r->action]" />
+        @else
+        <div class="overflow-x-auto">
+            <table class="ui-list w-full border-collapse text-sm">
+                <thead>
+                    <tr>
+                        <th class="text-start">{{ __('documents::field.when') }}</th>
+                        <th class="text-start">{{ __('documents::field.who') }}</th>
+                        <th class="text-start">{{ __('documents::field.what') }}</th>
+                        <th class="text-start">{{ __('documents::field.document_no') }}</th>
+                        <th class="text-start">{{ __('documents::field.name') }}</th>
+                        <th class="text-start">{{ __('documents::field.note') }}</th>
+                        <th class="text-start">{{ __('documents::field.ip') }}</th>
+                        <th class="text-start">{{ __('documents::field.device') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($rows as $row)
+                        <tr data-audit="{{ $row->action }}">
+                            <td class="whitespace-nowrap">{{ DateFormat::formatWithTime($row->created_at) }}</td>
+                            <td>{{ $row->user?->name ?? '—' }}</td>
+                            <td>{{ AuditTrail::actionInWords($row->action) }}</td>
+                            <td class="num whitespace-nowrap">{{ $row->document_no }}</td>
+                            <td class="max-w-[16rem] truncate">{{ $row->label }}</td>
+                            <td class="max-w-[14rem] truncate">{{ $row->reason }}</td>
+                            <td class="num whitespace-nowrap">{{ $row->ip_address ?? '—' }}</td>
+                            <td class="max-w-[14rem] truncate text-2xs text-(--color-ink-muted)" title="{{ $row->user_agent }}">{{ $row->user_agent ?? '—' }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="8"><x-ui.empty-state :message="__('core.empty.no_results')" /></td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @endif
 
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />

@@ -3,6 +3,13 @@
 --}}
 @php
     // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $columns = [
+        ['key' => 'code', 'label' => __('documents::field.code'), 'width' => '9rem', 'render' => fn ($r) => (string) $r->code],
+        ['key' => 'title', 'label' => __('documents::field.template_title'), 'wrap' => true, 'render' => fn ($r) => (string) $r->title],
+        ['key' => 'doc_type', 'label' => __('documents::field.doc_type'), 'render' => fn ($r) => $choices->typeName($r->doc_type)],
+        ['key' => 'folder', 'label' => __('documents::field.folder'), 'render' => fn ($r) => $choices->folderName($r->folder)],
+        ['key' => 'actions', 'label' => __('core.table.actions'), 'render' => fn ($r) => view('documents::partials.template-actions', ['row' => $r])],
+    ];
     $abosHead = \App\Core\Support\AbosHead::on();
     $facetPanel = \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::pick('doc_type', __('documents::field.doc_type'), $choices->types(true)),
@@ -28,7 +35,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
             @if ($abosHead)
-                <x-ui.toolbar :title="__('documents::menu.templates')" :info="__('documents::message.templates_subtitle')" :search-placeholder="__('documents::field.code').', '.__('documents::field.template_title')" :export="false" :share="false" :facets="$facetPanel">
+                <x-ui.toolbar :title="__('documents::menu.templates')" :info="__('documents::message.templates_subtitle')" :search-placeholder="__('documents::field.code').', '.__('documents::field.template_title')" :share="false" :columns="$columns" :facets="$facetPanel">
                     <x-slot:actions>
                         @can('documents.templates')
                             <x-ui.button tone="primary" icon="plus" :href="route('documents.templates.create')">{{ __('documents::action.new_template') }}</x-ui.button>
@@ -39,6 +46,16 @@
                 <x-ui.filter-bar :facets="$facetPanel" />
             @endif
         </form>
+        @if ($abosHead)
+        {{-- ⭐ খালি তালিকায় পরের কাজ — নতুন ছাঁচ, যাঁর চাবি আছে; খোঁজা বা ছাঁকনিতে খালি হলে টেবিল নিজেই বলে --}}
+        @if ($rows->isEmpty() && ! request()->hasAny(['q', 'doc_type', 'folder']))
+            <x-ui.empty-state :message="__('documents::message.no_templates')"
+                :action="auth()->user()?->can('documents.templates') ? ['url' => route('documents.templates.create'), 'label' => __('documents::action.new_template')] : null" />
+        @else
+            <x-ui.table :rows="$rows" :columns="$columns" :empty="__('documents::message.no_templates')"
+                        :row-attributes="fn ($r) => ['data-template' => $r->code, 'class' => $r->is_active ? '' : 'opacity-60']" />
+        @endif
+        @else
         <table class="ui-list w-full border-collapse text-sm">
             <thead>
                 <tr>
@@ -76,6 +93,7 @@
                 @endforelse
             </tbody>
         </table>
+        @endif
 
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />

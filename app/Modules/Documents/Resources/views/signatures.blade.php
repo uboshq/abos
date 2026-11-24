@@ -14,6 +14,25 @@
         'active' => $tab === $key,
     ])->all();
 
+    $columns = $tab === 'signed' ? [
+        ['key' => 'document_no', 'label' => __('documents::field.document_no'), 'render' => fn ($r) => view('documents::partials.queue-paper', ['paper' => $r->document, 'party' => $parties[$r->document_id] ?? null])],
+        ['key' => 'name', 'label' => __('documents::field.name'), 'wrap' => true, 'render' => fn ($r) => $r->document
+            ? new \Illuminate\Support\HtmlString('<a href="'.e(route('documents.show', $r->document)).'#signatures" class="text-(--color-link) hover:underline">'.e($r->document->name).'</a>') : ''],
+        ['key' => 'signer', 'label' => __('documents::field.signer'), 'render' => fn ($r) => $r->signer?->name ?? '—'],
+        ['key' => 'level', 'label' => __('documents::field.level'), 'numeric' => true, 'render' => fn ($r) => (string) $r->level],
+        ['key' => 'version', 'label' => __('documents::field.version'), 'render' => fn ($r) => 'v'.$r->version?->label()],
+        ['key' => 'date', 'label' => __('documents::field.date'), 'width' => '11rem', 'render' => fn ($r) => DateFormat::formatWithTime($r->signed_at)],
+        ['key' => 'hash', 'label' => __('documents::field.file_hash'), 'render' => fn ($r) => new \Illuminate\Support\HtmlString('<span class="num text-2xs" title="'.e($r->file_hash).'">'.e(substr($r->file_hash, 0, 12)).'…</span>')],
+    ] : [
+        ['key' => 'document_no', 'label' => __('documents::field.document_no'), 'render' => fn ($r) => view('documents::partials.queue-paper', ['paper' => $documents[$r->approvable_id] ?? null, 'party' => $parties[$r->approvable_id] ?? null])],
+        ['key' => 'name', 'label' => __('documents::field.name'), 'wrap' => true, 'render' => fn ($r) => ($documents[$r->approvable_id] ?? null)?->name ?? (string) $r->requested_reason],
+        ['key' => 'version', 'label' => __('documents::field.version'), 'render' => fn ($r) => (string) ($r->payload['version'] ?? '—')],
+        ['key' => 'requester', 'label' => __('documents::field.requester'), 'render' => fn ($r) => (string) $r->requesterName()],
+        ['key' => 'level', 'label' => __('documents::field.level'), 'numeric' => true, 'render' => fn ($r) => (string) $r->current_level],
+        ['key' => 'due', 'label' => __('documents::field.due_date'), 'width' => '11rem', 'render' => fn ($r) => $r->due_at ? DateFormat::formatWithTime($r->due_at) : '—'],
+        ['key' => 'actions', 'label' => __('core.table.actions'), 'render' => fn ($r) => new \Illuminate\Support\HtmlString('<a href="'.e(route('approval.inbox.show', $r->id)).'" class="text-(--color-link) hover:underline">'.e($tab === 'asked' ? __('documents::action.open') : __('documents::action.review')).'</a>')],
+    ];
+
     // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $abosHead = \App\Core\Support\AbosHead::on();
     $facetPanel = \App\Core\ListFilter\Facets::panel([
@@ -37,11 +56,15 @@
         <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
             @if ($abosHead)
-                <x-ui.toolbar :title="__('documents::menu.signature')" :info="__('documents::message.sign_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :export="false" :share="false" :facets="$facetPanel" :quiet="['tab']"></x-ui.toolbar>
+                <x-ui.toolbar :title="__('documents::menu.signature')" :info="__('documents::message.sign_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :share="false" :columns="$columns" :facets="$facetPanel" :quiet="['tab']"></x-ui.toolbar>
             @else
                 <x-ui.filter-bar :facets="$facetPanel" />
             @endif
         </form>
+        @if ($abosHead)
+        <x-ui.table :rows="$rows" :columns="$columns" :empty="__('documents::message.sign_empty')"
+                    :row-attributes="fn ($r) => [$tab === 'signed' ? 'data-signature' : 'data-approval' => $r->id]" />
+        @else
         <div class="overflow-x-auto">
             <table class="ui-list w-full border-collapse text-sm">
                 @if ($tab === 'signed')
@@ -116,6 +139,7 @@
                 @endif
             </table>
         </div>
+        @endif
 
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
