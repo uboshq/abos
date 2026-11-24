@@ -15,6 +15,9 @@
         'answer' => route('messaging.x.calls.answer', ['call' => '__CALL__']),
         'decline' => route('messaging.x.calls.decline', ['call' => '__CALL__']),
         'end' => route('messaging.x.calls.end', ['call' => '__CALL__']),
+        'meeting' => route('messaging.index').'/meetings/__MEETING__',
+        'meeting_start' => route('messaging.x.meetings').'/new/__KEY__',
+        'meeting_decline' => route('messaging.x.meetings').'/__MEETING__/decline',
         'people' => route('messaging.x.people'),
         'threads' => route('messaging.x.threads'),
         'papers' => route('messaging.x.papers'),
@@ -50,6 +53,18 @@
             <button type="button" class="msgr-inc__yes" data-msgr-answer>
                 <x-ui.icon name="phone_fill" :size="20" />{{ __('messaging::call.incoming.answer') }}
             </button>
+        </div>
+    </div>
+
+    {{-- ── মিটিংয়ে ডাকা ([[messenger-meeting.js]]) ── --}}
+    <div class="msgr-inc msgr-meet" data-msgr-meet role="dialog" aria-label="{{ __('messaging::meeting.title') }}" hidden>
+        <div class="msgr-inc__r">
+            <span class="msgr-av msgr-av--56" data-msgr-meet-avatar aria-hidden="true"></span>
+            <div class="msgr-inc__tx"><b data-msgr-meet-name></b><small>{{ __('messaging::meeting.calling') }}</small><small data-msgr-meet-title></small></div>
+        </div>
+        <div class="msgr-inc__bt">
+            <button type="button" class="msgr-inc__no" data-msgr-meet-act="no">{{ __('messaging::meeting.not_now') }}</button>
+            <button type="button" class="msgr-inc__yes" data-msgr-meet-act="open">{{ __('messaging::meeting.open') }}</button>
         </div>
     </div>
 

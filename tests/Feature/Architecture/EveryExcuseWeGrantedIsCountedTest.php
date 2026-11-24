@@ -543,6 +543,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     //      টাকা বা পরিমাণ নয়
     //   ⓘ ছাড় নেয়নি: বার্তার দুই অডিট-তালিকায় পট্টি বসেছে; বান্ডিলে নেই এমন তিন শ্রেণি আর নামহীন বোতাম সারানো হয়েছে
     //      (পাতার খোলস messaging.index NOT_REALLY_A_LIST-এ — চাহিদার তালিকা, গোনায় আসে না)
+    // ⓘ ২৪ নভেম্বর ২০২৬ (মিটিং), ছাদ একই ৫৫৩: +১ OPEN_TO_THE_WORLD `api.messaging.livekit.webhook` (কল-সার্ভারের সই করা খবর);
+    //   −১ NOT_WIRED_ON_PURPOSE `nameOf` — আর মৃত নয়: একক বদলালে productPacks::baseBecame() ওটাই ডাকে। ⛔ Mac-এ এখনো মাপা নয়
     private const CEILING = 553;
 
     /*

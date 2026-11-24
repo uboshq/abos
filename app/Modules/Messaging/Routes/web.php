@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Modules\Messaging\Http\Controllers\MeetingController;
 use App\Modules\Messaging\Http\Controllers\MessengerApiController;
 use App\Modules\Messaging\Http\Controllers\MessengerAuditController;
 use App\Modules\Messaging\Http\Controllers\MessengerCallApiController;
@@ -46,7 +47,28 @@ Route::middleware('auth')->prefix('messages')->group(function (): void {
         Route::post('/calls/{call}/answer', [MessengerCallApiController::class, 'answer'])->name('calls.answer');
         Route::post('/calls/{call}/decline', [MessengerCallApiController::class, 'decline'])->name('calls.decline');
         Route::post('/calls/{call}/end', [MessengerCallApiController::class, 'end'])->name('calls.end');
+
+        /* meetings and group calls — one engine ([[MeetingService]]) */
+        Route::get('/meetings', [MeetingController::class, 'mine'])->name('meetings');
+        Route::post('/meetings/new/{key}', [MeetingController::class, 'start'])->whereUuid('key')->name('meetings.start');
+        Route::get('/meetings/{meeting}', [MeetingController::class, 'state'])->whereUuid('meeting')->name('meetings.state');
+        Route::post('/meetings/{meeting}/join', [MeetingController::class, 'join'])->whereUuid('meeting')->name('meetings.join');
+        Route::post('/meetings/{meeting}/renew', [MeetingController::class, 'renew'])->whereUuid('meeting')->name('meetings.renew');
+        Route::post('/meetings/{meeting}/leave', [MeetingController::class, 'leave'])->whereUuid('meeting')->name('meetings.leave');
+        Route::post('/meetings/{meeting}/decline', [MeetingController::class, 'decline'])->whereUuid('meeting')->name('meetings.decline');
+        Route::post('/meetings/{meeting}/end', [MeetingController::class, 'end'])->whereUuid('meeting')->name('meetings.end');
+        Route::post('/meetings/{meeting}/invite', [MeetingController::class, 'invite'])->whereUuid('meeting')->name('meetings.invite');
+        Route::post('/meetings/{meeting}/lobby', [MeetingController::class, 'lobby'])->whereUuid('meeting')->name('meetings.lobby');
+        Route::post('/meetings/{meeting}/remove', [MeetingController::class, 'remove'])->whereUuid('meeting')->name('meetings.remove');
+        Route::post('/meetings/{meeting}/role', [MeetingController::class, 'role'])->whereUuid('meeting')->name('meetings.role');
+        Route::post('/meetings/{meeting}/set', [MeetingController::class, 'set'])->whereUuid('meeting')->name('meetings.set');
+        Route::post('/meetings/{meeting}/mute', [MeetingController::class, 'mute'])->whereUuid('meeting')->name('meetings.mute');
+        Route::post('/meetings/{meeting}/share', [MeetingController::class, 'share'])->whereUuid('meeting')->name('meetings.share');
+        Route::post('/meetings/{meeting}/stop-share', [MeetingController::class, 'stopShare'])->whereUuid('meeting')->name('meetings.stop_share');
     });
+
+    /* ⭐ a meeting's own page — its link (login required; the link alone gives only the lobby) */
+    Route::get('/meetings/{meeting}', [MeetingController::class, 'page'])->whereUuid('meeting')->name('meeting');
 
     Route::get('/files/{file}', [MessengerApiController::class, 'file'])->whereNumber('file')->name('file');
 

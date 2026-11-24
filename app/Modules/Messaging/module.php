@@ -67,10 +67,19 @@ return [
     'moves_money' => [],
 
     /*
-     * ⓘ No settings: the role allow-list ("কে কাকে বার্তা/কল দিতে পারবে") is gone — everyone of the group talks to everyone
+     * ⓘ No setting for who may talk: the role allow-list ("কে কাকে বার্তা/কল দিতে পারবে") is gone — everyone of the group talks to everyone
      *   (owner, 24 Nov 2026: "রেস্ট্রিকশান নেই এবং থাকবেও না"; [[MessengerAccess]]).
      */
-    'settings' => [],
+    'settings' => [
+        // ⭐ meetings and group calls (web) — off until the network is proven (24 Nov 2026); the switch above is only about who talks to whom
+        [
+            'key' => 'messaging.meetings',
+            'label' => 'messaging::settings.meetings',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'general',
+        ],
+    ],
 
     /*
      * ⛔ Not audited, each on purpose — the full reasons sit in each model's docblock and in
