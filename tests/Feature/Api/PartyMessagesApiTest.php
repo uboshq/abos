@@ -243,6 +243,15 @@ final class PartyMessagesApiTest extends TestCase
             ->assertForbidden();
         $this->phone($stranger)->withHeader('Idempotency-Key', Str::random(16))
             ->postJson('/api/v1/party-messages/'.$row->public_id.'/resend')->assertForbidden();
+        $this->phone($stranger)->withHeader('Idempotency-Key', Str::random(16))
+            ->postJson('/api/v1/party-messages/sms', $this->paper() + ['template_id' => $chosen['id'], 'locale' => 'bn', 'phone' => '01712345678'])
+            ->assertForbidden();
+
+        // ⓘ পার্টির হিসাবের সারি (কাগজ নয়) — ওয়েবের খাতার চাবি ছাড়া ৪০৩
+        $account = $this->message(['document_type' => 'party_account', 'document_id' => 0, 'status' => PartyMessage::FAILED]);
+        $this->phone($stranger)->withHeader('Idempotency-Key', Str::random(16))
+            ->postJson('/api/v1/party-messages/'.$account->public_id.'/resend')->assertForbidden();
+        $account->forceDelete();
 
         // ⓘ অচেনা ধরন, অচেনা কাগজ, ক্রমিক সংখ্যা — ৪০৪
         $this->phone($this->owner)->getJson('/api/v1/party-messages/compose?type=Nothing&id='.$this->voucher->public_id.'&channel=sms')->assertNotFound();
