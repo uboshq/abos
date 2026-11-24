@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Call extends Model
 {
     use BelongsToCompany;
+    use \App\Modules\Messaging\Models\Concerns\FollowsThePerson;
     use HasPublicId;
 
     public const RINGING = 'ringing';
