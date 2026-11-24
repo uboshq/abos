@@ -65,7 +65,13 @@ final class ARowAsksItsOwnKeyOnceTest extends TestCase
 
     public function test_a_bill_row_asks_update_once_and_answers_the_policy_in_every_state(): void
     {
-        $bill = PurchaseBill::query()->first() ?? $this->fail('প্রস্তুতিটাই ভুল — ডেমোতে ক্রয় বিল নেই।');
+        // ⓘ ডেমোতে কোনো ক্রয় বিল নেই — নিজেরটা
+        $bill = app(\App\Modules\Purchase\Services\PurchaseBillService::class)->create(
+            ['supplier_id' => \App\Modules\Supplier\Models\Supplier::query()->whereIn('id', \App\Modules\Supplier\Models\Supplier::onlySuppliersIds())->value('id'),
+                'warehouse_id' => \App\Modules\Inventory\Models\Warehouse::query()->where('is_default', true)->value('id'),
+                'trx_date' => now()->toDateString(), 'supplier_bill_no' => 'ROW-1'],
+            [['product_id' => \App\Modules\Inventory\Models\Product::query()->value('id'), 'qty' => '1', 'rate' => '10']],
+        );
         $edit = route('purchase.bill.edit', $bill);
 
         foreach ([$this->owner, $this->stranger()] as $user) {
