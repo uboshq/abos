@@ -14,4 +14,7 @@ return [
     'already' => ':no is already reversed.',
     'month_closed' => 'The month :month of :no is closed — someone allowed must reopen it with a reason first.',
     'reconciled' => ':no is held by a bank reconciliation — open the reconciliation first, then reverse.',
+    'asked' => 'Request to reverse :no — reason: :reason',
+    'awaiting' => 'The request to reverse :no is waiting for approval — the reversal is made when it is approved.',
+    'needs_paper' => ':no is posted — it goes back only by a reversal.',
 ];

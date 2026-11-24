@@ -27,6 +27,9 @@ class Reversal extends Model
 
     public const NOTE = 'note';
 
+    /** স্টক ছাড়া বিক্রয়/ক্রয় ভাউচার (SV/PUV) — ২৪ নভেম্বর ২০২৬ */
+    public const TRADE_VOUCHER = 'trade_voucher';
+
     protected $table = 'acc_reversals';
 
     protected $fillable = [

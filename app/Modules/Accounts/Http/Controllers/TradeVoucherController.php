@@ -178,6 +178,15 @@ class TradeVoucherController extends Controller implements HasMiddleware
 
         $data = $request->validate(['cancel_reason' => ['required', 'string', 'max:500']]);
 
+        // ⭐ পোস্ট হওয়া ভাউচার — উল্টো কাগজ, নিজের নম্বরে; ছক থাকলে আগে অনুমোদন
+        if ($voucher->isConfirmed()) {
+            $paper = app(\App\Modules\Accounts\Services\AccountsReversalService::class)
+                ->reverseTradeVoucher($voucher, $request->user(), $data['cancel_reason']);
+
+            return back()->with('saved', $paper === null ? __('accounts::reversal.awaiting', ['no' => $voucher->document_no])
+                : __('accounts::reversal.saved', ['no' => $voucher->document_no, 'rev' => $paper->document_no]));
+        }
+
         $this->vouchers->cancel($voucher, $data['cancel_reason']);
 
         return back()->with('saved', __('accounts::trade.cancelled'));

@@ -81,6 +81,9 @@
 
     <x-ui.errors />
 
+    {{-- ⭐ উল্টো কাগজের সূত্র — মূল ভাউচার থাকে, চিহ্ন দেওয়া --}}
+    @include('accounts::partials.reversal-reference', ['type' => \App\Modules\Accounts\Models\Reversal::TRADE_VOUCHER, 'id' => $voucher->id])
+
     <div class="tv-screen tv-tone-{{ $tone }}" data-trade-show="{{ $kind }}">
         <div class="tv-card">
             <dl class="tv-hdr tv-hdr-show">
