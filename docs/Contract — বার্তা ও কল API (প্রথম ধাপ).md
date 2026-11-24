@@ -103,6 +103,8 @@
 | `POST /messenger/groups` | `title`, `people: ["12","14"]` | `201 { data: thread }` | needs `messaging.group.create` |
 | `POST /messenger/threads/{id}/members` | `people: [...]` | `{ data: thread }` | group admin only; writes the "… যোগ করেছেন" system line |
 | `GET /messenger/calls` | | `{ data: [{ call_id, video, direction: in\|out, peer, status, at, answered_at, ended_at, duration_s }] }` | the call log |
+| `GET /messenger/calls` with any of these | `kind` (missed, in, out), `person` (user id), `q` (the other side's name), `cursor` (the answer's `next`), `limit` (1–100) | `{ data: [the same call row], next: string\|null }` | one page of my own history; with none of them the answer is the row above, unchanged |
+| `GET /messenger/calls/people` | `person` (optional) | `{ data: [{ peer, calls, answered, missed, seconds, last_at, last }] }` | my calls added up per colleague; `last` is a call row |
 
 ---
 

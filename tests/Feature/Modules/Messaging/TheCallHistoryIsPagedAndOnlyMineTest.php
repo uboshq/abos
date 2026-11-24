@@ -103,13 +103,16 @@ final class TheCallHistoryIsPagedAndOnlyMineTest extends TestCase
         $this->assertSame([$talked, $unanswered], $ids(['kind' => 'out']));
         $this->assertSame([$unanswered, $missed], $ids(['person' => $this->ann->id]));
         $this->assertSame([$unanswered], $ids(['person' => $this->ann->id, 'kind' => 'out']));
+        $this->assertSame([$unanswered, $missed], $ids(['q' => 'Ann']));
+        $this->assertSame([], $ids(['q' => 'Me']), 'my own name is not a match');
+        $this->assertSame([], $ids(['q' => '%']));
     }
 
     public function test_only_my_own_calls_under_every_filter_and_in_the_totals(): void
     {
         $theirs = (string) $this->call_($this->ann, $this->bob, Call::MISSED, 1)->public_id;
 
-        foreach ([['limit' => 50], ['kind' => 'missed'], ['kind' => 'in'], ['kind' => 'out'], ['person' => $this->ann->id], ['person' => $this->bob->id, 'kind' => 'missed']] as $query) {
+        foreach ([['limit' => 50], ['q' => 'Ann'], ['kind' => 'missed'], ['kind' => 'in'], ['kind' => 'out'], ['person' => $this->ann->id], ['person' => $this->bob->id, 'kind' => 'missed']] as $query) {
             $this->assertNotContains($theirs, array_column($this->ask($query)->assertOk()->json('data'), 'call_id'), json_encode($query));
         }
         $this->assertSame([], $this->ask([], '/people')->assertOk()->json('data'));
@@ -129,6 +132,7 @@ final class TheCallHistoryIsPagedAndOnlyMineTest extends TestCase
         $this->assertSame([1, 0, 0, 0], [$rows[0]['calls'], $rows[0]['answered'], $rows[0]['missed'], $rows[0]['seconds']]);
         $this->assertSame([4, 2, 1, 60], [$rows[1]['calls'], $rows[1]['answered'], $rows[1]['missed'], $rows[1]['seconds']]);
         $this->assertSame([$rows[1]], $this->ask(['person' => $this->ann->id], '/people')->json('data'));
+        $this->assertSame(['missed', 'out'], [$rows[1]['last']['status'], $rows[1]['last']['direction']], 'the latest call with Ann');
     }
 
     public function test_more_calls_and_more_people_ask_no_more_questions(): void
