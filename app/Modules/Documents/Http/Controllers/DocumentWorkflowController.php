@@ -56,8 +56,15 @@ final class DocumentWorkflowController extends Controller
             ->when($f['from'] ?? null, fn ($q, $d) => $q->whereDate('approvals.due_at', '>=', $d))
             ->when($f['to'] ?? null, fn ($q, $d) => $q->whereDate('approvals.due_at', '<=', $d))
             ->with(['requester'])
-            ->orderBy('approvals.due_at')
-            ->orderBy('approvals.id')
+            ->tap(function ($q) use ($request): void {
+                foreach (match ($request->query('sort')) {
+                    'newest' => [['approvals.id', 'desc']],
+                    'oldest' => [['approvals.id', 'asc']],
+                    default => [['approvals.due_at', 'asc'], ['approvals.id', 'asc']],
+                } as [$column, $way]) {
+                    $q->orderBy($column, $way);
+                }
+            })
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 

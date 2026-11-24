@@ -51,7 +51,7 @@
                 <input type="hidden" name="mine" value="1">
             @endif
             @if ($abosHead)
-                <x-ui.toolbar :title="__('documents::menu.approval')" :info="__('documents::message.queue_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :share="false" :columns="$columns" :facets="$facetPanel" :quiet="['mine']"></x-ui.toolbar>
+                <x-ui.toolbar :title="__('documents::menu.approval')" :info="__('documents::message.queue_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :share="false" :sort="['due' => __('documents::field.due_date'), 'newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]" :columns="$columns" :facets="$facetPanel" :quiet="['mine']"></x-ui.toolbar>
             @else
                 <x-ui.filter-bar :facets="$facetPanel" />
             @endif

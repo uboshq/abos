@@ -56,7 +56,7 @@
         <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
             @if ($abosHead)
-                <x-ui.toolbar :title="__('documents::menu.signature')" :info="__('documents::message.sign_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :share="false" :columns="$columns" :facets="$facetPanel" :quiet="['tab']"></x-ui.toolbar>
+                <x-ui.toolbar :title="__('documents::menu.signature')" :info="__('documents::message.sign_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :share="false" :sort="$tab === 'signed' ? ['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')] : ['due' => __('documents::field.due_date'), 'newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]" :columns="$columns" :facets="$facetPanel" :quiet="['tab']"></x-ui.toolbar>
             @else
                 <x-ui.filter-bar :facets="$facetPanel" />
             @endif

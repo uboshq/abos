@@ -54,8 +54,8 @@ final class DocumentSignatureController extends Controller
                     ->where(fn ($w) => $w->where('document_no', 'like', '%'.addcslashes($s, '%_\\').'%')->orWhere('name', 'like', '%'.addcslashes($s, '%_\\').'%'))->select('dms_documents.id')))
                 ->when($f['from'] ?? null, fn ($q, $d) => $q->whereDate('signed_at', '>=', $d))
                 ->when($f['to'] ?? null, fn ($q, $d) => $q->whereDate('signed_at', '<=', $d))
-                ->orderByDesc('signed_at')
-                ->orderByDesc('id')
+                ->orderBy('signed_at', $request->query('sort') === 'oldest' ? 'asc' : 'desc')
+                ->orderBy('id', $request->query('sort') === 'oldest' ? 'asc' : 'desc')
                 ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString();
         } else {
@@ -69,8 +69,15 @@ final class DocumentSignatureController extends Controller
                 ->when($f['from'] ?? null, fn ($q, $d) => $q->whereDate('approvals.due_at', '>=', $d))
                 ->when($f['to'] ?? null, fn ($q, $d) => $q->whereDate('approvals.due_at', '<=', $d))
                 ->with('requester')
-                ->orderBy('approvals.due_at')
-                ->orderBy('approvals.id')
+                ->tap(function ($q) use ($request): void {
+                    foreach (match ($request->query('sort')) {
+                        'newest' => [['approvals.id', 'desc']],
+                        'oldest' => [['approvals.id', 'asc']],
+                        default => [['approvals.due_at', 'asc'], ['approvals.id', 'asc']],
+                    } as [$column, $way]) {
+                        $q->orderBy($column, $way);
+                    }
+                })
                 ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString();
         }

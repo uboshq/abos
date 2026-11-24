@@ -40,7 +40,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         @if ($abosHead)
         <form id="list-form" method="GET" class="contents">
-                <x-ui.toolbar :title="__('documents::menu.audit')" :info="__('documents::message.audit_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :export="false" :share="false" :columns="$columns" :facets="$facetPanel"></x-ui.toolbar>
+                <x-ui.toolbar :title="__('documents::menu.audit')" :info="__('documents::message.audit_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :export="false" :print="false" :share="false" :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]" :columns="$columns" :facets="$facetPanel"></x-ui.toolbar>
         </form>
         @endif
         @unless ($abosHead)

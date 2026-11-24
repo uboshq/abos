@@ -35,7 +35,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
             @if ($abosHead)
-                <x-ui.toolbar :title="__('documents::menu.templates')" :info="__('documents::message.templates_subtitle')" :search-placeholder="__('documents::field.code').', '.__('documents::field.template_title')" :share="false" :columns="$columns" :facets="$facetPanel">
+                <x-ui.toolbar :title="__('documents::menu.templates')" :info="__('documents::message.templates_subtitle')" :search-placeholder="__('documents::field.code').', '.__('documents::field.template_title')" :share="false" :sort="['title' => __('documents::field.template_title'), 'code' => __('documents::field.code')]" :columns="$columns" :facets="$facetPanel">
                     <x-slot:actions>
                         @can('documents.templates')
                             <x-ui.button tone="primary" icon="plus" :href="route('documents.templates.create')">{{ __('documents::action.new_template') }}</x-ui.button>

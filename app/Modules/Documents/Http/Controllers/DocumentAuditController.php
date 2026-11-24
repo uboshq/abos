@@ -47,7 +47,7 @@ final class DocumentAuditController extends Controller
             ->when($action !== '', fn ($q) => $q->where('action', $action))
             ->when($request->string('q')->trim()->value(), fn ($q, $s) => $q->where(fn ($w) => $w->where('document_no', 'like', '%'.addcslashes($s, '%_\\').'%')->orWhere('label', 'like', '%'.addcslashes($s, '%_\\').'%')))
             ->with('user')
-            ->orderByDesc('id')
+            ->orderBy('id', $request->query('sort') === 'oldest' ? 'asc' : 'desc')
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
