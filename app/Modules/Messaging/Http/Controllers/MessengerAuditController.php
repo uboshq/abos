@@ -58,7 +58,8 @@ final class MessengerAuditController extends Controller implements HasMiddleware
                         ->whereIn('user_id', User::query()->select('id')->where('name', 'like', $like)
                             ->whereHas('companies', fn ($c) => $c->whereKey(CompanyContext::id())))));
             })
-            ->orderByDesc('last_at')
+            ->when(in_array($request->query('kind'), ['direct', 'group'], true), fn ($query) => $query->where('kind', $request->query('kind')))
+            ->orderBy('last_at', $request->query('sort') === 'oldest' ? 'asc' : 'desc')
             ->paginate(30)
             ->withQueryString();
 

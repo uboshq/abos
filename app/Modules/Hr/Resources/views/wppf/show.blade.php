@@ -8,13 +8,21 @@
     $money = fn ($value) => \App\Core\Support\Money::format($value);
     $profit = bccomp((string) $figures['pl_net'], '0', 4) >= 0;
     $charged = bccomp((string) $figures['charged'], '0', 4) !== 0;
+    // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('year', __('hr::wppf.year'), $years->pluck('name', 'id')->all()),
+    ]);
+    $source = __('hr::wppf.source', ['from' => $year->starts_on->format('d M Y'), 'to' => $year->ends_on->format('d M Y')]);
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('hr::wppf.title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('hr::wppf.title')" :subtitle="$year->name" />
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -34,6 +42,15 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form" :report="true">
+    @if ($abosHead)
+        <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <form id="list-form" method="GET" action="{{ route('hr.wppf.show') }}" class="contents" data-report>
+                <x-ui.toolbar :title="__('hr::wppf.title')" :count="$year->name" :info="$source.' '.__('hr::wppf.law')" :search="false" :report="true"
+                              :export="false" :print="false" :share="false" :facets="$facetPanel" />
+            </form>
+        </div>
+    @else
     <form method="GET" action="{{ route('hr.wppf.show') }}"
           class="mb-4 flex flex-wrap items-end gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         <label class="block">
@@ -47,6 +64,7 @@
         </label>
         <x-ui.button type="submit">{{ __('hr::wppf.show') }}</x-ui.button>
     </form>
+    @endif
 
     <div class="mb-4 grid gap-3 sm:grid-cols-2" data-wppf-figures>
         <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
@@ -107,4 +125,5 @@
             @endcan
         @endif
     </section>
+    </x-ui.filter-layout>
 </x-layouts.app>

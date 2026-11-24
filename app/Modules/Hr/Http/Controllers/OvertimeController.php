@@ -49,6 +49,7 @@ class OvertimeController extends Controller implements HasMiddleware
         $month = $this->monthFrom((string) $request->query('month'));
         $user = $request->user();
         $team = app(LeaveSigner::class)->teamOf($user);
+        $find = is_string($request->query('q')) ? trim($request->query('q')) : '';
 
         $query = $user->can('hr.attendance.view')
             ? OvertimeSheet::query()->where(fn ($q) => $q
@@ -59,6 +60,11 @@ class OvertimeController extends Controller implements HasMiddleware
         $sheets = $query
             ->with(['employee', 'signer'])
             ->whereDate('hr_overtime_sheets.month', $month->toDateString())
+            ->when($find !== '', fn ($q) => $q->whereHas('employee', fn ($e) => $e->search($find)))
+            ->when($request->query('status') === 'signed', fn ($q) => $q->where('hr_overtime_sheets.status', OvertimeSheet::SIGNED))
+            ->when($request->query('status') === 'waiting', fn ($q) => $q->where('hr_overtime_sheets.status', '!=', OvertimeSheet::SIGNED))
+            ->when($request->query('sort') === 'hours', fn ($q) => $q->orderByDesc('hr_overtime_sheets.hours'))
+            ->when($request->query('sort') === 'days', fn ($q) => $q->orderByDesc('hr_overtime_sheets.days'))
             ->orderBy('hr_overtime_sheets.id')
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();

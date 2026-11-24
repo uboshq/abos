@@ -17,6 +17,11 @@
         ['key' => 'created_at', 'label' => __('hr::claim.submitted_at'), 'width' => '8rem',
          'render' => fn ($c) => $c->created_at?->format('d/m/Y')],
     ];
+    // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('status', __('hr::claim.status'), collect(\App\Modules\Hr\Models\ExpenseClaim::STATES)->mapWithKeys(fn ($st) => [$st => __('hr::claim.state_'.$st)])->all()),
+    ]);
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('hr::claim.title') }}</x-slot:title>
@@ -29,13 +34,23 @@
 
     <x-ui.errors />
 
+    {{-- ⭐ তিন ABOS রূপে ট্যাব বারের সারিতে ওঠে ([[abos-list-head.js]]) --}}
+    @if ($abosHead && auth()->user()?->can('hr.claim.view'))
+        <x-ui.list-tabs :label="__('hr::claim.title')" :tabs="[
+            ['key' => 'mine', 'label' => __('hr::claim.tab_mine'), 'url' => route('hr.claim.index'), 'active' => $tab === 'mine'],
+            ['key' => 'all', 'label' => __('hr::claim.tab_all'), 'url' => route('hr.claim.index', ['tab' => 'all']), 'active' => $tab === 'all'],
+        ]" />
+    @endif
+
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <section data-boxed data-claim-list class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             @if ($tab === 'all')
                 <input type="hidden" name="tab" value="all">
             @endif
 
-            <x-ui.toolbar :title="__('hr::claim.title')" :subtitle="__('hr::claim.list_note')" :columns="$claimColumns" :quiet="['tab']">
+            <x-ui.toolbar :title="__('hr::claim.title')" :subtitle="$abosHead ? null : __('hr::claim.list_note')" :info="$abosHead ? __('hr::claim.list_note') : null" :columns="$claimColumns" :quiet="['tab']"
+                          :facets="$facetPanel" :search-placeholder="__('hr::claim.number')" :sort="$abosHead ? ['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')] : []">
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('hr.claim.create')">{{ __('hr::claim.new') }}</x-ui.button>
                 </x-slot:actions>
@@ -50,6 +65,7 @@
             </p>
         @endif
 
+        @unless ($abosHead)
         @can('hr.claim.view')
             <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm" aria-label="{{ __('hr::claim.title') }}">
                 @foreach (['mine' => __('hr::claim.tab_mine'), 'all' => __('hr::claim.tab_all')] as $key => $label)
@@ -62,6 +78,7 @@
                 @endforeach
             </nav>
         @endcan
+        @endunless
 
         <x-ui.table :rows="$claims" :grand="$grand ?? []" :view-url="fn ($c) => route('hr.claim.show', $c)"
                     :columns="$claimColumns" :compact="\App\Core\Support\Ui::compact()" :empty="__('hr::claim.none')" />
@@ -69,4 +86,5 @@
         <x-ui.pager :rows="$claims" />
         <x-ui.list-totals :rows="$claims" :grand="$grand ?? []" :columns="$claimColumns" />
     </section>
+    </x-ui.filter-layout>
 </x-layouts.app>
