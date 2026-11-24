@@ -226,7 +226,7 @@ final class ALeaverIsSettledOnOnePaperTest extends TestCase
     public function test_the_pages_need_the_salary_key(): void
     {
         $this->get(route('hr.final_settlement.index'))->assertOk()->assertSee('data-settlement-leavers', false);
-        $this->get(route('hr.final_settlement.create', ['employee' => $this->employee->id]))->assertOk()->assertSee('data-settlement-net', false);
+        $this->get(route('hr.final_settlement.preview', ['employee' => $this->employee->id]))->assertOk()->assertSee('data-settlement-net', false);
 
         $clerk = $this->secondHandIn($this->company->id, 'hr.employee.view');
         $this->actingAs($clerk)->get(route('hr.final_settlement.index'))->assertForbidden();

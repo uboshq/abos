@@ -368,24 +368,34 @@ final class StartingPoints
      */
     private function mayCreate(User $user, RouteObject $route, string $class): bool
     {
+        $asked = false;
+
+        // ⛔ দরজার **সব** চাবি — প্রথমটা দেখেই "হ্যাঁ" বললে দেখার চাবি থাকা মানুষকে এমন কাজ দেখানো হত যার দরজা ৪০৩ (২৫ নভেম্বর ২০২৬)
         foreach ($route->gatherMiddleware() as $middleware) {
             if (! is_string($middleware) || ! str_starts_with($middleware, 'can:')) {
                 continue;
             }
 
+            $asked = true;
             $clause = substr($middleware, 4);
 
             if (! str_contains($clause, ',')) {
-                return $user->can($clause);
+                if (! $user->can($clause)) {
+                    return false;
+                }
+
+                continue;
             }
 
             [$ability, $subject] = explode(',', $clause, 2);
 
             /* ⓘ `can:create,App\…\Model` — শ্রেণি ধরে পলিসি; অচেনা রূপে দরজা বন্ধ */
-            return $ability === 'create' && class_exists($subject) && $user->can('create', $subject);
+            if ($ability !== 'create' || ! class_exists($subject) || ! $user->can('create', $subject)) {
+                return false;
+            }
         }
 
-        return false;
+        return $asked;
     }
 
     /**

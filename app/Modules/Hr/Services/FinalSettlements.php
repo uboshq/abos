@@ -164,6 +164,11 @@ final class FinalSettlements
             // ⛔ তালা — একই কর্মীর দুইটা কাগজ একসাথে নয়
             $locked = Employee::query()->withTrashed()->whereKey($employee->id)->lockForUpdate()->firstOrFail();
 
+            // ⛔ খাতা কর্মীর কোম্পানির — কর্মী-খাতা এক হলেও ([[SharedAcrossCompaniesWhenAsked]]) অন্য কোম্পানির পাওনা এই খাতায় বসে না
+            if ((int) $locked->company_id !== (int) CompanyContext::id()) {
+                throw ValidationException::withMessages(['employee' => __('hr::settlement.other_company')]);
+            }
+
             $open = FinalSettlement::query()->where('employee_id', $locked->id)
                 ->whereIn('status', [FinalSettlement::PENDING, FinalSettlement::APPROVED])->exists();
 
@@ -368,7 +373,7 @@ final class FinalSettlements
 
     private function pendingApproval(FinalSettlement $settlement, User $by): Approval
     {
-        // ⛔ তালা দিয়ে তাজা অবস্থা — হাতের কপি বাসি হতে পারে
+        // ⓘ তাজা অবস্থা পড়া — হাতের কপি বাসি হতে পারে; তালা এখানেই ছাড়ে, আসল পাহারা ইঞ্জিনের অনুরোধের তালা আর finishSigned()-এর তালা
         $settlement = DB::transaction(fn () => FinalSettlement::query()->whereKey($settlement->getKey())->lockForUpdate()->firstOrFail());
         $approval = $this->approvalOf($settlement);
 

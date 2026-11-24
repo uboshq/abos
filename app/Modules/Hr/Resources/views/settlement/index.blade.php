@@ -42,7 +42,7 @@
     @endif
 
     @if ($mayStart && ! $abosHead)
-            <form method="GET" action="{{ route('hr.final_settlement.create') }}" data-boxed data-settlement-leavers
+            <form method="GET" action="{{ route('hr.final_settlement.preview') }}" data-boxed data-settlement-leavers
                   class="mb-4 flex flex-wrap items-end gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <x-ui.select name="employee" :label="__('hr::settlement.leavers')"
                              :options="$leavers->mapWithKeys(fn ($e) => [$e->id => $e->label().' · '.$e->leaving_date->format('d M Y')])" />
@@ -55,7 +55,7 @@
         <div id="pop-settlement" popover="auto" role="dialog" aria-labelledby="pop-settlement-title" data-settlement-leavers
              class="fixed inset-0 m-auto h-fit max-h-[90vh] w-[32rem] max-w-[92vw] overflow-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-5 text-(--color-ink) shadow-lg">
             <h2 id="pop-settlement-title" class="mb-3 text-base font-semibold">{{ __('hr::settlement.new') }}</h2>
-            <form method="GET" action="{{ route('hr.final_settlement.create') }}" class="space-y-3">
+            <form method="GET" action="{{ route('hr.final_settlement.preview') }}" class="space-y-3">
                 <x-ui.select name="employee" :label="__('hr::settlement.leavers')"
                              :options="$leavers->mapWithKeys(fn ($e) => [$e->id => $e->label().' · '.$e->leaving_date->format('d M Y')])" />
                 <div class="flex justify-end"><x-ui.button type="submit" tone="primary">{{ __('hr::settlement.preview') }}</x-ui.button></div>
