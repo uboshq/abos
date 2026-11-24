@@ -83,13 +83,14 @@ final class WebTopBarAndShareTest extends TestCase
         }
     }
 
-    public function test_without_the_key_nothing_is_drawn_even_in_an_abos_look(): void
+    /** ⭐ owner, 24 Nov 2026 — no key to hand out: every active account gets the messenger's pieces in the ABOS looks */
+    public function test_every_active_account_gets_the_messenger_in_an_abos_look(): void
     {
         $plain = $this->person('No Messenger', withKey: false);
 
         foreach (MessengerChrome::LOOKS as $look) {
             $html = $this->pageIn($plain, $look);
-            $this->assertStringNotContainsString('data-msgr-', $html, "⛔ {$look}: চাবি ছাড়াই বার্তার অংশ আঁকা হয়েছে");
+            $this->assertStringContainsString('data-msgr-topbar', $html, "⛔ {$look}: চাবি ছাড়া সক্রিয় মানুষ বার্তা পান না");
         }
     }
 
@@ -103,8 +104,12 @@ final class WebTopBarAndShareTest extends TestCase
             ->assertJsonStructure(['unread_total', 'ringing'])
             ->assertJsonPath('ringing', null);
 
+        // ⭐ owner, 24 Nov 2026 — open for every active account; a guest gets 401
         $this->actingAs($this->person('Keyless', withKey: false));
-        $this->getJson(route('messaging.x.unread'))->assertForbidden();
+        $this->getJson(route('messaging.x.unread'))->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->getJson(route('messaging.x.unread'))->assertUnauthorized();
     }
 
     public function test_a_printable_paper_row_menu_offers_send_in_a_message(): void

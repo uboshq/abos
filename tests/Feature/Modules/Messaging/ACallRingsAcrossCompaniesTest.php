@@ -89,7 +89,7 @@ final class ACallRingsAcrossCompaniesTest extends TestCase
     public function test_a_chat_from_another_company_shows_in_the_other_persons_list(): void
     {
         $this->as($this->owner, web: true);
-        $thread = $this->postJson(route('messaging.x.direct'), ['person' => (string) $this->clerk->id])->assertOk()->json('data.id')
+        $thread = $this->postJson(route('messaging.x.direct'), ['person' => (string) $this->clerk->id])->assertSuccessful()->json('data.id')
             ?? $this->postJson(route('messaging.x.direct'), ['person' => (string) $this->clerk->id])->json('data.thread.id');
 
         $this->as($this->clerk, web: true);

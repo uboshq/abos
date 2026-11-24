@@ -71,11 +71,15 @@ final class WebMessagesPageTest extends TestCase
             ->assertSee('data-open="'.$thread->public_id.'"', false);
     }
 
-    public function test_the_page_is_refused_without_the_key(): void
+    /** ⭐ owner, 24 Nov 2026: everyone talks to everyone — the page opens for every active account, key or not; a guest is sent to sign in */
+    public function test_the_page_opens_for_every_active_account_and_never_for_a_guest(): void
     {
-        $nobody = $this->person('No Key', false);
+        $plain = $this->person('No Key', false);
 
-        $this->actingAs($nobody)->get(route('messaging.index'))->assertForbidden();
+        $this->actingAs($plain)->get(route('messaging.index'))->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->get(route('messaging.index'))->assertRedirect();
     }
 
     public function test_the_page_draws_no_description_line(): void
@@ -152,11 +156,15 @@ final class WebMessagesPageTest extends TestCase
         $this->actingAs($this->stranger)->getJson(route('messaging.x.messages', ['thread' => 'NOPE-NOT-A-THREAD']))->assertNotFound();
     }
 
-    public function test_the_json_doors_are_refused_without_the_key(): void
+    /** ⭐ owner, 24 Nov 2026 — the JSON doors open for every active account; a guest gets 401 */
+    public function test_the_json_doors_open_for_every_active_account_and_never_for_a_guest(): void
     {
-        $nobody = $this->person('No Key Either', false);
+        $plain = $this->person('No Key Either', false);
 
-        $this->actingAs($nobody)->getJson(route('messaging.x.threads'))->assertForbidden();
+        $this->actingAs($plain)->getJson(route('messaging.x.threads'))->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $this->getJson(route('messaging.x.threads'))->assertUnauthorized();
     }
 
     public function test_every_word_has_both_languages(): void
