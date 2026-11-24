@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Models;
 
+use App\Modules\Hr\Services\Gratuity;
+use App\Core\Contracts\Drillable;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
@@ -17,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * ⓘ খাতার দাখিলার উৎস — `source_type` = [[Gratuity::SOURCE_TYPE]], `source_id` = এই সারি।
  */
-class GratuityProvision extends Model
+class GratuityProvision extends Model implements Drillable
 {
     use BelongsToCompany;
     use HasPublicId;
@@ -44,5 +46,27 @@ class GratuityProvision extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    // ── Drillable — খাতার সারি থেকে কাগজে (মালিক, ২৩ নভেম্বর ২০২৬) ───────────
+
+    public static function drillSourceType(): string
+    {
+        return Gratuity::SOURCE_TYPE;
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return 'GRT-'.$this->month->format('Y-m');
+    }
+
+    public function drillLabel(): string
+    {
+        return $this->month->translatedFormat('F Y');
+    }
+
+    public function drillRoute(): array
+    {
+        return ['hr.gratuity.report', ['on' => $this->month?->copy()->endOfMonth()->toDateString()]];
     }
 }

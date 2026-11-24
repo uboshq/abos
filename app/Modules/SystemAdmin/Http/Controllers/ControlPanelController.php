@@ -224,7 +224,7 @@ class ControlPanelController extends Controller implements HasMiddleware
      * কেবল এই কোম্পানির শেষ বিশটা পড়া। ⓘ চাবি সেটিং-সারি থেকে (ডিফল্টে ফেরালে সারি নেই — তখন তৈরির সময়ের `key`), নাম
      * ঘোষণা থেকে, পর্দার ভাষায়।
      *
-     * @return list<array{when: \Illuminate\Support\Carbon, who: ?string, label: string, from: ?string, to: ?string}>
+     * @return list<array{when: \Illuminate\Support\Carbon, who: ?string, label: string, from: ?string, to: ?string, self: bool}>
      */
     private function history(): array
     {
@@ -239,7 +239,15 @@ class ControlPanelController extends Controller implements HasMiddleware
 
         $keys = \App\Models\Setting::query()->whereIn('id', $trails->pluck('auditable_id'))->pluck('key', 'id');
 
-        return $trails->map(function (\App\Models\AuditTrail $trail) use ($definitions, $keys): array {
+        // ⭐ মালিক নিজে চেয়ে নিজে অনুমোদন দিলে দাগ — বদলটা একই লেনদেনে বসেছে, তাই চাবি, মানুষ আর মুহূর্ত ধরে মেলে ([[SignedSettings::sign()]])
+        $marks = app(\App\Core\Engines\Approval\OwnerSelfApproval::class);
+        $own = $trails->isEmpty() ? collect() : \App\Models\SettingChange::query()
+            ->where('status', \App\Models\SettingChange::SIGNED)
+            ->whereColumn('requested_by', 'decided_by')
+            ->where('decided_at', '>=', $trails->min('created_at'))
+            ->get()->filter(fn (\App\Models\SettingChange $c): bool => $marks->ofPaper($c));
+
+        return $trails->map(function (\App\Models\AuditTrail $trail) use ($definitions, $keys, $own): array {
             $value = $trail->changes->firstWhere('field', 'value');
             $key = (string) ($keys[$trail->auditable_id] ?? $trail->changes->firstWhere('field', 'key')?->new_value ?? '');
             $label = isset($definitions[$key]['label']) ? __((string) $definitions[$key]['label']) : $key;
@@ -250,6 +258,8 @@ class ControlPanelController extends Controller implements HasMiddleware
                 'label' => $label !== '' ? $label : '—',
                 'from' => $value?->old_value,
                 'to' => $value?->new_value,
+                'self' => $own->contains(fn (\App\Models\SettingChange $c): bool => $c->key === $key
+                    && (int) $c->decided_by === (int) $trail->user_id && abs($c->decided_at->diffInSeconds($trail->created_at)) <= 5),
             ];
         })->all();
     }

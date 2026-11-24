@@ -560,7 +560,8 @@ return [
         'NTC' => 'core.notice.doc_type',
     ],
 
-    'drill_sources' => [],
+    // ⭐ জরুরি সেটিংয়ের বদল — মালিকের নিজে-অনুমোদিত কাগজের রিপোর্ট থেকে (২৫ নভেম্বর ২০২৬)
+    'drill_sources' => ['setting_change' => \App\Models\SettingChange::class],
 
     'settings' => [
         /*

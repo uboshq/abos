@@ -10,9 +10,11 @@ use App\Core\Contracts\ShownInOwnerSelfReport;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\PartyRegistry;
 use App\Core\Services\PermissionSyncer;
+use App\Core\Services\SignedSettings;
 use App\Models\Approval;
 use App\Models\ApprovalDecision;
 use App\Models\AuditTrail;
+use App\Models\SettingChange;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder;
@@ -61,6 +63,12 @@ final class OwnerSelfApproval
     {
         if (! $paper->exists || ! $this->isPaper($paper)) {
             return false;
+        }
+
+        if ($paper instanceof SettingChange) {
+            return $paper->status === SettingChange::SIGNED && $paper->requested_by !== null
+                && (int) $paper->requested_by === (int) $paper->decided_by
+                && in_array((int) $paper->requested_by, $this->ownersOf((int) $paper->company_id), true);
         }
 
         $company = (int) ($paper->getAttribute('company_id') ?? 0);
@@ -147,6 +155,10 @@ final class OwnerSelfApproval
             }
         }
 
+        if ($owners !== []) {
+            $parts[] = $this->settingPart($company, $owners, $from, $to);
+        }
+
         $union = array_shift($parts) ?? $this->nothing($company);
 
         foreach ($parts as $part) {
@@ -223,6 +235,45 @@ final class OwnerSelfApproval
                 ->where('a2.approvable_type', $class)
                 ->where('a2.status', Approval::APPROVED))
             ->select($this->select($class, $columns, 't.created_at', $this->amountOf($columns), 'posted'));
+    }
+
+    /**
+     * জরুরি সেটিং — মালিক নিজে চেয়ে নিজে অনুমোদন দিয়েছেন ([[SignedSettings]]); নম্বরের ঘরে সেটিংয়ের নাম।
+     *
+     * @param  list<int>  $owners
+     */
+    private function settingPart(int $company, array $owners, string $from, string $to): Builder
+    {
+        $pdo = DB::getPdo();
+        $cases = [];
+
+        foreach (DB::table('sys_setting_changes')->where('company_id', $company)->where('status', SettingChange::SIGNED)
+            ->whereIn('decided_by', $owners)->distinct()->pluck('key') as $key) {
+            $cases[] = 'WHEN p.`key` = '.$pdo->quote((string) $key).' THEN '.$pdo->quote(app(SignedSettings::class)->labelOf((string) $key));
+        }
+
+        return DB::table('sys_setting_changes as p')
+            ->leftJoin('users as wu', 'wu.id', '=', 'p.requested_by')
+            ->leftJoin('users as au', 'au.id', '=', 'p.decided_by')
+            ->where('p.company_id', $company)
+            ->where('p.status', SettingChange::SIGNED)
+            ->whereIn('p.decided_by', $owners)
+            ->whereColumn('p.requested_by', 'p.decided_by')
+            ->whereBetween('p.decided_at', [$from, $to])
+            ->select([
+                DB::raw('DATE(p.decided_at) as paper_date'),
+                DB::raw($pdo->quote($this->typeLabel(SettingChange::class)).' as paper_type'),
+                DB::raw(($cases === [] ? "CONCAT('#', p.id)" : 'CASE '.implode(' ', $cases)." ELSE CONCAT('#', p.id) END").' as document_no'),
+                DB::raw('NULL as party_key'),
+                DB::raw('NULL as amount'),
+                DB::raw('wu.name as writer'),
+                DB::raw('au.name as approver'),
+                DB::raw('p.decided_at as approved_at'),
+                DB::raw($pdo->quote(__('core.owner_self.how_approved')).' as how'),
+                DB::raw($pdo->quote(SettingChange::drillSourceType()).' as source_type'),
+                DB::raw('p.id as source_id'),
+                DB::raw('NULL as branch_id'),
+            ]);
     }
 
     /**

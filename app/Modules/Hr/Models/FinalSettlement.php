@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Models;
 
+use App\Modules\Hr\Services\FinalSettlements;
+use App\Core\Contracts\Drillable;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
@@ -21,7 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property array<string, mixed>|null $details
  */
-class FinalSettlement extends Model implements ShownInOwnerSelfReport
+class FinalSettlement extends Model implements ShownInOwnerSelfReport, Drillable
 {
     use BelongsToCompany;
     use HasPublicId;
@@ -77,10 +79,10 @@ class FinalSettlement extends Model implements ShownInOwnerSelfReport
         return $this->belongsTo(User::class, 'requested_by');
     }
 
-    /** ⓘ মালিকের নিজে-অনুমোদিত কাগজের রিপোর্টে — লিংক কর্মীর পাতায় */
+    /** ⓘ মালিকের নিজে-অনুমোদিত কাগজের রিপোর্টে — লিংক কাগজের পাতায় */
     public static function ownerSelfSource(): array
     {
-        return [Employee::drillSourceType(), 'employee_id'];
+        return [self::drillSourceType(), 'id'];
     }
 
     public function isPending(): bool
@@ -93,5 +95,27 @@ class FinalSettlement extends Model implements ShownInOwnerSelfReport
     {
         return bcadd(bcadd((string) $this->wages, (string) $this->leave_encashment, 4),
             bcadd((string) $this->gratuity, (string) $this->provident_fund, 4), 4);
+    }
+
+    // ── Drillable — খাতার সারি থেকে কাগজে (মালিক, ২৩ নভেম্বর ২০২৬) ───────────
+
+    public static function drillSourceType(): string
+    {
+        return FinalSettlements::SOURCE_TYPE;
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return 'FS-'.$this->id;
+    }
+
+    public function drillLabel(): string
+    {
+        return (string) $this->employee?->label();
+    }
+
+    public function drillRoute(): array
+    {
+        return ['hr.final_settlement.show', ['settlement' => $this->id]];
     }
 }

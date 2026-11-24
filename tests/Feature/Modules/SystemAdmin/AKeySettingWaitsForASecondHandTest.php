@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\SystemAdmin;
 
+use App\Core\Engines\Approval\OwnerSelfApproval;
 use App\Core\Services\SettingsService;
 use App\Core\Services\SignedSettings;
 use App\Core\Support\CompanyContext;
@@ -24,7 +25,7 @@ use Tests\TestCase;
  * দাবি, আসল ফর্ম দিয়ে:
  *  - জরুরি সেটিং (অনুমোদনের নিজের সীমা) বদলালে সঙ্গে সঙ্গে বসে না — অপেক্ষায় যায়; সাধারণ সেটিং আগের মতোই সঙ্গে সঙ্গে বসে।
  *  - অন্য একজন অনুমোদন দিলে তবেই বসে; ফেরত দিলে আগের মতো থাকে।
- *  - যিনি চাইলেন তিনি নিজে অনুমোদন দিতে পারেন না — মালিকও নন।
+ *  - যিনি চাইলেন তিনি নিজে অনুমোদন দিতে পারেন না — মালিক ছাড়া (২০ নভেম্বর ২০২৬), দাগ আর রিপোর্টসহ।
  *  - অনুমোদন দেওয়ার মতো আর কেউ না থাকলে বদল আটকে যায়, কারণসহ; কিছুই লেখা হয় না।
  *  - তিনটা সেটিং-পর্দাতেই পাহারা (প্রতিষ্ঠানের সেটিংস, কন্ট্রোল প্যানেল, হিসাবের সেটিংস) — বাকির সীমা আর বেতনের চাবিও আওতায়।
  */
@@ -61,12 +62,16 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
         $this->assertSame($wanted, $change->new_value, '⛔ অপেক্ষার সারিতে চাওয়া মান নেই।');
         $this->assertSame((int) $this->owner->id, (int) $change->requested_by, '⛔ কে চাইলেন তা লেখা নেই।');
 
-        // ⛔ নিজে নয় — মালিকও নন
-        $this->actingAs($this->owner)->post(route('system_admin.setting-change.sign', $change->public_id));
+        // ⛔ কর্মী নিজের চাওয়ায় নিজে নয় — মালিকের চাওয়া ছাপিয়ে তাঁর নিজের চাওয়া
+        $maker = $this->secondAdmin();
+        $this->actingAs($maker)->put(route('system_admin.settings.update'), ['settings' => [self::KEY => $wanted]])->assertRedirect();
+        $change = SettingChange::query()->where('key', self::KEY)->where('status', SettingChange::PENDING)->latest('id')->firstOrFail();
+        $this->assertSame((int) $maker->id, (int) $change->requested_by);
+        $this->actingAs($maker)->post(route('system_admin.setting-change.sign', $change->public_id));
         $this->assertSame($before, (string) SignedSettings::stored(app(SettingsService::class)->get(self::KEY)), '⛔ যিনি চাইলেন তিনি নিজেই অনুমোদন দিয়ে বসালেন।');
 
         // ⓘ পাতায় অন্যজনের জন্য বোতাম, নিজের জন্য নয়
-        $mine = (string) $this->actingAs($this->owner)->get(route('system_admin.control-panel'))->assertOk()->getContent();
+        $mine = (string) $this->actingAs($maker)->get(route('system_admin.control-panel'))->assertOk()->getContent();
         $this->assertStringContainsString('data-setting-change="'.self::KEY.'"', $mine, '⛔ অপেক্ষার বদল কন্ট্রোল প্যানেলে দেখা যায় না।');
         $this->assertStringNotContainsString('data-setting-change-sign', $mine, '⛔ যিনি চাইলেন তাঁর সামনেই "অনুমোদন দিন" বোতাম।');
         $theirs = (string) $this->actingAs($second)->get(route('system_admin.control-panel'))->assertOk()->getContent();
@@ -76,7 +81,32 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
         $this->assertSame($wanted, (string) SignedSettings::stored(app(SettingsService::class)->get(self::KEY)), '⛔ দ্বিতীয় হাতের অনুমোদনেও সেটিং বসেনি।');
         $this->assertSame(SettingChange::SIGNED, $change->fresh()->status, '⛔ অনুমোদনের পরেও বদলটা "অপেক্ষায়"।');
         $this->assertSame((int) $second->id, (int) $change->fresh()->decided_by, '⛔ কে অনুমোদন দিলেন তা লেখা নেই।');
+        $this->assertFalse(app(OwnerSelfApproval::class)->ofPaper($change->fresh()), '⛔ দুই হাতের বদলে মালিকের দাগ।');
+        $this->assertCount(0, $this->reportRows(), '⛔ দুই হাতের বদল মালিকের রিপোর্টে।');
         $this->assertTrue(AuditTrail::query()->forRecord(SettingChange::class, (int) $change->id)->exists(), '⛔ বদলের চাওয়া আর অনুমোদন নিরীক্ষায় নেই।');
+    }
+
+    /** ⭐ মালিক, ২০ নভেম্বর ২০২৬ — নিজের বদলে নিজে, দাগ আর মাসের রিপোর্টসহ; দ্বিতীয় কেউ না থাকলেও */
+    public function test_the_owner_applies_his_own_change_with_the_mark_and_a_report_row(): void
+    {
+        User::query()->whereKeyNot($this->owner->id)->update(['is_active' => false]);
+        $wanted = (string) ((int) SignedSettings::stored(app(SettingsService::class)->get(self::KEY)) + 700);
+
+        $this->actingAs($this->owner)->put(route('system_admin.settings.update'), ['settings' => [self::KEY => $wanted]])->assertRedirect();
+        $change = SettingChange::query()->where('key', self::KEY)->where('status', SettingChange::PENDING)->sole();
+        $this->assertNotSame($wanted, (string) SignedSettings::stored(app(SettingsService::class)->get(self::KEY)), '⛔ অনুমোদনের আগেই বসল।');
+        $this->assertStringContainsString('data-setting-change-sign', (string) $this->get(route('system_admin.control-panel'))->assertOk()->getContent());
+
+        $this->post(route('system_admin.setting-change.sign', $change->public_id))->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertSame($wanted, (string) SignedSettings::stored(app(SettingsService::class)->get(self::KEY)), '⛔ মালিকের অনুমোদনে বসেনি।');
+        $this->assertTrue(app(OwnerSelfApproval::class)->ofPaper($change->fresh()), '⛔ দাগ নেই।');
+        $this->get(route('system_admin.control-panel'))->assertOk()->assertSee('data-owner-self-mark', false);
+
+        $rows = $this->reportRows();
+        $this->assertCount(1, $rows, '⛔ মাসের রিপোর্টে সারি নেই।');
+        $this->assertSame(app(SignedSettings::class)->labelOf(self::KEY), (string) ((array) $rows->first())['document_no']);
+        $this->get(route('accounts.report.show', ['slug' => 'owner-self-approved']))->assertOk()
+            ->assertSee(route('system_admin.control-panel'), false);
     }
 
     public function test_a_sent_back_change_leaves_the_setting_as_it_was(): void
@@ -98,10 +128,11 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
     public function test_with_nobody_else_to_approve_the_change_is_refused_and_nothing_is_written(): void
     {
         $before = (string) SignedSettings::stored(app(SettingsService::class)->get(self::KEY));
-        // ⓘ ডেমোর অন্য মানুষদের বন্ধ রাখা — এই কোম্পানিতে সেটিংসের চাবিওয়ালা কেবল মালিক
-        User::query()->whereKeyNot($this->owner->id)->update(['is_active' => false]);
+        // ⓘ সেটিংসের চাবিওয়ালা একজনই কর্মী চালু — মালিকের নিজের পথ আলাদা
+        $only = $this->secondAdmin();
+        User::query()->whereKeyNot($only->id)->update(['is_active' => false]);
 
-        $response = $this->actingAs($this->owner)->put(route('system_admin.settings.update'), ['settings' => [self::KEY => (string) ((int) $before + 9)]]);
+        $response = $this->actingAs($only)->put(route('system_admin.settings.update'), ['settings' => [self::KEY => (string) ((int) $before + 9)]]);
 
         $this->assertSame($before, (string) SignedSettings::stored(app(SettingsService::class)->get(self::KEY)), '⛔ দ্বিতীয় কেউ নেই, তবু এক হাতে বসে গেল।');
         $this->assertSame(0, SettingChange::query()->count(), '⛔ অনুমোদনের কেউ নেই, তবু অপেক্ষার সারি লেখা হলো — কেউ কখনো ছাড়বে না।');
@@ -158,6 +189,15 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
             $this->assertStringContainsString('$signed->guards($key)', (string) file_get_contents(app_path('Modules/'.$screen)),
                 "⛔ এই সেটিং-পর্দায় পাহারা নেই — জরুরি সেটিং এখান দিয়ে এক হাতে বদলানো যায়: {$screen}");
         }
+    }
+
+    /** @return \Illuminate\Support\Collection<int, mixed> */
+    private function reportRows(): \Illuminate\Support\Collection
+    {
+        $rows = app(\App\Core\Engines\Report\ReportEngine::class)->run(\App\Modules\Accounts\Reports\OwnerSelfApprovedReport::KEY,
+            ['from' => now()->startOfMonth()->toDateString(), 'to' => now()->toDateString()], 1, 200)->rows;
+
+        return collect($rows)->filter(fn ($r) => ((array) $r)['source_type'] === SettingChange::drillSourceType())->values();
     }
 
     private function secondAdmin(): User

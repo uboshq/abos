@@ -19,11 +19,13 @@ use App\Modules\Hr\Models\BankUnpaidLine;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
 use App\Modules\Hr\Models\FinalSettlement;
+use App\Modules\Hr\Models\GratuityProvision;
 use App\Modules\Hr\Models\HeldWagePayment;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryStructure;
+use App\Modules\Hr\Models\WppfProvision;
 use App\Modules\Hr\Panels\EmployeeFacts;
 use App\Modules\Hr\Reports\HrReports;
 use App\Modules\Hr\Services\UserEmployee;
@@ -435,6 +437,10 @@ return [
         'payroll_run' => PayrollRun::class,
         // ⭐ খরচের দাবি — ভাউচার থেকে দাবিতে ফেরা, রসিদের ছবি, আর ক্যাশিয়ারের ভাউচার পাকা হলে "টাকা দেওয়া হয়েছে"
         'expense_claim' => ExpenseClaim::class,
+        // ⭐ শ্রম আইনের কাগজ — খাতার সারি থেকে ফেরা (মালিকের লিংকের নিয়ম, ২৩ নভেম্বর ২০২৬)
+        'final_settlement' => FinalSettlement::class,
+        'gratuity_provision' => GratuityProvision::class,
+        'wppf_provision' => WppfProvision::class,
     ],
 
     /*
