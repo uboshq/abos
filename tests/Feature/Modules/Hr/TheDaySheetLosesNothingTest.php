@@ -39,7 +39,7 @@ final class TheDaySheetLosesNothingTest extends TestCase
         $this->day = now()->toDateString();
 
         for ($i = Employee::query()->count(); $i < 3; $i++) {
-            app(\App\Modules\Hr\Services\EmployeeService::class)->create(['name_en' => "Day Sheet {$i}", 'joining_date' => now()->subYear()->toDateString(),
+            app(\App\Modules\Hr\Services\EmployeeService::class)->create(['name_en' => "Day Sheet {$i}", 'code' => "DAY-{$i}", 'payment_method' => 'cash', 'joining_date' => now()->subYear()->toDateString(),
                 'branch_id' => $company->defaultBranch()?->id]);
         }
         $this->assertGreaterThan(2, $this->people()->count(), 'প্রস্তুতিটাই ভুল — তিনজন কর্মী নেই।');

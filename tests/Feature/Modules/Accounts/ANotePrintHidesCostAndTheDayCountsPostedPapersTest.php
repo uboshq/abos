@@ -83,7 +83,7 @@ final class ANotePrintHidesCostAndTheDayCountsPostedPapersTest extends TestCase
     {
         Company::query()->whereKey(CompanyContext::id())->update(['bin' => null]);
         $today = Carbon::today();
-        $count = fn (): int => (int) (collect(app(DayChecklist::class)->for($today)['items'])->firstWhere('key', 'bin_missing')['count'] ?? 0);
+        $count = fn (): int => (int) (collect(app(DayChecklist::class)->for($today))->firstWhere('key', 'bin_missing')['count'] ?? 0);
         $before = $count();
 
         $sv = app(TradeVoucherService::class)->create(TradeVoucher::SALE, ['party_id' => $this->customer->id, 'narration' => 'x', 'trx_date' => $today->toDateString(),
