@@ -126,7 +126,7 @@ final class TradeVoucherPrintController extends Controller implements HasMiddlew
             'party_bin' => $party['bin'],
             'company_bin' => $company['bin'],
             'narration' => (string) ($voucher->narration ?? ''),
-            'lines' => $lines->map(fn (TradeVoucherLine $l) => PaperTaxFacts::line($l))->all(),
+            'lines' => $lines->map(fn (TradeVoucherLine $l) => PaperTaxFacts::line($l, $voucher->isSale() || \App\Modules\Accounts\Support\TradeCatalog::seesCost()))->all(),
             'amount' => Money::format($voucher->amount),
             'tax' => Money::format($voucher->tax_amount),
             'total' => Money::format($voucher->total),

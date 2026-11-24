@@ -26,6 +26,9 @@
     // ⓘ মাল ফেরতের সারি নোটের মোটে নেই (ফেরতের কাগজ তোলে) — সারাংশে সব সারি, নকশার মতো
     $moved = $note->lines->filter(fn ($l) => (bool) $l->goods_moved);
     $movedAmount = $moved->reduce(fn ($t, $l) => bcadd($t, (string) $l->amount, 4), '0');
+    // ⛔ সরবরাহকারীর নোটে পণ্যের সারির দর কেনা দর — চাবি না থাকলে ঢাকা; নোটের মোট দেনার অঙ্ক, খোলা
+    $showsPrice = $type !== 'dn' || \App\Modules\Accounts\Support\TradeCatalog::seesCost();
+    $figure = fn ($line, $value) => $showsPrice || $line->line_type !== 'product' ? Money::format($value) : \App\Core\Security\FieldSecurity::mask();
     $movedVat = $moved->reduce(fn ($t, $l) => bcadd($t, (string) $l->vat_amount, 4), '0');
 @endphp
 
@@ -189,8 +192,8 @@
                                         @endif
                                         <td class="num tv-r">{{ \App\Modules\Accounts\Support\TradeCatalog::rate((string) $line->qty) }}</td>
                                         <td>{{ $line->unit ?: '—' }}</td>
-                                        <td class="num tv-r">{{ Money::format($line->rate) }}</td>
-                                        <td class="num tv-r">{{ Money::format($line->amount) }}</td>
+                                        <td class="num tv-r">{{ $figure($line, $line->rate) }}</td>
+                                        <td class="num tv-r">{{ $figure($line, $line->amount) }}</td>
                                         <td class="num tv-r">
                                             @if (bccomp((string) $line->vat_rate, '0', 4) > 0)
                                                 {{ \App\Modules\Accounts\Support\TradeCatalog::rate((string) $line->vat_rate) }}%
@@ -200,8 +203,8 @@
                                                 0%
                                             @endif
                                         </td>
-                                        <td class="num tv-r">{{ Money::format($line->vat_amount) }}</td>
-                                        <td class="num tv-r tv-strong">{{ Money::format($line->total) }}</td>
+                                        <td class="num tv-r">{{ $figure($line, $line->vat_amount) }}</td>
+                                        <td class="num tv-r tv-strong">{{ $figure($line, $line->total) }}</td>
                                         @if ($hasReturns)
                                             <td>
                                                 @if ($line->goods_moved)

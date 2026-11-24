@@ -169,6 +169,11 @@ final class NoteLineBuilder
 
             $figures = LineMath::figures((string) ($row['qty'] ?? '1'), $rateIn, $amountIn === null ? null : (string) $amountIn, $vatRate);
 
+            // ⛔ ঋণাত্মক পরিমাণ × ঋণাত্মক দর = ধনাত্মক অঙ্ক — পরিমাণ নিজে শূন্যের বেশি না হলে থামে
+            if (bccomp($figures['qty'], '0', 4) <= 0) {
+                throw ValidationException::withMessages([$field => __('accounts::note.qty_must_be_positive')]);
+            }
+
             if (bccomp($figures['amount'], '0', 4) <= 0) {
                 throw ValidationException::withMessages([$field => __('accounts::note.amount_must_be_positive')]);
             }
@@ -228,6 +233,7 @@ final class NoteLineBuilder
     {
         $pending = (string) (\Illuminate\Support\Facades\DB::table('acc_note_lines as l')
             ->join('acc_notes as n', 'n.id', '=', 'l.note_id')
+            ->where('n.company_id', \App\Core\Support\CompanyContext::id())
             ->where('n.against_type', $target->noteTargetType())
             ->where('n.against_id', (int) $target->getKey())
             ->whereNull('n.deleted_at')

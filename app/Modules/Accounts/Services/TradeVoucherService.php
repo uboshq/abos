@@ -367,6 +367,10 @@ final class TradeVoucherService
             $vatRate = $this->catalog->taxRate($taxId);
             $figures = LineMath::figures($qty, $rate, $amount === null ? null : (string) $amount, $vatRate ?? '0');
 
+            if (bccomp($figures['qty'], '0', 4) <= 0) {
+                throw ValidationException::withMessages([$field => __('accounts::note.qty_must_be_positive')]);
+            }
+
             if (bccomp($figures['amount'], '0', 4) <= 0) {
                 throw ValidationException::withMessages([$field => __('accounts::note.amount_must_be_positive')]);
             }

@@ -112,7 +112,14 @@ class TradeVoucherController extends Controller implements HasMiddleware
         $voucher = $this->vouchers->create($kind, $data);
 
         if ($request->input('submit') === 'send') {
-            $voucher = $this->vouchers->confirm($voucher);
+            $page = ['kind' => $kind, 'voucher' => $voucher->id];
+
+            // ⛔ থামলে খসড়ার পাতায় — ফর্মে ফিরলে আবার চাপায় দ্বিতীয় খসড়া হত ([[NoteController::store()]])
+            try {
+                $voucher = $this->vouchers->confirm($voucher);
+            } catch (\Illuminate\Validation\ValidationException $stopped) {
+                return redirect()->route('accounts.trade_voucher.show', $page)->withErrors($stopped->errors());
+            }
 
             return redirect()->route('accounts.trade_voucher.show', ['kind' => $kind, 'voucher' => $voucher->id])
                 ->with('saved', $voucher->isDraft() ? __('accounts::note.awaiting_signature') : __('accounts::trade.posted'));
@@ -188,7 +195,8 @@ class TradeVoucherController extends Controller implements HasMiddleware
             return [];
         }
 
-        return \Illuminate\Support\Facades\DB::table($table)->whereIn('id', $ids)->pluck('credit_days', 'id')
+        return \Illuminate\Support\Facades\DB::table($table)
+            ->where('company_id', \App\Core\Support\CompanyContext::id())->whereIn('id', $ids)->pluck('credit_days', 'id')
             ->map(fn ($d) => (int) ($d ?? 0))->all();
     }
 

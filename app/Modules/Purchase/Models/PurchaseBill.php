@@ -485,7 +485,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
         // ⭐ পাকা ফেরত + এই বিলের পাকা সরবরাহকারীর ডেবিট নোট (নকশা v5, ২৩ নভেম্বর ২০২৬; [[notedSql()]]-এর একই শর্ত)
         $returns = (string) PurchaseReturn::acrossBranches()->where('purchase_bill_id', $this->id)
             ->whereIn('status', DocumentStatus::POSTED)->sum('total');
-        $noted = (string) DB::table('acc_notes')->where('against_type', static::drillSourceType())->where('against_id', $this->id)
+        $noted = (string) DB::table('acc_notes')->where('company_id', $this->company_id)->where('against_type', static::drillSourceType())->where('against_id', $this->id)
             ->where('direction', 'debit')->whereNull('deleted_at')->whereIn('status', DocumentStatus::POSTED)->sum('total');
 
         return bcadd(bcadd($returns ?: '0', $noted ?: '0', 4), '0', 4);
@@ -720,7 +720,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
      */
     private function noteLayerSources(): array
     {
-        $receiptIds = DB::table('pur_receipt_lines')
+        $receiptIds = PurchaseReceiptLine::query()->withoutGlobalScopes()
             ->whereIn('id', $this->lines()->pluck('purchase_receipt_line_id')->filter()->unique()->values())
             ->pluck('purchase_receipt_id')->unique()->values()->all();
 
@@ -744,7 +744,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
                     $q->orWhere(fn ($s) => $s->where('source_type', $type)->where('source_id', $id));
                 }
             })
-            ->whereNotIn('id', DB::table('inv_cost_layer_uses')
+            ->whereNotIn('id', DB::table('inv_cost_layer_uses')->where('company_id', $this->company_id)
                 ->where(fn ($u) => $u->where('source_type', 'like', '%:revalue')->orWhere('source_type', 'like', '%:cancel'))
                 ->select('cost_layer_id'));
     }
@@ -800,7 +800,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
      * ⭐ ডেবিট নোটের "মাল ফেরত গেছে" সারি — ক্রয় ফেরত (PR), এই বিলে বাঁধা, এখনই পাকা। ⓘ ফেরতই মাল বের করে আর খাতায় তোলে
      * (Dr ২১১১ / Cr ১১২০ · Cr ২১২০) — নোট ঐ সারি আবার তোলে না। নোটের সই এই ফেরতেরও সই।
      */
-    public function noteReturnGoods(array $lines, string $date, string $narration, string $noteNo): array
+    public function noteReturnGoods(array $lines, string $date, string $narration, string $noteNo, bool $approved = false): array
     {
         $service = app(\App\Modules\Purchase\Services\PurchaseReturnService::class);
         $note = trim($noteNo.' — '.$narration, ' —');
@@ -817,7 +817,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
             'purchase_bill_line_id' => (int) $l['line_id'],
         ], $lines));
 
-        $return = $service->confirm($return, approvedUpstream: true);
+        $return = $service->confirm($return, approvedUpstream: $approved);
 
         return [
             'type' => PurchaseReturn::drillSourceType(),
@@ -838,7 +838,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
             return;
         }
 
-        $return = PurchaseReturn::query()->withoutGlobalScopes()->whereKey($id)->first();
+        $return = PurchaseReturn::acrossBranches()->whereKey($id)->first();
 
         if ($return === null || $return->status === DocumentStatus::CANCELLED) {
             return;
@@ -853,7 +853,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
      */
     public static function notedSql(): string
     {
-        return "(SELECT COALESCE(SUM(n.total), 0) FROM acc_notes n WHERE n.against_type = 'purchase_bill' AND n.against_id = pur_bills.id"
+        return "(SELECT COALESCE(SUM(n.total), 0) FROM acc_notes n WHERE n.against_type = 'purchase_bill' AND n.against_id = pur_bills.id AND n.company_id = pur_bills.company_id"
             ." AND n.direction = 'debit' AND n.deleted_at IS NULL AND n.status IN ('".implode("','", DocumentStatus::POSTED)."'))";
     }
 }

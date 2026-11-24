@@ -22,6 +22,14 @@ final class TradeCatalog
     private const PRODUCT_LIMIT = 3000;
 
     /**
+     * ⛔ কেনা দর দেখার চাবি — ক্রয়ের কাগজের পাতা আর ছাপা যে নিয়ম মানে, ক্রয়-দিকের নোট আর ভাউচারও তাই।
+     */
+    public static function seesCost(): bool
+    {
+        return auth()->user()?->can('inventory.cost.view') === true;
+    }
+
+    /**
      * এই কোম্পানির চালু পণ্য।
      *
      * @return list<array{id: int, name: string, unit: string, sale_price: string, purchase_price: string, tax_id: int|null, vat_rate: string}>

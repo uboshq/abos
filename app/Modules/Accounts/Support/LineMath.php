@@ -39,6 +39,7 @@ final class LineMath
     {
         $value = str_replace(',', '', trim((string) ($value ?? '')));
 
-        return bcadd(is_numeric($value) ? $value : '0', '0', 4);
+        // ⛔ `is_numeric` নয় — "1e5" তার কাছে সংখ্যা, অথচ bcadd তাতে ভেঙে পড়ে; পর্দার [[trade-lines.js]] money()-র একই ছাঁদ
+        return bcadd(preg_match('/^[+-]?(\d+\.?\d*|\.\d+)$/', $value) === 1 ? ltrim($value, '+') : '0', '0', 4);
     }
 }

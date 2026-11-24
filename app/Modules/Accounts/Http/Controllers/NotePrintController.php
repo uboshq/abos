@@ -20,6 +20,8 @@ use App\Modules\Accounts\Models\NoteLine;
 use App\Modules\Accounts\Services\NoteAccounts;
 use App\Modules\Accounts\Services\NoteService;
 use App\Modules\Accounts\Support\PaperTaxFacts;
+use App\Modules\Accounts\Support\TradeCatalog;
+use App\Core\Security\FieldSecurity;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -142,6 +144,11 @@ final class NotePrintController extends Controller implements HasMiddleware
         $bill = $note->against_id !== null ? app(NoteService::class)->targetOf($note) : null;
         $billAt = $bill instanceof NoteTargetLines ? $bill->noteTargetIssuedAt() : null;
 
+        // ⛔ সরবরাহকারীর নোটে পণ্যের দর আর তার উপ-যোগ কেনা দর — চাবি না থাকলে ঢাকা; নোটের মোট দেনার অঙ্ক, খোলা
+        $showsPrice = $note->type() !== Note::TYPE_DN || TradeCatalog::seesCost();
+        $sum = fn (\Illuminate\Support\Collection $of, string $field): string => ! $showsPrice && $of->contains(fn (NoteLine $l) => $l->line_type === NoteLine::PRODUCT)
+            ? FieldSecurity::mask() : Money::format(Money::sumOf($of, fn (NoteLine $l) => $l->{$field}));
+
         $grand = $note->grandTotal();
         $returnedTotal = (string) ($note->returned_total ?? '0');
 
@@ -171,12 +178,12 @@ final class NotePrintController extends Controller implements HasMiddleware
             'amount' => Money::format($note->amount),
             'tax' => bccomp((string) $note->tax_amount, '0', 4) > 0 ? Money::format($note->tax_amount) : '',
             'total' => Money::format($note->total),
-            'price_lines' => $price->map(fn (NoteLine $l) => PaperTaxFacts::line($l))->all(),
-            'return_lines' => $returned->map(fn (NoteLine $l) => PaperTaxFacts::line($l))->all(),
-            'price_amount' => Money::format(Money::sumOf($price, fn (NoteLine $l) => $l->amount)),
-            'price_vat' => Money::format(Money::sumOf($price, fn (NoteLine $l) => $l->vat_amount)),
-            'return_amount' => Money::format(Money::sumOf($returned, fn (NoteLine $l) => $l->amount)),
-            'return_vat' => Money::format(Money::sumOf($returned, fn (NoteLine $l) => $l->vat_amount)),
+            'price_lines' => $price->map(fn (NoteLine $l) => PaperTaxFacts::line($l, $showsPrice))->all(),
+            'return_lines' => $returned->map(fn (NoteLine $l) => PaperTaxFacts::line($l, $showsPrice))->all(),
+            'price_amount' => $sum($price, 'amount'),
+            'price_vat' => $sum($price, 'vat_amount'),
+            'return_amount' => $sum($returned, 'amount'),
+            'return_vat' => $sum($returned, 'vat_amount'),
             'returned_total' => bccomp($returnedTotal, '0', 4) > 0 ? Money::format($returnedTotal) : '',
             'grand_total' => Money::format($grand),
             'in_words' => AmountInWords::of($grand, app()->getLocale()),

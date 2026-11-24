@@ -14,6 +14,9 @@
     $dr = array_reduce($postings, fn ($t, $r) => bcadd($t, (string) $r['debit'], 4), '0');
     $cr = array_reduce($postings, fn ($t, $r) => bcadd($t, (string) $r['credit'], 4), '0');
     $days = $voucher->trx_date && $voucher->due_on ? (int) $voucher->trx_date->diffInDays($voucher->due_on) : null;
+    // ⛔ ক্রয় ভাউচারে পণ্যের সারির দর কেনা দর — চাবি না থাকলে ঢাকা; ভাউচারের মোট দেনার অঙ্ক, খোলা
+    $showsPrice = $sale || TradeCatalog::seesCost();
+    $figure = fn ($line, $value) => $showsPrice || $line->line_type !== 'product' ? Money::format($value) : \App\Core\Security\FieldSecurity::mask();
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -150,11 +153,11 @@
                                         <td>{{ $line->description ?: '—' }}</td>
                                         <td class="num tv-r">{{ TradeCatalog::rate((string) $line->qty) }}</td>
                                         <td>{{ $line->unit ?: '—' }}</td>
-                                        <td class="num tv-r">{{ Money::format($line->rate) }}</td>
-                                        <td class="num tv-r">{{ Money::format($line->amount) }}</td>
+                                        <td class="num tv-r">{{ $figure($line, $line->rate) }}</td>
+                                        <td class="num tv-r">{{ $figure($line, $line->amount) }}</td>
                                         <td class="num tv-r">{{ bccomp((string) $line->vat_rate, '0', 4) > 0 ? TradeCatalog::rate((string) $line->vat_rate).'%' : __('accounts::trade_form.vat_none') }}</td>
-                                        <td class="num tv-r">{{ Money::format($line->vat_amount) }}</td>
-                                        <td class="num tv-r tv-strong">{{ Money::format($line->total) }}</td>
+                                        <td class="num tv-r">{{ $figure($line, $line->vat_amount) }}</td>
+                                        <td class="num tv-r tv-strong">{{ $figure($line, $line->total) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
