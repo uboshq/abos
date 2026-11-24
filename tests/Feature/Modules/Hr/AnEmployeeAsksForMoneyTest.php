@@ -190,6 +190,21 @@ final class AnEmployeeAsksForMoneyTest extends TestCase
         $this->assertSame(0, ExpenseClaim::query()->count());
     }
 
+    /** ⛔ তালিকার মোটে কেবল অনুমোদিত আর দেওয়া দাবি — অপেক্ষার বা প্রত্যাখ্যাত অঙ্ক নয় (মালিক, ২৪ অক্টোবর ২০২৬) */
+    public function test_the_list_total_counts_only_approved_and_paid_claims(): void
+    {
+        foreach ([ExpenseClaim::SUBMITTED => '1000', ExpenseClaim::REJECTED => '2000', ExpenseClaim::APPROVED => '300', ExpenseClaim::PAID => '40'] as $state => $amount) {
+            ExpenseClaim::query()->whereKey($this->submit(ExpenseClaim::EXPENSE, $amount)->id)->update(['status' => $state]);
+        }
+
+        $total = fn (array $query = []): string => (string) collect($this->actingAs($this->worker)
+            ->get(route('hr.claim.index', $query))->assertOk()->viewData('grand'))->get('amount');
+
+        $this->assertMoney('340', $total(), '⛔ মোটে অচূড়ান্ত দাবি');
+        $this->assertMoney('0', $total(['status' => ExpenseClaim::SUBMITTED]), '⛔ ছাঁকা তালিকায় অপেক্ষার অঙ্ক মোটে');
+        $this->assertMoney('40', $total(['status' => ExpenseClaim::PAID]), '⛔ দেওয়া দাবি মোটে নেই');
+    }
+
     public function test_the_pages_the_phone_and_the_doors(): void
     {
         $this->actingAs($this->worker);

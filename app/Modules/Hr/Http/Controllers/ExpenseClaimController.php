@@ -63,7 +63,8 @@ class ExpenseClaimController extends Controller implements HasMiddleware
         return view('hr::claim.index', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $all ? 'all' : 'mine',
-            'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
+            // ⛔ মোট কেবল অনুমোদিত বা দেওয়া দাবির — অপেক্ষার বা প্রত্যাখ্যাত নয় (মালিক, ২৪ অক্টোবর ২০২৬)
+            'grand' => $this->grandTotals($query, ['amount' => "CASE WHEN t.status IN ('".ExpenseClaim::APPROVED."', '".ExpenseClaim::PAID."') THEN t.amount ELSE 0 END"]),
             'claims' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'openAdvance' => $employee === null ? null : $this->claims->openAdvance($employee),
         ]);
