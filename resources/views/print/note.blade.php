@@ -15,8 +15,10 @@
 --}}
 
 @section('body')
-    @php($thermal = $paper->isThermal)
-    @php($taxed = ($note['has_lines'] ?? false) === true)
+    @php
+        $thermal = $paper->isThermal;
+        $taxed = ($note['has_lines'] ?? false) === true;
+    @endphp
 
     <div style="text-align: center; font-weight: bold; font-size: {{ $thermal ? 11 : 14 }}pt; margin-bottom: {{ $taxed ? 0 : 2 }}mm;" data-note-direction>
         {{ $note['direction'] }}
