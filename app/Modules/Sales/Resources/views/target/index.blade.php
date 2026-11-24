@@ -54,7 +54,7 @@
 
 @php
     // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে; মাস ছাঁকনির প্যানেলে, সংরক্ষণ বারে (মালিক, ২৪ নভেম্বর ২০২৬)
-    // ⛔ খোঁজার ঘর নেই: টাইপের সাথে পাতা আবার আসে, আর বসানো-কিন্তু-না-রাখা লক্ষ্য হারাত
+    // ⓘ খোঁজা কেবল সারি লুকায়, পাতা আবার খোলে না, লুকানো সারিও জমা হয় — বসানো লক্ষ্য হারায় না ([[day-sheet.js]])
     $abosHead = \App\Core\Support\AbosHead::on();
     $facetPanel = \App\Core\ListFilter\Facets::panel($abosHead ? [\App\Core\ListFilter\Facets::month('month', __('sales::target.month'), $month->format('Y-m'))] : []);
 @endphp
@@ -95,10 +95,16 @@
         </div>
     @endif
 
+    <div @if ($abosHead) x-data="daySheet" data-sheet-form="target-form" data-sheet-rows="amount[" @endif>
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     @if ($abosHead)
         <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::target.title')" :info="__('sales::target.subtitle').' '.__('sales::target.empty_means_none')" :search="false" :export="false" :print="false" :share="false" :refresh="false" :facets="$facetPanel">
+                <x-slot:find>
+                    <input type="search" x-model="term" x-on:input="narrow()" x-on:keydown.enter.prevent="narrow()" autocomplete="off"
+                           placeholder="{{ __('sales::target.who') }}" aria-label="{{ __('sales::target.who') }}" data-target-find
+                           class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                </x-slot:find>
                 @if ($canManage && count($rows) > 0)
                     <x-slot:actions>
                         <x-ui.button type="submit" form="target-form" tone="primary">{{ __('core.action.save') }}</x-ui.button>
@@ -107,7 +113,7 @@
             </x-ui.toolbar>
         </form>
     @endif
-    <form id="target-form" method="POST" action="{{ route('sales.target.store') }}">
+    <form id="target-form" @if ($abosHead) x-on:submit="saved()" @endif method="POST" action="{{ route('sales.target.store') }}">
         @csrf
         <input type="hidden" name="month" value="{{ $month->toDateString() }}">
 
@@ -122,6 +128,7 @@
             }
         @endphp
         <x-ui.table :rows="$rows"
+                    :row-attributes="$abosHead ? fn ($r) => ['data-day-row' => '', 'data-find' => $r['user']->name] : null"
                     :columns="$columns"
                     :grand="$rows === [] ? [] : $grand"
                     :empty="__('sales::target.nobody_sells')" />
@@ -132,10 +139,13 @@
                 <p class="mt-2 text-xs text-(--color-ink-muted)">{{ __('sales::target.empty_means_none') }}</p>
             @endunless
 
+            @unless ($abosHead)
             <div class="mt-3">
                 <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
             </div>
+            @endunless
         @endif
     </form>
     </x-ui.filter-layout>
+    </div>
 </x-layouts.app>

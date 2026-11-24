@@ -15,7 +15,7 @@
 
 @php
     // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে; মাস ছাঁকনির প্যানেলে, সংরক্ষণ বারে (মালিক, ২৪ নভেম্বর ২০২৬)
-    // ⛔ খোঁজার ঘর নেই: টাইপের সাথে পাতা আবার আসে, আর বসানো-কিন্তু-না-রাখা লক্ষ্য হারাত
+    // ⓘ খোঁজা কেবল সারি লুকায়, পাতা আবার খোলে না, লুকানো সারিও জমা হয় — বসানো লক্ষ্য হারায় না ([[day-sheet.js]])
     $abosHead = \App\Core\Support\AbosHead::on();
     $facetPanel = \App\Core\ListFilter\Facets::panel($abosHead ? [\App\Core\ListFilter\Facets::month('month', __('sales::product_target.month'), $month->format('Y-m'))] : []);
 @endphp
@@ -50,10 +50,16 @@
         </div>
     @endif
 
+    <div @if ($abosHead) x-data="daySheet" data-sheet-form="target-form" data-sheet-rows="target[" @endif>
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     @if ($abosHead)
         <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::product_target.title')" :search="false" :export="false" :print="false" :share="false" :refresh="false" :facets="$facetPanel">
+                <x-slot:find>
+                    <input type="search" x-model="term" x-on:input="narrow()" x-on:keydown.enter.prevent="narrow()" autocomplete="off"
+                           placeholder="{{ __('sales::product_target.product') }}" aria-label="{{ __('sales::product_target.product') }}" data-target-find
+                           class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                </x-slot:find>
                 @if ($canManage && count($rows) > 0)
                     <x-slot:actions>
                         <x-ui.button type="submit" form="target-form" tone="primary">{{ __('core.action.save') }}</x-ui.button>
@@ -62,7 +68,7 @@
             </x-ui.toolbar>
         </form>
     @endif
-    <form id="target-form" method="POST" action="{{ route('sales.product_target.store') }}">
+    <form id="target-form" @if ($abosHead) x-on:submit="saved()" @endif method="POST" action="{{ route('sales.product_target.store') }}">
         @csrf
         <input type="hidden" name="month" value="{{ $month->toDateString() }}">
 
@@ -87,7 +93,7 @@
                             $amountRate = $rate($row['sold_amount'], $row['amount']);
                             $shown = fn (?string $v) => $v !== null && bccomp($v, '0', 4) !== 0 ? rtrim(rtrim($v, '0'), '.') : '';
                         @endphp
-                        <tr class="border-b border-(--color-border)" data-target-row="{{ $p->code }}">
+                        <tr class="border-b border-(--color-border)" data-target-row="{{ $p->code }}" @if ($abosHead) data-day-row data-find="{{ $p->code.' '.$p->name_en.' '.$p->name_bn }}" @endif>
                             <td>{{ $p->code }} · {{ $p->name() }}</td>
                             <td class="text-end">
                                 @if ($canManage)
@@ -145,10 +151,13 @@
         </div>
 
         @if ($canManage && $rows !== [])
+            @unless ($abosHead)
             <div class="mt-3">
                 <x-ui.button type="submit" tone="primary">{{ __('core.action.save') }}</x-ui.button>
             </div>
+            @endunless
         @endif
     </form>
     </x-ui.filter-layout>
+    </div>
 </x-layouts.app>
