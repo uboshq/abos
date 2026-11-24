@@ -126,7 +126,9 @@ final class TheAccountsBoardReadsTheBooksTest extends TestCase
         $sorted = $at;
         asort($sorted);
         $this->assertSame($marks, array_keys($sorted), '⛔ ঘরগুলো নমুনার ক্রমে নেই।');
-        $this->assertStringNotContainsString('data-stat-grid', $html, '⛔ পুরনো সংখ্যার কার্ড এখনো পাতায়।');
+        // ⓘ গ্রাফ যা দেখায় না সেই সংখ্যা ফিরেছে (২৩ নভেম্বর ২০২৬: "কিছু হারাবে না") — কিন্তু গ্রাফের নিচে, পাতার মাথায় নয়
+        $cards = strpos($html, 'data-stat-grid');
+        $this->assertTrue($cards === false || $cards > $at['data-viz-board'], '⛔ সংখ্যার কার্ড গ্রাফের উপরে।');
     }
 
     /** @param  list<array{0: int, 1: ?string, 2: ?string}>  $lines */

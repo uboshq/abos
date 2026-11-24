@@ -57,8 +57,9 @@ final class TheBoardsShowedProfitAndCostWithoutTheKeyTest extends TestCase
 
         $this->grant(['accounts.report.final']);
 
+        // ⓘ নিট লাভ এখন কেবল প্রথম গ্রাফে, এক নজরের সারিতে নয় (ড্যাশবোর্ড যাচাই, ২৩ নভেম্বর ২০২৬: "দুইবার নয়")
         $html = $this->board('accounts');
-        foreach (['data-acc-board-statements', 'data-acc-balance-sheet', 'data-acc-tree', 'data-acc-board-trends', 'data-glance="profit"'] as $mark) {
+        foreach (['data-acc-board-statements', 'data-acc-balance-sheet', 'data-acc-tree', 'data-acc-board-trends'] as $mark) {
             $this->assertStringContainsString($mark, $html, "⛔ চাবি থাকতেও {$mark} এল না — যার চাবি আছে সে-ও হারাল।");
         }
     }

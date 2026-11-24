@@ -48,6 +48,8 @@ class TheDateColumnsKeepTheirIndexTest extends TestCase
 
     public function test_the_voucher_list_filters_by_day_without_wrapping_the_column(): void
     {
+        // ⓘ মাঝখানের পপআপ নিজের অঙ্ক পড়ে (পাঁচ মিনিটে একবার, [[shell.day-check]]) — এই দাবি কেবল পাতার নিজের পড়া গোনে
+        $this->withSession(['daycheck.snooze_until' => now()->addHour()->getTimestamp()]);
         $this->assertKeepsIndex('trx_date', fn () => $this->get(route('accounts.voucher.index', [
             'type' => Voucher::JOURNAL,
             'from' => now()->subMonth()->toDateString(),
