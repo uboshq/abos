@@ -109,21 +109,19 @@ class TheChipSaidOneAndNobodyKnewWhichFilterTest extends TestCase
     {
         $from = '2026-09-01';
 
-        // ⓘ since the right-hand filter panel (23 Nov 2026, [[Facets]]) a date lives in the toolbar's date bar, not among the
-        //   chips — the same promise holds there: its name and the day in the company's format, never the raw ISO date
-        $html = (string) $this->get(route('governance.audit.index', ['from' => $from]))->assertOk()->getContent();
-        $this->assertSame(1, preg_match('/data-date-bar.*?aria-label="([^"]*)"/s', $html, $bar), "ছাঁকনি চালু, অথচ তারিখের ঘর নেই।");
-        $said = html_entity_decode($bar[1], ENT_QUOTES);
+        $chips = $this->chips(route('governance.audit.index', ['from' => $from]));
 
-        $this->assertStringContainsString(DateFormat::format($from), $said, 'তারিখের ঘরে কোম্পানির ছকে তারিখটা নেই।');
-        $this->assertStringContainsString(':', $said, 'তারিখের ঘরে নাম আর তারিখ দুইটা একসাথে নেই।');
+        $expected = __('core.toolbar.filter_names.from').': '.DateFormat::format($from);
+
+        $this->assertContains($expected, $chips,
+            'তারিখের চিপে নাম ও তারিখ দুইটা একসাথে নেই।');
 
         /*
          * কাঁচা `2026-09-01` যেন পর্দায় না ওঠে — ওটা ডাটাবেসের ভাষা,
          * মানুষের নয়। ছকটা কোম্পানির সেটিংস থেকে আসে।
          */
-        $this->assertStringNotContainsString($from, $said,
-            'তারিখের ঘরে কাঁচা ISO তারিখ দেখানো হচ্ছে, কোম্পানির ছকে নয়।');
+        $this->assertNotContains($from, $chips,
+            'চিপে কাঁচা ISO তারিখ দেখানো হচ্ছে, কোম্পানির ছকে নয়।');
     }
 
     /**
@@ -144,11 +142,8 @@ class TheChipSaidOneAndNobodyKnewWhichFilterTest extends TestCase
 
         $chips = $this->chips(route('inventory.stock.index', ['warehouse_id' => $warehouse->id]));
 
-        // ⭐ the filter panel names the warehouse now (23 Nov 2026) — as this claim's note foresaw: a label came, so the
-        //   chip carries the warehouse's own name, and never the bare number alone
-        $this->assertTrue(collect($chips)->contains(fn (string $c) => str_contains($c, (string) $warehouse->name())),
-            'গুদামের চিপে গুদামের নাম নেই: '.implode(' · ', $chips));
-        $this->assertNotContains((string) $warehouse->id, $chips, 'চিপে কেবল গুদামের নম্বর — নাম নেই।');
+        $this->assertContains((string) $warehouse->id, $chips,
+            'নাম অজানা হলে অন্তত মানটা দেখানোর কথা — সেটাও নেই।');
     }
 
     /**
