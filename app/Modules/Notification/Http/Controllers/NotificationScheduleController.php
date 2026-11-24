@@ -33,11 +33,12 @@ class NotificationScheduleController extends Controller
     public function index(Request $request): View
     {
         $f = $request->validate([
-            'state' => ['nullable', \Illuminate\Validation\Rule::in(['active', 'inactive'])],
+            'q' => ['nullable', 'string', 'max:120'], 'state' => ['nullable', \Illuminate\Validation\Rule::in(['active', 'inactive'])],
             'recurrence' => ['nullable', \Illuminate\Validation\Rule::in(NotificationSchedule::RECURRENCES)],
         ]);
 
         $rows = NotificationSchedule::query()->with(['template', 'group'])
+            ->when($f['q'] ?? null, fn ($q, $s) => $q->where('name', 'like', '%'.addcslashes($s, '%_\\').'%'))
             ->when($f['state'] ?? null, fn ($q, $s) => $q->where('is_active', $s === 'active'))
             ->when($f['recurrence'] ?? null, fn ($q, $r) => $q->where('recurrence', $r))
             ->orderByDesc('is_active')->orderBy('next_run_at')
