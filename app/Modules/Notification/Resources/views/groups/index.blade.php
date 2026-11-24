@@ -2,6 +2,11 @@
 @php
     // ⓘ ব্যাখ্যা নামের পাশে ⓘ-এ, "নতুন" মাথার সারিতে — কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $abosHead = \App\Core\Support\AbosHead::on();
+    $columns = [
+        ['key' => 'name', 'label' => __('notification::group.name'), 'render' => fn ($r) => new \Illuminate\Support\HtmlString('<a href="'.e(route('notification.groups.edit', $r)).'" class="hover:underline">'.e($r->name).'</a>')],
+        ...array_map(fn ($kind) => ['key' => 'kind_'.$kind, 'label' => __('notification::rule.kinds.'.$kind), 'numeric' => true, 'render' => fn ($r) => (string) count($r->ids($kind))], \App\Models\NotificationRecipientGroup::KINDS),
+        ['key' => 'state', 'label' => __('notification::rule.state'), 'render' => fn ($r) => __('notification::rule.states.'.($r->is_active ? 'active' : 'inactive'))],
+    ];
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $facetPanel = \App\Core\ListFilter\Facets::panel([
@@ -15,7 +20,7 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::group.title')" :info="__('notification::group.note')" :search-placeholder="__('notification::group.name')" :export="false" :share="false" :facets="$facetPanel">
+        <x-ui.toolbar :title="__('notification::group.title')" :info="__('notification::group.note')" :search-placeholder="__('notification::group.name')" :export="$abosHead" :share="false" :columns="$abosHead ? $columns : []" :facets="$facetPanel">
             @if ($abosHead)
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('notification.groups.create')">{{ __('notification::group.new') }}</x-ui.button>
@@ -42,6 +47,9 @@
                 <p class="text-sm text-(--color-ink-muted)">{{ __('notification::group.empty') }}</p>
             @endif
         @else
+            @if ($abosHead)
+            <x-ui.table :rows="$rows" :columns="$columns" :row-attributes="fn ($r) => ['data-group' => $r->id]" />
+            @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">
                     <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
@@ -66,6 +74,7 @@
                     </tbody>
                 </table>
             </div>
+            @endif
         @endif
         </div>
 
