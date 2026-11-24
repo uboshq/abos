@@ -39,6 +39,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // ⭐ অনুমতি-তালিকা — একই উত্তর, সস্তায় পড়া; spatie-র নিজের বাঁধনের পরে বসে ([[CheapPermissionRegistrar]])
+        $this->app->singleton(\Spatie\Permission\PermissionRegistrar::class, \App\Core\Security\CheapPermissionRegistrar::class);
+
         /*
          * ── কেন `register()`-এ, `boot()`-এ নয় ───────────────────────
          * প্রথমে এটা `boot()`-এ বসানো ছিল, আর **কেড়ে নেওয়াটা কাজ
