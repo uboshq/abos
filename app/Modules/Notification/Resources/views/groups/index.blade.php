@@ -34,9 +34,13 @@
         @include('notification::partials.flash')
 
         {{-- ⓘ ABOS রূপে তালিকার সাদা কার্ড, বাকি তালিকার মতো --}}
-        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead, 'p-3' => $abosHead && $rows->isEmpty()]) @if ($abosHead) data-boxed @endif>
+        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead]) @if ($abosHead) data-boxed @endif>
         @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::group.empty') }}</p>
+            @if ($abosHead)
+                <x-ui.empty-state :message="__('notification::group.empty')" />
+            @else
+                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::group.empty') }}</p>
+            @endif
         @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">
