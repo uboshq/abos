@@ -22,9 +22,9 @@
     <x-slot:title>{{ __('notification::template.title') }}</x-slot:title>
 
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
-    <div class="space-y-4">
+    <div @class(['space-y-4' => ! $abosHead, 'overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead]) @if ($abosHead) data-boxed @endif>
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::template.title')" :info="__('notification::template.note')" :search-placeholder="__('notification::template.search')" :export="$abosHead" :share="false" :columns="$abosHead ? $columns : []" :facets="$facetPanel">
+        <x-ui.toolbar :title="__('notification::template.title')" :info="__('notification::template.note')" :search-placeholder="__('notification::template.search')" :export="$abosHead" :share="false" :sort="$abosHead ? ['name' => __('notification::template.name'), 'code' => __('notification::template.code')] : []" :columns="$abosHead ? $columns : []" :facets="$facetPanel">
             @if ($abosHead)
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('notification.templates.create')">{{ __('notification::template.new') }}</x-ui.button>
@@ -40,10 +40,13 @@
             </div>
         @endunless
 
-        @include('notification::partials.flash')
+        @if ($abosHead && (session('saved') || session('failed') || $errors->any()))
+            <div class="px-3 pt-2">@include('notification::partials.flash')</div>
+        @elseif (! $abosHead)
+            @include('notification::partials.flash')
+        @endif
 
-        {{-- ⓘ ABOS রূপে তালিকার সাদা কার্ড, বাকি তালিকার মতো --}}
-        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead]) @if ($abosHead) data-boxed @endif>
+        <div>
         @if ($rows->isEmpty())
             @if ($abosHead)
                 <x-ui.empty-state :message="__('notification::template.empty')" />

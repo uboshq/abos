@@ -48,6 +48,7 @@ class NotificationRuleController extends Controller
             ->when(($f['state'] ?? null) === 'active', fn ($q) => $q->where('is_active', true))
             ->when(($f['state'] ?? null) === 'inactive', fn ($q) => $q->where('is_active', false))
             ->when($f['q'] ?? null, fn ($q, $s) => $q->where('name', 'like', '%'.addcslashes($s, '%_\\').'%'))
+            ->when($request->query('sort') === 'name', fn ($q) => $q->orderBy('name'))
             ->orderBy('module')->orderBy('event')->orderBy('id')
             ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 

@@ -32,6 +32,7 @@ class NotificationGroupController extends Controller
         $rows = NotificationRecipientGroup::query()
             ->when($f['q'] ?? null, fn ($q, $s) => $q->where('name', 'like', '%'.addcslashes($s, '%_\\').'%'))
             ->when($f['state'] ?? null, fn ($q, $s) => $q->where('is_active', $s === 'active'))
+            ->when(in_array($request->query('sort'), ['newest', 'oldest'], true), fn ($q) => $q->orderBy('id', $request->query('sort') === 'oldest' ? 'asc' : 'desc'))
             ->orderBy('name')->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         return view('notification::groups.index', [

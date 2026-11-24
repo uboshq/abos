@@ -41,6 +41,7 @@ class NotificationScheduleController extends Controller
             ->when($f['q'] ?? null, fn ($q, $s) => $q->where('name', 'like', '%'.addcslashes($s, '%_\\').'%'))
             ->when($f['state'] ?? null, fn ($q, $s) => $q->where('is_active', $s === 'active'))
             ->when($f['recurrence'] ?? null, fn ($q, $r) => $q->where('recurrence', $r))
+            ->when($request->query('sort') === 'name', fn ($q) => $q->orderBy('name'))
             ->orderByDesc('is_active')->orderBy('next_run_at')
             ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 

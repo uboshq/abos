@@ -51,7 +51,7 @@ class NotificationTemplateController extends Controller
             ->when($f['category'] ?? null, fn ($q, $c) => $q->where('category', $c))
             ->when($f['q'] ?? null, fn ($q, $s) => $q->where(fn ($w) => $w->where('name', 'like', '%'.addcslashes($s, '%_\\').'%')
                 ->orWhere('code', 'like', '%'.addcslashes($s, '%_\\').'%')))
-            ->orderBy('name')
+            ->orderBy($request->query('sort') === 'code' ? 'code' : 'name')
             ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         return view('notification::templates.index', [

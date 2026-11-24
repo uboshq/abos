@@ -24,6 +24,8 @@
     <x-ui.filter-layout :filters="$abosHead ? $facetPanel : \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div class="space-y-4">
         @if ($abosHead)
+        {{-- ⓘ ট্যাব বারের আগে — মাথার সারিতে নামের পাশে ওঠে ([[abos-list-head]]) --}}
+        <x-ui.list-tabs :label="__('notification::party.tabs_label')" :tabs="$tabs" />
         <form id="list-form" method="GET" action="{{ route('notification.party_templates.index') }}" class="contents">
             @if ($tab !== 'all')
                 <input type="hidden" name="tab" value="{{ $tab }}">
@@ -47,7 +49,9 @@
         </x-ui.page-header>
         @endif
 
-        <x-ui.list-tabs :label="__('notification::party.tabs_label')" :tabs="$tabs" />
+        @unless ($abosHead)
+            <x-ui.list-tabs :label="__('notification::party.tabs_label')" :tabs="$tabs" />
+        @endunless
 
         @include('notification::partials.flash')
 
