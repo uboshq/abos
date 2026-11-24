@@ -236,8 +236,7 @@
             {{-- ⭐ খরচ % — আড়াআড়ি দণ্ড, দাগে সীমা, সীমার উপরে কমলা; প্রতিটা দণ্ডের পাশে সংখ্যা (রং একা কিছু বলে না) --}}
             <section data-boxed data-cost-chart
                      class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                <h2 class="font-semibold">{{ $chartTitle }}</h2>
-                <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('purchase::cost_report.chart_note', ['n' => $thresholdText]) }}</p>
+                <h2 class="mb-2 font-semibold" title="{{ __('purchase::cost_report.chart_note', ['n' => $thresholdText]) }}">{{ $chartTitle }}</h2>
 
                 @forelse ($bars as $bar)
                     @php
