@@ -46,8 +46,9 @@
             ->all();
     }
 
+    /* ⭐ রেলের একই ক্রম, এই মানুষের — উৎস একটাই ([[MenuBuilder::arranged()]]); আগে রেল সাজানো ছিল, লঞ্চার নয় (২৪ নভেম্বর ২০২৬) */
     $tiles = [];
-    foreach ($menu as $module) {
+    foreach (app(\App\Core\Services\MenuBuilder::class)->arranged($menu, $user) as $module) {
         $first = collect($module['groups'])->flatten(1)->firstWhere('url', '!==', null);
 
         if ($first === null) {
