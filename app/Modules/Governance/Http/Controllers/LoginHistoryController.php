@@ -95,7 +95,16 @@ class LoginHistoryController extends Controller implements HasMiddleware
                 fn (Builder $q, string $d) => $q->whereDate('created_at', '>=', $d))
             ->when($this->readDate($request->query('to')),
                 fn (Builder $q, string $d) => $q->whereDate('created_at', '<=', $d))
-            ->latestFirst()
+            /* ⓘ খোঁজা উপরের কোম্পানির ছাঁকনির ভিতরেই (একটা বন্ধনীতে, নাহলে orWhere দেয়াল ভাঙত): যে নামে ঢোকার চেষ্টা, IP, বা মানুষের নাম */
+            ->when($request->string('q')->trim()->value(), function (Builder $q, string $term): void {
+                $like = '%'.addcslashes($term, '%_\\').'%';
+                $q->where(fn (Builder $w) => $w->where('identifier', 'like', $like)
+                    ->orWhere('ip_address', 'like', $like)
+                    ->orWhereIn('user_id', User::query()
+                        ->whereHas('companies', fn ($c) => $c->whereKey(CompanyContext::id()))
+                        ->where('name', 'like', $like)->select('users.id')));
+            })
+            ->when($request->query('sort') === 'oldest', fn (Builder $q) => $q->orderBy('created_at')->orderBy('id'), fn (Builder $q) => $q->latestFirst())
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
