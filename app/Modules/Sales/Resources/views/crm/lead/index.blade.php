@@ -34,9 +34,11 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::crm.leads') }}</x-slot:title>
 
+    @unless (\App\Core\Support\AbosHead::on())
     <x-slot:header>
         <x-ui.page-header :title="__('sales::crm.leads')" :subtitle="__('sales::crm.leads_note')" />
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -52,7 +54,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :title="__('sales::crm.leads')"
+            <x-ui.toolbar :title="__('sales::crm.leads')" :info="\App\Core\Support\AbosHead::on() ? __('sales::crm.leads_note') : null"
                           :columns="$columns"
                           :search-placeholder="__('sales::crm.lead_search')"
                           :export="false" :share="false" :print="false" :facets="$facetPanel">

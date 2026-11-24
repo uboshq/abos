@@ -48,10 +48,12 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::menu.schemes') }}</x-slot:title>
 
+    @unless (\App\Core\Support\AbosHead::on())
     <x-slot:header>
         <x-ui.page-header :title="__('sales::menu.schemes')"
                           :subtitle="__('sales::message.scheme_note')" />
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -77,7 +79,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :title="__('sales::menu.schemes')"
+            <x-ui.toolbar :title="__('sales::menu.schemes')" :info="\App\Core\Support\AbosHead::on() ? __('sales::message.scheme_note') : null"
                           :columns="$columns"
                           :search-placeholder="__('sales::field.scheme_search')"
                           :sort="$sortOptions" :facets="$facetPanel">

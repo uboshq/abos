@@ -46,7 +46,11 @@ final class PriceBookController extends Controller implements HasMiddleware
     {
         $target = $this->target($request->query('target'));
         $q = $request->string('q')->toString();
-        $lists = $this->book->lists($target, $q);
+        $lists = $this->book->lists($target, $q, match ($request->query('status')) {
+            'active' => true,
+            'inactive' => false,
+            default => null,
+        });
 
         return view('sales::price_book.index', [
             'menu' => $this->menu->forUser($request->user()),

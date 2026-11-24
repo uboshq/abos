@@ -180,8 +180,12 @@ class SalesQuotationController extends Controller implements HasMiddleware
      */
     public function revisions(Request $request): View
     {
+        $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
+
         $roots = SalesQuotation::query()
             ->whereNull('root_quotation_id')
+            ->when($f['from'] ?? null, fn ($w, $d) => $w->whereDate('trx_date', '>=', $d))
+            ->when($f['to'] ?? null, fn ($w, $d) => $w->whereDate('trx_date', '<=', $d))
             ->whereIn('id', SalesQuotation::query()->whereNotNull('root_quotation_id')->select('root_quotation_id'))
             ->search($request->query('q'))
             ->with(['customer.location.parent', 'customer.branch'])
