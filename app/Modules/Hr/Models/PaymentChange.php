@@ -7,6 +7,8 @@ namespace App\Modules\Hr\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
+use App\Core\Contracts\ShownInOwnerSelfReport;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,11 +22,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property array<string, mixed> $proposed
  * @property array<string, mixed>|null $previous
  */
-class PaymentChange extends Model
+class PaymentChange extends Model implements ShownInOwnerSelfReport
 {
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    use SharedAcrossCompaniesWhenAsked;
 
     public const PENDING = 'pending';
 
@@ -62,6 +65,12 @@ class PaymentChange extends Model
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    /** ⓘ মালিকের নিজে-অনুমোদিত কাগজের রিপোর্টে — লিংক কর্মীর পাতায় */
+    public static function ownerSelfSource(): array
+    {
+        return [Employee::drillSourceType(), 'employee_id'];
     }
 
     public function decider(): BelongsTo

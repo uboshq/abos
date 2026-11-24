@@ -86,7 +86,7 @@ final class ThePayrollSignatureShowsNoNetWithoutTheKeyTest extends TestCase
 
     public function test_the_net_is_never_stored_in_the_clear_and_reaches_no_door_without_the_key(): void
     {
-        $blind = $this->staff('approval.decide', 'approval.report', 'governance.export.view');
+        $blind = $this->staff('approval.decide', 'approval.report', 'governance.export.view', 'system_admin.list.export');
         $sighted = $this->staff('approval.decide', 'hr.payroll.view', 'hr.salary.view');
         $this->flow($blind, $sighted);
 

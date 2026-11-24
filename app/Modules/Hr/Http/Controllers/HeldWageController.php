@@ -89,7 +89,7 @@ class HeldWageController extends Controller implements HasMiddleware
         return redirect()->to(route('hr.payroll.held.index').'#bank-awaiting')->with('saved', __('hr::payroll.bank_unpaid_asked_ok'));
     }
 
-    /** ⭐ দ্বিতীয় সই — যিনি চাইলেন তিনি নন, মালিকও নন; ইনবক্সের একই ইঞ্জিন */
+    /** ⭐ দ্বিতীয় সই — যিনি চাইলেন তিনি নন, মালিক ছাড়া; ইনবক্সের একই ইঞ্জিন */
     public function signBankUnpaid(Request $request, BankUnpaidLine $line): RedirectResponse
     {
         abort_unless(app(BranchReach::class)->reaches($request->user(), $line->employee), 404);

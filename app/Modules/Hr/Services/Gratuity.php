@@ -151,14 +151,15 @@ final class Gratuity
             // ⛔ তালা — দুইজন একসাথে চাপলে একই মাস দুইবার বসত
             Company::query()->whereKey(CompanyContext::id())->lockForUpdate()->first();
 
-            if (GratuityProvision::query()->whereDate('month', $monthStart->toDateString())->exists()) {
+            // ⛔ খাতা কোম্পানির — কর্মী-খাতা এক হলেও ([[SharedAcrossCompaniesWhenAsked]]) সঞ্চিতি, কর্মী আর মেটানো অঙ্ক কেবল এই কোম্পানির
+            if (GratuityProvision::query()->where('company_id', CompanyContext::id())->whereDate('month', $monthStart->toDateString())->exists()) {
                 return [];
             }
 
             $head = Company::query()->find(CompanyContext::id())?->defaultBranch()?->id;
             $byBranch = [];
 
-            foreach (Employee::query()->withTrashed()->whereNotNull('joining_date')->get() as $employee) {
+            foreach (Employee::query()->withTrashed()->where('company_id', CompanyContext::id())->whereNotNull('joining_date')->get() as $employee) {
                 $branch = $employee->branch_id === null ? $head : (int) $employee->branch_id;
                 $key = (string) $branch;
                 $row = $employee->trashed() ? ['obligation' => '0.00'] : $this->obligation($employee, $monthEnd);
@@ -168,7 +169,7 @@ final class Gratuity
             }
 
             // ⓘ আগে যে শাখায় সঞ্চিতি ছিল অথচ আজ কেউ নেই — সেটাও শূন্যে মেলাতে হয়
-            foreach (GratuityProvision::query()->select('branch_id')->distinct()->pluck('branch_id') as $branch) {
+            foreach (GratuityProvision::query()->where('company_id', CompanyContext::id())->select('branch_id')->distinct()->pluck('branch_id') as $branch) {
                 $byBranch[(string) $branch] ??= ['branch' => $branch === null ? null : (int) $branch, 'obligation' => '0', 'count' => 0];
             }
 
@@ -179,7 +180,7 @@ final class Gratuity
                  * ⓘ এ পর্যন্ত বসা = সঞ্চিতির যোগ − চূড়ান্ত পাওনায় মেটানো গ্র্যাচুইটি ([[FinalSettlements]] Dr 2134)।
                  * ⛔ বাদ না দিলে চলে যাওয়া কর্মীর দায় পরের মাসে আবার "ছাড়া" হত — Dr 2134 / Cr 5227, অথচ 2134 আগেই নেমেছে।
                  */
-                $booked = bcsub((string) GratuityProvision::query()
+                $booked = bcsub((string) GratuityProvision::query()->where('company_id', CompanyContext::id())
                     ->when($group['branch'] === null, fn ($q) => $q->whereNull('branch_id'), fn ($q) => $q->where('branch_id', $group['branch']))
                     ->sum('amount'), FinalSettlements::gratuitySettled($group['branch']), 4);
                 $amount = bcsub($group['obligation'], bcadd($booked, '0', 4), 4);

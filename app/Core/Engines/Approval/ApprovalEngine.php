@@ -1071,7 +1071,11 @@ final class ApprovalEngine
                  * কাগজটা আসতই না। ⓘ যাঁর হয়ে, তিনি এই স্তরে আগেই সিদ্ধান্ত দিলে নয় — [[notYetSignedAtLevel()]]-এর একই নিয়ম।
                  */
                 foreach ($standIn as [$module, $action, $type, $levels, $from]) {
+                    $twoHanded = $this->twoHands((string) $module, (string) $action);
+
                     $outer->orWhere(fn (Builder $one) => $one
+                        // ⓘ দুই হাতের কাজে যাঁর হয়ে, তাঁর নিজের অনুরোধ নয় — [[canDecide()]]-এর একই নিয়ম
+                        ->when($twoHanded, fn (Builder $own) => $own->where(fn (Builder $q) => $q->whereNull('requested_by')->orWhere('requested_by', '!=', $from)))
                         ->whereNull('assigned_to')
                         ->where('module', $module)
                         ->where('action', $action)
@@ -1511,9 +1515,11 @@ final class ApprovalEngine
                 return false;
             }
 
-            // ⛔ দুই হাতের কাজে অনুরোধকারীর হয়ে ভার নিয়েও নয় — নাহলে বন্ধুকে ভার দিয়ে নিজের রান পাশ ([[twoHands()]]; মালিক ছাড়া, নিচের নিয়ম)
-            if ((int) $approval->requested_by === (int) $for && $this->twoHands((string) $approval->module, (string) $approval->action)
-                && ! $this->isSuperAdmin($from)) {
+            /*
+             * ⛔ দুই হাতের কাজে অনুরোধকারীর হয়ে ভার নিয়েও নয় — নাহলে বন্ধুকে ভার দিয়ে নিজের রান পাশ ([[twoHands()]])। ⓘ মালিকের ছাড় কেবল তাঁর
+             *   নিজের হাতে, যেখানে দাগ বসে ([[OwnerSelfApproval]]); তাঁর হয়ে কর্মী সই দিলে দাগ থাকে না, তাই এখানে মালিকও নন (২৫ নভেম্বর ২০২৬)।
+             */
+            if ((int) $approval->requested_by === (int) $for && $this->twoHands((string) $approval->module, (string) $approval->action)) {
                 return false;
             }
         }

@@ -48,7 +48,7 @@ final class EarnedLeaveDaysGoToZeroOnceTest extends TestCase
         $this->assertSame('0.0', (string) $this->fresh($zero)->days_per_year);
 
         $trail = AuditTrail::query()->withoutGlobalScopes()->forRecord(LeaveType::class, (int) $earned->id)
-            ->where('action', AuditTrail::UPDATED)->with('changes')->sole();
+            ->where('action', AuditTrail::UPDATED)->with(['changes' => fn ($q) => $q->withoutGlobalScopes()])->sole();
         $change = $trail->changes->firstWhere('field', 'days_per_year');
         $this->assertNotNull($change, '⛔ বদলটা অডিটে নেই');
         $this->assertSame(0, bccomp('15', (string) $change->old_value, 1), '⛔ আগের মান অডিটে নেই');

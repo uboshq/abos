@@ -38,7 +38,10 @@
                             $remarks0 = $was === null ? $row?->remarks : ($was['remarks'] ?? null);
                         @endphp
                         <tr class="border-b border-(--color-border)" @if ($facetPanel) data-day-row data-find="{{ $employee->code }} {{ $employee->name() }}" data-department="{{ $employee->department_id }}" @endif>
-                            <td class="num">{{ $employee->code }}</td>
+                            <td class="num">{{ $employee->code }}
+                                {{-- ⓘ পাতা খোলার সময়ের ছাপ — এর মধ্যে অন্য কেউ বদলালে চাপা পড়ে না ([[AttendanceService::markSheet()]]) --}}
+                                <input type="hidden" name="rows[{{ $employee->id }}][was]" value="{{ $was['was'] ?? \App\Modules\Hr\Models\Attendance::stampOfRow($row) }}">
+                            </td>
                             <td>{{ $employee->name() }}</td>
                             <td>
                                 <select name="rows[{{ $employee->id }}][status]"

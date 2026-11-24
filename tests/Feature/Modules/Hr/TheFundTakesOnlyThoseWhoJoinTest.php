@@ -33,6 +33,7 @@ use Tests\TestCase;
 final class TheFundTakesOnlyThoseWhoJoinTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private Company $company;
 
@@ -77,10 +78,16 @@ final class TheFundTakesOnlyThoseWhoJoinTest extends TestCase
         $newcomer = $this->employee('PF-N', '2026-06-01', null);
         $fund = app(ProvidentFund::class);
 
-        $this->assertNull($fund->enrol($candidate, Carbon::parse('2026-08-01'), $this->owner));
+        // ⓘ বেতনের কাঠামো বদল — আরেকজনের অনুমোদনের আগে বসে না, আর অডিট তখন "যোগ দিলেন" বলে না
+        $asked = $fund->enrol($candidate, Carbon::parse('2026-08-01'), $this->owner);
+        $audit = fn (string $action) => AuditTrail::query()->forRecord(Employee::class, (int) $candidate->id)->where('action', $action)->exists();
+        $this->assertSame(0, $this->pfRows($candidate), '⛔ অনুমোদনের আগেই যোগ হলেন।');
+        $this->assertTrue($audit(ProvidentFund::ENROL_ASKED));
+        $this->assertFalse($audit(ProvidentFund::ENROLLED), '⛔ অপেক্ষায়, অথচ অডিটে "যোগ দিলেন"।');
+        $this->signTheSalaryChange($asked);
         $this->assertSame(0, bccomp((string) SalaryStructure::query()->where('employee_id', $candidate->id)
             ->where('salary_head_id', $this->salaryHead('PF')->id)->value('amount'), '8', 4), '⛔ যোগ দিলেন, অথচ ৮% বসেনি।');
-        $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $candidate->id)->where('action', ProvidentFund::ENROLLED)->exists());
+        $this->assertTrue($audit('salary_change_signed'), '⛔ বসল, অথচ অডিটে নেই।');
 
         foreach ([$newcomer, $member] as $who) {
             try {

@@ -90,6 +90,15 @@ trait SignsTheSecondHand
         return $employee->fresh();
     }
 
+    /** ⭐ অপেক্ষার কাঠামো-বদলে আলাদা একজনের অনুমোদন, আসল ইঞ্জিনে */
+    protected function signTheSalaryChange(?Approval $approval): void
+    {
+        $this->assertInstanceOf(Approval::class, $approval, 'কাঠামো-বদলে অনুমোদনের অনুরোধ বসেনি।');
+        $signer = $this->secondHandIn((int) $approval->company_id, 'hr.salary.manage', 'hr.salary.view', 'approval.decide');
+        CompanyContext::forCompany((int) $approval->company_id,
+            fn () => app(ApprovalEngine::class)->approve($approval->fresh(), $signer, 'second hand in test'));
+    }
+
     /** ⓘ চাবি থাকা আলাদা একজন — প্রতিবার নতুন, সুপার অ্যাডমিন নন */
     protected function secondHandIn(int $companyId, string ...$keys): User
     {

@@ -87,6 +87,13 @@ final class TheAdvanceIsNotTakenTwiceTest extends TestCase
             ['account_id' => StandardChart::find(StandardChart::EMPLOYEE_ADVANCE)->id, 'credit' => '2500', 'party_type' => 'employee', 'party_id' => $this->borrower->id],
         ], branchId: $this->company->defaultBranch()?->id);
 
+        // ⓘ অগ্রিম কমায় নিট বাড়ে — খসড়ার অঙ্কের অনুমোদন খাটে না, নতুন অঙ্কে আবার ([[PayrollService::confirm()]])
+        $this->signPayrollWithoutConfirming($run->fresh());
+        try {
+            app(PayrollService::class)->confirm($run->fresh());
+            $this->fail('⛔ নিট বাড়ল, তবু পুরনো অনুমোদনে খাতায় বসল');
+        } catch (\App\Core\Engines\Approval\HeldForApproval) {
+        }
         $run = $this->confirmedPayroll($run->fresh());
 
         $this->assertSame('500', $this->deducted($run), '⛔ ফেরত দেওয়া অগ্রিম বেতন থেকেও কাটা হল');
@@ -117,6 +124,13 @@ final class TheAdvanceIsNotTakenTwiceTest extends TestCase
             ->where('approvable_id', $claim->id)->where('status', Approval::PENDING)->sole(), $this->owner);
         $this->assertSame('2800', bcadd((string) $claim->fresh()->from_advance, '0', 0), 'দাবি অগ্রিম থেকে মিটল');
 
+        // ⓘ অগ্রিম কমায় নিট বাড়ে — খসড়ার অঙ্কের অনুমোদন খাটে না, নতুন অঙ্কে আবার ([[PayrollService::confirm()]])
+        $this->signPayrollWithoutConfirming($run->fresh());
+        try {
+            app(PayrollService::class)->confirm($run->fresh());
+            $this->fail('⛔ নিট বাড়ল, তবু পুরনো অনুমোদনে খাতায় বসল');
+        } catch (\App\Core\Engines\Approval\HeldForApproval) {
+        }
         $run = $this->confirmedPayroll($run->fresh());
 
         $this->assertSame('200', $this->deducted($run), '⛔ দাবিতে মেটানো অগ্রিম বেতন থেকেও কাটা হল');

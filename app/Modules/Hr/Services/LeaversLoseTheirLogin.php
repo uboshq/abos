@@ -52,7 +52,9 @@ final class LeaversLoseTheirLogin
             ->where('is_active', true)
             ->update(['is_active' => false, 'updated_at' => now()]);
 
-        $elsewhere = DB::table('company_user')->where('user_id', $user->id)->where('is_active', true)->exists();
+        // ⓘ এই কোম্পানি ছাড়া আর কোথাও — এখানকার সারি উপরেই বন্ধ
+        $elsewhere = DB::table('company_user')->where('company_id', '!=', $companyId)
+            ->where('user_id', $user->id)->where('is_active', true)->exists();
         $deactivated = false;
         if (! $elsewhere && $user->is_active) {
             $user->forceFill(['is_active' => false])->save();
