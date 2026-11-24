@@ -134,16 +134,24 @@ class NumberSeriesController extends Controller implements HasMiddleware
             ?? $years->firstWhere('is_current', true)
             ?? $years->first();
 
+        // ⭐ খোঁজা (নাম, ধরন, প্রিফিক্স) আর মডিউলের ছাঁকনি — বছরের সব সিরিজ আগেই পড়া, তাই ছাঁকাও এখানেই; নাম অনুবাদ থেকে আসে
+        $all = NumberSeries::query()
+            ->when($year, fn ($q) => $q->where('financial_year_id', $year->id))
+            ->orderBy('module')
+            ->orderBy('doc_type')
+            ->get();
+        $labels = $this->docTypeLabels();
+        $term = is_string($request->query('q')) ? mb_strtolower(trim($request->query('q'))) : '';
+        $module = is_string($request->query('module')) ? $request->query('module') : '';
+
         return view('master_data::series.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'series' => NumberSeries::query()
-                ->when($year, fn ($q) => $q->where('financial_year_id', $year->id))
-                ->orderBy('module')
-                ->orderBy('doc_type')
-                ->get(),
+            'modules' => $all->pluck('module')->unique()->sort()->mapWithKeys(fn (string $m) => [$m => $m])->all(),
+            'series' => $all->filter(fn (NumberSeries $s) => ($module === '' || $s->module === $module)
+                && ($term === '' || str_contains(mb_strtolower((isset($labels[$s->doc_type]) ? __($labels[$s->doc_type]) : '').' '.$s->module.' '.$s->doc_type.' '.$s->prefix), $term)))->values(),
             'years' => $years,
             'year' => $year,
-            'labels' => $this->docTypeLabels(),
+            'labels' => $labels,
             // নমুনাটা আসল নম্বরের কোড থেকেই আসে, তাই দুইটা আলাদা হতে
             // পারে না — আগে ভিউ নিজে হাতে জুড়ে দেখাত, আর ছক বদলালে
             // নমুনাটা মিথ্যা বলত

@@ -8,13 +8,23 @@
     পরের নম্বরের ঘরটাও নেই, আর সেটাও ইচ্ছাকৃত — পিছিয়ে দিলে একই নম্বর
     দুইবার ইস্যু হত, এগিয়ে দিলে অডিটে অব্যাখ্যাত ফাঁক থাকত।
 --}}
+@php
+    $abosHead = \App\Core\Support\AbosHead::on();
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে (মালিক, ২৪ নভেম্বর ২০২৬: সব তালিকায় একই মাথা আর একই ছাঁকনি; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('module', __('core.search.module'), $modules),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('master_data::menu.number_series') }}</x-slot:title>
 
+    {{-- ⛔ কেবল ABOS Smart, Navy, Blue-এ — বাকি রূপ হুবহু আগের মতো ([[AbosHead]]) --}}
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('master_data::menu.number_series')"
                           :subtitle="__('master_data::message.series_note')" />
     </x-slot:header>
+    @endunless
 
     {{-- ⭐ একাধিক অর্থবছরের সিরিজ থাকলে বছর বাছা — নইলে প্রতিটা কাগজ দুইবার দেখাত (মালিক, ২ অক্টোবর ২০২৬) --}}
     @if ($years->count() > 1)
@@ -58,9 +68,11 @@
          অনুমান করতেন, আর ভুল চিহ্ন হুবহু নম্বরে বসে যেত। --}}
     <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card) p-4">
+        @unless ($abosHead)
         <p class="mb-2 max-w-(--spacing-prose-max) text-sm text-(--color-ink-muted)">
             {{ __('master_data::message.series_placeholders') }}
         </p>
+        @endunless
 
         <dl class="grid gap-x-4 gap-y-1 sm:grid-cols-2 lg:grid-cols-4">
             @foreach ($placeholders as $token => $label)
@@ -72,7 +84,16 @@
         </dl>
     </div>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form id="list-form" method="GET" class="contents">
+            @if ($year && $years->count() > 1)
+                <input type="hidden" name="fy" value="{{ $year->id }}">
+            @endif
+            <x-ui.toolbar :title="$abosHead ? __('master_data::menu.number_series') : null"
+                          :info="$abosHead ? __('master_data::message.series_note').' '.__('master_data::message.series_placeholders') : null"
+                          :search-placeholder="__('master_data::field.doc_type')" :density="false" :quiet="['fy']" :facets="$facetPanel" />
+        </form>
         <div class="overflow-x-auto">
             <table class="ui-grid">
                 <thead>
@@ -200,4 +221,5 @@
             </table>
         </div>
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
