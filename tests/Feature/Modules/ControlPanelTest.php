@@ -98,6 +98,14 @@ class ControlPanelTest extends TestCase
                 continue;
             }
 
+            // ⓘ নিজের পর্দার সেটিং (`owned_by`) এখানে থাকার কথা নয় ([[TheWeeklyOffHasOneHomeTest]]) — ঐ পর্দাটা সত্যিই আছে কি না দেখা
+            if (isset($definition['owned_by'])) {
+                $this->assertTrue(\Illuminate\Support\Facades\Route::has($definition['owned_by']), "{$key}: নিজের পর্দাটাই নেই।");
+                $this->assertStringNotContainsString("settings[{$key}]", $everything);
+
+                continue;
+            }
+
             $this->assertStringContainsString("settings[{$key}]", $everything,
                 "ঘোষিত সুইচ {$key} কোনো ট্যাবেই নেই।");
 

@@ -241,19 +241,18 @@ final class WppfService
     /** @return array{0: Account, 1: Account} খরচ আর দেনা — ছকে না থাকলে ছকটা আবার বসে (যা নেই কেবল তা) */
     private function accounts(): array
     {
-        $expense = StandardChart::find(StandardChart::WPPF_EXPENSE);
-        $payable = StandardChart::find(StandardChart::WPPF_PAYABLE);
+        $find = fn (): array => [StandardChart::accountFor(StandardChart::WPPF_EXPENSE), StandardChart::accountFor(StandardChart::WPPF_PAYABLE)];
 
-        if ($expense === null || $payable === null) {
+        try {
+            return $find();
+        } catch (ValidationException) {
             app(StandardChart::class)->install();
-            $expense = StandardChart::find(StandardChart::WPPF_EXPENSE);
-            $payable = StandardChart::find(StandardChart::WPPF_PAYABLE);
         }
 
-        if ($expense === null || $payable === null) {
+        try {
+            return $find();
+        } catch (ValidationException) {
             throw ValidationException::withMessages(['provision' => __('hr::wppf.no_account')]);
         }
-
-        return [$expense, $payable];
     }
 }

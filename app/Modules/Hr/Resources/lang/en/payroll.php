@@ -47,7 +47,7 @@ return [
     'bank_unpaid_not_awaiting' => 'This line is not "sent to bank — awaiting confirmation".',
     'bank_unpaid_already_asked' => '"Bank did not pay this line" is already pending approval for this line.',
     'bank_unpaid_not_pending' => 'This request is no longer pending approval.',
-    'bank_unpaid_another_hand' => 'The person who asked cannot approve — another person\'s second approval is needed (the owner too, on his own request).',
+    'bank_unpaid_another_hand' => 'The person who asked cannot approve — another person\'s second approval is needed.',
     'bank_unpaid_no_right' => 'You do not hold the keys for this second approval.',
     'bank_unpaid_asked_ok' => '"Bank did not pay this line" — pending the second approval.',
     'bank_unpaid_signed_ok' => 'Second approval given — the wage is ready to pay again.',

@@ -48,7 +48,9 @@ use Tests\TestCase;
  */
 final class ALeaverIsSettledOnOnePaperTest extends TestCase
 {
+    use \Tests\Concerns\OpensTheYears;
     use RefreshDatabase;
+    use \Tests\Concerns\SeesTheOwnersOwnMark;
     use SignsMoneyOff;
     use SignsTheSecondHand;
 
@@ -65,6 +67,7 @@ final class ALeaverIsSettledOnOnePaperTest extends TestCase
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
+        $this->openTheYearsOf('2026-06-30');
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->actingAs($this->owner);
 
@@ -148,6 +151,19 @@ final class ALeaverIsSettledOnOnePaperTest extends TestCase
         $payable = $lines->firstWhere('account_id', $this->id(StandardChart::SALARY_PAYABLE));
         $this->assertSame(Employee::drillSourceType(), $payable->party_type, '⛔ প্রদেয় কর্মীর নামে নয়');
         $this->assertSame((int) $this->employee->id, (int) $payable->party_id);
+    }
+
+    public function test_the_owner_settles_his_own_paper_with_the_mark_and_no_figure_in_the_report(): void
+    {
+        $service = app(FinalSettlements::class);
+        $settlement = $service->prepare($this->employee, 'resignation', null, $this->owner);
+        $this->actingAs($this->owner)->post(route('hr.final_settlement.approve', $settlement))->assertSessionHasNoErrors();
+
+        $this->assertSame(FinalSettlement::APPROVED, $settlement->fresh()->status);
+        $this->assertOwnerSelfMarked($service->approvalOf($settlement->fresh()));
+        $this->get(route('hr.final_settlement.show', $settlement))->assertOk()->assertSee('data-owner-self-mark', false);
+        $this->get(route('accounts.report.show', ['slug' => 'owner-self-approved']))->assertOk()
+            ->assertDontSee(\App\Core\Support\Money::format((string) $settlement->net));
     }
 
     public function test_a_rejection_books_nothing_and_a_second_paper_waits_for_the_first(): void

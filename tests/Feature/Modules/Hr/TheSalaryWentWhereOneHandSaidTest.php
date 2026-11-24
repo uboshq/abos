@@ -48,6 +48,7 @@ use Tests\TestCase;
 final class TheSalaryWentWhereOneHandSaidTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SeesTheOwnersOwnMark;
     use \Tests\SignsTheSecondHand;
 
     private const OLD = '1234567890123';
@@ -413,7 +414,7 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $vouchers->cancel($first->fresh(), 'wrong wallet');
         $this->assertSame(0, \App\Modules\Hr\Models\HeldWagePayment::query()->where('payslip_id', $held->id)->count(), '⛔ বাতিল ভাউচারে মজুরি আটকে রইল');
         $this->assertContains((int) $held->id, $held_(), '⛔ বাতিলের পরে মজুরি দেওয়ার অপেক্ষায় ফেরেনি');
-        $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $mfs->id)->where('action', 'held_wage_payment_released')
+        $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $mfs->id)->where('action', 'held_wage_released')
             ->where('reason', 'like', '%'.$first->document_no.'%')->exists(), '⛔ ছাড়ার কথা কর্মীর অডিটে নেই');
         $this->as($this->owner)->get(route('hr.payroll.held.index'))->assertOk()->assertSee('data-held-line="EMP-REL"', false);
 
@@ -571,7 +572,7 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $this->assertSame(PaymentChange::APPLIED, $change->fresh()->status);
     }
 
-    public function test_a_refusal_or_a_withdrawal_leaves_the_account_and_the_owner_cannot_sign_his_own(): void
+    public function test_a_refusal_or_a_withdrawal_leaves_the_account_and_the_owner_signs_his_own_with_the_mark(): void
     {
         $this->as($this->clerk)->put(route('hr.employee.update', $this->employee), $this->form(['bank_account_no' => self::NEW]));
         $first = PaymentChange::query()->where('status', PaymentChange::PENDING)->firstOrFail();
@@ -600,19 +601,16 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $this->as($this->clerk)->post(route('hr.employee.payment_change.reject',
             [$this->employee, PaymentChange::query()->where('status', PaymentChange::PENDING)->firstOrFail()]));
 
-        // ⛔ মালিক নিজে — অপেক্ষায়, আর নিজে সই দিতে পারেন না (fe, ২১ অক্টোবর ২০২৬); আরেকজন দিলে বসে, "নিজে-সই" চিহ্ন নেই
+        // ⭐ মালিক নিজে — অপেক্ষায়, তারপর নিজের অনুমোদনে বসে, দাগ আর রিপোর্টসহ (মালিক, ২০ নভেম্বর ২০২৬)
         $this->as($this->owner)->put(route('hr.employee.update', $this->employee), $this->form(['bank_account_no' => self::NEW]))
             ->assertSessionHasNoErrors()->assertSessionHas('saved', __('hr::payment_change.waiting_saved'));
         $this->assertSame(self::OLD, (string) $this->employee->fresh()->bank_account_no, '⛔ মালিকের বদল সই ছাড়াই বসল');
         $own = PaymentChange::query()->where('status', PaymentChange::PENDING)->firstOrFail();
 
         $this->as($this->owner)->post(route('hr.employee.payment_change.approve', [$this->employee, $own]))
-            ->assertSessionHasErrors(['payment_change' => __('hr::payment_change.another_hand')]);
-        $this->assertSame(self::OLD, (string) $this->employee->fresh()->bank_account_no, '⛔ মালিক নিজের বদলে নিজেই সই দিলেন');
-        $this->as($this->signer)->post(route('hr.employee.payment_change.approve', [$this->employee, $own]))->assertSessionHasNoErrors();
-        $this->assertSame(self::NEW, (string) $this->employee->fresh()->bank_account_no);
-        $this->assertFalse(AuditTrail::query()->forRecord(Employee::class, (int) $this->employee->id)
-            ->where('action', SalaryStructureService::OWNER_SELF_SIGNED)->exists(), '⛔ "নিজে-সই" চিহ্ন বসল');
+            ->assertSessionHasNoErrors();
+        $this->assertSame(self::NEW, (string) $this->employee->fresh()->bank_account_no, '⛔ মালিকের নিজের অনুমোদনে বদলটা বসল না');
+        $this->assertOwnerSelfMarked(app(PaymentChanges::class)->approvalOf($own));
 
         // ⛔ বন্ধের সুইচ নেই — মালিক বলেছেন "সবসময়"
         $this->assertNotContains('hr.payment_change_needs_second_hand',

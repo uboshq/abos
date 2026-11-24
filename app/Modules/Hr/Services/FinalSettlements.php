@@ -16,6 +16,7 @@ use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\FinalSettlement;
+use App\Modules\Hr\Support\AdvanceBalance;
 use App\Modules\Hr\Models\PayrollRun;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -273,6 +274,12 @@ final class FinalSettlements
         }
 
         DB::transaction(function () use ($settlement, $approval): void {
+            $settlement = FinalSettlement::query()->whereKey($settlement->getKey())->lockForUpdate()->firstOrFail();
+
+            if (! $settlement->isPending()) {
+                return;
+            }
+
             $this->post($settlement);
             $settlement->forceFill(['status' => FinalSettlement::APPROVED, 'decided_at' => now(), 'decided_by' => $this->lastDecider($approval)])->save();
             $approval->markUsed();
@@ -293,7 +300,7 @@ final class FinalSettlements
     /** ⓘ অনুমোদিত কাগজগুলোয় মেটানো গ্র্যাচুইটি — শাখা ধরে ([[Gratuity::accrue()]] বাদ দেয়) */
     public static function gratuitySettled(?int $branchId): string
     {
-        return bcadd((string) FinalSettlement::query()->where('status', FinalSettlement::APPROVED)
+        return bcadd((string) FinalSettlement::query()->where('company_id', CompanyContext::id())->where('status', FinalSettlement::APPROVED)
             ->when($branchId === null, fn ($q) => $q->whereNull('branch_id'), fn ($q) => $q->where('branch_id', $branchId))
             ->sum('gratuity'), '0', 4);
     }
@@ -318,7 +325,7 @@ final class FinalSettlements
                 continue;
             }
 
-            $lines[] = ['account_id' => (int) $this->account($code)->id, $side => $amount, 'narration' => $narration, 'branch_id' => $branch] + $extra;
+            $lines[] = ['account_id' => (int) StandardChart::accountFor($code)->id, $side => $amount, 'narration' => $narration, 'branch_id' => $branch] + $extra;
         }
 
         $this->posting->post(
@@ -336,6 +343,7 @@ final class FinalSettlements
     {
         $month = DB::table('hr_payslips as s')
             ->join('hr_payroll_runs as r', 'r.id', '=', 's.payroll_run_id')
+            ->where('s.company_id', CompanyContext::id())
             ->where('s.employee_id', $employee->id)
             ->where('r.run_type', PayrollRun::SALARY)
             ->where('r.status', DocumentStatus::CONFIRMED)
@@ -353,37 +361,15 @@ final class FinalSettlements
     /** ⓘ কর্মীর অগ্রিমের খাতে শেষ দিন পর্যন্ত বাকি (Dr − Cr), ঋণাত্মক হলে শূন্য */
     private function advanceOutstanding(Employee $employee, Carbon $on): string
     {
-        $account = StandardChart::find(StandardChart::EMPLOYEE_ADVANCE);
-
-        if ($account === null) {
-            return '0.00';
-        }
-
-        $net = (string) DB::table('ledger_entries')
-            ->where('company_id', CompanyContext::id())
-            ->where('account_id', $account->id)
-            ->where('party_type', Employee::drillSourceType())
-            ->where('party_id', $employee->id)
-            ->where('trx_date', '<=', $on->toDateString())
-            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as n')
-            ->value('n');
+        $net = app(AdvanceBalance::class)->open($employee, $on);
 
         return bccomp($net, '0', 4) > 0 ? Money::round($net, 2) : '0.00';
     }
 
-    private function account(string $code): Account
-    {
-        $account = StandardChart::find($code);
-
-        if ($account === null) {
-            throw ValidationException::withMessages(['account' => __('hr::settlement.account_missing', ['code' => $code])]);
-        }
-
-        return $account;
-    }
-
     private function pendingApproval(FinalSettlement $settlement, User $by): Approval
     {
+        // ⛔ তালা দিয়ে তাজা অবস্থা — হাতের কপি বাসি হতে পারে
+        $settlement = DB::transaction(fn () => FinalSettlement::query()->whereKey($settlement->getKey())->lockForUpdate()->firstOrFail());
         $approval = $this->approvalOf($settlement);
 
         if (! $settlement->isPending() || $approval === null || ! $approval->isPending()) {

@@ -68,28 +68,68 @@ final class AccountsReversalService
         });
     }
 
-    public function reverseNote(Note $note, User $by, string $reason): Reversal
+    /**
+     * ⓘ নোট পোস্টের যে ছক (ক্রেডিট নোট মালিকের ছাড়ের ছকে, বাকি নোটের ছকে), উল্টানোরও সেটাই; ছক না থাকলে সাথে সাথে। ⛔ পোস্টের পুরনো
+     * অনুমোদন উল্টানোর অনুমোদন নয় — প্রতিবার নতুন অনুরোধ, `reverse` চিহ্নসহ ([[reverseTradeVoucher()]]-এর একই নিয়ম, ২৫ নভেম্বর ২০২৬)।
+     *
+     * @return Reversal|null  `null` — অনুমোদনের অপেক্ষায়; কিছুই উল্টায়নি
+     */
+    public function reverseNote(Note $note, User $by, string $reason): ?Reversal
     {
         $reason = $this->reason($reason);
+        $this->assertNoteReversible($note);
+        $discount = $note->type() === Note::TYPE_CN && $note->lines()->exists();
 
+        $waiting = app(ApprovalEngine::class)->request(
+            document: $note,
+            module: $discount ? NoteService::DISCOUNT_MODULE : AccountsSignature::MODULE,
+            action: $discount ? NoteService::DISCOUNT_ACTION : AccountsSignature::NOTE,
+            amount: $note->grandTotal(),
+            payload: ['reverse' => true, 'reason' => $reason],
+            reason: mb_substr((string) __('accounts::reversal.asked', ['no' => $note->document_no, 'reason' => $reason]), 0, 250),
+            userId: (int) $by->id,
+            stateHash: app(DocumentFingerprint::class)->of($note),
+            matchOn: ApprovalEngine::fieldsOf($note),
+        );
+
+        return $waiting === null ? $this->writeNoteReversal($note, (int) $by->id, $reason) : null;
+    }
+
+    /** শেষ অনুমোদনে — যিনি চেয়েছিলেন তাঁর নামে, তাঁর লেখা কারণে; আগেই উল্টানো হলে কিছু নয় */
+    public function finishNote(Note $note, \App\Models\Approval $approval): ?Reversal
+    {
+        if (! $note->isConfirmed()) {
+            return null;
+        }
+
+        $by = $approval->requested_by;
+
+        return $this->writeNoteReversal($note, $by === null ? null : (int) $by, $this->reason((string) (((array) $approval->payload)['reason'] ?? '')));
+    }
+
+    private function writeNoteReversal(Note $note, ?int $by, string $reason): Reversal
+    {
         return DB::transaction(function () use ($note, $by, $reason) {
             $locked = Note::acrossBranches()->lockForUpdate()->findOrFail($note->id);
-
-            if (! $locked->isConfirmed()) {
-                throw ValidationException::withMessages(['cancel_reason' => __('accounts::reversal.not_posted', ['no' => $locked->document_no])]);
-            }
-
-            $this->assertMonthOpen($locked->document_no, $locked->trx_date);
+            $this->assertNoteReversible($locked);
 
             // ⭐ উল্টো কাগজের অঙ্ক নোটের পুরো প্রভাব — নিজের মোট আর বাঁধা ফেরতের কাগজ (SR/PR), দুটোই এই একই লেনদেনে ফেরে ([[NoteService::cancel()]])
             $paper = $this->paper(Reversal::NOTE, (int) $locked->id, $locked->document_no, (int) $locked->branch_id, $locked->grandTotal(), $reason, $by);
 
             $this->notes->cancel($locked, $this->narration($paper, $reason), $paper->document_no);
-
             $locked->auditAction('reversed', $paper->document_no.' — '.$reason);
 
             return $paper;
         });
+    }
+
+    private function assertNoteReversible(Note $note): void
+    {
+        if (! $note->isConfirmed()) {
+            throw ValidationException::withMessages(['cancel_reason' => __('accounts::reversal.not_posted', ['no' => $note->document_no])]);
+        }
+
+        $this->assertMonthOpen($note->document_no, $note->trx_date);
     }
 
     /**

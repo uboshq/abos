@@ -75,6 +75,76 @@ final class TheDaySheetLosesNothingTest extends TestCase
         $this->assertNull($this->row($e));
     }
 
+    public function test_an_untouched_row_is_not_written_and_a_mark_made_elsewhere_survives(): void
+    {
+        [$mine, $theirs, $blank] = $this->people()->take(3)->all();
+        $first = User::factory()->create();
+        foreach ([$mine, $theirs] as $e) {
+            Attendance::writeDay($e->id, $this->day, ['status' => Attendance::PRESENT, 'is_late' => false, 'remarks' => null, 'created_by' => $first->id]);
+        }
+        $was = fn ($e) => Attendance::stampOfRow($this->row($e));
+        $page = [$mine->id => ['status' => Attendance::PRESENT, 'remarks' => '', 'was' => $was($mine)],
+            $theirs->id => ['status' => Attendance::PRESENT, 'remarks' => null, 'was' => $was($theirs)],
+            $blank->id => ['status' => '', 'was' => $was($blank)]];
+        $audits = \App\Models\AuditTrail::query()->where('auditable_type', Attendance::class)->count();
+
+        // পাতা খোলার পরে: ফোনে একজন অনুপস্থিত, আরেকজনের নতুন হাজিরা
+        Attendance::writeDay($theirs->id, $this->day, ['status' => Attendance::ABSENT, 'remarks' => 'ফোন']);
+        Attendance::writeDay($blank->id, $this->day, ['status' => Attendance::HOLIDAY, 'created_by' => $first->id]);
+        $after = \App\Models\AuditTrail::query()->where('auditable_type', Attendance::class)->count();
+        $this->assertGreaterThan($audits, $after, 'প্রস্তুতিটাই ভুল — বদল অডিটে ওঠে না।');
+
+        $this->post(route('hr.attendance.store'), ['work_date' => $this->day, 'rows' => $page])->assertSessionHasNoErrors();
+
+        $this->assertSame([Attendance::ABSENT, 'ফোন'], [$this->row($theirs)->status, $this->row($theirs)->remarks], '⛔ অন্যের বদল চাপা পড়ল।');
+        $this->assertSame(Attendance::HOLIDAY, $this->row($blank)->status);
+        $this->assertSame((int) $first->id, (int) $this->row($mine)->created_by, '⛔ না-ছোঁয়া সারির লেখক বদলাল।');
+        $this->assertSame($after, \App\Models\AuditTrail::query()->where('auditable_type', Attendance::class)->count(), '⛔ না-ছোঁয়া সারির অডিট সারি।');
+    }
+
+    public function test_the_same_mark_changed_by_both_is_refused_by_name_and_the_rest_is_saved(): void
+    {
+        [$both, $other] = $this->people()->take(2)->all();
+        Attendance::writeDay($both->id, $this->day, ['status' => Attendance::PRESENT, 'created_by' => $this->owner->id]);
+        $rows = [$both->id => ['status' => Attendance::LEAVE, 'remarks' => 'আমার লেখা', 'was' => Attendance::stampOfRow($this->row($both))],
+            $other->id => ['status' => Attendance::PRESENT, 'was' => Attendance::stampOfRow($this->row($other))]];
+        Attendance::writeDay($both->id, $this->day, ['status' => Attendance::ABSENT]);
+
+        $html = (string) $this->followingRedirects()->post(route('hr.attendance.store'), ['work_date' => $this->day, 'rows' => $rows])->assertOk()->getContent();
+
+        $this->assertSame(Attendance::ABSENT, $this->row($both)->status, '⛔ অন্যের বদল চাপা পড়ল।');
+        $this->assertSame(Attendance::PRESENT, $this->row($other)?->status, '⛔ বাকি সারি বসেনি।');
+        $this->assertStringContainsString(e(__('hr::message.attendance_changed_meanwhile', ['name' => $both->name(), 'now' => __('hr::kind.absent')])), $html);
+        $this->assertStringContainsString('আমার লেখা', $html, '⛔ যা লেখা হয়েছিল হারাল।');
+        $this->assertStringContainsString(Attendance::stampOfRow($this->row($both)), $html, 'আবার চাপার জন্য এখনকার ছাপ চাই।');
+
+        $rows[$both->id]['was'] = Attendance::stampOfRow($this->row($both));
+        $this->post(route('hr.attendance.store'), ['work_date' => $this->day, 'rows' => [$both->id => $rows[$both->id]]])->assertSessionHasNoErrors();
+        $this->assertSame([Attendance::LEAVE, 'আমার লেখা'], [$this->row($both)->status, $this->row($both)->remarks]);
+    }
+
+    public function test_without_the_stamp_it_is_as_before_and_a_leave_link_stays(): void
+    {
+        $e = $this->people()->first();
+        $type = \App\Modules\Hr\Models\LeaveType::query()->first() ?? tap(null, fn () => $this->post(route('hr.leave_type.install'))) ?? \App\Modules\Hr\Models\LeaveType::query()->firstOrFail();
+        $leave = \App\Modules\Hr\Models\LeaveApplication::query()->withoutEvents(fn () => \App\Modules\Hr\Models\LeaveApplication::query()->create(['company_id' => CompanyContext::id(), 'employee_id' => $e->id,
+            'leave_type_id' => $type->id, 'from_date' => $this->day, 'to_date' => $this->day, 'days' => 1, 'reason' => 'x', 'status' => 'approved']));
+        Attendance::writeDay($e->id, $this->day, ['status' => Attendance::LEAVE, 'leave_application_id' => $leave->id, 'created_by' => $this->owner->id]);
+
+        $this->post(route('hr.attendance.store'), ['work_date' => $this->day, 'rows' => [$e->id => ['status' => Attendance::PRESENT]]])->assertSessionHasNoErrors();
+        $this->assertSame([Attendance::PRESENT, (int) $leave->id], [$this->row($e)->status, (int) $this->row($e)->leave_application_id]);
+    }
+
+    public function test_the_stamp_treats_empty_and_null_alike_and_sees_every_box(): void
+    {
+        $base = Attendance::stampOf('present', false, null);
+        $this->assertSame($base, Attendance::stampOf('present', false, '  '));
+        foreach ([['absent', false, null], ['present', true, null], ['present', false, 'x'], [null, false, null]] as $other) {
+            $this->assertNotSame($base, Attendance::stampOf(...$other));
+        }
+        $this->assertSame(Attendance::stampOf(null, false, null), Attendance::stampOfRow(null));
+    }
+
     public function test_the_bar_holds_the_date_and_save_and_nothing_in_it_reloads_the_sheet(): void
     {
         foreach (['rose', 'navy', 'blue'] as $look) {

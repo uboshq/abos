@@ -105,10 +105,6 @@ class EveryRawQueryNamesItsCompanyTest extends TestCase
             .'আর আদেশটা বাইরের কোয়েরিতেই কোম্পানি-স্কোপে বাছা; লাইনের টেবিলে '
             .'`company_id` কলামই নেই',
 
-        // ⭐ চাকরি ছাড়ায় লগইন বন্ধ (a6, ২১ অক্টোবর ২০২৬)
-        'app/Modules/Hr/Services/LeaversLoseTheirLogin.php' => 'company_user সদস্যপদের টেবিল — এই কোম্পানির সারি বন্ধ করা company_id দিয়েই; '
-            .'অন্য কোম্পানিতে চালু সদস্যপদ আছে কি না দেখা ইচ্ছাকৃতভাবে সব কোম্পানি জুড়ে (লগইন খোলা রাখার প্রশ্ন), কেবল exists()',
-
         'app/Modules/MasterData/Services/MasterListService.php' => 'সন্তান-সারি আছে কি না দেখা — অভিভাবকের আইডি দিয়েই, আর অভিভাবক '
             .'ইতিমধ্যেই কোম্পানি-স্কোপে বাছা',
 

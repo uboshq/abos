@@ -6,6 +6,7 @@ namespace App\Modules\Hr\Services;
 
 use App\Core\Concerns\ReadsTheRowUnderLock;
 use App\Core\Engines\Approval\DocumentApproval;
+use App\Core\Engines\Approval\PaperChangedWhileChecking;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Engines\Posting\PostingEngine;
 use App\Core\Services\SettingsService;
@@ -309,14 +310,19 @@ final class PayrollService
          */
         $signedNet = (string) $run->net_total;
 
-        $print = $this->approvals->assertClear(
-            document: $run,
-            module: 'hr',
-            action: 'payroll',
-            field: 'status',
-            amount: $signedNet,
-            reason: $run->narration,
-        );
+        try {
+            $print = $this->approvals->assertClear(
+                document: $run,
+                module: 'hr',
+                action: 'payroll',
+                field: 'status',
+                amount: $signedNet,
+                reason: $run->narration,
+            );
+        } catch (PaperChangedWhileChecking) {
+            // ⓘ দেখার মাঝেই আবার-বানানো — নতুন অঙ্কে শুরু থেকে
+            return $this->confirm($run->fresh());
+        }
 
         $posted = DB::transaction(function () use ($run, $signedNet, $print) {
             /*
