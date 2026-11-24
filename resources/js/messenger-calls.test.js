@@ -154,6 +154,7 @@ describe('tab ১ — the call list', () => {
         root.querySelector('.call-row[data-peer="8"]').click()
         await flush()
         expect(root.querySelector('[data-call-pane] .who b').textContent).toBe('Karim')
+        expect(root.querySelector('.csum .bad')).toBeNull() // no missed call, no red box
 
         const rung = vi.fn()
         root.addEventListener('messenger:call', (e) => rung(e.detail))
