@@ -43,4 +43,7 @@ return [
     'delegation_change' => 'Change',
     'delegation_see' => 'See',
     'delegation_cancel' => 'Cancel this hand-over',
+    'board_bulk' => '✓ Approve together',
+    'board_view' => 'View',
+    'board_remark' => 'Remark',
 ];

@@ -43,7 +43,8 @@ export function inboxBoard (root = document, win = window) {
         const cents = boxes.reduce((sum, box) => sum + Math.round(Number(box.dataset.amount || 0) * 100), 0)
 
         if (pickedSum) {
-            pickedSum.textContent = '৳' + money(cents / 100)
+            // ⓘ nothing picked → no amount (the sample)
+            pickedSum.textContent = boxes.length === 0 ? '' : '৳' + money(cents / 100)
         }
 
         root.querySelectorAll('[data-board-group-pick]').forEach((group) => {
@@ -57,6 +58,16 @@ export function inboxBoard (root = document, win = window) {
 
     root.addEventListener('change', (event) => {
         const group = event.target.closest?.('[data-board-group-pick]')
+
+        // ⓘ the bar's round tick picks every row that has a tick
+        if (event.target.matches?.('[data-board-pick-all]')) {
+            const on = event.target.checked
+
+            root.querySelectorAll('[data-inbox-pick]').forEach((box) => {
+                box.checked = on
+                box.dispatchEvent(new Event('change', { bubbles: true }))
+            })
+        }
 
         if (group) {
             root.querySelectorAll('[data-board-in]').forEach((box) => {

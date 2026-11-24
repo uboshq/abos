@@ -20,6 +20,8 @@
     $from ??= '';
     $nextId ??= null;
     $isBundle = $bundle !== null;
+    $boardActions ??= false;
+    $boardSheetOpen ??= false;
 @endphp
 
 {{-- ⓘ স্থির (sticky) নয় — পরিকল্পনার ক্রমেই, কাগজ আর যাত্রাপথের নিচে। ⛔ ২৮ অক্টোবর ২০২৬-এর ছবিতে ধরা: স্থির রাখলে 1366×768-এ বাক্সটা
@@ -43,14 +45,24 @@
         <input type="hidden" name="next" value="{{ $nextId }}">
         <input type="hidden" name="from" value="{{ $from }}">
 
-        <label class="block">
+        {{-- ⓘ on the board the remark opens from its button (or Ctrl+K) — the sample's row of buttons stays one row --}}
+        <label @class(['block', 'inbox-board-remark' => $boardActions])>
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('approval::field.comment') }}</span>
-            <textarea name="remarks" rows="2" maxlength="500" data-approval-remarks aria-keyshortcuts="Control+K"
+            <textarea id="remarks-{{ $approval->id }}" name="remarks" rows="2" maxlength="500" data-approval-remarks aria-keyshortcuts="Control+K"
                       class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1.5 text-sm"></textarea>
         </label>
 
         {{-- ⓘ চারটা বোতাম এই ফর্মের ভেতরে, কিন্তু জমা-বোতাম কেবল অনুমোদনেরটা — বাকি তিনটা `type="button"`, কেবল পপ-আপ খোলে --}}
-        <div class="mt-3 flex flex-wrap items-center justify-end gap-2">
+        <div @class(['flex flex-wrap items-center justify-end gap-2', 'mt-3' => ! $boardActions])>
+            @if ($boardActions)
+                @if ($boardSheetOpen)
+                    <x-ui.button type="button" tone="secondary" x-on:click="$dispatch('open-paper')" data-opens-dialog aria-haspopup="dialog" class="inbox-board-view">
+                        {{ __('approval::action.board_view') }}
+                    </x-ui.button>
+                @endif
+                <x-ui.button type="button" tone="ghost" data-board-remark aria-controls="remarks-{{ $approval->id }}">{{ __('approval::action.board_remark') }}</x-ui.button>
+                <span class="flex-1"></span>
+            @endif
             @if ($forwardTo !== [] && ! $isBundle)
                 <x-ui.button type="button" tone="ghost" x-on:click="ask = 'forward'" data-ask="forward" aria-haspopup="dialog">
                     {{ __('approval::action.forward') }}
@@ -80,7 +92,9 @@
             </div>
         </div>
 
+        @unless ($boardActions)
         <p class="mt-2 text-end text-2xs text-(--color-ink-muted)">{{ __('approval::message.next_opens') }}</p>
+        @endunless
         {{-- ⓘ স্থির বারের নিচে শেষ লাইন ঢাকা না পড়ুক — বারের সমান ফাঁকা জায়গা, কেবল ফোনে --}}
         <div aria-hidden="true" class="h-16 md:hidden"></div>
     </form>

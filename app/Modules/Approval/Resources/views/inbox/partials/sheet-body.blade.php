@@ -5,7 +5,7 @@
     নয় — আর সইকারী জানালায় যা দেখে সই দিতেন তা পাতার সাথে মিলত না।
     ⓘ তফাত কেবল কয়টা সারি (`$rows`)।
 --}}
-@if ($sheet['facts'] !== [])
+@if ($sheet['facts'] !== [] && ! ($hideFacts ?? false))
     <dl class="mt-3 grid gap-3 sm:grid-cols-3">
         @foreach ($sheet['facts'] as $fact)
             <div>

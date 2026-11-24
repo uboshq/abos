@@ -32,20 +32,47 @@
     $link = static fn (?string $text, ?string $url) => $text === null || $text === ''
         ? '—'
         : ($url ? '<a href="'.e($url).'" class="inbox-board-link">'.e($text).'</a>' : e($text));
-    $tiles = array_filter([
-        [__('approval::field.party'), $link($partyName, $partyUrl), 'who'],
-        [__('approval::field.board_point'), $link($facts['point'] ?? null, $partyUrl), 'who'],
-        [__('approval::field.board_date'), e(\App\Core\Support\DateFormat::spoken($approval->requested_at)), 'when'],
-        [__('approval::field.board_where'), e(($facts['where'] ?? null) ?: '—'), 'where'],
-        [__('approval::field.board_paper'), $documentHidden
-            ? e(__('approval::message.document_not_yours'))
-            : ($document === null ? e(__('approval::message.document_gone')) : $link($paperNo ?? ('#'.$approval->approvable_id), $paperUrl)), 'what'],
-        [__('approval::field.branch'), e(($facts['branch'] ?? null) ?: '—'), 'where'],
-        [__('approval::field.asked_by'), e($approval->requesterName()), 'who'],
-        [__('approval::field.deadline'), e($deadline['text'] ?? '—'), ($deadline['tone'] ?? null) === 'danger' ? 'late' : 'when'],
-        [__('approval::field.step'), e($step['at'].' / '.$step['of']).($step['name'] ? ' · '.e($step['name']) : ''), 'what'],
-    ]);
-    $note = collect([$facts['about'] ?? null, $approval->requested_reason])->filter()->unique()->implode(' · ');
+    // ⓘ the paper's own facts (way of paying, transaction no., prepared by …) stand in the tiles, never a second time over the lines
+    $sheetFacts = collect($sheet['facts'] ?? []);
+    $fact = static fn (string $label) => $sheetFacts->firstWhere('label', $label)['value'] ?? null;
+    $txNo = $fact(__('accounts::field.instrument_no'));
+    $preparedBy = $fact(__('core.print.prepared_by'));
+    $narration = $fact(__('core.table.narration'));
+    $wait = $approval->requested_at === null ? '—' : (($days = (int) $approval->requested_at->diffInDays(now())) >= 1
+        ? __('approval::field.board_waited_days', ['count' => $days])
+        : (($hours = (int) $approval->requested_at->diffInHours(now())) >= 1
+            ? __('approval::field.board_waited_hours', ['count' => $hours]) : __('approval::field.board_waited_now')));
+    $paperDate = $fact(__('accounts::field.date')) ?? \App\Core\Support\DateFormat::format($approval->requested_at);
+    $whereShown = collect([$facts['where'] ?? null, $fact(__('accounts::field.instrument'))])->filter()->unique()->implode(' · ');
+    // [label, html, hue 1–5, span] — the sample's order, four to a row
+    $tiles = [
+        [__('approval::field.party'), $link($partyName, $partyUrl), 1, 2],
+        [__('approval::field.board_point'), $link($facts['point'] ?? null, $partyUrl), 2, 1],
+        [__('approval::field.board_date'), e($paperDate), 3, 1],
+        [__('approval::field.board_where'), e($whereShown ?: '—'), 4, 2],
+        [__('approval::field.board_tx'), e($txNo ?: '—'), 5, 1],
+        [__('approval::field.branch'), e(($facts['branch'] ?? null) ?: '—'), 2, 1],
+        [__('approval::field.asked_by'), e($approval->requesterName()), 3, 1],
+        [__('approval::field.board_waited'), e($wait).(($deadline['text'] ?? null) ? ' · '.e($deadline['text']) : ''), ($deadline['tone'] ?? null) === 'danger' ? 'late' : 5, 1],
+        [__('approval::field.step'), e($step['at'].' / '.$step['of']).($step['name'] ? ' · '.e($step['name']) : ''), 1, 1],
+        [__('core.print.prepared_by'), e($preparedBy ?: $approval->requesterName()), 4, 1],
+    ];
+    if ($documentHidden || $document === null) {
+        $tiles[] = [__('approval::field.board_paper'), e(__($documentHidden ? 'approval::message.document_not_yours' : 'approval::message.document_gone')), 5, 4];
+    }
+    if ($standInFor) {
+        $tiles[] = [__('approval::field.board_stand_in'), '<span data-approval-stand-in>'.e(__('approval::message.on_behalf_of', ['name' => $standInFor])).'</span>', 5, 4];
+    }
+    // ⓘ any fact of the paper no tile says yet keeps a tile of its own — nothing is lost, nothing is said twice
+    $said = collect($tiles)->map(fn ($t) => strip_tags(html_entity_decode((string) $t[1])))->implode(' | ').' | '.($facts['about'] ?? '').' | '.$workName;
+    $skip = [__('accounts::field.date'), __('approval::field.document'), __('approval::field.party'), __('core.company.branch'),
+        __('accounts::field.instrument_no'), __('core.print.prepared_by'), __('core.table.narration')];
+    foreach ($sheetFacts as $row) {
+        if (! in_array($row['label'], $skip, true) && ! str_contains($said, (string) $row['value'])) {
+            $tiles[] = [$row['label'], e($row['value']), 4, 1];
+        }
+    }
+    $note = collect([$narration, $facts['about'] ?? null, $approval->requested_reason])->filter()->unique()->implode(' · ');
 @endphp
 
 <div data-approval-detail="{{ $approval->id }}" class="inbox-board-detail" style="--k: {{ $tone }}; --kd: {{ $deep }}">
@@ -62,7 +89,12 @@
                     @endif
                 @endif
                 @if ($changedSinceAsked)
-                    <span class="inbox-board-dflag">{{ __('approval::message.changed_since_asked_short') }}</span>
+                    <span class="inbox-board-dflag" title="{{ __('approval::message.changed_since_asked') }}">{{ __('approval::message.changed_since_asked_short') }}</span>
+                @endif
+                @if (($approval->payload['supersedes'] ?? null) !== null)
+                    <span class="inbox-board-dflag">{{ $was === null
+                        ? __('approval::message.supersedes_plain')
+                        : __('approval::message.supersedes', ['was' => \App\Core\Support\Money::format($was)]) }}</span>
                 @endif
                 @unless ($pending)
                     @include('approval::inbox.partials.status', ['approval' => $approval])
@@ -70,7 +102,7 @@
             </p>
 
             @if (($prevUrl ?? null) || ($nextUrl ?? null))
-                <span class="mt-1 flex items-center gap-1">
+                <span class="inbox-board-arrows">
                     @if ($prevUrl ?? null)
                         <a href="{{ $prevUrl }}" data-approval-prev aria-keyshortcuts="ArrowLeft" class="inbox-board-arrow"
                            aria-label="{{ __('approval::action.previous') }}" title="{{ __('approval::action.previous') }}">&larr;</a>
@@ -101,34 +133,25 @@
     <div class="inbox-board-dscroll" data-board-scroll>
         {{-- ── tiles ─────────────────────────────────────────────────────── --}}
         <dl class="inbox-board-tiles">
-            @foreach ($tiles as [$label, $value, $hue])
-                <div class="inbox-board-tile" data-tile="{{ $hue }}">
+            @foreach ($tiles as [$label, $value, $hue, $span])
+                <div @class(['inbox-board-tile', 'is-two' => $span === 2, 'is-wide' => $span === 4]) data-tile="{{ $hue }}">
                     <dt>{{ $label }}</dt>
                     <dd>{!! $value !!}</dd>
                 </div>
             @endforeach
             @if ($note !== '')
-                <div class="inbox-board-tile is-wide" data-tile="note">
+                <div class="inbox-board-tile is-wide" data-tile="2">
                     <dt>{{ __('approval::field.board_note') }}</dt>
                     <dd>{{ $note }}</dd>
                 </div>
             @endif
         </dl>
 
-        @if ($standInFor)
-            <p class="inbox-board-note" data-approval-stand-in>{{ __('approval::message.on_behalf_of', ['name' => $standInFor]) }}</p>
-        @endif
-
-        @if ($changedSinceAsked)
-            <p class="inbox-board-warn">{{ __('approval::message.changed_since_asked') }}</p>
-        @endif
-
-        @if (($approval->payload['supersedes'] ?? null) !== null)
-            <p class="inbox-board-warn">
-                {{ $was === null
-                    ? __('approval::message.supersedes_plain')
-                    : __('approval::message.supersedes', ['was' => \App\Core\Support\Money::format($was)]) }}
-            </p>
+        @if ($timeline !== [])
+            <div class="inbox-board-route">
+                <b>{{ __('approval::field.journey') }}:</b>
+                @include('approval::inbox.partials.timeline', ['timeline' => $timeline, 'approval' => $approval])
+            </div>
         @endif
 
         {{-- ── the boxes ─────────────────────────────────────────────────── --}}
@@ -136,18 +159,11 @@
             @if ($bundle !== null)
                 <section class="inbox-board-box">@include('approval::inbox.partials.bundle')</section>
             @elseif ($sheet !== null)
-                <section class="inbox-board-box">@include('approval::inbox.partials.sheet')</section>
+                <section class="inbox-board-box">@include('approval::inbox.partials.sheet', ['boardSheet' => true])</section>
             @endif
 
             @if ($document instanceof \App\Core\Contracts\Drillable)
                 @include('approval::inbox.partials.papers')
-            @endif
-
-            @if ($timeline !== [])
-                <section class="inbox-board-box">
-                    <h3 class="inbox-board-boxhead">{{ __('approval::field.journey') }}</h3>
-                    @include('approval::inbox.partials.timeline', ['timeline' => $timeline, 'approval' => $approval])
-                </section>
             @endif
 
             @if (($partyPapers ?? []) !== [])
@@ -184,7 +200,7 @@
         {{-- ── decide — in the flow, under the boxes (not fixed) ───────────────────── --}}
         <div class="inbox-board-actions">
             @if ($pending && $canDecide)
-                @include('approval::inbox.partials.decide')
+                @include('approval::inbox.partials.decide', ['boardActions' => true, 'boardSheetOpen' => $sheet !== null && $bundle === null])
             @elseif ($pending)
                 <p class="inbox-board-note">{{ $whyNot ?? __('approval::message.not_your_turn') }}</p>
             @endif

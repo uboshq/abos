@@ -2613,12 +2613,6 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
 }
 .inbox-board-link:hover { text-decoration-style: solid; }
 .inbox-board-late { color: var(--color-badge-danger-ink); font-weight: 600; }
-.inbox-board-near { color: var(--color-badge-pending-ink); font-weight: 600; }
-/* ⓘ the step of a two-step paper ("ধাপ 1 / 2") beside its number — the card's pill, kept on the board */
-.inbox-board-step {
-    margin-inline-start: 4px; border-radius: var(--radius-pill); padding: 0 6px; font-size: 10px; font-weight: 600;
-    background: var(--color-surface-sunken); color: var(--color-ink-muted); white-space: nowrap;
-}
 .inbox-board-changed {
     margin-inline-start: 4px; border-radius: var(--radius-pill); padding: 0 6px; font-size: 10px; font-weight: 700;
     background: var(--color-badge-danger-bg); color: var(--color-badge-danger-ink);
@@ -2648,16 +2642,18 @@ a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; te
 .inbox-board-damount { font-size: 38px; font-weight: 800; line-height: 1.1; color: var(--color-ink-inverse); }
 .inbox-board-dwords { font-size: 15px; font-weight: 600; opacity: .95; }
 
-.inbox-board-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 14px 16px 6px; }
+.inbox-board-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 10px 16px; }
 .inbox-board-tile {
     min-width: 0; border-radius: 10px; padding: 6px 12px; border-inline-start: 3px solid var(--t, var(--k));
     background: color-mix(in srgb, var(--t, var(--k)) 9%, var(--color-surface-card));
 }
-.inbox-board-tile[data-tile="who"] { --t: var(--color-kind-fact-who); }
-.inbox-board-tile[data-tile="what"] { --t: var(--color-kind-fact-what); }
-.inbox-board-tile[data-tile="when"] { --t: var(--color-kind-expense); }
-.inbox-board-tile[data-tile="where"] { --t: var(--color-kind-contra); }
+.inbox-board-tile[data-tile="1"] { --t: var(--color-kind-fact-who); }
+.inbox-board-tile[data-tile="2"] { --t: var(--color-kind-contra); }
+.inbox-board-tile[data-tile="3"] { --t: var(--color-kind-expense); }
+.inbox-board-tile[data-tile="4"] { --t: var(--color-kind-fact-what); }
+.inbox-board-tile[data-tile="5"] { --t: var(--color-kind-payment); }
 .inbox-board-tile[data-tile="late"] { --t: var(--color-badge-danger-ink); }
+.inbox-board-tile.is-two { grid-column: span 2; }
 .inbox-board-tile.is-wide { grid-column: 1 / -1; }
 .inbox-board-tile dt { font-size: 11px; color: var(--color-ink-muted); }
 .inbox-board-tile dd { margin: 0; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -2693,6 +2689,34 @@ a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; te
     .inbox-board-dmoney { align-items: flex-start; text-align: start; }
     .inbox-board-damount { font-size: 30px; }
 }
+
+/* ── the sample's small parts (YRFmwfF7 v5): round ticks, green button, one total line, one-line route, one row of buttons ── */
+.inbox-board-ck {
+    appearance: none; inline-size: 18px; block-size: 18px; min-height: 0; margin: 0; flex: none; cursor: pointer;
+    display: inline-grid; place-items: center; border: 2px solid var(--color-ink-muted); border-radius: 50%; background: var(--color-surface-card);
+}
+.inbox-board-ck:checked { background: var(--k, var(--color-brand-600)); border-color: var(--k, var(--color-brand-600)); }
+.inbox-board-ck:checked::after { content: "✓"; color: var(--color-ink-inverse); font-size: 11px; font-weight: 700; line-height: 1; }
+.inbox-board-go, .inbox-board-actions button[type="submit"][data-key="a"] {
+    background: var(--color-success); border-color: var(--color-success); color: var(--color-ink-inverse);
+}
+.inbox-board-foot { border-top: 2px solid var(--color-ink); background: var(--color-surface-card); }
+.inbox-board-total, .inbox-board-pagetotal { display: flex; justify-content: space-between; margin: 0; padding: 8px 88px 8px 44px; font-size: 14px; font-weight: 800; }
+.inbox-board-pagetotal { font-size: 13px; font-weight: 600; color: var(--color-ink-muted); border-top: 1px solid var(--color-border); }
+.inbox-board-arrows { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+.inbox-board-arrows:focus-within { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; display: inline-flex; gap: 4px; }
+.inbox-board-route { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 16px 8px; font-size: 13px; border-bottom: 1px solid var(--color-border); }
+.inbox-board-route > ol { display: contents; }
+.inbox-board-route > ol > li {
+    align-items: center; gap: 5px; padding: 2px 10px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface-card);
+}
+.inbox-board-route > ol > li > span { margin-top: 0; }
+.inbox-board-remark { display: none; }
+.inbox-board-remark.is-open, .inbox-board-remark:focus-within { display: block; margin-bottom: 8px; }
+.inbox-board-actions button { min-height: 34px; padding-block: 0; font-size: 14px; }
+.inbox-board-view { background: color-mix(in srgb, var(--color-brand-600) 10%, var(--color-surface-card)); color: var(--color-link); }
+.inbox-board-actions [data-ask="fix"] { background: var(--color-badge-pending-bg); color: var(--color-badge-pending-ink); border-color: var(--color-badge-pending-ink); }
+.inbox-board-actions [data-ask="reject"] { background: var(--color-badge-danger-bg); color: var(--color-badge-danger-ink); }
 
 /* ⭐ the board's one head row (owner, 24 Nov 2026): coloured title · tab pills · the list toolbar — no orange ribbon, never two rows at 1920 */
 .inbox-board-headrow { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; flex-wrap: nowrap; min-width: 0; }
