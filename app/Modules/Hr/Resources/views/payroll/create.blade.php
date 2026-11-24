@@ -59,8 +59,10 @@
           class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         @csrf
         <input type="hidden" name="run_type" value="{{ \App\Modules\Hr\Models\PayrollRun::BONUS }}">
-        <h2 class="mb-1 font-semibold">{{ __('hr::action.new_bonus_run') }}</h2>
+        <h2 class="mb-1 font-semibold">{{ __('hr::action.new_bonus_run') }}@if (\App\Core\Support\AbosHead::on())<x-ui.page-info :text="__('hr::message.bonus_note')" />@endif</h2>
+@unless (\App\Core\Support\AbosHead::on())
         <p class="mb-3 text-2xs text-(--color-ink-muted)">{{ __('hr::message.bonus_note') }}</p>
+@endunless
 
         <div class="grid gap-3 sm:grid-cols-[14rem_14rem_auto] sm:items-end">
             <label class="block">

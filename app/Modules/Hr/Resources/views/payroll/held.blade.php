@@ -88,8 +88,10 @@
         <section id="bank-awaiting" data-bank-awaiting data-boxed
                  class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) text-sm">
             <div class="border-b border-(--color-border) p-4">
-                <h2 class="font-semibold">{{ __('hr::payroll.bank_awaiting') }}</h2>
+                <h2 class="font-semibold">{{ __('hr::payroll.bank_awaiting') }}@if (\App\Core\Support\AbosHead::on())<x-ui.page-info :text="__('hr::payroll.bank_awaiting_note')" />@endif</h2>
+@unless (\App\Core\Support\AbosHead::on())
                 <p class="mt-0.5 max-w-(--spacing-prose-max) text-(--color-ink-muted)">{{ __('hr::payroll.bank_awaiting_note') }}</p>
+@endunless
             </div>
             <div class="overflow-x-auto">
                 <table class="ui-grid">
@@ -141,7 +143,38 @@
         </section>
     @endif
 
-    @if ($papers->isNotEmpty())
+    @if (\App\Core\Support\AbosHead::on())
+        @php
+            $paperPanel = \App\Core\ListFilter\Facets::panel([\App\Core\ListFilter\Facets::pick('channel', __('hr::field.payment_method'), ['bank' => __('hr::kind.bank'), 'mfs' => __('hr::kind.mfs')])]);
+        @endphp
+        @if ($papers->total() > 0 || request()->filled('q') || request()->filled('channel'))
+            <x-ui.filter-layout :filters="$paperPanel" form="list-form">
+            <section data-boxed data-held-papers class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) text-sm">
+                <form id="list-form" method="GET" class="contents">
+                    <x-ui.toolbar :title="__('hr::payroll.held_papers')" :search-placeholder="__('hr::field.document_no')" :facets="$paperPanel"
+                                  :export="false" :print="false" :share="false" :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]" />
+                </form>
+                <div class="p-4">
+                    @if ($papers->isEmpty())
+                        <x-ui.empty-state :message="__('core.empty.no_results')" />
+                    @endif
+            <ul class="list-inside list-disc">
+                @foreach ($papers as $paper)
+                    <li>
+                        {{ $paper->voucher?->document_no }} · {{ __('hr::kind.'.$paper->channel) }}
+                        @can('hr.identity.view')
+                            · <a class="underline" href="{{ route('hr.payroll.held.paper', $paper->voucher_id) }}">{{ __('hr::payroll.held_paper_again') }}</a>
+                        @endcan
+                    </li>
+                @endforeach
+            </ul>
+                </div>
+                <x-ui.pager :rows="$papers" />
+                <x-ui.list-totals :rows="$papers" />
+            </section>
+            </x-ui.filter-layout>
+        @endif
+    @elseif ($papers->isNotEmpty())
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 text-sm">
             <h2 class="mb-2 font-semibold">{{ __('hr::payroll.held_papers') }}</h2>
             <ul class="list-inside list-disc">

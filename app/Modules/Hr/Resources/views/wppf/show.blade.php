@@ -46,7 +46,7 @@
     @if ($abosHead)
         <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <form id="list-form" method="GET" action="{{ route('hr.wppf.show') }}" class="contents" data-report>
-                <x-ui.toolbar :title="__('hr::wppf.title')" :count="$year->name" :info="$source.' '.__('hr::wppf.law')" :search="false" :report="true"
+                <x-ui.toolbar :title="__('hr::wppf.title')" :count="$year->name" :info="$source.' '.__('hr::wppf.law').($provision?->isPosted() ? '' : ' '.__('hr::wppf.provision_note'))" :search="false" :report="true"
                               :export="false" :print="false" :share="false" :facets="$facetPanel" />
             </form>
         </div>
@@ -72,7 +72,9 @@
                 {{ $profit ? __('hr::wppf.net_profit') : __('hr::wppf.net_loss') }}
             </p>
             <p class="num mt-1 text-xl font-semibold" data-wppf-net>{{ $money($profit ? $figures['pl_net'] : bcmul((string) $figures['pl_net'], '-1', 4)) }}</p>
+@unless (\App\Core\Support\AbosHead::on())
             <p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('hr::wppf.source', ['from' => $year->starts_on->format('d M Y'), 'to' => $year->ends_on->format('d M Y')]) }}</p>
+@endunless
             {{-- ⓘ জাবেদা বসার পরে — তহবিলের নিজের খরচ ফিরিয়ে যোগ, ভিত্তি তহবিলের আগের মুনাফা ([[WppfService::figuresFor()]]) --}}
             @if ($charged)
                 <p class="mt-2 text-xs" data-wppf-base>
@@ -83,7 +85,9 @@
         <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
             <p class="text-2xs font-semibold uppercase tracking-wide text-(--color-ink-muted)">{{ __('hr::wppf.wppf') }}</p>
             <p class="num mt-1 text-xl font-semibold" data-wppf-total>{{ $money($figures['wppf']) }}</p>
+@unless (\App\Core\Support\AbosHead::on())
             <p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('hr::wppf.law') }}</p>
+@endunless
         </div>
     </div>
 
@@ -114,7 +118,9 @@
         @if ($provision?->isPosted())
             <p>{{ __('hr::wppf.posted_on', ['amount' => $money($provision->wppf), 'at' => \App\Core\Support\DateFormat::format($provision->posted_at)]) }}</p>
         @else
+@unless (\App\Core\Support\AbosHead::on())
             <p class="text-(--color-ink-muted)">{{ __('hr::wppf.provision_note') }}</p>
+@endunless
             @can('hr.wppf.manage')
                 @if (bccomp((string) $figures['wppf'], '0', 4) > 0)
                     <form method="POST" action="{{ route('hr.wppf.provision', ['year' => $year->id]) }}" class="mt-3">

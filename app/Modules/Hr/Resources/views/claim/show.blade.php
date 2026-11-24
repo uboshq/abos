@@ -86,10 +86,12 @@
         && bccomp((string) $openAdvance, '0', 2) > 0)
         @can('accounts.voucher.create')
             <section data-take-back class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 text-sm">
-                <h2 class="mb-2 font-semibold">{{ __('hr::claim.take_back_title') }}</h2>
+                <h2 class="mb-2 font-semibold">{{ __('hr::claim.take_back_title') }}@if (\App\Core\Support\AbosHead::on())<x-ui.page-info :text="__('hr::claim.take_back_note', ['open' => \App\Core\Support\Money::format($openAdvance)])" />@endif</h2>
+@unless (\App\Core\Support\AbosHead::on())
                 <p class="mb-3 text-2xs text-(--color-ink-muted)">
                     {{ __('hr::claim.take_back_note', ['open' => \App\Core\Support\Money::format($openAdvance)]) }}
                 </p>
+@endunless
                 <form method="POST" action="{{ route('hr.claim.take_back', $claim) }}" class="flex flex-wrap items-end gap-3">
                     @csrf
                     <x-ui.field name="amount" type="number" step="0.01" inputmode="decimal" :label="__('hr::claim.amount')"
