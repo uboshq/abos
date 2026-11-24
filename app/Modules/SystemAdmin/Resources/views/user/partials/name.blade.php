@@ -8,6 +8,9 @@
 
     ⓘ ছবিটাও বাদ — নমুনায় নেই। ⚠️ সারি-প্রতি একটা বৃত্ত এগারো কলামের
     ছকে জায়গা খায়, আর নামটাই তো পরিচয়।
+
+    ⭐ নামটা লিংক — সম্পাদনার পাতায় (মালিক, ২৪ নভেম্বর ২০২৬: "এই পর্দায় কোনোভাবেই কোনো জায়গা থেকে ঢুকতে পারতেছি না";
+    হাইপারলিংকের নিয়ম, ২৩ নভেম্বর)। ⓘ আগে পথ ছিল কেবল সারির শেষের ⋯ মেনু।
 --}}
 {{-- ⓘ নামটা ভাঙে না — কারণটা [[index.blade.php]]-এর `name` কলামে লেখা --}}
-<span class="whitespace-nowrap">{{ $user->name }}</span>
+<a href="{{ route('system_admin.user.edit', $user) }}" class="whitespace-nowrap text-(--color-link) underline-offset-2 hover:underline">{{ $user->name }}</a>
