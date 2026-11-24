@@ -368,7 +368,7 @@ final class FinalSettlements
 
     private function pendingApproval(FinalSettlement $settlement, User $by): Approval
     {
-        // ⛔ তালা দিয়ে তাজা অবস্থা — হাতের কপি বাসি হতে পারে
+        // ⓘ তাজা অবস্থা পড়া — হাতের কপি বাসি হতে পারে; তালা এখানেই ছাড়ে, আসল পাহারা ইঞ্জিনের অনুরোধের তালা আর finishSigned()-এর তালা
         $settlement = DB::transaction(fn () => FinalSettlement::query()->whereKey($settlement->getKey())->lockForUpdate()->firstOrFail());
         $approval = $this->approvalOf($settlement);
 
