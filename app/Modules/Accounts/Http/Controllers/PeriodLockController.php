@@ -62,13 +62,28 @@ class PeriodLockController extends Controller implements HasMiddleware
      */
     public function index(Request $request): View
     {
-        $year = FinancialYear::query()->where('is_current', true)->first()
+        /*
+         * ⭐ আগের অর্থবছরও (২৪ নভেম্বর ২০২৬) — আগে কেবল চলতি বছর আসত, তাই আগের বছরের বন্ধ মাস এই পাতা থেকে খোলাই যেত না।
+         * ⓘ খোলা-বন্ধের নিয়ম একটাও বদলায়নি: পরের মাস বন্ধ থাকলে আগেরটা খোলে না, কারণ লাগে। না বাছলে আগের মতো চলতি বছর।
+         */
+        $years = FinancialYear::query()->where('starts_on', '<=', Carbon::today()->toDateString())->orderByDesc('starts_on')->get();
+        $chosen = $request->query('fy');
+        $year = (is_string($chosen) && ctype_digit($chosen) ? $years->firstWhere('id', (int) $chosen) : null)
+            ?? FinancialYear::query()->where('is_current', true)->first()
             ?? FinancialYear::query()->orderByDesc('starts_on')->first();
+
+        $state = in_array($request->query('state'), ['open', 'closed'], true) ? $request->query('state') : '';
+        $term = is_string($request->query('q')) ? mb_strtolower(trim($request->query('q'))) : '';
+        $sort = $request->query('sort') === 'oldest' ? 'oldest' : 'recent';
+
+        $months = array_values(array_filter($this->monthsOf($year), fn (array $m): bool => ($state === '' || ($state === 'closed') === ($m['lock'] !== null))
+            && ($term === '' || str_contains(mb_strtolower($m['label'].' '.sprintf('%02d/%04d', $m['month'], $m['year']).' '.($m['lock']?->reason ?? '')), $term))));
 
         return view('accounts::period.index', [
             'menu' => $this->menu->forUser($request->user()),
             'year' => $year,
-            'months' => $this->monthsOf($year),
+            'years' => $years,
+            'months' => $sort === 'oldest' ? array_reverse($months) : $months,
         ]);
     }
 

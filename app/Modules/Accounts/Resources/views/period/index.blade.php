@@ -44,15 +44,24 @@
             'render' => fn ($m) => view('accounts::period.partials.actions', ['month' => $m]),
         ],
     ];
+
+    // ⛔ মাথা আর প্যানেল কেবল ABOS Smart, Navy, Blue-এ — বাকি রূপ হুবহু আগের মতো ([[AbosHead]])
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead || $year === null ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::one('fy', __('accounts::period_list.year'), $years->mapWithKeys(fn ($y) => [(string) $y->id => (string) $y->name])->all(), (string) $year->id),
+        \App\Core\ListFilter\Facets::pick('state', __('accounts::field.state'), ['open' => __('accounts::field.open'), 'closed' => __('accounts::field.closed')]),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.periods') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('accounts::menu.periods')"
                           :subtitle="__('accounts::message.period_note')" />
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -74,7 +83,19 @@
         </div>
     @endif
 
-    @if ($months === [])
+    @if ($facetPanel)
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :title="__('accounts::menu.periods')" :info="__('accounts::message.period_note')"
+                          :search-placeholder="__('accounts::field.month')" :columns="$columns"
+                          :sort="['recent' => __('accounts::period_list.recent'), 'oldest' => __('accounts::period_list.oldest')]"
+                          :quiet="['fy']" :facets="$facetPanel" />
+        </form>
+        <x-ui.table :rows="$months" :columns="$columns" :empty="__('core.empty.no_results')" />
+    </div>
+    </x-ui.filter-layout>
+    @elseif ($months === [])
         <x-ui.empty-state :message="__('accounts::message.no_current_year')" />
     @else
     <x-ui.table :rows="$months"
