@@ -171,7 +171,7 @@
                 <span>{{ __('approval::field.page_total', ['count' => $rows->count()]) }}</span>
                 <span class="num" data-page-total>{{ \App\Core\Support\Money::format($sumPage) }}</span>
             </p>
-            <x-ui.pager :rows="$approvals" />
+            @include('approval::inbox.partials.pages')
         @endif
     </div>
 </div>

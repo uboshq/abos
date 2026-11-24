@@ -165,7 +165,7 @@
                     <span>{{ __('approval::field.all_total', ['count' => $visibleTotal]) }}</span>
                     <span class="num" data-all-total>৳{{ \App\Core\Support\Money::format($sumAll) }}</span>
                 </p>
-                <x-ui.pager :rows="$approvals" />
+                @include('approval::inbox.partials.pages')
             </div>
             @endunless
 

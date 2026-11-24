@@ -499,6 +499,12 @@ class AClonePromisedAShapeAndDrewAnotherTest extends TestCase
                 if ($module->menu === []) {
                     continue;
                 }
+                // ⓘ `merged_only` মডিউল (বার্তা) ঘোষণাতেই কেবল আশ্রয়দাতার ভিতরে; যে রূপে মডিউল আলাদা থাকে সেখানে সে নেই — থাকলেই ভুল
+                if (($module->nav['merged_only'] ?? false) === true && Ui::keepsModulesApart($look)) {
+                    $this->assertNotContains($code, $covered, "রূপ {$look}: {$code} কেবল এক করা রূপের, অথচ এখানে মেনুতে");
+
+                    continue;
+                }
                 $this->assertContains($code, $covered, "রূপ {$look}: মডিউল {$code} মেনুর কোথাও নেই — না নিজে, না কারও ভিতরে");
             }
 
