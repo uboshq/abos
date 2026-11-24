@@ -176,8 +176,15 @@ final class TheInboxIsOnePageWithTheListAndThePaperTest extends TestCase
         $this->assertSame(27, $page->viewData('visibleTotal'));
         $this->assertSame(0, bccomp('2500', $page->viewData('sumPage'), 2), '⛔ দফা ৬: এই পাতার মোট ভুল।');
         $this->assertSame(0, bccomp('2700', $page->viewData('sumAll'), 2), '⛔ দফা ৬: সবগুলোর মোট ভুল।');
-        $page->assertSee(__('approval::field.all_total', ['count' => 27]));
-        $page->assertSee('৳2,700.00', false);
+        // ⓘ the ABOS board (owner's sample, 24 Nov 2026) says its one total line in its own words; the cards keep theirs
+        $page->assertSee(__('approval::field.board_total', ['count' => 27]));
+        $this->assertMatchesRegularExpression('~data-all-total>\s*2,700\.00\s*<~', (string) $page->getContent(), '⛔ দফা ৬: বোর্ডে সর্বমোট নেই।');
+
+        $this->first->forceFill(['ui' => 'tiles'])->save();
+        $cards = $this->actingAs($this->first->fresh())->get(route('approval.inbox.index'))->assertOk();
+        $cards->assertSee(__('approval::field.all_total', ['count' => 27]));
+        $cards->assertSee('৳2,700.00', false);
+        $this->first = $this->first->fresh();
 
         $two = $this->actingAs($this->first)->get(route('approval.inbox.index', ['page' => 2]))->assertOk();
         $this->assertCount(2, $two->viewData('approvals')->getCollection(), '⛔ দফা ৬: বাকি দুইটা পরের পাতায় নেই।');

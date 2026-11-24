@@ -51,6 +51,12 @@ class WorkspaceController extends Controller
     {
         $menu = $this->menu->forUser($request->user());
 
+        /*
+         * ⓘ বার্তা সবার জন্য খোলা (মালিক, ২৪ নভেম্বর ২০২৬) — কেবল ঐ সারিটা থাকা মানে ভূমিকা আছে, তা নয়; তাই "কেন ফাঁকা" বলার
+         *   সময় ওটা গোনা হয় না ([[ANewUserSawAnEmptyScreenAndNoReasonTest]])।
+         */
+        $hasWork = collect($menu)->contains(fn (array $m): bool => array_diff($m['codes'] ?? [$m['code']], ['messaging']) !== []);
+
         // ⭐ হোমের ছাঁকনি — কেবল নতুন ড্যাশবোর্ডে; তালিকার বাইরের নম্বর নেয় না (মালিক, ৪ অক্টোবর ২০২৬)
         // ⓘ ৫ অক্টোবর ২০২৬ থেকে নতুন হোম সব সাইটে, সুইচ ছাড়াই — তাই ফিল্টারও সবসময়
         $filterChoices = app(\App\Core\Contracts\HomeSalesFilters::class)->choices();
@@ -93,7 +99,8 @@ class WorkspaceController extends Controller
              * ⚠️ খোঁজাটা কেবল মেনু খালি হলে — রোজকার পাতা খোলায় একটা
              * বাড়তি কোয়েরি বসানোর কোনো কারণ নেই।
              */
-            'roleLivesIn' => $menu === [] ? $this->whereTheirRolesAre($request->user()) : [],
+            'hasWork' => $hasWork,
+            'roleLivesIn' => ! $hasWork ? $this->whereTheirRolesAre($request->user()) : [],
 
             // ⭐ হোমের ছাঁকনি — কেবল এই কার্ডগুলো গোনার সময় চালু; বদলায় শুধু বিক্রি আর বকেয়া ([[HomeFilter]])
             'groups' => $filter->during(fn () => \App\Core\Dashboard\HomePeriod::during($period,
