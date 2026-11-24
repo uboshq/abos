@@ -492,14 +492,14 @@ final class ASalesmanSeesOnlyHisOwnDealersTest extends TestCase
         $this->wall();
         $fresh = $this->salesman('new-sr@abos.test');
 
-        $this->web($this->owner)->get(route('customer.binding.index'))->assertOk()
+        $this->web($this->owner)->get(route('customer.binding.index', ['tab' => 'who']))->assertOk()
             ->assertSee('data-staff="'.$fresh->id.'" data-blind="1"', false);
 
         $this->actingAs($this->owner);
         app(DealerBindingService::class)->bind((int) $fresh->id, [(int) $this->loose->id], now()->toDateString());
         $this->forget();
 
-        $this->web($this->owner)->get(route('customer.binding.index'))->assertOk()
+        $this->web($this->owner)->get(route('customer.binding.index', ['tab' => 'who']))->assertOk()
             ->assertSee('data-staff="'.$fresh->id.'" data-blind="0"', false);
 
         $this->web($this->sales)->get(route('customer.binding.index'))->assertForbidden();
