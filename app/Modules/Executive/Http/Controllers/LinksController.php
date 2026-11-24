@@ -63,6 +63,11 @@ final class LinksController extends Controller implements HasMiddleware
         $links = SisterLink::acrossAllCompanies()
             ->whereIn('company_id', $companies->keys()->all() ?: [0])
             ->whereIn('sister_company_id', $companies->keys()->all() ?: [0])
+            // ⓘ ছাঁকনি উপরের দেয়ালের ভিতরে — কেবল কমে
+            ->when($request->integer('in') > 0, fn ($q) => $q->where('company_id', $request->integer('in')))
+            ->when(in_array($request->query('kind'), ['customer', 'supplier'], true), fn ($q) => $request->query('kind') === 'customer'
+                ? $q->where('party_type', SisterLink::CUSTOMER)
+                : $q->where('party_type', '!=', SisterLink::CUSTOMER))
             ->orderBy('company_id')
             ->orderBy('id')
             ->paginate(\App\Core\Support\PerPage::of())

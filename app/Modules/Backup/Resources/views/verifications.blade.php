@@ -6,14 +6,28 @@
     হুবহু দেখানো হয় — ১৯ সেপ্টেম্বর ২০২৬-এর "Access denied … verify"
     মালিক আগে কেবল সার্ভারের লগে পেতেন।
 --}}
+@php
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $sinceLine = $since
+        ? __('backup::screen.records_since', ['date' => \App\Core\Support\DateFormat::format(\Illuminate\Support\Carbon::parse($since))])
+        : __('backup::screen.no_records_yet');
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('status', __('backup::screen.col_result'),
+            collect(['success', 'partial', 'local_only', 'failed', 'running'])->mapWithKeys(fn ($s) => [$s => __('backup::screen.status_'.$s)])->all()),
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('backup::screen.verify_title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('backup::screen.verify_title')"
                           :subtitle="__('backup::screen.verify_subtitle')" />
     </x-slot:header>
+    @endunless
 
+    @unless ($abosHead)
     <p class="mb-3 text-sm text-(--color-ink-muted)">
         @if ($since)
             {{ __('backup::screen.records_since', ['date' => \App\Core\Support\DateFormat::format(\Illuminate\Support\Carbon::parse($since))]) }}
@@ -21,6 +35,15 @@
             {{ __('backup::screen.no_records_yet') }}
         @endif
     </p>
+    @endunless
+
+    <x-ui.filter-layout :filters="$abosHead ? $facetPanel : \App\Core\ListFilter\Facets::panel([])" form="list-form">
+    @if ($abosHead)
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :title="__('backup::screen.verify_title')" :info="__('backup::screen.verify_subtitle').' '.$sinceLine"
+                          :search="false" :export="false" :share="false" :facets="$facetPanel" />
+        </form>
+    @endif
 
     @if ($runs->isNotEmpty())
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
@@ -79,4 +102,5 @@
 
     {{-- ⓘ খালি হলেও "০টি সারি" — যে রাতগুলো নেই, সেটাও একটা উত্তর --}}
     <x-ui.list-totals :rows="$runs" />
+    </x-ui.filter-layout>
 </x-layouts.app>

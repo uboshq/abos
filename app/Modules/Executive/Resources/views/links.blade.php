@@ -4,14 +4,30 @@
     ⓘ "এই কোম্পানির এই ক্রেতা বা সরবরাহকারী আসলে আমাদের ঐ কোম্পানি।" জোড়া থাকলে গ্রুপের মোট থেকে
     দুইয়ের মাঝের বিক্রি, পাওনা আর দেনা বাদ যায় ([[Eliminations]])। ⛔ নাম মিলিয়ে কিছু আন্দাজ করা হয় না।
 --}}
+@php
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('in', __('executive::links.company'), collect($companies)->mapWithKeys(fn ($c) => [$c['id'] => $c['name']])->all()),
+        \App\Core\ListFilter\Facets::pick('kind', __('executive::links.party'), ['customer' => __('executive::links.type_customer'), 'supplier' => __('executive::links.type_supplier')]),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     @include('executive::partials.fit')
     <x-slot:title>{{ __('executive::links.title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$abosHead ? $facetPanel : \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div data-executive-links class="flex flex-col gap-3">
+        @if ($abosHead)
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :title="__('executive::links.title')" :info="__('executive::links.explain')" :search="false" :export="false" :share="false"
+                              :facets="$facetPanel" :quiet="['company']" />
+            </form>
+        @endif
         <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: var(--exec-bar)">
-            <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::links.title') }}</h1>
+            @unless ($abosHead)
+                <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::links.title') }}</h1>
+            @endunless
             <form method="GET" action="{{ route('executive.links') }}" class="flex flex-wrap items-center gap-2">
                 <label for="ln-company" class="text-sm text-(--color-ink-muted)">{{ __('executive::links.company') }}</label>
                 <select id="ln-company" name="company" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
@@ -29,7 +45,9 @@
         @endif
         <x-ui.errors />
 
-        <p class="text-sm text-(--color-ink-muted)">{{ __('executive::links.explain') }}</p>
+        @unless ($abosHead)
+            <p class="text-sm text-(--color-ink-muted)">{{ __('executive::links.explain') }}</p>
+        @endunless
 
         @if ($chosen !== null && count($companies) > 1)
             <form method="POST" action="{{ route('executive.links.store') }}"
@@ -95,4 +113,5 @@
             <x-ui.pager :rows="$links" />
         </section>
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

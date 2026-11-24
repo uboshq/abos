@@ -13,11 +13,31 @@
         'active' => $tab === $key,
     ])->all();
     $tabQuery = $tab !== 'all' ? ['tab' => $tab] : [];
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('type', __('notification::party.document_type'), $typeNames),
+    ]);
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::party.templates_title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$abosHead ? $facetPanel : \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div class="space-y-4">
+        @if ($abosHead)
+        <form id="list-form" method="GET" action="{{ route('notification.party_templates.index') }}" class="contents">
+            @if ($tab !== 'all')
+                <input type="hidden" name="tab" value="{{ $tab }}">
+            @endif
+            <x-ui.toolbar :title="__('notification::party.templates_title')" :search-placeholder="__('notification::party.name')"
+                          :export="false" :share="false" :facets="$facetPanel" :quiet="['tab']">
+                <x-slot:actions>
+                    <x-ui.button tone="primary" icon="plus" :href="route('notification.party_templates.create', $tabQuery)" data-new-template>
+                        {{ __('notification::party.new') }}
+                    </x-ui.button>
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
+        @else
         <x-ui.page-header :title="__('notification::party.templates_title')">
             <x-slot:actions>
                 <x-ui.button tone="primary" icon="plus" :href="route('notification.party_templates.create', $tabQuery)" data-new-template>
@@ -25,6 +45,7 @@
                 </x-ui.button>
             </x-slot:actions>
         </x-ui.page-header>
+        @endif
 
         <x-ui.list-tabs :label="__('notification::party.tabs_label')" :tabs="$tabs" />
 
@@ -79,4 +100,5 @@
             @include('notification::party.form', ['template' => $template, 'types' => $types, 'tabQuery' => $tabQuery, 'metaSubmit' => $metaSubmit])
         </div>
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

@@ -5,20 +5,31 @@
     বোতাম; শেষে একজন গ্রাহকের অনাদায়ী বাদের খসড়া। দুটো বোতামই খসড়া ভাউচার লেখে — পাকা হয় ভাউচারের পাতায়।
 --}}
 @php
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([\App\Core\ListFilter\Facets::day('as_of', __('credit_control::loss.as_of'), (string) $position['as_of'])]);
     $money = fn ($v) => \App\Core\Support\Money::format($v);
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('credit_control::loss.title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('credit_control::loss.title')" :subtitle="__('credit_control::loss.subtitle')" />
     </x-slot:header>
+    @endunless
 
+    <x-ui.filter-layout :filters="$abosHead ? $facetPanel : \App\Core\ListFilter\Facets::panel([])" form="list-form">
+    @if ($abosHead)
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :title="__('credit_control::loss.title')" :info="__('credit_control::loss.subtitle')" :search="false" :export="false" :share="false" :facets="$facetPanel" />
+        </form>
+    @else
     <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide">
         <x-ui.field name="as_of" type="date" :label="__('credit_control::loss.as_of')" :value="$position['as_of']" />
         <x-ui.button type="submit" tone="secondary">{{ __('core.action.apply') }}</x-ui.button>
     </form>
+    @endif
 
     <section data-boxed class="mb-4 overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <table class="w-full text-sm">
@@ -82,4 +93,5 @@
             </form>
         </section>
     @endcan
+    </x-ui.filter-layout>
 </x-layouts.app>
