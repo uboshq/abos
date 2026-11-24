@@ -5,9 +5,20 @@
     যায় না। গুদামের লোক সকালে একবার আজকের পর্দাটা খোলেন — কাজের ধরনটাই
     এই রকম।
 --}}
+@php
+    // ⛔ মাথা আর প্যানেল কেবল ABOS Smart, Navy, Blue-এ — বাকি রূপ হুবহু আগের মতো ([[AbosHead]])
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::day('date', __('hr::field.work_date'), $date->toDateString()),
+    ]);
+    $departments = $employees->pluck('department')->filter()->unique('id')->sortBy(fn ($d) => $d->name())->mapWithKeys(fn ($d) => [$d->id => $d->name()])->all();
+    // ⓘ সংরক্ষণ থামলে (যেমন বেতন হয়ে যাওয়া মাস) যা লেখা হয়েছিল তাই ফেরে — আগে সব মুছে যেত
+    $typed = is_array(old('rows')) ? old('rows') : null;
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('hr::menu.attendance') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header
             :title="__('hr::menu.attendance')"
@@ -19,6 +30,7 @@
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -40,6 +52,7 @@
         </div>
     @endif
 
+    @unless ($abosHead)
     {{-- দিন বাছা — আলাদা ফর্ম, কারণ এটা শুধু পাতা বদলায়, কিছু সংরক্ষণ করে না --}}
     <form method="GET" class="mb-4 flex flex-wrap items-end gap-2">
         <label class="block">
@@ -51,76 +64,43 @@
                        class="text-sm" />
         </label>
     </form>
+    @endunless
 
-    @if ($employees->isEmpty())
-        <div data-boxed class="rounded-(--radius-card) border border-(--color-border)
-                    bg-(--color-surface-card) p-8 text-center text-sm text-(--color-ink-muted)">
-            {{ __('hr::message.no_employees_for_day') }}
+    @if ($facetPanel)
+        <div x-data="daySheet">
+            <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+                <form id="list-form" method="GET" class="contents">
+                    <x-ui.toolbar :title="__('hr::menu.attendance')" :info="__('hr::message.attendance_note')" :subtitle="$date->translatedFormat('d M Y, l')"
+                                  :search="false" :density="false" :export="false" :share="false" :print="false" :refresh="false"
+                                  :quiet="['date']" :facets="$facetPanel">
+                        <x-slot:actions>
+                            {{-- ⓘ নাম ছাড়া ঘর — ঠিকানায় যায় না, পাতা আবার খোলে না; কেবল সারি লুকায় ([[day-sheet.js]]) --}}
+                            <input type="search" x-model="term" x-on:input="narrow()" x-on:keydown.enter.prevent="narrow()" autocomplete="off"
+                                   placeholder="{{ __('hr::field.name') }}" aria-label="{{ __('hr::field.name') }}" data-day-find
+                                   class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                            @if (count($departments) > 1)
+                                <select x-model="department" x-on:change="narrow()" aria-label="{{ __('hr::field.department') }}" data-day-department
+                                        class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                                    <option value="">{{ __('hr::field.department') }}: {{ __('core.list_filter.any') }}</option>
+                                    @foreach ($departments as $id => $name)
+                                        <option value="{{ $id }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
+                            <span class="num text-sm text-(--color-ink-muted)" aria-live="polite"><span x-text="shown">{{ $employees->count() }}</span> / {{ $employees->count() }}</span>
+                            <x-ui.button tone="secondary" :href="route('hr.attendance.sheet', ['month' => $date->format('Y-m')])">{{ __('hr::action.monthly_sheet') }}</x-ui.button>
+                            @can('hr.attendance.manage')
+                                @if ($employees->isNotEmpty())
+                                    <x-ui.button type="submit" form="attendance-form" tone="primary" data-save-day>{{ __('hr::action.save_attendance') }}</x-ui.button>
+                                @endif
+                            @endcan
+                        </x-slot:actions>
+                    </x-ui.toolbar>
+                </form>
+                @include('hr::attendance.partials.day')
+            </x-ui.filter-layout>
         </div>
     @else
-        <form method="POST" action="{{ route('hr.attendance.store') }}">
-            @csrf
-            <input type="hidden" name="work_date" value="{{ $date->toDateString() }}">
-
-            <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-surface-card)">
-                <p class="border-b border-(--color-border) px-4 py-2 text-2xs text-(--color-ink-muted)">
-                    {{ __('hr::message.attendance_note') }}
-                </p>
-
-                <table class="ui-grid is-dense w-full text-sm">
-                    <thead class="border-b border-(--color-border) text-2xs uppercase
-                                  tracking-wide text-(--color-ink-muted)">
-                        <tr>
-                            <th class="text-start">{{ __('hr::field.code') }}</th>
-                            <th class="text-start">{{ __('hr::field.name') }}</th>
-                            <th class="text-start">{{ __('hr::field.attendance_status') }}</th>
-                            <th class="text-center">{{ __('hr::field.is_late') }}</th>
-                            <th class="text-start">{{ __('hr::field.remarks') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($employees as $employee)
-                            @php $row = $existing->get($employee->id); @endphp
-                            <tr class="border-b border-(--color-border)">
-                                <td class="num">{{ $employee->code }}</td>
-                                <td>{{ $employee->name() }}</td>
-                                <td>
-                                    <select name="rows[{{ $employee->id }}][status]"
-                                            class="rounded-(--radius-field) border border-(--color-border)
-                                                   bg-(--color-surface-app) px-2 py-1.5 text-sm">
-                                        <option value="">—</option>
-                                        @foreach ($statuses as $status)
-                                            <option value="{{ $status }}"
-                                                    @selected($row?->status === $status)>
-                                                {{ __('hr::kind.' . $status) }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </td>
-                                <td class="text-center">
-                                    <input type="checkbox" name="rows[{{ $employee->id }}][is_late]" value="1"
-                                           @checked($row?->is_late) class="size-4">
-                                </td>
-                                <td>
-                                    <input type="text" name="rows[{{ $employee->id }}][remarks]"
-                                           value="{{ $row?->remarks }}"
-                                           class="w-full rounded-(--radius-field) border border-(--color-border)
-                                                  bg-(--color-surface-app) px-2 py-1.5 text-sm">
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            @can('hr.attendance.manage')
-                <div class="mt-3 flex justify-end">
-                    <x-ui.button type="submit" tone="primary">
-                        {{ __('hr::action.save_attendance') }}
-                    </x-ui.button>
-                </div>
-            @endcan
-        </form>
+        @include('hr::attendance.partials.day')
     @endif
 </x-layouts.app>

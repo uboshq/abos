@@ -16,6 +16,8 @@ import { copilotPage } from './copilot-page.js'
 import { modulePicker } from '../module-picker.js'
 // ⭐ নোট আর স্টক ছাড়া ভাউচারের সারির ছক — কেবল কম্পোনেন্টটা; money/figures/plain সাহায্যকারী, x-data নয় (নকশা v5)
 import { tradeLines } from './trade-lines.js'
+// ⓘ দিনের হাজিরার খাতা — খোঁজা আর বিভাগ পাতার ভিতরেই, না-সংরক্ষিত লেখা হারায় না
+import { daySheet } from './day-sheet.js'
 
 /*
  * প্রতিটা নামওয়ালা কম্পোনেন্ট এক জায়গায় নিবন্ধিত — ব্লেড কেবল নামটা ডাকে।
@@ -26,7 +28,7 @@ import { tradeLines } from './trade-lines.js'
  * ওটাকে সরাসরি পায়।
  */
 // ⓘ rail-fit.js-এর সাহায্যকারীগুলো (hideOrder, fitRail…) x-data নয় — তাই কেবল কম্পোনেন্টটা
-const modules = [shell, money, forms, screens, pos, documents, collection, { railFit }, { copilotQuick }, { copilotPage }, { modulePicker }, { tradeLines }]
+const modules = [shell, money, forms, screens, pos, documents, collection, { railFit }, { copilotQuick }, { copilotPage }, { modulePicker }, { tradeLines }, { daySheet }]
 
 /*
  * ব্রাউজারের কয়েকটা ফাংশন, পর্দা থেকে ডাকার মতো করে।
