@@ -2566,3 +2566,199 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
     cursor: not-allowed;
     filter: grayscale(1);
 }
+
+/* ⭐ The approval inbox board — only rose, navy and blue ([[ApprovalInboxController::BOARD_LOOKS]]; owner "ok", 23 Nov 2026,
+   sample YRFmwfF7 v5). ⓘ Kinds in round boxes in the kind's colour (--k, --kd come from the box's own style), rows alternate
+   light and deeper inside each box, the open row deepest; the right side has a bright head with a big amount, and the decide
+   buttons flow under the boxes. ⓘ Each side scrolls on its own with no visible scrollbar (owner: "স্ক্রল বার না থাকাটাই ভালো").
+   ⓘ px, because 1rem = 20px in this app. */
+.inbox-board { align-items: stretch; }
+@media (min-width: 1024px) {
+    .inbox-board { height: var(--board-h, auto); min-height: 560px; }
+    .inbox-board-left, .inbox-board-right { min-height: 0; display: flex; flex-direction: column; }
+    .inbox-board-left > form { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+    .inbox-board-list { flex: 1 1 auto; min-height: 0; }
+    .inbox-board-right > .inbox-board-detail { flex: 1 1 auto; min-height: 0; }
+}
+.inbox-board-list, .inbox-board-detail {
+    display: flex; flex-direction: column; overflow: hidden;
+    border-radius: var(--radius-card); background: var(--color-surface-card); border: 1px solid var(--color-border);
+}
+.inbox-board-scroll, .inbox-board-dscroll { flex: 1 1 auto; min-height: 0; overflow: auto; scrollbar-width: none; }
+.inbox-board-scroll::-webkit-scrollbar, .inbox-board-dscroll::-webkit-scrollbar { display: none; }
+
+.inbox-board-pickbar {
+    display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+    border-bottom: 1px solid var(--color-border); background: var(--color-surface-sunken);
+}
+.inbox-board-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.inbox-board-table thead th {
+    position: sticky; top: 0; z-index: 1; background: var(--color-surface-card); color: var(--color-ink-muted);
+    font-weight: 600; font-size: 12px; text-align: start; padding: 6px 8px; border-bottom: 1px solid var(--color-border);
+}
+.inbox-board-table td { padding: 6px 8px; white-space: nowrap; }
+.inbox-board-table td.num:not(.text-end) { text-align: start; }
+.inbox-board-cut { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.inbox-board-tick { width: 34px; text-align: center; }
+.inbox-board-serial { width: 30px; }
+.inbox-board-open { color: inherit; text-decoration: none; }
+
+/* ⓘ one round box per kind: a tbody takes no radius, so the box is drawn on its cells' outer edges */
+.inbox-board-group > tr > * { background: color-mix(in srgb, var(--k) 7%, var(--color-surface-card)); }
+.inbox-board-group > tr > :first-child { border-inline-start: 1.5px solid color-mix(in srgb, var(--k) 45%, transparent); }
+.inbox-board-group > tr > :last-child { border-inline-end: 1.5px solid color-mix(in srgb, var(--k) 45%, transparent); }
+.inbox-board-group > .inbox-board-head > th {
+    border-top: 1.5px solid color-mix(in srgb, var(--k) 45%, transparent);
+    border-start-start-radius: 12px; border-start-end-radius: 12px;
+    padding: 8px 10px; text-align: start; position: static;
+}
+.inbox-board-group > .inbox-board-sub > td {
+    border-bottom: 1.5px solid color-mix(in srgb, var(--k) 45%, transparent);
+    color: var(--kd); font-weight: 700; padding: 6px 8px;
+    background: color-mix(in srgb, var(--k) 16%, var(--color-surface-card)) !important;
+}
+.inbox-board-group > .inbox-board-sub > :first-child { border-end-start-radius: 12px; padding-inline-start: 46px; }
+.inbox-board-group > .inbox-board-sub > :last-child { border-end-end-radius: 12px; }
+.inbox-board-group::before { content: ""; display: table-row; height: 10px; }
+.inbox-board-headline { display: inline-flex; align-items: center; gap: 8px; }
+.inbox-board-kind { color: var(--kd); font-weight: 700; font-size: 14px; }
+.inbox-board-count {
+    border-radius: var(--radius-pill); padding: 0 8px; font-size: 11px; font-weight: 700;
+    background: var(--k); color: var(--color-ink-inverse);
+}
+.inbox-board-row { cursor: pointer; }
+.inbox-board-row > td { background: color-mix(in srgb, var(--k) 4%, var(--color-surface-card)) !important; }
+.inbox-board-row.is-even > td { background: color-mix(in srgb, var(--k) 12%, var(--color-surface-card)) !important; }
+.inbox-board-row:hover > td { background: color-mix(in srgb, var(--k) 17%, var(--color-surface-card)) !important; }
+.inbox-board-row.is-open > td { background: color-mix(in srgb, var(--k) 24%, var(--color-surface-card)) !important; }
+.inbox-board-link {
+    color: var(--color-link); text-decoration: underline dashed; text-decoration-thickness: 1px; text-underline-offset: 3px;
+}
+.inbox-board-link:hover { text-decoration-style: solid; }
+.inbox-board-late { color: var(--color-badge-danger-ink); font-weight: 600; }
+.inbox-board-changed {
+    margin-inline-start: 4px; border-radius: var(--radius-pill); padding: 0 6px; font-size: 10px; font-weight: 700;
+    background: var(--color-badge-danger-bg); color: var(--color-badge-danger-ink);
+}
+
+/* ── right side ── */
+.inbox-board-dhead {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px;
+    background: linear-gradient(120deg, var(--k), color-mix(in srgb, var(--k) 70%, black)); color: var(--color-ink-inverse);
+}
+.inbox-board-dtitle { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0; }
+.inbox-board-dkind {
+    border-radius: var(--radius-pill); padding: 2px 12px; font-size: 13px; font-weight: 700;
+    background: var(--color-ink-inverse); color: var(--kd);
+}
+.inbox-board-dno { font-size: 20px; font-weight: 800; color: var(--color-ink-inverse); letter-spacing: .5px; }
+a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; text-decoration-thickness: 1px; text-underline-offset: 5px; }
+.inbox-board-dflag {
+    border-radius: var(--radius-pill); padding: 1px 8px; font-size: 11px; font-weight: 700;
+    background: var(--color-badge-danger-bg); color: var(--color-badge-danger-ink);
+}
+.inbox-board-arrow {
+    border: 1px solid color-mix(in srgb, var(--color-ink-inverse) 55%, transparent); border-radius: var(--radius-field);
+    padding: 0 8px; color: var(--color-ink-inverse);
+}
+.inbox-board-dmoney { margin: 0; text-align: end; display: flex; flex-direction: column; align-items: flex-end; }
+.inbox-board-damount { font-size: 38px; font-weight: 800; line-height: 1.1; color: var(--color-ink-inverse); }
+.inbox-board-dwords { font-size: 15px; font-weight: 600; opacity: .95; }
+
+.inbox-board-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 10px 16px; }
+.inbox-board-tile {
+    min-width: 0; border-radius: 10px; padding: 6px 12px; border-inline-start: 3px solid var(--t, var(--k));
+    background: color-mix(in srgb, var(--t, var(--k)) 9%, var(--color-surface-card)) !important;
+}
+.inbox-board-tile[data-tile="1"] { --t: var(--color-kind-fact-who); }
+.inbox-board-tile[data-tile="2"] { --t: var(--color-kind-contra); }
+.inbox-board-tile[data-tile="3"] { --t: var(--color-kind-expense); }
+.inbox-board-tile[data-tile="4"] { --t: var(--color-kind-fact-what); }
+.inbox-board-tile[data-tile="5"] { --t: var(--color-kind-payment); }
+.inbox-board-tile[data-tile="late"] { --t: var(--color-badge-danger-ink); }
+.inbox-board-tile.is-two { grid-column: span 2; }
+.inbox-board-tile.is-wide { grid-column: 1 / -1; }
+.inbox-board-tile dt { font-size: 11px; color: var(--color-ink-muted); }
+.inbox-board-tile dd { margin: 0; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inbox-board-tile.is-wide dd { white-space: normal; }
+.inbox-board-note, .inbox-board-warn { margin: 6px 16px 0; font-size: 12px; }
+.inbox-board-note { color: var(--color-ink-muted); }
+.inbox-board-warn {
+    border-radius: var(--radius-field); padding: 4px 8px;
+    background: var(--color-badge-draft-bg); color: var(--color-badge-draft-ink);
+}
+.inbox-board-boxes { display: grid; gap: 12px; padding: 12px 16px 4px; }
+.inbox-board-box, .inbox-board-boxes > [data-approval-papers] {
+    border: 1.5px solid color-mix(in srgb, var(--k) 40%, transparent) !important; border-radius: 12px !important;
+    background: color-mix(in srgb, var(--k) 6%, var(--color-surface-card)) !important; padding: 10px 12px !important;
+}
+.inbox-board-box > [data-signing-sheet], .inbox-board-box > [data-sale-bundle] {
+    border: 0 !important; background: transparent !important; padding: 0 !important;
+}
+.inbox-board-boxhead, .inbox-board-box h2 { margin: 0 0 6px; font-size: 14px; font-weight: 700; color: var(--kd); }
+.inbox-board-box tbody tr:nth-child(odd) > td { background: color-mix(in srgb, var(--k) 4%, var(--color-surface-card)) !important; }
+.inbox-board-box tbody tr:nth-child(even) > td { background: color-mix(in srgb, var(--k) 12%, var(--color-surface-card)) !important; }
+.inbox-board-mini { width: 100%; font-size: 13px; }
+.inbox-board-mini th { text-align: start; font-size: 12px; color: var(--color-ink-muted); padding: 4px 8px; }
+.inbox-board-mini td { padding: 5px 8px; }
+.inbox-board-actions { display: grid; gap: 8px; padding: 8px 16px 16px; }
+.inbox-board-actions [data-approval-decide] {
+    border: 1.5px solid color-mix(in srgb, var(--k) 40%, transparent); border-radius: 12px;
+    background: color-mix(in srgb, var(--k) 6%, var(--color-surface-card));
+}
+@media (max-width: 1279px) { .inbox-board-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+    .inbox-board-dhead { flex-direction: column; align-items: flex-start; }
+    .inbox-board-dmoney { align-items: flex-start; text-align: start; }
+    .inbox-board-damount { font-size: 30px; }
+}
+
+/* ── the sample's small parts (YRFmwfF7 v5): round ticks, green button, one total line, one-line route, one row of buttons ── */
+.inbox-board-ck {
+    appearance: none; inline-size: 18px; block-size: 18px; min-height: 0; margin: 0; flex: none; cursor: pointer;
+    display: inline-grid; place-items: center; border: 2px solid var(--color-ink-muted); border-radius: 50%; background: var(--color-surface-card);
+}
+.inbox-board-ck:checked { background: var(--k, var(--color-brand-600)); border-color: var(--k, var(--color-brand-600)); }
+.inbox-board-ck:checked::after { content: "✓"; color: var(--color-ink-inverse); font-size: 11px; font-weight: 700; line-height: 1; }
+.inbox-board-go, .inbox-board-actions button[type="submit"][data-key="a"] {
+    background: var(--color-success); border-color: var(--color-success); color: var(--color-ink-inverse);
+}
+.inbox-board-foot { border-top: 2px solid var(--color-ink); background: var(--color-surface-card); }
+[data-page-kind] .inbox-board-foot[data-inbox-totals] > :first-child { background: var(--color-surface-card); color: var(--color-ink); }
+[data-page-kind] .inbox-board-detail[data-approval-detail] { border-top: 1px solid var(--color-border); }
+.inbox-board-actions [data-approval-decide] { padding: 10px 14px; }
+.inbox-board-actions button { padding-inline: 12px; white-space: nowrap; }
+.inbox-board-actions form > div:first-of-type { flex-wrap: nowrap; }
+@media (max-width: 1500px) { .inbox-board-actions form > div:first-of-type { flex-wrap: wrap; } }
+.inbox-board-total, .inbox-board-pagetotal { display: flex; justify-content: space-between; margin: 0; padding: 8px 88px 8px 44px; font-size: 14px; font-weight: 800; }
+.inbox-board-pagetotal { font-size: 13px; font-weight: 600; color: var(--color-ink-muted); border-top: 1px solid var(--color-border); }
+.inbox-board-arrows { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); }
+.inbox-board-arrows:focus-within { position: static; inline-size: auto; block-size: auto; overflow: visible; clip-path: none; display: inline-flex; gap: 4px; }
+.inbox-board-route { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 16px 8px; font-size: 13px; border-bottom: 1px solid var(--color-border); }
+.inbox-board-route > ol { display: contents; }
+.inbox-board-route > ol > li {
+    align-items: center; gap: 5px; padding: 2px 10px; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-surface-card);
+}
+.inbox-board-route > ol > li > span { margin-top: 0; }
+.inbox-board-remark { display: none; }
+.inbox-board-remark.is-open, .inbox-board-remark:focus-within { display: block; margin-bottom: 8px; }
+.inbox-board-actions button { min-height: 34px; padding-block: 0; font-size: 14px; }
+.inbox-board-view { background: color-mix(in srgb, var(--color-brand-600) 10%, var(--color-surface-card)); color: var(--color-link); }
+.inbox-board-actions [data-ask="fix"] { background: var(--color-badge-pending-bg); color: var(--color-badge-pending-ink); border-color: var(--color-badge-pending-ink); }
+.inbox-board-actions [data-ask="reject"] { background: var(--color-badge-danger-bg); color: var(--color-badge-danger-ink); }
+
+/* ⭐ the board's one head row (owner, 24 Nov 2026): coloured title · tab pills · the list toolbar — no orange ribbon, never two rows at 1920 */
+.inbox-board-headrow { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; flex-wrap: nowrap; min-width: 0; }
+.inbox-board-title { margin: 0; flex: 0 0 auto; font-size: 20px; font-weight: 800; color: var(--color-kind-approval-deep); white-space: nowrap; }
+.inbox-board-tabs { display: flex; flex: 0 0 auto; gap: 6px; }
+.inbox-board-tab {
+    display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: var(--radius-pill);
+    padding: 5px 12px; font-size: 13px; font-weight: 600; color: var(--color-ink-muted);
+    background: var(--color-surface-card); border: 1px solid var(--color-border);
+}
+.inbox-board-tab:hover { color: var(--color-ink); }
+.inbox-board-tab.is-on { background: var(--color-kind-approval); border-color: var(--color-kind-approval); color: var(--color-ink-inverse); }
+.inbox-board-tabcount { border-radius: var(--radius-pill); padding: 0 7px; font-size: 11px; background: var(--color-surface-sunken); color: var(--color-ink); }
+.inbox-board-tab.is-on .inbox-board-tabcount { background: var(--color-ink-inverse); color: var(--color-kind-approval-deep); }
+.inbox-board-filters { flex: 1 1 auto; min-width: 0; margin: 0; }
+@media (max-width: 1279px) { .inbox-board-headrow { flex-wrap: wrap; } }

@@ -43,4 +43,7 @@ return [
     'delegation_change' => 'বদলান',
     'delegation_see' => 'দেখুন',
     'delegation_cancel' => 'এই দায়িত্ব বাতিল করুন',
+    'board_bulk' => '✓ একসাথে অনুমোদন',
+    'board_view' => 'দেখুন',
+    'board_remark' => 'মন্তব্য',
 ];

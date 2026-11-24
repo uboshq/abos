@@ -79,6 +79,14 @@ export function approvalKeys(root = document) {
         const opener = event.target.closest?.('[data-ask], [data-opens-dialog]')
 
         if (opener) trigger = opener
+
+        // ⓘ the board's "মন্তব্য" button opens the remark and puts the cursor in it
+        if (event.target.closest?.('[data-board-remark]')) {
+            const box = root.querySelector('[data-approval-remarks]')
+
+            box?.closest('.inbox-board-remark')?.classList.add('is-open')
+            box?.focus()
+        }
     }, true)
 
     root.addEventListener('keydown', (event) => {
@@ -124,6 +132,7 @@ export function approvalKeys(root = document) {
             // ⓘ ঘর না থাকলে সরে দাঁড়ানো — ওপরের বারের খোঁজা তখন নিজের Ctrl+K পায়
             if (box && ! dialog) {
                 event.preventDefault()
+                box.closest('.inbox-board-remark')?.classList.add('is-open')
                 box.focus()
             }
 
@@ -207,6 +216,12 @@ export function approvalKeys(root = document) {
 
             bulk.textContent = bulk.dataset.label.replace('__N__', String(picked))
             bulk.disabled = picked === 0
+
+            const said = root.querySelector('[data-board-picked-count]')
+            const all = root.querySelector('[data-board-pick-all]')
+
+            if (said) said.textContent = said.dataset.label.replace('__N__', String(picked))
+            if (all) all.checked = picked > 0 && picked === root.querySelectorAll('[data-inbox-pick]').length
         }
 
         root.addEventListener('change', (event) => {

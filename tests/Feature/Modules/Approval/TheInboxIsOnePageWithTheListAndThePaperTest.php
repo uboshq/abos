@@ -188,11 +188,22 @@ final class TheInboxIsOnePageWithTheListAndThePaperTest extends TestCase
         $a = $this->ask('500', now()->subHours(5));
         $a->forceFill(['due_at' => now()->subHours(3)->subMinutes(10)])->save();
 
-        $html = $this->actingAs($this->first)->get(route('approval.inbox.index'))->assertOk()->getContent();
+        // ⓘ a card look: the card says both; the ABOS board (owner's sample, 24 Nov 2026) says them in the open paper's tiles
+        $this->first->forceFill(['ui' => 'tiles'])->save();
+        $html = $this->actingAs($this->first->fresh())->get(route('approval.inbox.index'))->assertOk()->getContent();
         $this->assertStringContainsString(e(__('approval::message.due_passed_hours', ['hours' => 3])), $html,
             '⛔ দফা ৭: কার্ডে "শেষ সময় পেরিয়েছে 3 ঘণ্টা" নেই।');
         $this->assertStringContainsString(e(__('approval::field.step_at', ['at' => 1, 'of' => 2])), $html,
             '⛔ দফা ৮: কার্ডে "ধাপ 1 / 2" নেই।');
+
+        foreach (['rose', 'navy', 'blue'] as $look) {
+            $this->first->forceFill(['ui' => $look])->save();
+            $html = (string) $this->actingAs($this->first->fresh())->get(route('approval.inbox.index'))->assertOk()->getContent();
+            $tiles = preg_match('/<dl class="inbox-board-tiles">(.*?)<\/dl>/s', $html, $m) === 1 ? strip_tags($m[1]) : '';
+            $this->assertStringContainsString(__('approval::message.due_passed_hours', ['hours' => 3]), html_entity_decode($tiles), "⛔ দফা ৭: {$look} বোর্ডের ঘরে শেষ সময় নেই।");
+            $this->assertStringContainsString('1 / 2', $tiles, "⛔ দফা ৮: {$look} বোর্ডের ঘরে ধাপ নেই।");
+            $this->assertStringNotContainsString('data-card-step', $html, "⛔ {$look}: নমুনায় নেই এমন ধাপের ব্যাজ সারিতে।");
+        }
     }
 
     public function test_dofa10_the_journey_says_who_for_whom_and_what(): void
