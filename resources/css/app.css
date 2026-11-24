@@ -1659,6 +1659,10 @@ input[type='number'] {
         column-gap: 0;
     }
 
+    .topbar [data-shell-start] {
+        flex-shrink: 0;
+    }
+
     [data-shell-search][data-expanded="true"] {
         position: fixed;
         inset-inline: 0;
