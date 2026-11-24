@@ -107,16 +107,18 @@
         ],
         [
             'key' => 'email',
-            'width' => '10rem',
+            'width' => '8rem',
             'label' => __('core.profile.email'),
             'render' => fn ($u) => new \Illuminate\Support\HtmlString(
-                '<a class="block max-w-[10rem] truncate hover:underline" title="'.e($u->email).'" href="mailto:'.e($u->email).'">'.e($u->email).'</a>'),
+                '<a class="block max-w-[8rem] truncate hover:underline" title="'.e($u->email).'" href="mailto:'.e($u->email).'">'.e($u->email).'</a>'),
         ],
         [
             'key' => 'remarks',
             'wrap' => true,
             'label' => __('core.table.remarks'),
-            'render' => fn ($u) => $u->remarks ?: '',
+            'render' => fn ($u) => $u->remarks
+                ? new \Illuminate\Support\HtmlString('<span class="block max-w-[7rem] truncate" title="'.e($u->remarks).'">'.e($u->remarks).'</span>')
+                : '',
         ],
         [
             'key' => 'status',
@@ -143,7 +145,7 @@
              */
             'key' => 'last_login',
             'label' => __('system_admin::field.last_login'),
-            'width' => '9rem',
+            'width' => '7rem',
             'render' => fn ($u) => $u->last_login_at
                 ? new \Illuminate\Support\HtmlString('<span class="num whitespace-nowrap">'
                     .e(\App\Core\Support\DateFormat::spoken($u->last_login_at)).'</span>')
