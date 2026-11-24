@@ -72,7 +72,7 @@
         <section data-boxed data-security-failed class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <h2 class="flex items-baseline justify-between gap-2 border-b border-(--color-border) px-4 py-3 text-sm font-semibold">
                 {{ __('system_admin::security.failed_week') }}
-                @if (\Illuminate\Support\Facades\Route::has('governance.login.index') && auth()->user()->can('governance.view'))
+                @if (\Illuminate\Support\Facades\Route::has('governance.login.index') && auth()->user()->can('governance.login.view'))
                     <a href="{{ route('governance.login.index') }}" class="text-xs font-normal text-(--color-link)">{{ __('system_admin::security.all_logins') }} →</a>
                 @endif
             </h2>
