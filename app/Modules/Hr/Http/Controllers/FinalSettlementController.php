@@ -46,7 +46,11 @@ final class FinalSettlementController extends Controller implements HasMiddlewar
         $term = is_string($request->query('q')) ? trim($request->query('q')) : '';
         $query = FinalSettlement::query()->with('employee')
             ->whereIn('employee_id', app(BranchReach::class)->employeesInView(Employee::query()->withTrashed(), $request->user())
-                ->when($term !== '', fn ($q) => $q->search($term))->select('id'));
+                ->when($term !== '', fn ($q) => $q->search($term))->select('id'))
+            ->when(is_string($request->query('status')) && $request->query('status') !== '', fn ($q) => $q->where('status', $request->query('status')))
+            ->when(is_string($request->query('separation')) && $request->query('separation') !== '', fn ($q) => $q->where('separation', $request->query('separation')))
+            ->when($this->day($request, 'from'), fn ($q, string $day) => $q->whereDate('last_day', '>=', $day))
+            ->when($this->day($request, 'to'), fn ($q, string $day) => $q->whereDate('last_day', '<=', $day));
         $sort = $this->applySort($query, $request, [
             'recent' => fn ($q) => $q->latest('id'),
             'oldest' => fn ($q) => $q->oldest('id'),
@@ -129,6 +133,14 @@ final class FinalSettlementController extends Controller implements HasMiddlewar
         abort_if($employee === null, 404);
 
         return $employee;
+    }
+
+    /** ⓘ ঠিকানায় হাতে লেখা ভুল তারিখ ছাঁকনি নয় */
+    private function day(Request $request, string $key): ?string
+    {
+        $value = $request->query($key);
+
+        return is_string($value) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1 && strtotime($value) !== false ? $value : null;
     }
 
     /** @return \Illuminate\Support\Collection<int, Employee> */
