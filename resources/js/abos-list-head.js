@@ -158,7 +158,7 @@ const MAX_PILLS = 5
 const flexItems = el => [...el.children].flatMap(c => (getComputedStyle(c).display === 'contents' ? flexItems(c) : [c]))
 
 const wraps = row => {
-    const tops = flexItems(row).filter(e => e.offsetHeight > 0).map(e => e.getBoundingClientRect().top)
+    const tops = flexItems(row).filter(e => e.offsetHeight > 0 && ! (row.closest('[data-bar-head]') && e.hasAttribute('data-chip-row'))).map(e => e.getBoundingClientRect().top)
 
     return tops.length > 1 && Math.max(...tops) - Math.min(...tops) > 24
 }
@@ -205,7 +205,77 @@ function asHeadTabs (nav, root, collapse = false) {
     return wrap
 }
 
+/*
+ * ⭐ ছাঁকনির সরু বারওয়ালা পাতা ([[x-ui.filter-bar]]: ডে বুক, দিন শেষ, স্থিতিপত্র, বাজেট …) — নাম, ⓘ আর পাতার বোতাম বারের সারিতে ওঠে,
+ *   খালি মাথা লুকায় (মালিক, ২৪ নভেম্বর ২০২৬: "Filter line r module r create egulo sob ek line thakbe")। ট্যাব তোলে [[compactPageHead]]।
+ * ⓘ বার নয়, মাথা সরে — ছাঁকনির বোতামের Alpine আর ফর্ম যেখানে ছিল সেখানেই থাকে।
+ * ⛔ বারটা প্রথম টেবিল বা বাক্সের পরে হলে (নিচের কোনো অংশের বার) কিছুই নড়ে না। ⛔ বোতামে ফর্ম বা জমার বোতাম থাকলেও নয় — বারটা
+ *   ছাঁকনির ফর্মের ভিতরে, তাই ওখানে গেলে জমাটা ছাঁকনিতে পড়ত।
+ * ⓘ বার কাগজে ছাপে না (print-hide) — ছাপার সময় নামটা নিজের জায়গায় ফেরে, পরে আবার বারে।
+ */
+export function mergeFilterBarHead (root = document) {
+    if (! ABOS_HEAD_LOOKS.includes(root.documentElement?.dataset.ui)) {
+        return false
+    }
+
+    const main = root.querySelector('main')
+    const title = main?.querySelector('h1')
+    const bar = main?.querySelector('[data-filter-bar]')
+    const row = bar?.querySelector('.toolbar-view > div')
+    const home = title?.closest('.min-w-0')
+    const head = home?.parentElement
+
+    if (! row || ! head || title.closest('.toolbar-view, [data-boxed], [data-money-hero]') || ! before(head, bar)) {
+        return false
+    }
+
+    const first = [...main.querySelectorAll('table, [data-boxed]')].find(el => ! bar.contains(el) && ! el.closest('[data-filter-panel], dialog'))
+    const actions = head.querySelector(':scope > [data-page-actions]')
+
+    if ((first && ! before(bar, first)) || actions?.querySelector('form, [type=submit], button:not([type])')) {
+        return false
+    }
+
+    const place = () => {
+        row.prepend(title)
+        head.hidden = true
+    }
+
+    title.style.order = '-1'
+    place()
+
+    if (actions) {
+        // ⓘ চিপের সারি `order-last`, তাই বোতাম তার আগে, সারির ডান মাথায়
+        actions.style.order = '9'
+        actions.style.marginInlineStart = 'auto'
+        row.append(actions)
+    }
+
+    bar.setAttribute('data-bar-head', '')
+
+    // ⓘ নিচের টুলবারে একই নাম আবার থাকলে দ্বিতীয়টা লুকায় — নাম একবারই
+    const name = title.textContent.trim()
+
+    for (const twin of main.querySelectorAll('.toolbar-view h2[data-view-selector]')) {
+        if (twin.textContent.trim() === name) {
+            twin.hidden = true
+        }
+    }
+
+    const view = root.defaultView
+
+    view?.addEventListener('beforeprint', () => {
+        home.prepend(title)
+        head.hidden = false
+    })
+    view?.addEventListener('afterprint', place)
+
+    return true
+}
+
 export function compactPageHead (root = document) {
+    mergeFilterBarHead(root)
+
     if (! ABOS_HEAD_LOOKS.includes(root.documentElement?.dataset.ui)) {
         return null
     }
@@ -233,7 +303,10 @@ export function compactPageHead (root = document) {
         const placed = asHeadTabs(tabs, root)
         ;(count && title.parentElement === count.parentElement ? count : title).after(placed)
 
-        if (placed === tabs && wraps(toolbar)) {
+        // ⓘ ছাঁকনির বারে জিনিসগুলো ভিতরের সারিতে; চালু ছাঁকনির চিপ ইচ্ছে করেই নিজের লাইনে, তাই ভাঙা বলে গোনা নয়
+        const barRow = toolbar.closest('[data-bar-head]') ? title.parentElement : null
+
+        if (placed === tabs && wraps(barRow ?? toolbar)) {
             asHeadTabs(tabs, root, true)
         }
 
