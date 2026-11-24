@@ -23,6 +23,9 @@ final class MessengerPresenter
     /** @var array<int, string|null> */
     private array $branches = [];
 
+    /** @var array<int, object>|null */
+    private ?array $hrDesignations = null;
+
     public function __construct(
         private readonly Presence $presence,
         private readonly PaperCards $papers,
@@ -233,9 +236,7 @@ final class MessengerPresenter
          * ⭐ Owner, 24 Nov 2026: an HR employee shows the HR designation; someone who is not an employee (a director, Starline's
          * DSM or area manager) shows the title the owner gave the account (bn or en, by the reader's language); else the role.
          */
-        $hr = DB::table('hr_employees')->whereNull('hr_employees.deleted_at')->where('hr_employees.user_id', $user->id)
-            ->join('mdm_designations', 'mdm_designations.id', '=', 'hr_employees.designation_id')
-            ->orderByDesc('hr_employees.is_active')->first(['mdm_designations.name_en', 'mdm_designations.name_bn']);
+        $hr = $this->hrDesignations()[(int) $user->id] ?? null;
         $bn = app()->getLocale() === 'bn';
 
         if ($hr !== null && filled($bn ? ($hr->name_bn ?: $hr->name_en) : ($hr->name_en ?: $hr->name_bn))) {
@@ -255,6 +256,21 @@ final class MessengerPresenter
         }
 
         return is_string($role) ? RoleLabel::for($role) : '';
+    }
+
+    /**
+     * The working HR employees' designations, by user — one query for the whole list, never one per person.
+     * ⓘ Someone who has left (inactive) is not an employee any more: the owner-given title shows again.
+     *
+     * @return array<int, object>
+     */
+    private function hrDesignations(): array
+    {
+        return $this->hrDesignations ??= DB::table('hr_employees')
+            ->join('mdm_designations', 'mdm_designations.id', '=', 'hr_employees.designation_id')
+            ->whereNull('hr_employees.deleted_at')->where('hr_employees.is_active', true)->whereNotNull('hr_employees.user_id')
+            ->get(['hr_employees.user_id', 'mdm_designations.name_en', 'mdm_designations.name_bn'])
+            ->keyBy('user_id')->all();
     }
 
     private function branchOf(User $user): string
