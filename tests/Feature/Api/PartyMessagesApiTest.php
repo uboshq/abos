@@ -285,6 +285,7 @@ final class PartyMessagesApiTest extends TestCase
         $branch = fn (string $code) => Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', $code)->firstOrFail();
         [$mms, $ntk] = [$branch('MMS'), $branch('NTK')];
         $this->voucher->forceFill(['branch_id' => $mms->id])->saveQuietly();
+        \App\Models\LedgerEntry::query()->forParty('customer', (int) $this->customer->id)->delete();
 
         $year = (int) \App\Models\LedgerEntry::query()->value('financial_year_id');
         foreach ([[$mms->id, '700'], [$ntk->id, '2000'], [null, '30']] as [$branchId, $debit]) {
