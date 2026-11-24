@@ -105,7 +105,9 @@ final class PayrollService
          * বসানো নেই তিনি কোনো রানেই পড়তেন না, আর দুই শাখা আলাদা রান
          * করলে শাখাহীন কর্মীদের বেতন দুইবার হত।
          */
+        // ⛔ রান আর প্রদেয় বেতন কোম্পানির — কর্মী-খাতা এক হলেও কেবল রানের কোম্পানির কর্মী (২৫ নভেম্বর ২০২৬)
         $employees = Employee::query()
+            ->where('company_id', CompanyContext::id())
             ->onPayrollFor($monthEnd)
             ->orderBy('code')
             ->get();
@@ -193,6 +195,7 @@ final class PayrollService
             // build()-এর হুবহু একই পরিধি — নাহলে "আবার বানান" চাপলে
             // তালিকা বদলে যেত, আর কেউ নীরবে বাদ পড়ত
             $employees = Employee::query()
+                ->where('company_id', $run->company_id)
                 ->onPayrollFor($monthEnd)
                 ->orderBy('code')
                 ->get();
@@ -543,6 +546,7 @@ final class PayrollService
     public function heldWagesOwed(?User $user = null): Collection
     {
         $query = Payslip::query()
+            ->where('company_id', CompanyContext::id())
             ->where('payment_method', self::HELD)
             ->whereDoesntHave('heldPayment')
             ->whereHas('run', fn ($q) => $q->where('status', DocumentStatus::CONFIRMED))
@@ -590,6 +594,8 @@ final class PayrollService
     private function arrearsFor(PayrollRun $run, ?User $user): array
     {
         $query = Payslip::query()
+            // ⛔ এক কোম্পানির ব্যাংক ফাইলে অন্য কোম্পানির বকেয়া নয় — মাঝে আন্তঃকোম্পানি দাখিলা নেই (২৫ নভেম্বর ২০২৬)
+            ->where('company_id', $run->company_id)
             ->where('payment_method', self::HELD)
             ->where('payroll_run_id', '!=', $run->id)
             ->where('net', '>', 0)
@@ -1363,6 +1369,7 @@ final class PayrollService
     private function bonusEligible(Carbon $on): \Illuminate\Support\Collection
     {
         return Employee::query()
+            ->where('company_id', CompanyContext::id())
             ->whereNotNull('joining_date')
             ->whereDate('joining_date', '<=', $on->copy()->subYearNoOverflow()->toDateString())
             ->where(fn ($q) => $q->whereNull('leaving_date')->orWhereDate('leaving_date', '>=', $on->toDateString()))

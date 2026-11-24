@@ -49,7 +49,9 @@ final class HeldWages
      */
     public function ready(?User $user = null): Collection
     {
+        // ⛔ প্রদেয় বেতন রানের কোম্পানির — অন্য কোম্পানির বকেয়া এই ব্যাংক থেকে নয়, এক খাতার সুইচেও (২৫ নভেম্বর ২০২৬)
         $query = Payslip::query()
+            ->where('company_id', CompanyContext::id())
             ->where('payment_method', PayrollService::HELD)
             ->where('net', '>', 0)
             ->whereDoesntHave('heldPayment')
@@ -102,7 +104,7 @@ final class HeldWages
         $channel = $money->money_kind === Account::MFS ? 'mfs' : 'bank';
 
         return DB::transaction(function () use ($payslipIds, $money, $channel, $by) {
-            $slips = Payslip::query()->whereKey($payslipIds)->with(['employee', 'run'])->lockForUpdate()->get();
+            $slips = Payslip::query()->where('company_id', CompanyContext::id())->whereKey($payslipIds)->with(['employee', 'run'])->lockForUpdate()->get();
 
             if ($slips->isEmpty() || $slips->count() !== count(array_unique($payslipIds))) {
                 throw ValidationException::withMessages(['payslips' => __('hr::payroll.held_pay_none')]);
@@ -212,6 +214,7 @@ final class HeldWages
     public function awaitingBank(?User $user = null): Collection
     {
         $query = Payslip::query()
+            ->where('company_id', CompanyContext::id())
             ->whereHas('heldPayment', fn ($q) => $q->whereIn('paid_in_run_id',
                 PayrollRun::acrossBranches()->where('status', DocumentStatus::CANCELLED)->select('id')))
             ->with(['employee', 'heldPayment']);
@@ -267,7 +270,7 @@ final class HeldWages
         return DB::transaction(function () use ($payment, $reason, $by): BankUnpaidLine {
             $fresh = HeldWagePayment::query()->whereKey($payment->getKey())->lockForUpdate()->first();
 
-            if ($fresh === null || ! self::awaitsTheBank($fresh)) {
+            if ($fresh === null || (int) $fresh->company_id !== (int) CompanyContext::id() || ! self::awaitsTheBank($fresh)) {
                 throw ValidationException::withMessages(['payment' => __('hr::payroll.bank_unpaid_not_awaiting')]);
             }
 
