@@ -28,4 +28,19 @@ return [
     'reason_wrong_code' => 'Wrong code',
     'reason_locked' => 'Locked after many tries',
     'reason_handoff_refused' => 'Phone hand-off refused',
+
+    // ⓘ এক সারির বারের পাতা (২৫ নভেম্বর ২০২৬)
+    'tab_failed' => 'Wrong logins',
+    'find' => 'Name, login or IP',
+    'sort_last_in' => 'Last login — newest first',
+    'sort_phones' => 'Phones — most first',
+    'sort_newest' => 'Newest first',
+    'sort_oldest' => 'Oldest first',
+    'state' => 'State',
+    'active' => 'Active',
+    'inactive' => 'Inactive',
+    'reason' => 'Reason',
+    'who' => 'Login name',
+    'ip' => 'IP',
+    'when' => 'When',
 ];

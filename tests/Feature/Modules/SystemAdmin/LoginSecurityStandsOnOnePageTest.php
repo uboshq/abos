@@ -43,6 +43,8 @@ final class LoginSecurityStandsOnOnePageTest extends TestCase
         $try(null, 'typed-unknown-name@abos.test', LoginAttempt::UNKNOWN, 1);
 
         $html = (string) $this->actingAs($owner)->get(route('system_admin.login-security'))->assertOk()->getContent();
+        // ⓘ ABOS রূপে ভুল লগইন দ্বিতীয় ট্যাবে (মালিকের "ok", ২৫ নভেম্বর ২০২৬) — দুই ট্যাব মিলিয়েই দেখা
+        $html .= (string) $this->actingAs($owner)->get(route('system_admin.login-security', ['tab' => 'failed']))->assertOk()->getContent();
 
         $this->assertMatchesRegularExpression('/data-security-person="'.$accountant->id.'"(?:(?!<\/tr>).)*data-two-step="on"/s', $html, '⛔ দুই-ধাপ চালু মানুষটা চালু দেখায় না।');
         $this->assertMatchesRegularExpression('/data-security-person="'.$sales->id.'"(?:(?!<\/tr>).)*data-two-step="required"/s', $html, '⛔ বাধ্যতামূলক অথচ বসানো হয়নি — পাতা চুপ।');

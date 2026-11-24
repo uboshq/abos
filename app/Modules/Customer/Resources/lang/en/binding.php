@@ -72,4 +72,22 @@ return [
     'bad_date' => '⛔ That date could not be read.',
     'office_takes_money' => '⛔ Only the office takes money — a collection cannot be sent from the phone. Hand the money in at the office.',
     'dealer_out_of_reach' => '⛔ This dealer is not bound to you — you cannot place his order.',
+
+    // ⓘ এক সারির বারের পাতা (২৫ নভেম্বর ২০২৬)
+    'tab_bind' => 'Bindings',
+    'tab_who' => 'Staff',
+    'state_on' => 'On: bound dealers only',
+    'state_off' => 'Off: everyone sees all',
+    'find' => 'Staff or dealer',
+    'dealer' => 'Dealer',
+    'starts' => 'Start',
+    'ends' => 'End',
+    'state' => 'State',
+    'sort_newest' => 'Start — newest first',
+    'sort_oldest' => 'Start — oldest first',
+    'sees' => 'Sees',
+    'above' => 'Above',
+    'ends_on' => 'End date',
+    'more' => 'More',
+    'close' => 'Close',
 ];

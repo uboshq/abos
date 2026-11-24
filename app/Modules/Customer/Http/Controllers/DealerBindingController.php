@@ -6,6 +6,7 @@ namespace App\Modules\Customer\Http\Controllers;
 
 use App\Core\Services\DealerScope;
 use App\Core\Services\MenuBuilder;
+use App\Core\Support\AbosHead;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Customer\Models\DealerBinding;
@@ -45,9 +46,23 @@ final class DealerBindingController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         $userId = $request->integer('user_id') ?: null;
+        // ⭐ এক সারির বার কেবল তিন ABOS রূপে (মালিকের "ok", ২৫ নভেম্বর ২০২৬; নমুনা X57NWrioqvAT1qcaZG8LHd) — বাকি রূপে আগের পাতা
+        $bar = AbosHead::on();
+        $tab = $request->query('tab') === 'who' ? 'who' : 'bind';
+        $find = $bar ? $request->string('q')->trim()->value() : '';
+        $sort = $bar ? $request->string('sort')->value() : '';
 
         $rows = DealerBinding::query()
             ->with(['user', ...Customer::placeVia('customer')])
+            // ⓘ খোঁজা এক বন্ধনীতে, আর ডিলার মডেলের নিজের দেয়ালের ভিতরে
+            ->when($find !== '', function ($q) use ($find): void {
+                $like = '%'.addcslashes($find, '%_\\').'%';
+                $q->where(fn ($w) => $w->whereHas('user', fn ($u) => $u->where('name', 'like', $like))
+                    ->orWhereHas('customer', fn ($c) => $c->where(fn ($x) => $x->where('code', 'like', $like)
+                        ->orWhere('name_en', 'like', $like)->orWhere('name_bn', 'like', $like))));
+            })
+            ->when($sort === 'newest', fn ($q) => $q->orderByDesc('starts_on'))
+            ->when($sort === 'oldest', fn ($q) => $q->orderBy('starts_on'))
             ->when($userId !== null, fn ($q) => $q->where('user_id', $userId))
             ->when(! $request->boolean('ended'), fn ($q) => $q->open())
             ->orderBy('user_id')
@@ -56,11 +71,23 @@ final class DealerBindingController extends Controller implements HasMiddleware
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
-        return view('customer::binding.index', [
+        $staff = $this->bindings->staff();
+        // ⓘ আগাম দেখা মানুষ ধরে গোনে — বারের পাতায় কেবল তার ট্যাবে
+        $preview = ! $bar || $tab === 'who' ? $this->bindings->preview() : collect();
+
+        if ($bar) {
+            $preview = $preview
+                ->filter(fn (array $row) => $userId === null || (int) $row['user']->id === $userId)
+                ->filter(fn (array $row) => $find === '' || str_contains(mb_strtolower($row['user']->name.' '.$row['supervisor']?->name), mb_strtolower($find)))
+                ->values();
+        }
+
+        return view($bar ? 'customer::binding.bar' : 'customer::binding.index', [
+            'tab' => $tab,
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $rows,
-            'preview' => $this->bindings->preview(),
-            'staff' => $this->bindings->staff(),
+            'preview' => $preview,
+            'staff' => $staff,
             // ⓘ বাঁধার ঘর — দেয়াল ছাড়া (অন্য কর্মীর ডিলারও বাঁধা যায়), হেডারের শাখায়
             'customers' => Customer::acrossDealers()->inViewedBranch()->active()->with(Customer::PLACE)->orderBy('code')
                 ->get(['id', 'code', 'name_en', 'name_bn', 'location_id', 'branch_id']),
