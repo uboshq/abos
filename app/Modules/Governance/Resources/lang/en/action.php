@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 return [
+    'bank_unpaid_asked' => '"Bank did not pay" reported',
+    'bank_unpaid_released' => '"Bank did not pay" approved, wage released',
+    'bank_unpaid_refused' => '"Bank did not pay" rejected',
+    'bank_unpaid_withdrawn' => '"Bank did not pay" withdrawn',
+    'maternity_delivery' => 'Delivery date approved',
+    'payment_change_withdrawn' => 'Payment change request withdrawn',
     'created' => 'Created',
     'updated' => 'Edited',
     'edited' => 'Edited before approving',
@@ -146,12 +152,6 @@ return [
     'salary_change_late' => 'Approved salary change not applied',
     // ⭐ salary change signed · login closed on leaving (a6)
     'salary_change_signed' => 'Salary change approved',
-    'bank_unpaid_asked' => '"Bank did not pay" reported',
-    'bank_unpaid_released' => '"Bank did not pay" approved, wage released',
-    'bank_unpaid_refused' => '"Bank did not pay" rejected',
-    'bank_unpaid_withdrawn' => '"Bank did not pay" withdrawn',
-    'maternity_delivery' => 'Delivery date approved',
-    'payment_change_withdrawn' => 'Payment change request withdrawn',
     'leaver_login_closed' => 'Login closed on leaving',
     // ⭐ the payroll signer role, for one company's Managers ([[GrantPayrollSigners]], owner, 21 Oct 2026)
     'payroll_signer_made' => 'Payroll approver role made',
