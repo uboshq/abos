@@ -62,8 +62,8 @@
         ['route' => 'accounts.voucher.create', 'params' => ['type' => 'journal'], 'label' => 'accounts::approval.journal', 'group' => 'accounts', 'icon' => 'book', 'can' => 'accounts.voucher.create'],
         ['route' => 'accounts.voucher.create', 'params' => ['type' => 'contra'], 'label' => 'accounts::approval.contra', 'group' => 'accounts', 'icon' => 'swap', 'can' => 'accounts.voucher.create'],
         // ⭐ ডেবিট আর ক্রেডিট নোট — মালিক, ৩ অক্টোবর ২০২৬; নোট বানানোর চাবি `accounts.note.manage`
-        ['route' => 'accounts.note.create', 'params' => ['direction' => 'debit'], 'label' => 'accounts::note.debit_note', 'group' => 'accounts', 'icon' => 'arrow_up', 'can' => 'accounts.note.manage'],
-        ['route' => 'accounts.note.create', 'params' => ['direction' => 'credit'], 'label' => 'accounts::note.credit_note', 'group' => 'accounts', 'icon' => 'arrow_down', 'can' => 'accounts.note.manage'],
+        ['route' => 'accounts.note.dn.create', 'label' => 'accounts::note.debit_note', 'group' => 'accounts', 'icon' => 'arrow_up', 'can' => 'accounts.note.manage'],
+        ['route' => 'accounts.note.cn.create', 'label' => 'accounts::note.credit_note', 'group' => 'accounts', 'icon' => 'arrow_down', 'can' => 'accounts.note.manage'],
         // ⭐ দিন শেষের হিসাব — দিন বন্ধের শর্টকাট, কেবল যাঁর দিন বন্ধের চাবি আছে (মালিক, ১৮ নভেম্বর ২০২৬: '+' মেনুর নিচে)
         ['route' => 'executive.dayclose', 'label' => 'accounts::dayclose.create_menu', 'group' => 'accounts', 'icon' => 'check-circle', 'can' => 'accounts.day_close.close'],
         ['route' => 'customer.create', 'label' => 'core.create.customer', 'group' => 'sales', 'icon' => 'customer', 'can' => 'customer.create'],

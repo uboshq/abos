@@ -328,6 +328,11 @@ final class StartingPoints
                 continue;
             }
 
+            /* ⛔ পুরনো ঠিকানা, যেটা কেবল নতুন পাতায় পাঠায় (নোট, নকশা v5) — প্রস্তাবে আসল পাতা, তার নিজের মেনুর সারি থেকে */
+            if (str_starts_with((string) $route->getActionMethod(), 'legacy')) {
+                continue;
+            }
+
             if (! $this->mayCreate($user, $route, $class)) {
                 continue;
             }
