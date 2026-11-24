@@ -119,7 +119,6 @@ export function copilotPage () {
         micTitle () { return this.listening ? this.word('mic_on') : (this.canListen() ? this.word('mic') : this.word('mic_off')) },
         word (key) { return String((this.cfg.words || {})[key] ?? key) },
         sendDim () { return this.q.trim() === '' && ! this.busy },
-        attachOn () { return Boolean(this.cfg.papersUrl) },
         isCopied (item) { return this.copiedKey === item.key },
         votedUp (item) { return item.voted === 1 },
         hasList (item) { return item.listHref !== '' },
@@ -169,9 +168,6 @@ export function copilotPage () {
             return this.ask(t || '', false)
         },
         regenerate (item) { return this.canRegenerate(item) ? this.ask(item.question, true) : Promise.resolve() },
-        newTalk () {
-            if (this.cfg.chatUrl) window.location.assign(this.cfg.chatUrl)
-        },
         toggleHistory () { this.histOpen = ! this.histOpen },
 
         async ask (text, regenerate) {

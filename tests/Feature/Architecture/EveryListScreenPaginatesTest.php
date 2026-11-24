@@ -161,10 +161,8 @@ class EveryListScreenPaginatesTest extends TestCase
         'sales.target.index' => 'বাঁধা — একটা সারি মানে একজন বিক্রয়কর্মী; আর স্কোরবোর্ডের কাজই তুলনা, অর্ধেক দল পরের পাতায় গেলে র‍্যাঙ্কিং অর্থ হারায়',
         'inventory.stock.overview' => 'বাঁধা — ড্যাশবোর্ড; সবই সংখ্যা, নয়তো আগে থেকেই ৮-এ বাঁধা (lowStock, recentMovements)',
         'sales.overview' => 'বাঁধা — ড্যাশবোর্ড; কার্ডগুলো যোগফল, দৈনিক ধারা ৩০ দিন ও মাসিক ১২ মাসে বাঁধা (SalesAnalytics::DAYS/MONTHS), সেরা গ্রাহক/পণ্য/ধীর পণ্য limit(SalesAnalytics::TOP = 10); বিক্রেতা, এরিয়া আর শাখার সারি বাড়ে কর্মী, এরিয়া আর শাখার সংখ্যায়, লেনদেনে নয়। ⚠️ পাতা ভাগ করলে ভাগগুলোর যোগফল আর নিট বিক্রয় মিলত না (TheSalesScreenCountsWhatTheBooksSayTest)',
-        // ⓘ ২৩ নভেম্বর ২০২৬ (1.3.10; Mac run of b13373eaa) — একই কারণ TheListThatGrowsForeverAndThePageThatNeverEndsTest::WHOLE_ON_PURPOSE-এ
         // ⓘ মালিকের সিদ্ধান্ত, ২৪ নভেম্বর ২০২৬ (owner, 24 Nov 2026; abos-08 জানাল)
         'system_admin.import.index' => 'তালিকা নয় — ImportController@index কোনো কোয়েরি চালায় না; kinds() কোডে লেখা ইমপোর্টের ধরন, ফল কেবল সেশনের একটা মান (owner, 24 Nov 2026)',
-        'notification.party_roads.index' => 'বাঁধা — তিনটা পথ কোডে বাঁধা (wa.me, Cloud API, অফিসের ফোন) আর তাদের এই মাসের গোনা (পথ ধরে এক সারি); সাথে অফিসের SMS-ফোন (SmsGatewayPhone) — হাতে গোনা যন্ত্র, পার্টি বা লেনদেনে বাড়ে না',
     ];
 
     /**

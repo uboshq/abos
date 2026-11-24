@@ -6,12 +6,10 @@ namespace App\Modules\Messaging\Support;
 
 use App\Core\Contracts\Drillable;
 use App\Core\Services\PhonePaperDoor;
-use App\Core\Support\LookPreview;
-use App\Core\Support\LookRegistry;
+use App\Core\Support\AbosHead;
+use App\Core\Support\MessengerDoor;
 use App\Core\Support\Money;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Route;
 
 /**
  * The messenger's pieces on every ABOS page (web sample M1UddRxK v7): the top-bar chat icon, the light poll, the
@@ -23,8 +21,8 @@ use Illuminate\Support\Facades\Route;
  */
 final class MessengerChrome
 {
-    /** ⓘ the three ABOS looks — the same three as [[Ui::FOLD_MENU_LOOKS]] */
-    public const LOOKS = ['rose', 'navy', 'blue'];
+    /** ⓘ the three ABOS looks — the same list as [[AbosHead]] */
+    public const LOOKS = AbosHead::LOOKS;
 
     /** ⓘ the row the table is drawing right now — set by [[x-ui.table]] around its `:row-menu`, read by [[x-ui.row-actions]] */
     public const ROW = 'abos.row-menu.paper';
@@ -43,11 +41,6 @@ final class MessengerChrome
         }
 
         return (bool) $attributes->get(self::ON);
-    }
-
-    public static function lookAllows(?string $chosenUi): bool
-    {
-        return in_array(LookRegistry::lookFor(LookPreview::orChosen($chosenUi)), self::LOOKS, true);
     }
 
     /**
@@ -135,13 +128,7 @@ final class MessengerChrome
 
     private static function decide(): bool
     {
-        $user = auth()->user();
-
-        if (! $user instanceof User || ! Route::has('messaging.index') || ! Route::has('messaging.x.unread')) {
-            return false;
-        }
-
-        return self::lookAllows($user->ui) && $user->can('messaging.use');
+        return MessengerDoor::open(auth()->user());
     }
 
     /** @return array<string, class-string<Model>> type name → model class */
