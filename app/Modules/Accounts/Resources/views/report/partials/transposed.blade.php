@@ -22,7 +22,10 @@
         </thead>
         <tbody>
             @foreach ($table['rows'] as $line)
-                @php($column = $line['__column'])
+                {{-- ⚠️ block @php only — an inline @php(…) in a file that also has @php … @endphp is read up to the next @endphp (demo 500, 24 Nov) --}}
+                @php
+                    $column = $line['__column'];
+                @endphp
                 <tr @class(['transition-colors hover:bg-(--color-surface-hover)', 'font-semibold' => $column->key === $report->rankBy]) data-report-row="{{ $column->key }}">
                     <th scope="row" class="text-start font-medium">{{ $line['__cells'][0] }}</th>
                     @foreach ($line['__rows'] as $row)
@@ -31,7 +34,9 @@
                         </td>
                     @endforeach
                     <td class="num font-semibold">
-                        @php($all = end($line['__cells']))
+                        @php
+                            $all = end($line['__cells']);
+                        @endphp
                         @if ($all !== null && $all !== false)
                             @php
                                 $allShown = \App\Core\Engines\Report\ReportResult::number($all, $column);
