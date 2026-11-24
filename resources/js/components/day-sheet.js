@@ -9,13 +9,16 @@ export function daySheet () {
         shown: 0,
         was: '',
         saving: false,
+        box: null,
 
         /** কোন ফর্ম, আর তার কোন ঘরগুলো সারির — বাইরের বাক্সের data-sheet-form / data-sheet-rows; না দিলে হাজিরার */
         sheet () {
-            return document.getElementById(this.$root?.dataset?.sheetForm || 'attendance-form')
+            return document.getElementById(this.box?.dataset?.sheetForm || 'attendance-form')
         },
 
         init () {
+            // ⓘ শুরুতেই ধরা: পরে ভিতরের প্যানেল থেকে ডাকলে $root ঐ প্যানেল হয়, সারিগুলো তার বাইরে
+            this.box = this.$root
             // ⓘ থামা সংরক্ষণ থেকে ফেরা পাতা — ঘরে যা আছে তা এখনো জমা হয়নি
             this.was = this.sheet()?.hasAttribute('data-unsaved') ? '-' : this.written()
             this.narrow()
@@ -35,7 +38,7 @@ export function daySheet () {
         written () {
             // ⓘ id ধরে, $refs নয় — মাঝে প্যানেলের নিজের x-data আছে
             const form = this.sheet()
-            const rows = this.$root?.dataset?.sheetRows || 'rows['
+            const rows = this.box?.dataset?.sheetRows || 'rows['
             return form ? JSON.stringify(Array.from(new FormData(form).entries()).filter(([k]) => k.startsWith(rows))) : ''
         },
 
@@ -43,7 +46,7 @@ export function daySheet () {
             const term = this.term.trim().toLowerCase()
             let shown = 0
 
-            for (const row of this.$root.querySelectorAll('[data-day-row]')) {
+            for (const row of this.box.querySelectorAll('[data-day-row]')) {
                 const on = (term === '' || (row.dataset.find || '').toLowerCase().includes(term))
                     && (this.department === '' || row.dataset.department === this.department)
 
