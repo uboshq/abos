@@ -43,13 +43,15 @@ final class DocumentSignatureController extends Controller
 
         $tab = in_array($request->query('tab'), self::TABS, true) ? (string) $request->query('tab') : 'to_sign';
 
-        $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
+        $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date'], 'q' => ['nullable', 'string', 'max:100']]);
 
         if ($tab === 'signed') {
             // ⛔ ইতিহাস কেবল যে কাগজ আমি দেখতে পাই তার — তিন দেয়াল আর বিভাগ
             $rows = DocumentSignature::query()
                 ->whereIn('document_id', Document::query()->inViewedBranch()->visibleTo($user)->select('dms_documents.id'))
                 ->with(['document', 'version', 'signer'])
+                ->when($f['q'] ?? null, fn ($q, $s) => $q->whereIn('document_id', Document::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())
+                    ->where(fn ($w) => $w->where('document_no', 'like', '%'.addcslashes($s, '%_\\').'%')->orWhere('name', 'like', '%'.addcslashes($s, '%_\\').'%'))->select('dms_documents.id')))
                 ->when($f['from'] ?? null, fn ($q, $d) => $q->whereDate('signed_at', '>=', $d))
                 ->when($f['to'] ?? null, fn ($q, $d) => $q->whereDate('signed_at', '<=', $d))
                 ->orderByDesc('signed_at')
@@ -62,6 +64,8 @@ final class DocumentSignatureController extends Controller
                 : $this->engine->pendingQueryFor($user))
                 ->where('approvals.module', DocumentWorkflow::MODULE)
                 ->where('approvals.action', DocumentSignatures::ACTION)
+                ->when($f['q'] ?? null, fn ($q, $s) => $q->whereIn('approvals.approvable_id', Document::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())
+                    ->where(fn ($w) => $w->where('document_no', 'like', '%'.addcslashes($s, '%_\\').'%')->orWhere('name', 'like', '%'.addcslashes($s, '%_\\').'%'))->select('dms_documents.id')))
                 ->when($f['from'] ?? null, fn ($q, $d) => $q->whereDate('approvals.due_at', '>=', $d))
                 ->when($f['to'] ?? null, fn ($q, $d) => $q->whereDate('approvals.due_at', '<=', $d))
                 ->with('requester')

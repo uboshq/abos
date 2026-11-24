@@ -37,7 +37,7 @@
         <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
             @if ($abosHead)
-                <x-ui.toolbar :title="__('documents::menu.signature')" :info="__('documents::message.sign_subtitle')" :search="false" :export="false" :share="false" :facets="$facetPanel" :quiet="['tab']"></x-ui.toolbar>
+                <x-ui.toolbar :title="__('documents::menu.signature')" :info="__('documents::message.sign_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :export="false" :share="false" :facets="$facetPanel" :quiet="['tab']"></x-ui.toolbar>
             @else
                 <x-ui.filter-bar :facets="$facetPanel" />
             @endif

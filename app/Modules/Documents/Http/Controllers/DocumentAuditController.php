@@ -45,6 +45,7 @@ final class DocumentAuditController extends Controller
             ->whereBetween('created_at', [$from.' 00:00:00', $to.' 23:59:59'])
             ->when($who > 0, fn ($q) => $q->where('user_id', $who))
             ->when($action !== '', fn ($q) => $q->where('action', $action))
+            ->when($request->string('q')->trim()->value(), fn ($q, $s) => $q->where(fn ($w) => $w->where('document_no', 'like', '%'.addcslashes($s, '%_\\').'%')->orWhere('label', 'like', '%'.addcslashes($s, '%_\\').'%')))
             ->with('user')
             ->orderByDesc('id')
             ->paginate(\App\Core\Support\PerPage::of())

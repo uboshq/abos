@@ -39,7 +39,7 @@
                 <input type="hidden" name="mine" value="1">
             @endif
             @if ($abosHead)
-                <x-ui.toolbar :title="__('documents::menu.approval')" :info="__('documents::message.queue_subtitle')" :search="false" :export="false" :share="false" :facets="$facetPanel" :quiet="['mine']"></x-ui.toolbar>
+                <x-ui.toolbar :title="__('documents::menu.approval')" :info="__('documents::message.queue_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :export="false" :share="false" :facets="$facetPanel" :quiet="['mine']"></x-ui.toolbar>
             @else
                 <x-ui.filter-bar :facets="$facetPanel" />
             @endif

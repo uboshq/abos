@@ -29,7 +29,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         @if ($abosHead)
         <form id="list-form" method="GET" class="contents">
-                <x-ui.toolbar :title="__('documents::menu.audit')" :info="__('documents::message.audit_subtitle')" :search="false" :export="false" :share="false" :facets="$facetPanel"></x-ui.toolbar>
+                <x-ui.toolbar :title="__('documents::menu.audit')" :info="__('documents::message.audit_subtitle')" :search-placeholder="__('documents::field.document_no').', '.__('documents::field.name')" :export="false" :share="false" :facets="$facetPanel"></x-ui.toolbar>
         </form>
         @endif
         @unless ($abosHead)
