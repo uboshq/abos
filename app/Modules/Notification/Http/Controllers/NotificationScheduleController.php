@@ -32,7 +32,15 @@ class NotificationScheduleController extends Controller
 
     public function index(Request $request): View
     {
-        $rows = NotificationSchedule::query()->with(['template', 'group'])->orderByDesc('is_active')->orderBy('next_run_at')
+        $f = $request->validate([
+            'state' => ['nullable', \Illuminate\Validation\Rule::in(['active', 'inactive'])],
+            'recurrence' => ['nullable', \Illuminate\Validation\Rule::in(NotificationSchedule::RECURRENCES)],
+        ]);
+
+        $rows = NotificationSchedule::query()->with(['template', 'group'])
+            ->when($f['state'] ?? null, fn ($q, $s) => $q->where('is_active', $s === 'active'))
+            ->when($f['recurrence'] ?? null, fn ($q, $r) => $q->where('recurrence', $r))
+            ->orderByDesc('is_active')->orderBy('next_run_at')
             ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         return view('notification::schedules.index', [

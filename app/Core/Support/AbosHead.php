@@ -1,18 +1,23 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Core\Support;
 
+use App\Models\User;
+
 /**
- * Does this person's look take the one-row list head (title, tabs, filter, search and create on one row)?
+ * এক সারির তালিকার মাথা কেবল তিন ABOS রূপে — ABOS Smart (rose), Navy, Blue (মালিক, ২৪ নভেম্বর ২০২৬)।
  *
- * Only the three ABOS looks — rose, navy, blue (owner, 24 Nov 2026). SAP, Dynamic and Odoo keep their own page heads.
+ * ⛔ SAP, Dynamic, Odoo আর বাকি রূপে পাতার মাথা হুবহু আগের মতো। ⓘ জাভাস্ক্রিপ্টের একই তালিকা: abos-list-head.js-এর
+ *   `ABOS_HEAD_LOOKS` — দুইটা একসাথে বদলায়।
  */
 final class AbosHead
 {
-    public static function shows(): bool
+    public const LOOKS = ['rose', 'navy', 'blue'];
+
+    public static function on(?User $user = null): bool
     {
-        return in_array(Ui::clean(LookRegistry::lookFor(LookPreview::orChosen(auth()->user()?->ui))), Ui::FOLD_MENU_LOOKS, true);
+        $user ??= auth()->user();
+
+        return in_array(LookRegistry::lookFor(LookPreview::orChosen($user?->ui)), self::LOOKS, true);
     }
 }

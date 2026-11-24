@@ -40,11 +40,15 @@ class NotificationTemplateController extends Controller
 
     public function index(Request $request): View
     {
-        $f = $request->validate(['q' => ['nullable', 'string', 'max:120']]);
+        $f = $request->validate([
+            'q' => ['nullable', 'string', 'max:120'],
+            'category' => ['nullable', \Illuminate\Validation\Rule::in(\App\Core\Support\NotificationKinds::CATEGORIES)],
+        ]);
 
         $rows = NotificationTemplate::query()
             ->with('published')
             ->withCount('versions')
+            ->when($f['category'] ?? null, fn ($q, $c) => $q->where('category', $c))
             ->when($f['q'] ?? null, fn ($q, $s) => $q->where(fn ($w) => $w->where('name', 'like', '%'.addcslashes($s, '%_\\').'%')
                 ->orWhere('code', 'like', '%'.addcslashes($s, '%_\\').'%')))
             ->orderBy('name')
