@@ -99,6 +99,7 @@
     $export = app(\App\Core\Services\ListExport::class);
     $export->numeric(['count', 'cartons', 'value', 'labour', 'fare', 'other', 'total', 'per_carton']);
 
+    $abosHead = \App\Core\Support\AbosHead::on();
     $highest = $result['highest'];
     // ⓘ কার্ডের ছোট আইকন — নমুনার একই রেখা-ছবি (ইমোজি নয়); ডেলিভারি খরচের কার্ডের একই আঁকা
     $svg = fn (string $d, string $width = '2') => new HtmlString('<svg viewBox="0 0 24 24" class="size-3.5"><path d="'.$d.'" fill="none" stroke="currentColor" stroke-width="'.$width.'" stroke-linejoin="round" stroke-linecap="round"/></svg>');
@@ -165,6 +166,12 @@
 
     <x-ui.filter-layout :filters="$filters" form="list-form" :report="true" :noun="__('purchase::cost_report.col.purchases')">
 
+        @if ($abosHead)
+            <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+                @include('purchase::cost-report.partials.head')
+            </div>
+        @endif
+
         {{-- ⭐ চারটা সরু রঙিন কার্ড — তালিকার কার্ডের একই গড়ন ([[filter-layout]]); এখানে লিংক নয়, কেবল অঙ্ক --}}
         <div class="list-cards" data-list-cards data-cost-cards>
             @foreach ($cards as [$icon, $gradient, $label, $value, $sub])
@@ -181,43 +188,9 @@
 
         <div class="grid items-start gap-4 xl:grid-cols-3">
             <div data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) xl:col-span-2">
-                <form id="list-form" method="GET" class="contents" data-report>
-                    <input type="hidden" name="by" value="{{ $by }}">
-                    <x-ui.toolbar :title="__('purchase::cost_report.title')" :search="false" :report="true"
-                                  :count="implode(' · ', $chips)"
-                                  :columns="$columns" :facets="$filters" :quiet="['by']">
-                        <x-slot:actions>
-                            {{-- ⭐ ভাগ — ইনভয়েস / সরবরাহকারী / মাস / পণ্য (`?by=`) --}}
-                            <nav aria-label="{{ __('purchase::cost_report.group_label') }}" data-cost-groups
-                                 class="inline-flex overflow-hidden rounded-(--radius-field) border border-(--color-border)">
-                                @foreach (\App\Modules\Purchase\Services\PurchaseCostReport::GROUPS as $g)
-                                    <a href="{{ request()->fullUrlWithQuery(['by' => $g, 'page' => null]) }}" data-group="{{ $g }}"
-                                       @if ($g === $by) aria-current="page" @endif
-                                       @class([$segment, 'border-s border-(--color-border)' => ! $loop->first,
-                                               'bg-(--color-surface-selected) font-semibold text-(--color-brand-600)' => $g === $by])>{{ __('purchase::cost_report.by.'.$g) }}</a>
-                                @endforeach
-                            </nav>
-                            @if ($canDownload)
-                                <a href="{{ $exportUrl('print') }}" target="_blank" rel="noopener" data-no-prefetch data-download="print" class="{{ $button }}">
-                                    <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current"><path d="M7 3h10v4H7V3ZM5 9h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2Zm4 8h6v4H9v-4Z"/></svg>
-                                    {{ __('purchase::cost_report.print') }}
-                                </a>
-                                <a href="{{ $exportUrl('pdf') }}" target="_blank" rel="noopener" data-no-prefetch data-download="pdf" class="{{ $button }}">{{ __('purchase::cost_report.pdf') }}</a>
-                                <a href="{{ $exportUrl('xlsx') }}" data-no-prefetch data-download="xlsx" class="{{ $button }}">{{ __('purchase::cost_report.excel') }}</a>
-                            @endif
-                        </x-slot:actions>
-                    </x-ui.toolbar>
-                </form>
-
-                @php
-                    // ⓘ কাগজের মাথা — রিপোর্টের নাম আর সময়কাল, তারপর বাকি চিপ (টুলবারের বসানোর পরে, তাই এটাই থাকে)
-                    $export->describe([
-                        'title' => __('purchase::cost_report.title'),
-                        'title_en' => app()->getLocale() === 'en' ? '' : __('purchase::cost_report.title', [], 'en'),
-                        'period' => $period,
-                        'facts' => array_slice($chips, 1),
-                    ]);
-                @endphp
+                @unless ($abosHead)
+                    @include('purchase::cost-report.partials.head')
+                @endunless
 
                 {{-- ⭐ সর্বমোট — গোটা ছাঁকা রিপোর্টের একটাই সারি (পাতার নয়), হার মোট থেকে; ফাইলের শেষেও টেবিল নিজেই দেয় ([[Table]]) --}}
                 <x-ui.table
@@ -236,7 +209,10 @@
             {{-- ⭐ খরচ % — আড়াআড়ি দণ্ড, দাগে সীমা, সীমার উপরে কমলা; প্রতিটা দণ্ডের পাশে সংখ্যা (রং একা কিছু বলে না) --}}
             <section data-boxed data-cost-chart
                      class="min-w-0 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-                <h2 class="mb-2 font-semibold" title="{{ __('purchase::cost_report.chart_note', ['n' => $thresholdText]) }}">{{ $chartTitle }}</h2>
+                <h2 class="font-semibold" @if ($abosHead) title="{{ __('purchase::cost_report.chart_note', ['n' => $thresholdText]) }}" @endif>{{ $chartTitle }}</h2>
+                @unless ($abosHead)
+                <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('purchase::cost_report.chart_note', ['n' => $thresholdText]) }}</p>
+                @endunless
 
                 @forelse ($bars as $bar)
                     @php
