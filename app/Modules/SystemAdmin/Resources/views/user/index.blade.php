@@ -87,7 +87,7 @@
              * ঘরটা বলে তিনি আর কোথায় ঢুকতে পারেন — সেটা এক কথা নয়।
              */
             'key' => 'companies',
-            'wrap' => true,
+            'width' => '12rem',
             'label' => __('core.company.company'),
             'render' => fn ($u) => $u->companies->map(fn ($c) => $c->code)->implode(', ') ?: '—',
         ],
@@ -107,9 +107,10 @@
         ],
         [
             'key' => 'email',
+            'width' => '10rem',
             'label' => __('core.profile.email'),
             'render' => fn ($u) => new \Illuminate\Support\HtmlString(
-                '<a class="hover:underline" href="mailto:'.e($u->email).'">'.e($u->email).'</a>'),
+                '<a class="block max-w-[10rem] truncate hover:underline" title="'.e($u->email).'" href="mailto:'.e($u->email).'">'.e($u->email).'</a>'),
         ],
         [
             'key' => 'remarks',
