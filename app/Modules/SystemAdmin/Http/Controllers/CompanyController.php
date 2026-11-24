@@ -94,6 +94,8 @@ class CompanyController extends Controller implements HasMiddleware
                  * একই প্রশ্ন, একই উত্তর)।
                  */
                 ->whereIn('id', $request->user()?->companies()->pluck('companies.id') ?? [])
+                // ⓘ ছাঁকনি "অবস্থা" — উপরের দেয়ালের ভিতরে
+                ->when(in_array($request->query('status'), ['active', 'inactive'], true), fn ($q) => $q->where('is_active', $request->query('status') === 'active'))
                 ->withCount(['branches' => fn ($q) => $q->withoutGlobalScopes()->whereNull('deleted_at')])
 
                 /*
