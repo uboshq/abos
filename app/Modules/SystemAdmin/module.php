@@ -193,7 +193,13 @@ return [
              *
              * ⛔ একই চাবি — দুইটা একই প্রশ্নের দুই অর্ধেক।
              */
-            ['label' => 'system_admin::branch_module.title', 'icon' => 'building', 'route' => 'system_admin.branch-module', 'section' => 'modules',
+            ['label' => 'system_admin::module_board.companies', 'icon' => 'building', 'route' => 'system_admin.module.companies', 'section' => 'modules',
+                'permission' => 'system_admin.settings.manage'],
+            ['label' => 'system_admin::branch_module.title', 'icon' => 'building', 'route' => 'system_admin.module.branches', 'section' => 'modules',
+                'permission' => 'system_admin.settings.manage'],
+            ['label' => 'system_admin::module_board.screens', 'icon' => 'list', 'route' => 'system_admin.module.screens', 'section' => 'modules',
+                'permission' => 'system_admin.settings.manage'],
+            ['label' => 'system_admin::module_board.app', 'icon' => 'settings', 'route' => 'system_admin.module.app', 'section' => 'modules',
                 'permission' => 'system_admin.settings.manage'],
 
             /*

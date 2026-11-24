@@ -25,7 +25,6 @@ final class EveryListPageHasTheToolbarTest extends TestCase
         'Finance/Resources/views/account-analysis/index.blade.php',
         'Finance/Resources/views/budget/index.blade.php',
         'Finance/Resources/views/carrier-labour/index.blade.php',
-        'Finance/Resources/views/institution/index.blade.php',
         'Finance/Resources/views/profit/index.blade.php',
         'Sales/Resources/views/target/index.blade.php',
     ];

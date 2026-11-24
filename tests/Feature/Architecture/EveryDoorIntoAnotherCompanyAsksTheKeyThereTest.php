@@ -51,6 +51,7 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
             .'পড়ার সময় কেবল CompanyLens-এর কোম্পানি (যেখানে executive.view আছে), আর শাখার সীমা পড়তে প্রসঙ্গে বসে',
         'app/Modules/SystemAdmin/Http/Controllers/CompanyController.php' => null,
         'app/Modules/SystemAdmin/Http/Controllers/BranchController.php' => null,
+        'app/Modules/SystemAdmin/Http/Controllers/BranchModuleController.php' => null,
         'app/Modules/SystemAdmin/Http/Controllers/UserController.php' => 'অন্য কোম্পানি কেবল যেখানে কর্তা নিজে সুপার অ্যাডমিন (companiesWithinReach); বাকিগুলো কেবল গুদামের নাম পড়া',
         'app/Modules/SystemAdmin/Services/BranchDesk.php' => 'কেবল BranchController/CompanyController ডাকে, আর ওরা আগে canInCompany জিজ্ঞেস করে',
         'app/Modules/SystemAdmin/Services/ScheduledReportRunner.php' => 'ক্রন — কোনো মানুষ নেই, নির্ধারিত রিপোর্ট যার নামে তার কোম্পানিতেই চলে',

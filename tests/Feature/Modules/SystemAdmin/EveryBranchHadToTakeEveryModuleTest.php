@@ -225,22 +225,21 @@ final class EveryBranchHadToTakeEveryModuleTest extends TestCase
      */
     public function test_the_screen_actually_draws(): void
     {
-        $html = $this->actingAs($this->owner)
-            ->get(route('system_admin.branch-module'))
-            ->assertOk()
-            ->getContent();
+        // ⓘ পুরনো ঠিকানা নতুন পাতায় নেয় (মালিক, ২৪ নভেম্বর ২০২৬)
+        $this->actingAs($this->owner)->get(route('system_admin.branch-module', ['branch' => $this->there->id]))
+            ->assertRedirect(route('system_admin.module.branches', ['pick' => [$this->there->id]]));
 
-        // ⓘ দুইটা শাখাই ট্যাব হিসেবে আছে — নাহলে একটাতে যাওয়ার পথই নেই।
+        $html = (string) $this->actingAs($this->owner)->get(route('system_admin.module.branches'))->assertOk()->getContent();
+
+        // ⓘ দুইটা শাখাই তালিকায় — নাহলে একটাতে যাওয়ার পথই নেই।
         $this->assertStringContainsString($this->here->name(), $html);
         $this->assertStringContainsString($this->there->name(), $html);
 
-        preg_match_all('/name="modules\[([^\]]+)\]"/', $html, $m);
+        preg_match_all('/data-module-row="([^"]+)"/', $html, $m);
 
-        $onScreen = $m[1];
-
-        $this->assertSame(
+        $this->assertEqualsCanonicalizing(
             array_keys(app(ModuleRegistry::class)->all()),
-            $onScreen,
+            $m[1],
             'পর্দার সারিগুলো রেজিস্ট্রির সাথে মেলে না — কোনো মডিউলের সুইচই নেই, '
             .'অথবা একটা দুইবার আছে।'
         );
@@ -263,7 +262,7 @@ final class EveryBranchHadToTakeEveryModuleTest extends TestCase
         $this->assertNotNull($stranger, 'যার চাবি নেই এমন কেউ নেই — পরীক্ষাটা কিছু মাপছে না।');
 
         $this->actingAs($stranger)
-            ->get(route('system_admin.branch-module'))
+            ->get(route('system_admin.module.branches'))
             ->assertForbidden();
     }
 
@@ -408,7 +407,7 @@ final class EveryBranchHadToTakeEveryModuleTest extends TestCase
     private function aModuleInTheMenu(): string
     {
         $code = collect($this->menuCodesIn($this->here))
-            ->first(fn (string $c) => $c !== 'system_admin');
+            ->first(fn (string $c) => ! app(\App\Modules\SystemAdmin\Support\ModuleBoard::class)->locked($c));
 
         $this->assertNotNull($code, 'মেনুতে বন্ধ করার মতো কোনো মডিউলই নেই।');
 

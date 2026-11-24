@@ -4,44 +4,46 @@ declare(strict_types=1);
 
 namespace App\Modules\SystemAdmin\Http\Controllers;
 
-use App\Core\Module\ModuleRegistry;
+use App\Core\Concerns\SortsLists;
+use App\Core\ListFilter\Facets;
+use App\Core\Services\ListExport;
 use App\Core\Services\MenuBuilder;
-use App\Core\Services\MenuSwitches;
-use App\Core\Services\SettingsService;
+use App\Core\Support\CompanyContext;
+use App\Core\Support\PerPage;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\BranchModule;
+use App\Models\Company;
+use App\Modules\SystemAdmin\Support\ModuleBoard;
+use App\Modules\SystemAdmin\Support\ModulePackages;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 /**
  * কোন শাখা কোন মডিউল পাবে।
  *
  * ── ⓘ কেন কন্ট্রোল প্যানেলের পাশে, ভিতরে নয় (২৮ নভেম্বর ২০২৬) ─────────
- * কন্ট্রোল প্যানেল **কোম্পানির** সুইচ ধরে — `settings` টেবিল, unique
- * `(company_id, key)`। ⛔ ওখানে শাখা ঢোকাতে হলে ঐ unique index বদলাতে
- * হত, আর সব সেটিংস ঐ একটা টেবিলে বসে।
+ * কন্ট্রোল প্যানেল **কোম্পানির** সুইচ ধরে — `settings` টেবিল, unique `(company_id, key)`। ⛔ ওখানে শাখা ঢোকাতে হলে ঐ unique index
+ * বদলাতে হত। ⭐ তাই আলাদা টেবিল ([[BranchModule]])।
  *
- * ⭐ তাই আলাদা পর্দা, আলাদা টেবিল ([[BranchModule]]) — আর প্রশ্নটাও
- * আলাদা: কন্ট্রোল প্যানেল বলে *"এই ব্যবসা মডিউলটা নেয়ইনি"*, এটা বলে
- * *"এই ডিপোতে লাগে না"*।
+ * ⚠️ ক্রমটা এক দিকেই চলে: শাখা এমন কিছু **চালু করতে পারে না** যা কোম্পানি বন্ধ রেখেছে ([[MenuBuilder::moduleEnabled()]])। পর্দায় ঐ
+ * সারিগুলো ধরা থাকে, লুকানো নয়।
  *
- * ⚠️ ক্রমটা এক দিকেই চলে: শাখা এমন কিছু **চালু করতে পারে না** যা
- * কোম্পানি বন্ধ রেখেছে ([[MenuBuilder::moduleEnabled()]])। পর্দায় তাই
- * ঐ সারিগুলো ধরা থাকে, লুকানো নয় — লুকালে মানুষ ভাবতেন মডিউলটা নেই।
+ * ⭐ অনেক শাখা একসাথে (মালিক, ২৪ নভেম্বর ২০২৬, নমুনা system-plan-v4): বাঁয়ে খোঁজা-ছাঁকা তালিকা পাতা ধরে, ডানে মডিউল; লেখার আগে কী
+ *   বদলাবে তার তালিকা। ⛔ শাখা ধরে আলাদা প্রশ্ন বা কলাম নেই — একশো শাখাতেও একই।
  */
 class BranchModuleController extends Controller implements HasMiddleware
 {
+    use SortsLists;
+
     public function __construct(
-        private readonly ModuleRegistry $registry,
-        private readonly SettingsService $settings,
+        private readonly ModuleBoard $board,
+        private readonly ModulePackages $packages,
         private readonly MenuBuilder $menu,
-        private readonly MenuSwitches $switches,
+        private readonly ListExport $export,
     ) {}
 
     public static function middleware(): array
@@ -54,227 +56,188 @@ class BranchModuleController extends Controller implements HasMiddleware
         return [new Middleware('can:system_admin.settings.manage')];
     }
 
-    public function edit(Request $request): View
+    /** পুরনো ঠিকানা (`/branch-modules?branch=…`) — নতুন পর্দায়, সেই শাখাটা বাছা অবস্থায় */
+    public function edit(Request $request): RedirectResponse
     {
-        $branches = $this->branches();
+        $branch = (int) $request->query('branch', 0);
 
-        $current = $this->chosenBranch($request, $branches);
+        return redirect()->route('system_admin.module.branches', $branch > 0 ? ['pick' => [$branch]] : []);
+    }
 
-        return view('system_admin::branch-module.edit', [
-            'menu' => $this->menu->forUser($request->user()),
-            'branches' => $branches,
-            'current' => $current,
-            'modules' => $current === null ? [] : $this->modulesFor($current),
+    public function index(Request $request): View
+    {
+        $user = $request->user();
+        $menu = $this->menu->forUser($user);
+        $companies = $this->board->companiesFor($user);
+        $company = $this->company($request);
+
+        return CompanyContext::forCompany((int) $company->id, function () use ($request, $menu, $companies, $company): View {
+            $q = is_string($request->query('q')) ? trim($request->query('q')) : '';
+            $state = is_string($request->query('state')) ? $request->query('state') : '';
+            $query = $this->board->branches($q, $state);
+            $allowed = (clone $query)->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+            if ($request->query('sort') === 'off') {
+                $query->reorder()->orderByDesc(BranchModule::query()->selectRaw('COUNT(*)')->whereColumn('branch_modules.branch_id', 'branches.id')->where('is_enabled', false))
+                    ->orderBy('name_en')->orderBy('id');
+            }
+            $rows = $query->paginate(PerPage::of())->withQueryString();
+
+            $ids = ModuleBoard::picked($request->query('pick', []), $allowed);
+            if ($ids === [] && $allowed !== []) {
+                $ids = [$allowed[0]];
+            }
+
+            $pageIds = collect($rows->items())->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $copy = (int) $request->query('copy_from', 0);
+            $off = $this->board->branchOff(array_values(array_unique([...$pageIds, ...$ids, ...($copy > 0 ? [$copy] : [])])));
+            $names = Branch::query()->whereIn('id', [...$ids, $copy])->get()->mapWithKeys(fn (Branch $b) => [(int) $b->id => $b->name()])->all();
+            $wall = $this->board->companyOff([(int) $company->id])[(int) $company->id];
+            $copying = isset($names[$copy]);
+
+            $this->offerTheMatrix($rows, $off, $wall, $company);
+
+            return view('system_admin::module-board.board', [
+                'menu' => $menu,
+                'kind' => 'branch',
+                'rows' => $rows,
+                'off' => $off,
+                'packages' => $this->packages->namesFor($pageIds),
+                'ids' => $ids,
+                'names' => $names,
+                'groups' => $this->board->rows($ids, $copying ? array_fill_keys($ids, $off[$copy]) : $off, $wall),
+                'was' => $this->board->rows($ids, $off, $wall),
+                'copyable' => collect($rows->items())->mapWithKeys(fn (Branch $b) => [(int) $b->id => $b->name()])->all(),
+                'copied' => $copying ? $names[$copy] : null,
+                'history' => $this->board->branchHistory($ids, $names),
+                'companies' => $companies,
+                'company' => $company,
+                'facets' => Facets::panel([
+                    Facets::pick('state', __('core.table.status'), ['diff' => __('system_admin::module_board.differs'), 'same' => __('system_admin::module_board.like_company')]),
+                ]),
+            ]);
+        });
+    }
+
+    public function preview(Request $request): View|RedirectResponse
+    {
+        $menu = $this->menu->forUser($request->user());
+        $company = $this->company($request);
+        [$names, $plan] = $this->planned($request, $company);
+        $back = route('system_admin.module.branches', ['company' => $company->id, 'pick' => array_keys($names)]);
+
+        if ($plan['changes'] === []) {
+            return redirect($back)->with('saved', __('system_admin::module_board.nothing'));
+        }
+
+        return view('system_admin::module-board.preview', [
+            'menu' => $menu,
+            'kind' => 'branch', 'plan' => $plan, 'board' => $this->board, 'stamp' => $this->board->stamp($plan['changes']),
+            'apply' => route('system_admin.module.branches.apply'),
+            'back' => $back,
+            'payload' => ['company' => $company->id, ...$request->only(['pick', 'scope', 'modules', 'was', 'all_on', 'reset'])],
+            'stale' => false,
         ]);
     }
 
+    public function apply(Request $request): View|RedirectResponse
+    {
+        $company = $this->company($request);
+        [$names, $plan] = $this->planned($request, $company);
+
+        // ⛔ দেখার পরে অন্য কেউ বদলেছেন — নতুন তালিকা আবার দেখাও, চুপচাপ লেখা নয়
+        if ($this->board->stamp($plan['changes']) !== $request->input('stamp')) {
+            return $this->preview($request)->with('stale', true);
+        }
+
+        $userId = (int) $request->user()->id;
+        $count = CompanyContext::forCompany((int) $company->id, fn (): int => $this->board->writeBranches($plan['changes'], $userId));
+
+        return redirect()->route('system_admin.module.branches', ['company' => $company->id, 'pick' => array_keys($names)])
+            ->with('saved', __('system_admin::module_board.saved', ['count' => $count]));
+    }
+
+    /**
+     * পুরনো সংরক্ষণের দরজা — এক শাখা, চলতি কোম্পানি; ফর্ম আর হাতের লিংক আগের মতোই চলে।
+     */
     public function update(Request $request): RedirectResponse
     {
-        $branches = $this->branches();
-
         $data = $request->validate([
             'branch' => ['required', 'integer'],
             'scope' => ['array'],
             'scope.*' => ['string', 'max:64'],
-
-            /*
-             * ⓘ চাবিগুলোই মডিউলের কোড (`modules[accounts]`), মান নয়।
-             *
-             * ⚠️ `modules[]` হলে সব ঘরের নাম এক হত, আর `switchBoard.touch()`
-             * বদল গোনে **নাম ধরে** — দশটা বদলও "১টা" দেখাত।
-             */
             'modules' => ['array'],
         ]);
 
-        /*
-         * ⛔ শাখাটা সত্যিই এই কোম্পানির কি না — `$branches` ইতিমধ্যেই
-         * কোম্পানির দেয়ালের ভিতর দিয়ে এসেছে ([[BelongsToCompany]])।
-         *
-         * ⚠️ কেবল `Branch::find()` করলে দেয়ালটা কোয়েরিতে থাকত, কিন্তু
-         * "ঐ শাখা আমার পর্দায় ছিল কি না" প্রশ্নের উত্তর থাকত না — আর
-         * নিষ্ক্রিয় শাখাও তখন বদলানো যেত।
-         */
-        $branch = $branches->firstWhere('id', (int) $data['branch']);
-
+        // ⛔ শাখাটা এই কোম্পানির আর সচল কি না — দেয়াল [[BelongsToCompany]]
+        $branch = $this->board->branches()->whereKey((int) $data['branch'])->first();
         abort_if($branch === null, 404);
 
-        /*
-         * ⚠️ কেবল যে সারিগুলো ফর্মে ছিল। ⓘ কন্ট্রোল প্যানেলে ৩০ আগস্ট
-         * ২০২৬-এ এই ভুলটা সত্যিই হয়েছিল: "চেকবক্স নেই মানে বন্ধ" ধরায়
-         * এক ট্যাব সংরক্ষণ করলে অন্য ট্যাবের সুইচগুলো নীরবে বন্ধ হত।
-         */
-        // ⓘ `all()` কোড ধরেই সাজানো, তাই চাবিগুলোই চেনা মডিউলের তালিকা।
-        $scope = array_values(array_intersect(
-            $data['scope'] ?? [],
-            array_keys($this->registry->all())
-        ));
-
-        $wanted = array_keys((array) ($data['modules'] ?? []));
-
-        $changed = 0;
-
-        foreach ($scope as $code) {
-            if ($this->nailedDown($code)) {
-                continue;
-            }
-
-            $on = in_array($code, $wanted, true);
-
-            $row = BranchModule::query()
-                ->where('branch_id', $branch->id)
-                ->where('module', $code)
-                ->first();
-
-            if ($row === null) {
-                // ⓘ চালু-ই ডিফল্ট, তাই "চালু" অবস্থায় সারি বসানোর মানে নেই।
-                if ($on) {
-                    continue;
-                }
-
-                BranchModule::create([
-                    'branch_id' => $branch->id,
-                    'module' => $code,
-                    'is_enabled' => false,
-                    'created_by' => Auth::id(),
-                ]);
-
-                $changed++;
-
-                continue;
-            }
-
-            if ((bool) $row->is_enabled === $on) {
-                continue;
-            }
-
-            $row->is_enabled = $on;
-            $row->save();
-
-            $changed++;
-        }
+        $id = (int) $branch->id;
+        $wanted = $this->board->wanted($data['scope'] ?? [], $data['modules'] ?? [], [], []);
+        $wall = $this->board->companyOff([(int) $branch->company_id])[(int) $branch->company_id];
+        $plan = $this->board->plan([$id => $branch->name()], $this->board->branchOff([$id]), $wanted, $wall);
+        $count = $this->board->writeBranches($plan['changes'], (int) $request->user()->id);
 
         return redirect()
-            ->route('system_admin.branch-module', ['branch' => $branch->id])
-            ->with('saved', __('system_admin::branch_module.saved', ['count' => $changed]));
+            ->route('system_admin.module.branches', ['pick' => [$id]])
+            ->with('saved', __('system_admin::branch_module.saved', ['count' => $count]));
     }
 
-    /**
-     * এই কোম্পানির সচল শাখাগুলো।
-     *
-     * @return Collection<int, Branch>
-     */
-    private function branches(): Collection
+    /** বাছা কোম্পানি — না বললে চলতিটা; চাবিটা ঐ কোম্পানিতে না থাকলে ৪০৪ */
+    private function company(Request $request): Company
     {
-        return Branch::query()
-            ->where('is_active', true)
-            ->orderByDesc('is_default')
-            ->orderBy('name_en')
-            ->get();
+        $id = (int) $request->input('company', CompanyContext::id());
+        abort_unless($request->user()->canInCompany($id, 'system_admin.settings.manage'), 404);
+
+        return Company::query()->findOrFail($id);
     }
 
-    /**
-     * ⓘ ঠিকানায় শাখা থাকলে সেটা, নাহলে প্রথমটা।
-     *
-     * ⚠️ ঠিকানায় থাকাটা ইচ্ছাকৃত — কেউ "ঢাকা ডিপোর মডিউল" বুকমার্ক করে
-     * রাখতে পারেন, আর ফিরে গেলে একই শাখায় ফেরেন ([[ControlPanelController]]
-     * -এর ট্যাবেও একই কারণে ঠিকানা ব্যবহার হয়)।
-     *
-     * @param  Collection<int, Branch>  $branches
-     */
-    private function chosenBranch(Request $request, $branches): ?Branch
+    /** @return array{0: array<int, string>, 1: array<string, mixed>} */
+    private function planned(Request $request, Company $company): array
     {
-        $asked = $request->query('branch');
+        $data = $request->validate([
+            'pick' => ['required', 'array', 'min:1'], 'pick.*' => ['integer'],
+            'scope' => ['array'], 'scope.*' => ['string', 'max:64'], 'modules' => ['array'], 'was' => ['array'], 'all_on' => ['array'],
+        ]);
+        $asked = array_values(array_unique(array_map('intval', $data['pick'])));
 
-        if ($asked !== null) {
-            $found = $branches->firstWhere('id', (int) $asked);
+        return CompanyContext::forCompany((int) $company->id, function () use ($request, $company, $data, $asked): array {
+            $names = $this->board->branches()->whereIn('id', $asked)->get()->mapWithKeys(fn (Branch $b) => [(int) $b->id => $b->name()])->all();
+            // ⛔ অন্য কোম্পানির বা বন্ধ শাখা — একটাও থাকলে পুরোটাই ৪০৪, অর্ধেক লেখা নয়
+            abort_if(count($names) !== count($asked), 404);
 
-            if ($found !== null) {
-                return $found;
+            $off = $this->board->branchOff($asked);
+            // ⭐ "কোম্পানির মতো করুন" — শাখায় বন্ধ যা কিছু সব চালু
+            $wanted = $request->boolean('reset')
+                ? array_fill_keys(array_values(array_unique(array_merge(...array_values($off)))), true)
+                : $this->board->wanted($data['scope'] ?? [], $data['modules'] ?? [], $data['was'] ?? [], $data['all_on'] ?? []);
+            $wall = $this->board->companyOff([(int) $company->id])[(int) $company->id];
+
+            return [$names, $this->board->plan($names, $off, $wanted, $request->boolean('reset') ? [] : $wall)];
+        });
+    }
+
+    /** নামানো ফাইলে শাখা × মডিউল, প্রতিটার অবস্থা */
+    private function offerTheMatrix($rows, array $off, array $wall, Company $company): void
+    {
+        if (! $this->export->wanted()) {
+            return;
+        }
+
+        $columns = [['key' => 'name', 'label' => __('core.company.branch'), 'render' => null]];
+        foreach ($this->board->groups() as $group) {
+            foreach ($group['codes'] as $code) {
+                $columns[] = ['key' => $code, 'label' => $this->board->label($code), 'render' => null];
             }
         }
 
-        return $branches->first();
-    }
-
-    /**
-     * এই শাখার জন্য মডিউলের সারিগুলো।
-     *
-     * @return list<array{code: string, label: string, on: bool, company_on: bool, locked: bool, off_elsewhere: int, screens: int}>
-     */
-    private function modulesFor(Branch $branch): array
-    {
-        $offHere = BranchModule::query()
-            ->where('branch_id', $branch->id)
-            ->where('is_enabled', false)
-            ->pluck('module')
-            ->all();
-
-        /*
-         * ⭐ কোন মডিউল আর কয়টা শাখায় বন্ধ — এক নজরে গোটা ছবিটা।
-         *
-         * ⓘ ট্যাব ধরে একটা শাখা দেখা যায়, কিন্তু "LC কি কেবল এখানেই বন্ধ,
-         * নাকি সব ডিপোতেই?" প্রশ্নটার উত্তর ছাড়া সিদ্ধান্তটা অন্ধ হত।
-         */
-        $offElsewhere = BranchModule::query()
-            ->where('is_enabled', false)
-            ->where('branch_id', '!=', $branch->id)
-            ->selectRaw('module, COUNT(*) as how_many')
-            ->groupBy('module')
-            ->pluck('how_many', 'module')
-            ->all();
-
-        $rows = [];
-
-        foreach ($this->registry->all() as $module) {
-            $companyOn = (bool) $this->settings->get($this->switches->forModule($module->code), true);
-
-            $rows[] = [
-                'code' => $module->code,
-                'label' => $module->label(),
-                'on' => ! in_array($module->code, $offHere, true),
-                'company_on' => $companyOn,
-                'locked' => $this->nailedDown($module->code),
-                'off_elsewhere' => (int) ($offElsewhere[$module->code] ?? 0),
-
-                /*
-                 * ⭐ বন্ধ করলে কয়টা পর্দা মেনু থেকে সরে — সিস্টেম পর্দার নকশা §৪/§৬, ১০ অক্টোবর ২০২৬: *"বন্ধ করলে কী হবে বলা
-                 * নেই"*। ⓘ কন্ট্রোল প্যানেলের একই গোনা ([[MenuSwitches::tree()]]): মেনুর সারি, এখনো-না-বানানো (`planned`) বাদ।
-                 */
-                'screens' => collect($module->menu)->flatten(1)->reject(fn ($item) => (bool) ($item['planned'] ?? false))->count(),
-            ];
-        }
-
-        return $rows;
-    }
-
-    /**
-     * ⛔ যে মডিউলটা এই পর্দাটাই ধরে আছে, সেটা বন্ধ করা যায় না।
-     *
-     * ⚠️ পারলে কেউ নিজের শাখায় এটা বন্ধ করতেন, আর তারপর **ফিরিয়ে আনার
-     * পর্দাটাই** আর মেনুতে থাকত না। ⓘ নামটা হাতে লেখা নেই — এই রুটের
-     * নামের উপসর্গ থেকেই আসে, তাই মডিউলের নাম বদলালে এটাও বদলায়।
-     */
-    private function nailedDown(string $code): bool
-    {
-        return $code === $this->myOwnModule();
-    }
-
-    /**
-     * ⓘ রুটের নামের উপসর্গ = মডিউলের কোড।
-     *
-     * ⚠️ সম্পর্কটা আন্দাজ নয়, নিয়ম: [[ModuleServiceProvider]] প্রতিটা
-     * মডিউলের রুটে `->name($code.'.')` বসায়। ⛔ ফোল্ডারের নাম থেকে
-     * বের করলে ভুল হত — কোড আসে `module.php`-র ঘোষণা থেকে, ফোল্ডার
-     * থেকে নয়।
-     *
-     * ⚠️ রুট ছাড়া ডাকা হলে (কনসোল, সরাসরি ইউনিট কল) খালি ফেরে, অর্থাৎ
-     * কিছুই ধরা থাকে না। ⓘ ওয়েবে এই পথটা নেই, আর ওয়েবই একমাত্র জায়গা
-     * যেখানে কেউ নিজের পর্দা নিজে বন্ধ করে ফেলতে পারেন।
-     */
-    private function myOwnModule(): string
-    {
-        $name = (string) (request()->route()?->getName() ?? '');
-
-        return str_contains($name, '.') ? (string) strstr($name, '.', true) : $name;
+        $this->export->describe(['title' => __('system_admin::module_board.branches'), 'facts' => [$company->name()]]);
+        $this->export->capture($columns, $rows, fn (Branch $b, array $col) => $col['key'] === 'name' ? $b->name() : __(match (true) {
+            $this->board->locked($col['key']) => 'system_admin::module_board.on',
+            in_array($col['key'], $wall, true) => 'system_admin::branch_module.company_off',
+            in_array($col['key'], $off[(int) $b->id] ?? [], true) => 'system_admin::module_board.off',
+            default => 'system_admin::module_board.on',
+        }));
     }
 }

@@ -55,7 +55,7 @@ final class SystemAdminDashboard implements ProvidesDashboard
                     permission: 'system_admin.company.manage', icon: 'building'),
                 new Tile(label: __('system_admin::menu.section_people'), href: route('system_admin.user.index'),
                     permission: 'system_admin.user.manage', icon: 'people'),
-                new Tile(label: __('system_admin::menu.section_modules'), href: route('system_admin.branch-module'),
+                new Tile(label: __('system_admin::menu.section_modules'), href: route('system_admin.module.branches'),
                     permission: 'system_admin.settings.manage', icon: 'building'),
                 new Tile(label: __('system_admin::menu.section_control'), href: route('system_admin.control-panel'),
                     permission: 'system_admin.settings.manage', icon: 'settings'),

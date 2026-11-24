@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Modules\SystemAdmin\Http\Controllers\BranchModuleController;
 use App\Modules\SystemAdmin\Http\Controllers\BranchController;
 use App\Modules\SystemAdmin\Http\Controllers\CompanyController;
+use App\Modules\SystemAdmin\Http\Controllers\CompanyModuleController;
+use App\Modules\SystemAdmin\Http\Controllers\ModuleScreenController;
 use App\Modules\SystemAdmin\Http\Controllers\ControlPanelController;
 use App\Modules\SystemAdmin\Http\Controllers\SettingChangeController;
 use App\Modules\SystemAdmin\Http\Controllers\CustomFieldController;
@@ -98,6 +100,17 @@ Route::middleware('auth')->prefix('system')->group(function () {
      * ⛔ একই চাবি (`settings.manage`), কারণ দুইটা পর্দা একই প্রশ্নের
      * দুই অর্ধেক, আর অর্ধেক উত্তর বদলানোর অধিকার কোনো অধিকার নয়।
      */
+    // ⭐ মডিউলের পাতা (মালিক, ২৪ নভেম্বর ২০২৬, নমুনা system-plan-v4) — পুরনো `/branch-modules` নতুন পাতায় নেয়, পুরনো সংরক্ষণ আগের মতো
+    Route::prefix('modules')->name('module.')->group(function () {
+        Route::get('/companies', [CompanyModuleController::class, 'index'])->name('companies');
+        Route::post('/companies/preview', [CompanyModuleController::class, 'preview'])->name('companies.preview');
+        Route::post('/companies/apply', [CompanyModuleController::class, 'apply'])->name('companies.apply');
+        Route::get('/branches', [BranchModuleController::class, 'index'])->name('branches');
+        Route::post('/branches/preview', [BranchModuleController::class, 'preview'])->name('branches.preview');
+        Route::post('/branches/apply', [BranchModuleController::class, 'apply'])->name('branches.apply');
+        Route::get('/screens', [ModuleScreenController::class, 'screens'])->name('screens');
+        Route::get('/app', [ModuleScreenController::class, 'app'])->name('app');
+    });
     Route::get('/branch-modules', [BranchModuleController::class, 'edit'])->name('branch-module');
     Route::put('/branch-modules', [BranchModuleController::class, 'update'])->name('branch-module.update');
 

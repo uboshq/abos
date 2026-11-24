@@ -40,96 +40,50 @@ final class TheBranchModulesSaidNothingAboutOffTest extends TestCase
         $this->actingAs($owner->fresh());
     }
 
-    /** ⭐ প্রতিটা বন্ধযোগ্য মডিউলের সারিতে প্রভাব — ঠিক কয়টা পর্দা, কোন শাখা থেকে, আর "তথ্য মুছবে না"। */
-    public function test_every_switchable_row_says_what_turning_it_off_does(): void
+    /** ⭐ প্রতিটা বন্ধযোগ্য মডিউলের সারিতে প্রভাব — ঠিক কয়টা পর্দা; এখনো-না-বানানো (`planned`) সারি গোনায় নেই। */
+    public function test_every_switchable_row_says_how_many_screens_it_holds(): void
     {
-        $html = $this->page();
+        foreach (['sales', 'restaurant'] as $code) {
+            $screens = collect(app(ModuleRegistry::class)->get($code)->menu)->flatten(1)->reject(fn ($item) => (bool) ($item['planned'] ?? false))->count();
+            $this->assertGreaterThan(0, $screens);
 
-        $sales = app(ModuleRegistry::class)->get('sales');
-        $screens = collect($sales->menu)->flatten(1)->reject(fn ($item) => (bool) ($item['planned'] ?? false))->count();
-
-        $this->assertGreaterThan(0, $screens);
-
-        $row = $this->rowOf($html, 'sales');
-
-        $this->assertStringContainsString('data-module-impact', $row, '⛔ বিক্রয়ের সারিতে বন্ধের প্রভাব নেই।');
-        $this->assertStringContainsString(
-            __('system_admin::branch_module.off_impact', ['screens' => $screens, 'branch' => $this->branch->name()], 'bn'),
-            $row,
-            '⛔ প্রভাবের লেখায় পর্দার সংখ্যা বা শাখার নাম ভুল।',
-        );
+            $this->assertStringContainsString(__('system_admin::module_board.screens_count', ['n' => $screens], 'bn'), $this->rowOf($this->page(), $code),
+                "⛔ {$code}-এর সারিতে পর্দার সংখ্যা ভুল।");
+        }
     }
 
-    /**
-     * ⛔ এখনো-না-বানানো (`planned`) সারি গোনায় পড়ে না — ওগুলো মেনুতে নিভে থাকে, বন্ধ করলে "সরে" না।
-     *
-     * ⓘ রেস্টুরেন্টই একমাত্র মডিউল যার planned সারি আছে; বিক্রয়ে নেই, তাই উপরের দাবি এই পার্থক্যটা কখনো দেখত না (মিউট্যান্ট
-     * বেঁচে গিয়েছিল)। ⚠️ planned সারি আছে কি না আগে মাপা হয় — না থাকলে দাবিটা কিছুই মাপত না।
-     */
-    public function test_planned_rows_are_not_counted_as_screens(): void
+    /** ⭐ বন্ধের আগে দেখায় — কোন শাখা, কোন মডিউল; নিশ্চিত না করলে কিছু লেখা হয় না। */
+    public function test_switching_off_shows_the_list_first_and_writes_only_after_the_confirm(): void
     {
-        $menu = collect(app(ModuleRegistry::class)->get('restaurant')->menu)->flatten(1);
-        $planned = $menu->filter(fn ($item) => (bool) ($item['planned'] ?? false))->count();
+        $send = ['company' => $this->branch->company_id, 'pick' => [$this->branch->id], 'scope' => ['sales'], 'modules' => [], 'was' => ['sales' => 'on']];
 
-        $this->assertGreaterThan(0, $planned, 'ⓘ রেস্টুরেন্টে আর planned সারি নেই — দাবিটার জন্য অন্য মডিউল খুঁজুন।');
+        $html = (string) $this->post(route('system_admin.module.branches.preview'), $send)->assertOk()->getContent();
+        $this->assertStringContainsString($this->branch->name(), $html);
+        $this->assertStringContainsString('data-module-confirm', $html);
+        $this->assertStringContainsString('data-module-warning="sales"', $html, '⛔ বিক্রয়ের উপর দাঁড়ানো মডিউলের সতর্কতা নেই।');
+        $this->assertSame(0, \App\Models\BranchModule::query()->count(), '⛔ কেবল দেখাতেই লেখা হয়ে গেছে।');
 
-        $row = $this->rowOf($this->page(), 'restaurant');
+        preg_match('/name="stamp" value="([^"]+)"/', $html, $m);
+        // ⛔ ভুল ছাপ — লেখা থামে, তালিকা আবার আসে
+        $this->post(route('system_admin.module.branches.apply'), [...$send, 'stamp' => 'x'])->assertOk()->assertSee(__('system_admin::module_board.stale'));
+        $this->assertSame(0, \App\Models\BranchModule::query()->count());
 
-        $this->assertStringContainsString(
-            __('system_admin::branch_module.off_impact', ['screens' => $menu->count() - $planned, 'branch' => $this->branch->name()], 'bn'),
-            $row,
-            '⛔ রেস্টুরেন্টের পর্দা-গোনায় এখনো-না-বানানো সারিও ধরা হয়েছে।',
-        );
-    }
-
-    /** ⭐ বন্ধের আগে নিশ্চিত — ফর্মে confirmOff, আর প্রতিটা টিক নিজের নাম বয়। */
-    public function test_switching_off_asks_first(): void
-    {
-        $html = $this->page();
-
-        $form = $this->between($html, 'action="'.route('system_admin.branch-module.update').'"', '</form>');
-        $head = substr($form, 0, (int) strpos($form, '>'));
-
-        $this->assertStringContainsString('@submit="confirmOff($event)"', $head, '⛔ সংরক্ষণের আগে কিছু জিজ্ঞেস করা হয় না।');
-        $this->assertStringContainsString('data-confirm-off=', $head, '⛔ জিজ্ঞাসার লেখা নেই।');
-        $this->assertStringContainsString($this->branch->name(), $head, '⛔ জিজ্ঞাসায় শাখার নাম নেই।');
-
-        $this->assertMatchesRegularExpression('/name="modules\[sales\]"[^>]*data-module-label="[^"]+"/s', $form,
-            '⛔ টিকে মডিউলের নাম নেই — confirmOff কাকে বন্ধ বলবে জানে না।');
-    }
-
-    /** ⭐ সংরক্ষণ ডানে স্থির পট্টিতে — বাঁয়ে একা পড়ে থাকা পুরনো বোতামটা নেই। */
-    public function test_save_rides_the_sticky_bar(): void
-    {
-        $form = $this->between($this->page(), 'action="'.route('system_admin.branch-module.update').'"', '</form>');
-
-        $this->assertStringContainsString('data-form-actions', $form, '⛔ স্থির পট্টি নেই।');
-
-        /* ⓘ দুটো সংরক্ষণ: বদল জমলে ভাসা পটির একটা, আর পট্টির একটা — বাঁয়ে একা তৃতীয়টা নয় */
-        $this->assertSame(2, substr_count($form, 'type="submit"'), '⛔ পুরনো বাঁয়ের সংরক্ষণ রয়ে গেছে।');
+        $this->post(route('system_admin.module.branches.apply'), [...$send, 'stamp' => $m[1]])->assertRedirect();
+        $row = \App\Models\BranchModule::query()->sole();
+        $this->assertSame([(int) $this->branch->id, 'sales', false], [(int) $row->branch_id, $row->module, $row->is_enabled]);
+        $this->assertSame(1, \App\Models\AuditTrail::query()->where('auditable_type', \App\Models\BranchModule::class)->count(), '⛔ বদলটা অডিটে নেই।');
     }
 
     private function page(): string
     {
-        return (string) $this->get(route('system_admin.branch-module', ['branch' => $this->branch->id]))->assertOk()->getContent();
+        return (string) $this->get(route('system_admin.module.branches', ['pick' => [$this->branch->id]]))->assertOk()->getContent();
     }
 
     private function rowOf(string $html, string $code): string
     {
-        $at = strpos($html, 'name="modules['.$code.']"');
+        $at = strpos($html, 'data-module-row="'.$code.'"');
         $this->assertNotFalse($at, "⛔ {$code}-এর সারি নেই।");
-        $end = strpos($html, '</tr>', $at);
 
-        return substr($html, $at, (int) $end - $at);
-    }
-
-    private function between(string $html, string $from, string $to): string
-    {
-        $at = strpos($html, $from);
-        $this->assertNotFalse($at, "⛔ পাতায় «{$from}» নেই।");
-        $end = strpos($html, $to, $at);
-        $this->assertNotFalse($end);
-
-        return substr($html, $at, $end - $at);
+        return substr($html, $at, (int) strpos($html, '</div>', $at) - $at);
     }
 }
