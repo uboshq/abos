@@ -154,6 +154,8 @@
                     </li>
                 @endforeach
             </ul>
+            <x-ui.pager :rows="$papers" />
+            <x-ui.list-totals :rows="$papers" />
         </section>
     @endif
 </x-layouts.app>

@@ -26,9 +26,11 @@
     @else
         <form method="POST" action="{{ route('hr.leave.delivery', $application->id) }}" class="flex items-center justify-end gap-1">
             @csrf
-            <input type="date" name="actual_delivery_date" required aria-label="{{ __('hr::field.actual_delivery_date') }}"
-                   value="{{ $application->actual_delivery_date?->toDateString() }}"
-                   class="rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-1.5 py-1 text-2xs">
+            <label>
+                <span class="sr-only">{{ __('hr::field.actual_delivery_date') }}</span>
+                <x-ui.date name="actual_delivery_date" id="delivery-{{ $application->id }}" required dense
+                           :value="$application->actual_delivery_date?->toDateString()" />
+            </label>
             <button type="submit" class="rounded-(--radius-field) px-2 py-1 text-2xs text-(--color-ink-muted) transition-colors hover:bg-(--color-surface-hover)">
                 {{ __('hr::action.record_delivery') }}
             </button>

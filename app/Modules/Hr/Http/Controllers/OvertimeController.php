@@ -61,7 +61,7 @@ class OvertimeController extends Controller implements HasMiddleware
             ->with(['employee', 'signer'])
             ->whereDate('hr_overtime_sheets.month', $month->toDateString())
             ->orderBy('hr_overtime_sheets.id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('hr::overtime.index', [
