@@ -199,11 +199,35 @@
             @endif
         </div>
 
+        @if (($printView ?? null) !== null)
+            {{-- ⭐ "দেখুন" opens the paper exactly as it prints (owner, 24 Nov 2026) — the PDF of the print door, drawn only when opened --}}
+            <div x-data="{ open: false }" x-on:open-paper.window="open = true" data-paper-view="{{ $printView }}">
+                <div x-show="open" x-cloak role="dialog" aria-modal="true" aria-labelledby="paper-view-{{ $approval->id }}" data-dialog-focus
+                     x-on:keydown.escape.window="open = false"
+                     class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 text-start">
+                    <div x-on:click.outside="open = false" class="inbox-board-paper">
+                        <div class="flex items-center gap-3 border-b border-(--color-border) px-4 py-2">
+                            <p id="paper-view-{{ $approval->id }}" class="num min-w-0 flex-1 truncate font-bold">{{ $workName }} · {{ $paperNo ?? '#'.$approval->id }}</p>
+                            <a href="{{ $printView }}" target="_blank" rel="noopener" class="inbox-board-link text-sm">{{ __('approval::action.board_new_tab') }}</a>
+                            <button type="button" x-on:click="open = false"
+                                    class="rounded-(--radius-field) border border-(--color-border) px-3 py-1 text-xs">{{ __('approval::action.close') }}</button>
+                        </div>
+                        <template x-if="open">
+                            <iframe src="{{ $printView }}#toolbar=0&amp;view=FitH" title="{{ $paperNo ?? $workName }}" class="inbox-board-paperframe"></iframe>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         {{-- ── decide — in the flow, under the boxes (not fixed) ───────────────────── --}}
         <div class="inbox-board-actions">
             @if ($pending && $canDecide)
                 @include('approval::inbox.partials.decide', ['boardActions' => true, 'boardSheetOpen' => $sheet !== null && $bundle === null])
             @elseif ($pending)
+                @if (($printView ?? null) !== null)
+                    <x-ui.button type="button" tone="secondary" x-data x-on:click="$dispatch('open-paper')" data-opens-dialog aria-haspopup="dialog" class="inbox-board-view justify-self-start">{{ __('approval::action.board_view') }}</x-ui.button>
+                @endif
                 <p class="inbox-board-note">{{ $whyNot ?? __('approval::message.not_your_turn') }}</p>
             @endif
 
