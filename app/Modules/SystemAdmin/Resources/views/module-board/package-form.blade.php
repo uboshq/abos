@@ -24,8 +24,8 @@
             @method('PUT')
         @endif
         <div class="grid gap-4 sm:grid-cols-2">
-            <x-ui.field name="name_bn" :label="__('system_admin::field.name_bn')" :value="old('name_bn', $package->name_bn)" />
-            <x-ui.field name="name_en" :label="__('system_admin::field.name_en')" :value="old('name_en', $package->name_en)" required />
+            <x-ui.field name="name_bn" :label="__('system_admin::module_board.name_bn')" :value="old('name_bn', $package->name_bn)" />
+            <x-ui.field name="name_en" :label="__('system_admin::module_board.name_en')" :value="old('name_en', $package->name_en)" required />
         </div>
         @foreach ($groups as $group)
             <section data-boxed class= + CARD + r>
