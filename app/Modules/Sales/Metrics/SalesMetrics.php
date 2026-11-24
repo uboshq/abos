@@ -582,6 +582,37 @@ final class SalesMetrics implements ProvidesMetrics
     }
 
     /**
+     * দিন ধরে আদায় — [[collectionTotal()]]-এর হুবহু সংজ্ঞা, দুই কোয়েরিতে (প্রতিটা দিন আলাদা করে নয়); খালি দিন শূন্য।
+     *
+     * @return array<string, string> 'Y-m-d' => আদায়
+     */
+    public static function collectionByDay(string $from, string $to): array
+    {
+        $sums = fn ($query, string $table): array => $query
+            ->whereBetween("{$table}.trx_date", [$from, $to])
+            ->selectRaw("DATE({$table}.trx_date) as k, COALESCE(SUM({$table}.amount), 0) as total")
+            ->groupByRaw("DATE({$table}.trx_date)")
+            ->toBase()->get()
+            ->mapWithKeys(fn ($row) => [substr((string) $row->k, 0, 10) => (string) $row->total])->all();
+
+        $byCollection = $sums(Collection::query()->posted(), (new Collection)->getTable());
+        $byVoucher = $sums(Voucher::query()
+            ->where('type', Voucher::RECEIPT)
+            ->where('party_type', 'customer')
+            ->tap(fn ($q) => app(DealerScope::class)->restrict($q, 'party_id'))
+            ->posted(), (new Voucher)->getTable());
+
+        $out = [];
+
+        for ($day = Carbon::parse($from); $day->lte(Carbon::parse($to)); $day->addDay()) {
+            $key = $day->toDateString();
+            $out[$key] = Money::of(bcadd($byCollection[$key] ?? '0', $byVoucher[$key] ?? '0', 4));
+        }
+
+        return $out;
+    }
+
+    /**
      * ⭐ কয়টা আদায় — [[collectionTotal()]]-এর হুবহু দুই উৎস আর একই দেয়াল (পুরো ERP অডিট, ৬ অক্টোবর ২০২৬, ফোন ⚠️৯: ফোনের
      * আজকের পাতায় রসিদ-ভাউচারের গোনা ডিলার-দেয়াল ছাড়া ছিল — বাঁধা বিক্রয়কর্মী শাখার সব ডিলারের রসিদ-সংখ্যা দেখতেন,
      * আর পাশের অঙ্কের সাথে মিলত না)। ⚠️ একটা বদলালে অন্যটাও।

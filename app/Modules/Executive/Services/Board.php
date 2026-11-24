@@ -158,7 +158,12 @@ final class Board
      */
     private function compute(User $user, int $companyId, array $branches, ?int $only, string $from, string $to): array
     {
-        $values = $this->lens->within($user, $companyId, $only, fn () => $this->values($user, $from, $to));
+        // ⓘ গোটা কোম্পানির তিনটা কাজ একবার ঢুকেই — তিনবার নয় (২৪ নভেম্বর ২০২৬)
+        [$values, $parts, $trend] = $this->lens->within($user, $companyId, $only, fn (): array => [
+            $this->values($user, $from, $to),
+            $this->figures->salesParts($user, $from, $to),
+            $this->dailyTrend($user),
+        ]);
 
         $rows = [];
 
@@ -175,8 +180,8 @@ final class Board
             'unsplit' => $only === null ? $this->unsplit($values, $rows) : null,
             'values' => $values,
             // ⭐ নিট বিক্রির বিল আর ফেরত — ঘরটা খুললে দেখায় (IFRS 15, ২০ অক্টোবর ২০২৬); ঢাকা ঘরে null
-            'sales_parts' => $this->lens->within($user, $companyId, $only, fn () => $this->figures->salesParts($user, $from, $to)),
-            'trend' => $this->lens->within($user, $companyId, $only, fn () => $this->dailyTrend($user)),
+            'sales_parts' => $parts,
+            'trend' => $trend,
         ];
     }
 
@@ -301,19 +306,19 @@ final class Board
 
         $sales = $this->figures->visible($user, Figures::SALES)
             // ⭐ নিট — উপরের ঘরের একই সংজ্ঞা (IFRS 15, ২০ অক্টোবর ২০২৬)
-            ? Trend::series(Trend::DAILY, $from, $to, fn (string $f, string $t) => SalesMetrics::net($f, $t))
+            ? SalesMetrics::netByDay($from, $to)
             : null;
 
         $collections = $this->figures->visible($user, Figures::COLLECTIONS)
-            ? Trend::series(Trend::DAILY, $from, $to, fn (string $f, string $t) => SalesMetrics::collectionTotal($f, $t))
+            ? SalesMetrics::collectionByDay($from, $to)
             : null;
 
         $out = [];
 
-        foreach (Trend::buckets(Trend::DAILY, $from, $to) as $i => $bucket) {
+        foreach (Trend::buckets(Trend::DAILY, $from, $to) as $bucket) {
             $out[$bucket['from']] = [
-                'sales' => $sales === null ? null : $sales[$i]['value'],
-                'collections' => $collections === null ? null : $collections[$i]['value'],
+                'sales' => $sales === null ? null : $sales[$bucket['from']],
+                'collections' => $collections === null ? null : $collections[$bucket['from']],
             ];
         }
 
