@@ -35,7 +35,7 @@
     }
 @endphp
 
-<div x-data="{ open: false }" x-on:open-paper.window="open = true" data-signing-sheet
+<div x-data="{ open: false }" @if ($boardSheet && ($printView ?? null) === null) x-on:open-paper.window="open = true" @endif data-signing-sheet
      class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
     <div class="flex items-start justify-between gap-4">
         <h2 class="text-sm font-semibold">{{ $boardSheet && array_key_exists('debit', $sheet['totals'] ?? []) ? __('approval::field.board_ledger') : __('approval::field.sheet') }}</h2>
