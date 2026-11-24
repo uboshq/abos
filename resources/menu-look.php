@@ -717,6 +717,8 @@ return [
             'system_admin::module_board.companies' => ['setup', 'factory'],
             'system_admin::module_board.screens' => ['setup', 'monitor'],
             'system_admin::module_board.app' => ['setup', 'wifi'],
+            'system_admin::module_board.packages' => ['setup', 'package'],
+            'system_admin::module_board.why' => ['setup', 'message-circle-question'],
             'system_admin::notice.title' => ['notice', 'megaphone'],
             'core.notice.analytics_title' => ['notice', 'chart-bar'],
             'core.notice.categories_title' => ['notice', 'tags'],

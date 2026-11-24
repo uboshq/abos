@@ -201,6 +201,10 @@ return [
                 'permission' => 'system_admin.settings.manage'],
             ['label' => 'system_admin::module_board.app', 'icon' => 'settings', 'route' => 'system_admin.module.app', 'section' => 'modules',
                 'permission' => 'system_admin.settings.manage'],
+            ['label' => 'system_admin::module_board.packages', 'icon' => 'list', 'route' => 'system_admin.module.packages', 'section' => 'modules',
+                'permission' => 'system_admin.settings.manage'],
+            ['label' => 'system_admin::module_board.why', 'icon' => 'help', 'route' => 'system_admin.module.why', 'section' => 'modules',
+                'permission' => 'system_admin.user.manage'],
 
             /*
              * ⭐ নোটিশ — ২২ সেপ্টেম্বর ২০২৬।

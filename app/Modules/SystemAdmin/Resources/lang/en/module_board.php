@@ -50,6 +50,8 @@ return [
     'stale' => 'Things changed since you looked — check the new list and confirm again.',
     'confirm' => 'Confirm and save',
     'control_panel' => 'This screen is switched in the control panel',
+    'used' => 'In use',
+    'unused' => 'Not used',
     'package' => 'Package',
     'package_new' => 'New package',
     'package_custom' => ':name · by hand',
