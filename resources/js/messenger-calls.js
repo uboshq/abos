@@ -191,7 +191,7 @@ export function callHistory(x) {
             .join('')
         const empty = `<tr><td colspan="4" class="none">${esc(loading ? w('loading') : word('none'))}</td></tr>`
         el.pane.innerHTML = `<div class="wh"><button type="button" class="hb back" data-act="calls-list" aria-label="${esc(w('back'))}">${ic('back', '')}</button>${avatar(p, 42)}<span class="who"><b>${esc(p.name)}</b><small>${esc(sub)}</small></span>${back}</div>
-<div class="csum n">${card(word('total'), t.calls)}${card(word('result.talked'), t.answered)}${card(word('result.missed'), t.missed, 'bad')}${card(word('time'), length(t.seconds), 'time')}</div>
+<div class="csum n">${card(word('total'), t.calls)}${card(word('result.talked'), t.answered)}${card(word('result.missed'), t.missed, Number(t.missed) ? 'bad' : '')}${card(word('time'), length(t.seconds), 'time')}</div>
 <div class="ctw"><table><thead><tr><th>${esc(word('col_at'))}</th><th>${esc(word('col_kind'))}</th><th>${esc(word('col_result'))}</th><th class="r">${esc(word('col_length'))}</th></tr></thead><tbody>${rows || empty}</tbody></table>${C.logNext ? `<button type="button" class="cmore" data-act="calls-more">${esc(word('more'))}</button>` : ''}</div>`
     }
 
