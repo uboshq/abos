@@ -195,7 +195,7 @@ final class CallService
      *
      * @return array{data: list<array<string, mixed>>, next: ?string}
      */
-    public function history(User $user, ?string $kind, ?int $personId, ?string $cursor, int $limit): array
+    public function history(User $user, ?string $kind, ?int $personId, ?string $cursor, int $limit, string $q = ''): array
     {
         $this->sweep();
 
@@ -211,6 +211,12 @@ final class CallService
             ->when($kind === 'in', fn ($q) => $q->where('callee_id', $me))
             ->when($kind === 'out', fn ($q) => $q->where('caller_id', $me))
             ->when($personId !== null, fn ($q) => $q->where(fn ($w) => $w->where('caller_id', $personId)->orWhere('callee_id', $personId)))
+            // ⓘ the OTHER side's name — my own name would match every call
+            ->when($q !== '', function ($query) use ($me, $q): void {
+                $named = User::query()->select('id')->where('name', 'like', '%'.addcslashes($q, '%_\\').'%');
+                $query->where(fn ($w) => $w->where(fn ($o) => $o->where('caller_id', $me)->whereIn('callee_id', clone $named))
+                    ->orWhere(fn ($i) => $i->where('callee_id', $me)->whereIn('caller_id', clone $named)));
+            })
             ->when($after !== null, fn ($q) => $q->where(fn ($w) => $w->where('created_at', '<', $after[0])
                 ->orWhere(fn ($s) => $s->where('created_at', $after[0])->where('id', '<', $after[1]))))
             ->with(['caller', 'callee'])
@@ -250,9 +256,9 @@ final class CallService
             ->selectRaw('SUM(CASE WHEN answered_at IS NOT NULL THEN 1 ELSE 0 END) AS answered')
             ->selectRaw('SUM(CASE WHEN callee_id = ? AND status = ? THEN 1 ELSE 0 END) AS missed', [$me, Call::MISSED])
             ->selectRaw('COALESCE(SUM(duration_s), 0) AS seconds')
-            ->selectRaw('MAX(created_at) AS last_at')
+            ->selectRaw('MAX(id) AS last_id')
             ->groupBy('peer_id')
-            ->orderByDesc('last_at')
+            ->orderByDesc('last_id')
             ->orderBy('peer_id')
             ->limit(self::PEOPLE_MAX)
             ->toBase()
@@ -260,6 +266,8 @@ final class CallService
 
         $users = User::query()->whereIn('id', $rows->pluck('peer_id')->all())->get()->keyBy('id');
         $this->presenter->warm($users->values());
+        // ⓘ the latest call with each — one more question for all of them; a call's id grows with its time
+        $lasts = Call::query()->whereIn('id', $rows->pluck('last_id')->all())->with(['caller', 'callee'])->get()->keyBy('id');
 
         return $rows->filter(fn ($row): bool => $users->has($row->peer_id))->map(fn ($row): array => [
             'peer' => $this->presenter->person($users->get($row->peer_id)),
@@ -267,7 +275,8 @@ final class CallService
             'answered' => (int) $row->answered,
             'missed' => (int) $row->missed,
             'seconds' => (int) $row->seconds,
-            'last_at' => \Illuminate\Support\Carbon::parse($row->last_at)->toIso8601String(),
+            'last_at' => $lasts->get($row->last_id)?->created_at?->toIso8601String(),
+            'last' => $lasts->has($row->last_id) ? $this->row($lasts->get($row->last_id), $user) : null,
         ])->values()->all();
     }
 

@@ -429,6 +429,47 @@
 .msgr .mtoast { position: absolute; left: 50%; bottom: 80px; transform: translateX(-50%); z-index: 70; max-width: min(520px, 90%); padding: 10px 18px; border-radius: 10px; background: #1f2c34; color: #e9edef; font-size: 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); text-align: center; }
 
 /* narrower screens: one pane at a time; the drawer floats over the chat */
+/* ── calls (owner's sample VxwPoxm77whS6ToNqsyZPU, tabs ১ and ২) ── */
+.msgr { --m-red: #d92b3a; --m-redbg: #fdecee; --m-callbg: rgba(15, 157, 107, .16); }
+:root[data-theme='dark'] .msgr { --m-red: #ff7b85; --m-redbg: #3a171b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']):not([data-theme='dark']) .msgr { --m-red: #ff7b85; --m-redbg: #3a171b; } }
+.msgr .mchips { flex-wrap: wrap; }
+.msgr .mchips b.red { color: var(--m-red); }
+.msgr .crow.miss .last, .msgr .crow.miss .l1 b { color: var(--m-red); }
+.msgr .call-row { gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--m-line); }
+.msgr .call-row .mid { flex: 1; min-width: 0; line-height: 1.35; }
+.msgr .call-row .mid b { display: block; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msgr .call-row .mid small { font-size: 13px; }
+.msgr .call-row .dir { color: var(--wa-green); font-weight: 700; }
+.msgr .call-row .rt { text-align: end; font-size: 13px; color: var(--wa-meta); white-space: nowrap; line-height: 1.35; }
+.msgr .call-row .rt span { display: block; font-weight: 600; color: var(--wa-ink); }
+.msgr .call-row.miss .mid b, .msgr .call-row.miss .dir, .msgr .call-row.miss .rt span { color: var(--m-red); }
+.msgr .mcalls { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--m-bg); }
+.msgr .mcalls:empty { background: var(--wa-wall); }
+.msgr .csum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; padding: 16px 18px; }
+.msgr .csum div { border-radius: 12px; background: var(--m-bg2); padding: 10px 14px; }
+.msgr .csum span { display: block; color: var(--wa-meta); font-size: 13px; }
+.msgr .csum b { font-size: 22px; font-weight: 700; }
+.msgr .csum b.t { font-size: 17px; }
+.msgr .csum .bad { background: var(--m-redbg); }
+.msgr .csum .bad b { color: var(--m-red); }
+.msgr .ctw { overflow: auto; padding: 0 18px 18px; min-height: 0; flex: 1; }
+.msgr .ctw table { width: 100%; border-collapse: collapse; min-width: 560px; }
+.msgr .ctw th { text-align: start; color: var(--wa-meta); font-weight: 600; font-size: 13px; border-bottom: 2px solid var(--m-line); padding: 7px 8px; }
+.msgr .ctw td { padding: 9px 8px; border-bottom: 1px solid var(--m-line); }
+.msgr .ctw .r { text-align: end; }
+.msgr .ctw tr.miss td { color: var(--m-red); font-weight: 600; }
+.msgr .ctw td.none { text-align: center; color: var(--wa-meta); padding: 26px 8px; }
+.msgr .cmore { display: block; margin: 12px auto 0; border: 0; border-radius: 999px; padding: 6px 18px; background: var(--m-bg2); color: var(--wa-link); font-weight: 600; }
+.msgr .ccall { display: flex; align-items: center; gap: 12px; min-width: 260px; max-width: 100%; }
+.msgr .ccall > i { flex: none; width: 38px; height: 38px; border-radius: 50%; background: var(--m-callbg); color: var(--wa-green); display: grid; place-items: center; font-style: normal; }
+.msgr .ccall > i svg { width: 20px; height: 20px; }
+.msgr .ccall b { display: block; line-height: 1.3; }
+.msgr .ccall small { display: block; color: var(--wa-meta); line-height: 1.3; }
+.msgr .ccall > button { margin-inline-start: auto; border: 0; background: none; color: var(--wa-link); font-weight: 700; padding: 6px 4px; }
+.msgr .ccall.miss > i { background: var(--m-redbg); color: var(--m-red); }
+.msgr .ccall.miss b { color: var(--m-red); }
+
 @media (max-width: 1279px) {
     .msgr .minfo { position: absolute; top: 0; right: 0; bottom: 0; z-index: 30; box-shadow: -8px 0 24px rgba(11, 20, 26, .18); max-width: 100%; }
     .msgr .mlist { width: 340px; }
@@ -445,4 +486,7 @@
     .msgr .msgs { padding: 8px 3% 12px; }
     .msgr .soon2 { display: none; }
     .msgr .rbar, .msgr .stage { padding-left: 16px; }
+}
+@media (max-width: 899px) {
+    .msgr .csum { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

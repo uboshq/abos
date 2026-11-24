@@ -81,12 +81,12 @@ final class MessengerCallApiController extends Controller implements HasMiddlewa
     /**
      * GET /messenger/calls → { data: [call row] }, newest first, 50 — exactly as before while no history parameter is sent.
      *
-     * With any of `kind` (missed | in | out), `person` (user id), `cursor` (the answer's `next`) or `limit` (1–100, 50 if not
+     * With any of `kind` (missed | in | out), `person` (user id), `q` (the other side's name), `cursor` (the answer's `next`) or `limit` (1–100, 50 if not
      * said) → { data: [call row], next: string|null }, only my own calls.
      */
     public function log(Request $request): JsonResponse
     {
-        if (! $request->hasAny(['kind', 'person', 'cursor', 'limit'])) {
+        if (! $request->hasAny(['kind', 'person', 'cursor', 'limit', 'q'])) {
             return response()->json(['data' => $this->calls->log($this->me($request))]);
         }
 
@@ -95,6 +95,7 @@ final class MessengerCallApiController extends Controller implements HasMiddlewa
             'person' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'cursor' => ['sometimes', 'nullable', 'string', 'max:40'],
             'limit' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:'.CallService::PAGE_MAX],
+            'q' => ['sometimes', 'nullable', 'string', 'max:100'],
         ]);
 
         return response()->json($this->calls->history(
@@ -103,10 +104,11 @@ final class MessengerCallApiController extends Controller implements HasMiddlewa
             isset($data['person']) ? (int) $data['person'] : null,
             $data['cursor'] ?? null,
             (int) ($data['limit'] ?? CallService::LOG),
+            trim((string) ($data['q'] ?? '')),
         ));
     }
 
-    /** GET /messenger/calls/people[?person=] → { data: [{ peer, calls, answered, missed, seconds, last_at }] }, only my own calls */
+    /** GET /messenger/calls/people[?person=] → { data: [{ peer, calls, answered, missed, seconds, last_at, last }] }, only my own calls */
     public function people(Request $request): JsonResponse
     {
         $data = $request->validate(['person' => ['sometimes', 'nullable', 'integer', 'min:1']]);
