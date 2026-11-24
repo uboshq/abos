@@ -254,7 +254,7 @@ final class MessengerPresenter
             } else {
                 $row = DB::table('company_user')->where('user_id', $uid)->where('is_active', true)->orderBy('company_id')
                     ->first(['company_id', 'default_branch_id']);
-                $company = $row === null ? '' : (string) DB::table('companies')->where('id', $row->company_id)->value('name');
+                $company = $row === null ? '' : (string) \App\Models\Company::query()->find($row->company_id)?->name();
                 $branch = $row?->default_branch_id === null ? null
                     : Branch::query()->withoutGlobalScopes()->whereKey($row->default_branch_id)->first()?->name();
 
