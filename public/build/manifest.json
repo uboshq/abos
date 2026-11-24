@@ -6,7 +6,7 @@
     "isDynamicEntry": true
   },
   "resources/css/app.css": {
-    "file": "assets/app-CQN0D9GP.css",
+    "file": "assets/app-DeV-c7fL.css",
     "name": "app",
     "names": [
       "app.css"
@@ -37,12 +37,12 @@
     ]
   },
   "resources/js/messenger-page.js": {
-    "file": "assets/messenger-page-BECDw7hZ.js",
+    "file": "assets/messenger-page-CH83PakN.js",
     "name": "messenger-page",
     "src": "resources/js/messenger-page.js",
     "isEntry": true,
     "css": [
-      "assets/messenger-page-pjXjQ8_0.css"
+      "assets/messenger-page-Dnb1tBXz.css"
     ]
   },
   "resources/js/messenger-share.js": {
