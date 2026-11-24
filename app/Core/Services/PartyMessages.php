@@ -14,8 +14,6 @@ use App\Models\DocumentShare;
 use App\Models\LedgerEntry;
 use App\Models\PartyMessage;
 use App\Models\PartyMessageTemplate;
-use App\Models\User;
-use App\Models\UserDataScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -143,22 +141,16 @@ final class PartyMessages
      * ⭐ পার্টির এখনকার মোট বাকি — {due} (ধাপ ৩)।
      *
      * ⓘ পক্ষের খাতার একই ভিত্তি যা হিসাব বিবরণী আর গ্রাহকের পাতা পড়ে ([[Customer::outstanding()]], [[PartyLedger]]): পক্ষের সব
-     *   দাখিলা। সম্পাদনার উল্টো-জোড়া মিলে শূন্য।
-     * ⭐ `$sender` শাখার দেয়ালে আটকানো হলে কেবল তাঁর নাগালের শাখা + শাখাহীন সারি ([[DataScope::inView()]]-এর একই নিয়ম); সীমা না থাকলে গোটা বাকি
-     *   (মালিক, ২৪ নভেম্বর ২০২৬)। ⛔ হেডারে বাছা শাখা নয়, **দেয়াল** — সব শাখার মানুষ এক শাখা বেছে পাঠালেও পার্টি পুরো বাকিটাই পায়।
-     * ⓘ `null` = পাঠানোর মানুষ নেই (নিজে থেকে পাঠানো, [[PartyAutoSend]]) — গোটা কোম্পানির বাকি।
+     *   দাখিলা, সব শাখার — পার্টির কাছে তার পুরো বাকিটাই যায়, পাঠানো মানুষটার শাখারটা নয়। সম্পাদনার উল্টো-জোড়া মিলে শূন্য।
      * ⓘ গ্রাহক (ও বাকিরা): ডেবিট − ক্রেডিট; সরবরাহকারী: ক্রেডিট − ডেবিট (আমাদের দেনা)। শূন্যের নিচে (অগ্রিম) হলে 0।
      */
-    public function dueOf(?string $type, ?int $id, ?User $sender = null): ?string
+    public function dueOf(?string $type, ?int $id): ?string
     {
         if ($type === null || $id === null || $id <= 0) {
             return null;
         }
 
-        $branches = $sender === null ? null : app(DataScope::class)->idsFor($sender, UserDataScope::BRANCH);
-
-        $net = (string) (PartyLedger::withoutUndoneEdits(LedgerEntry::query()->forParty($type, $id)
-            ->when($branches !== null, fn ($q) => $q->where(fn ($w) => $w->whereIn('ledger_entries.branch_id', $branches)->orWhereNull('ledger_entries.branch_id'))))
+        $net = (string) (PartyLedger::withoutUndoneEdits(LedgerEntry::query()->forParty($type, $id))
             ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net')
             ->value('net') ?? '0');
 
@@ -183,11 +175,9 @@ final class PartyMessages
     /**
      * লেখায় বসানোর মান — চাওয়া ভাষায়।
      *
-     * ⓘ {due} পাঠানো মানুষটার শাখার দেয়ালে ([[dueOf()]]); `$bySystem` = নিজে থেকে পাঠানো, কোনো মানুষ নেই — গোটা বাকি।
-     *
      * @return array<string, string>
      */
-    public function values(Model $document, DocumentShare $share, string $locale, bool $bySystem = false): array
+    public function values(Model $document, DocumentShare $share, string $locale): array
     {
         /*
          * ⓘ পার্টির নামও লেখার ভাষায় — ইংরেজি লেখায় "Rahim Traders", বাংলায় "রহিম ট্রেডার্স"।
@@ -204,10 +194,8 @@ final class PartyMessages
         }
 
         // ⓘ দুই ভাষায় একই বাকি — একবারই গোনা
-        $person = auth()->user();
-        $sender = $bySystem || ! $person instanceof User ? null : $person;
-        $dueKey = $of['type'].':'.$of['id'].':'.($sender === null ? '-' : $sender->getKey());
-        $due = $this->dues[$dueKey] ??= $this->dueOf($of['type'], $of['id'], $sender);
+        $dueKey = $of['type'].':'.$of['id'];
+        $due = $this->dues[$dueKey] ??= $this->dueOf($of['type'], $of['id']);
 
         $amount = $document->getAttribute('total') ?? $document->getAttribute('amount');
         $date = $document->getAttribute('trx_date');

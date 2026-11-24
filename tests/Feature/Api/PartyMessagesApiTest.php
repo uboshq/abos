@@ -276,60 +276,6 @@ final class PartyMessagesApiTest extends TestCase
         $this->assertSame(0, SmsOutbox::query()->count());
     }
 
-    /**
-     * ⭐ {due} — শাখার দেয়ালে আটকানো মানুষ কেবল নিজের শাখার (আর শাখাহীন) বাকি দেখেন ও পাঠান; সব শাখার মানুষ গোটাটা, হেডারে এক
-     * শাখা বাছলেও; নিজে থেকে পাঠানোয় গোটাটা (মালিক, ২৪ নভেম্বর ২০২৬)।
-     */
-    public function test_the_due_stays_inside_the_senders_branch_wall(): void
-    {
-        $branch = fn (string $code) => Branch::query()->withoutGlobalScopes()->where('company_id', $this->company->id)->where('code', $code)->firstOrFail();
-        [$mms, $ntk] = [$branch('MMS'), $branch('NTK')];
-        $this->voucher->forceFill(['branch_id' => $mms->id])->saveQuietly();
-        \App\Models\LedgerEntry::query()->forParty('customer', (int) $this->customer->id)->delete();
-
-        $year = (int) \App\Models\LedgerEntry::query()->value('financial_year_id');
-        foreach ([[$mms->id, '700'], [$ntk->id, '2000'], [null, '30']] as [$branchId, $debit]) {
-            \App\Models\LedgerEntry::query()->create([
-                'company_id' => $this->company->id, 'branch_id' => $branchId, 'financial_year_id' => $year,
-                'account_id' => Account::query()->where('is_group', false)->firstOrFail()->id,
-                'party_type' => 'customer', 'party_id' => $this->customer->id, 'trx_date' => now()->toDateString(),
-                'debit' => $debit, 'credit' => '0', 'source_type' => 'due_wall_test', 'source_id' => $this->customer->id,
-                'narration' => 'due wall', 'created_by' => $this->owner->id,
-            ]);
-        }
-
-        $template = PartyMessageTemplate::query()->where('document_type', 'accounts_voucher')->where('channel', 'whatsapp')->firstOrFail();
-        $template->update(['body_bn' => 'বাকি [{due}]', 'body_en' => 'Due [{due}]']);
-
-        $clerk = $this->person(['accounts.voucher.print', 'accounts.voucher.view', 'accounts.report'], $mms);
-        \App\Models\UserDataScope::query()->create(['company_id' => $this->company->id, 'user_id' => $clerk->id,
-            'scope_type' => \App\Models\UserDataScope::BRANCH, 'scope_id' => $mms->id]);
-        app(\App\Core\Services\DataScope::class)->forget();
-
-        foreach ([[$clerk, '730'], [$this->owner, '2,730']] as [$who, $due]) {
-            $seen = collect($this->phone($who)->getJson('/api/v1/party-messages/compose?'.http_build_query($this->paper() + ['channel' => 'whatsapp']))
-                ->assertOk()->json('data.templates'))->firstWhere('id', $template->id);
-            $this->assertSame('বাকি ['.$due.']', $seen['bn'] ?? null, '⛔ পপআপের বাকি ভুল — '.$who->name);
-
-            $this->phone($who)->withHeader('Idempotency-Key', Str::random(16))
-                ->postJson('/api/v1/party-messages/whatsapp', $this->paper() + ['template_id' => $template->id, 'locale' => 'en', 'phone' => '01712345678'])
-                ->assertCreated();
-            $sent = PartyMessage::query()->withoutGlobalScopes()->latest('id')->firstOrFail();
-            $this->assertSame('Due ['.$due.']', $sent->body, '⛔ পাঠানো লেখার বাকি ভুল — '.$who->name);
-
-            $this->phone($who)->withHeader('Idempotency-Key', Str::random(16))
-                ->postJson('/api/v1/party-messages/'.$sent->public_id.'/resend')->assertCreated();
-            $this->assertSame('Due ['.$due.']', PartyMessage::query()->withoutGlobalScopes()->latest('id')->firstOrFail()->body, '⛔ আবার পাঠানোর বাকি ভুল — '.$who->name);
-        }
-
-        $messages = app(\App\Core\Services\PartyMessages::class);
-        $this->assertSame('2730.0000', $messages->dueOf('customer', (int) $this->customer->id), '⛔ নিজে থেকে পাঠানোয় গোটা বাকি নয়');
-
-        // ⓘ হেডারে এক শাখা বাছা, কিন্তু দেয়াল নেই — তবু গোটা বাকি
-        $this->owner->forceFill(['view_all_branches' => false, 'current_branch_id' => $mms->id])->save();
-        $this->assertSame('2730.0000', $messages->dueOf('customer', (int) $this->customer->id, $this->owner->fresh()));
-    }
-
     /** @return array{type: string, id: string} */
     private function paper(): array
     {

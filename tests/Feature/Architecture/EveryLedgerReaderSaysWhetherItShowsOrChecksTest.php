@@ -150,7 +150,7 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
         'app/Modules/Supplier/Services/SupplierCreditWall.php' => '⛔ সরবরাহকারীর বাকির সীমা — দেনা আর বিল-না-আসা মাল, গোটা কোম্পানি ধরে; সীমা সরবরাহকারীর, শাখার নয় (গ্রাহকের CreditExposure-এর একই নিয়ম); তালিকার ঘরও দেয়াল যা দেখে তা-ই',
         'app/Modules/Purchase/Services/PurchaseBillService.php' => 'বিলের দামে মালের দামের সংশোধনী — একটা বিলের নিজের খোলা দাখিলা উল্টে মিলিয়ে আবার বসায়, গোটা কোম্পানি ধরে; দেখার শাখা খাটলে অন্য শাখার সারি বাদ পড়ত (ক্রয় ⚠️৩, ১০ অক্টোবর ২০২৬)',
         // ⓘ পার্টিকে বার্তা (মালিকের "ok", ২৩ নভেম্বর ২০২৬) — 1.3.10-এর লাল
-        'app/Core/Services/PartyMessages.php' => 'লেখার {due} — পার্টির এখনকার মোট বাকি, (PartyLedger::withoutUndoneEdits); হেডারে বাছা শাখা নয় — বার্তা পার্টির কাছে যায়; তবে পাঠানো মানুষটা শাখার দেয়ালে আটকানো হলে কেবল তাঁর শাখা + শাখাহীন (DataScope::idsFor; মালিক, ২৪ নভেম্বর ২০২৬), নিজে থেকে পাঠানোয় গোটাটা',
+        'app/Core/Services/PartyMessages.php' => 'লেখার {due} — পার্টির এখনকার মোট বাকি, পক্ষের সব দাখিলা সব শাখার (PartyLedger::withoutUndoneEdits, হিসাব বিবরণীর একই ভিত্তি); বার্তাটা পার্টির কাছে যায়, তাই তার পুরো বাকিটাই — পাঠানো মানুষটার শাখারটা নয়',
     ];
 
     public function test_every_ledger_reader_is_declared_and_no_declaration_is_stale(): void
