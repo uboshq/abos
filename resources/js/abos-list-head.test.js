@@ -248,3 +248,43 @@ describe('mergeFilterBarHead', () => {
         }
     })
 })
+
+/* ⛔ কন্ট্রোল প্যানেলের বাঁয়ের তালিকা মাথার ট্যাব নয় (মালিক, ২৪ নভেম্বর ২০২৬) */
+describe('a side list is never head tabs', () => {
+    const side = (ui, frame, first = '') => {
+        document.documentElement.dataset.ui = ui
+        document.body.innerHTML = `
+            <main>
+                <div class="flex" id="head"><div class="min-w-0"><h1>Control panel</h1></div></div>
+                ${first}
+                <div ${frame ? 'data-control-frame' : ''}>
+                    <${frame ? 'div' : 'aside'} id="side">
+                        <form method="GET" role="search"><input type="search" name="find"></form>
+                        <nav><a href="/m" aria-current="page">Modules</a><a href="/p">Printing</a></nav>
+                    </${frame ? 'div' : 'aside'}>
+                    <section data-boxed><table></table></section>
+                </div>
+            </main>`
+    }
+
+    it('leaves the list and its search in the left column, in an aside or a control frame', () => {
+        for (const ui of ['rose', 'navy', 'blue']) {
+            for (const frame of [true, false]) {
+                side(ui, frame)
+                compactPageHead(document)
+
+                expect(document.querySelector('#side > nav')).not.toBeNull()
+                expect(document.querySelector('#side > form').hidden).toBe(false)
+                expect(document.querySelector('[data-head-tabs], [data-head-tabs-menu], [data-head-filter]')).toBeNull()
+            }
+        }
+    })
+
+    it('still lifts the real tabs of the same page', () => {
+        side('blue', true, '<nav id="real"><a href="/a" aria-current="page">A</a><a href="/b">B</a></nav>')
+        compactPageHead(document)
+
+        expect(document.querySelector('#head > #real')).not.toBeNull()
+        expect(document.querySelector('#side > nav')).not.toBeNull()
+    })
+})

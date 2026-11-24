@@ -90,6 +90,21 @@ return [
      * ⭐ মডিউলের মেনু দলে দলে, এই ক্রমে — দলের সারিগুলো উপরের তালিকার ক্রমে ([[MenuLook::arrange()]])। ⓘ যে মডিউল এখানে নেই তার
      * সারি আগের মতো module.php-র ক্রমে।
      */
+    /*
+     * ⭐ ভাগে সাজানো মেনুর (`nav.panel_sections`) ভাগের মাথা — [রং, Lucide আইকন]; তিন ABOS রূপের ভাঁজের টাইলে (মালিক, ২৪ নভেম্বর ২০২৬:
+     *   সিস্টেমের মেনুর মাথায় রঙিন আইকন নেই, বাকি সব মডিউলে আছে)। ⓘ শেষ দুইটা এক করা অতিথিদের ([[MenuBuilder]])।
+     */
+    'sections' => [
+        'home' => ['#475569', 'house'],
+        'org' => ['#2563eb', 'building-2'],
+        'people' => ['#ea580c', 'users'],
+        'modules' => ['#0891b2', 'blocks'],
+        'comms' => ['#db2777', 'megaphone'],
+        'data' => ['#65a30d', 'database'],
+        'audit' => ['#9333ea', 'scroll-text'],
+        'governance' => ['#ca8a04', 'shield-check'],
+        'backup' => ['#0d9488', 'database-backup'],
+    ],
     'order' => [
         'accounts' => ['start', 'daily', 'receivable', 'payable', 'bank_cash', 'loans_invest', 'fixed_assets', 'budget', 'reports_close'],
         'sales' => ['*', 'customers', 'credit', 'promo'],

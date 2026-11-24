@@ -273,6 +273,12 @@ export function mergeFilterBarHead (root = document) {
     return true
 }
 
+/*
+ * ⛔ পাশের তালিকা ট্যাব নয় — `<aside>` বা কন্ট্রোল প্যানেলের কাঠামো (`data-control-frame`): ওখানকার nav আর খোঁজার ফর্ম মাথায় তুললে
+ *   বাঁয়ের কলামটা খালি পড়ে থাকত (মালিক, ২৪ নভেম্বর ২০২৬: "মডিউল ও মেনু ⌄")।
+ */
+const aside = el => Boolean(el.closest('aside, [data-control-frame]'))
+
 export function compactPageHead (root = document) {
     mergeFilterBarHead(root)
 
@@ -292,7 +298,7 @@ export function compactPageHead (root = document) {
 
     if (toolbar) {
         const tabs = [...main.querySelectorAll('nav, [data-list-tabs]')].find(n => ! n.hasAttribute('data-head-tabs')
-            && (toolbar.contains(n) || before(n, toolbar))
+            && ! aside(n) && (toolbar.contains(n) || before(n, toolbar))
             && n.querySelectorAll('a').length >= 2 && n.querySelector('a[aria-current="page"]'))
 
         if (! tabs) {
@@ -320,7 +326,7 @@ export function compactPageHead (root = document) {
     }
 
     const firstTable = main.querySelector('table, [data-boxed], .toolbar-view')
-    const outside = el => ! head.contains(el) && ! el.closest('.toolbar-view, [data-filter-panel], [data-filter-layout], dialog, [data-print-only]')
+    const outside = el => ! head.contains(el) && ! aside(el) && ! el.closest('.toolbar-view, [data-filter-panel], [data-filter-layout], dialog, [data-print-only]')
     const done = { tabs: false, filter: false }
     const actions = head.querySelector(':scope > [data-page-actions]')
 

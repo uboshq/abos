@@ -257,8 +257,10 @@
                  ভেসে থাকলে ওটা আসবাব হয়ে যায়, আর কেউ পড়ে না। --}}
             {{-- ⭐ পটিটা সবসময় — কিছু জমলে কয়টা আর সংরক্ষণ, না জমলে শেষ বদল কে কবে করেছেন (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৬) --}}
             <div data-save-bar
-                 class="fixed inset-x-0 bottom-(--spacing-bottom-nav) z-40 border-t border-(--color-border)
-                        bg-(--color-surface-card) px-4 py-3 shadow-lg md:bottom-0">
+                 {{-- ⓘ ফুটার নিচে স্থির — তিন ABOS রূপে পটিটা তার উপরে বসে, ঢাকে না (মালিক, ২৪ নভেম্বর ২০২৬); বাকি রূপ আগের মতো --}}
+                 @class(['fixed inset-x-0 bottom-(--spacing-bottom-nav) z-40 border-t border-(--color-border) bg-(--color-surface-card) px-4 py-3 shadow-lg',
+                         'md:bottom-(--spacing-status-bar)' => \App\Core\Support\AbosHead::on(),
+                         'md:bottom-0' => ! \App\Core\Support\AbosHead::on()])>
                 <div class="mx-auto flex max-w-screen-2xl items-center gap-3">
                     <span class="text-sm" x-show="count > 0" x-cloak>
                         <span class="num font-semibold" x-text="count"></span>

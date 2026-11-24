@@ -853,11 +853,15 @@
                             @if ($foldSections && $foldKey !== null && $foldOpenGroup === null)
                                 {{-- ⭐ ভাগের মাথা ভাঁজের বোতাম — অন্য মডিউলের দলের মাথার মতোই --}}
                                 <div class="menu-fold-grp" data-menu-fold-grp="{{ $foldKey }}">
+                                @php($sectionLook = \App\Core\Navigation\MenuLook::section($item['section'] ?? null))
                                 <button type="button" class="menu-kind-head menu-fold-head" data-menu-kind="section"
+                                        data-mc="{{ ltrim($sectionLook['colour'], '#') }}"
                                         data-menu-fold="{{ $foldKey }}" data-panel-section="{{ $item['section'] ?? 'other' }}"
                                         @if (isset($foldHere[$foldKey])) data-menu-fold-here @endif
                                         aria-expanded="{{ isset($foldHere[$foldKey]) ? 'true' : 'false' }}"
                                         x-show="filter === ''">
+                                    <span class="menu-fold-icon" data-menu-fold-tile="{{ $sectionLook['colour'] }}"
+                                          style="background: {{ $sectionLook['colour'] }}" aria-hidden="true"><x-ui.licon :name="$sectionLook['icon']" :size="15" /></span>
                                     <span class="menu-fold-name">{{ ($item['section'] ?? null) !== null ? __($activeModule['code'].'::menu.section_'.$item['section']) : '…' }}</span>
                                     <svg class="menu-fold-chev" data-menu-fold-chev width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                                 </button>

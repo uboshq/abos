@@ -129,6 +129,18 @@ final class MenuLook
     }
 
     /**
+     * ⭐ ভাগের মাথার টাইল — রং আর চিহ্ন (`menu-look.php`-এর `sections`); তালিকায় না থাকা ভাগ নিরপেক্ষ রঙে, যাতে টাইল ছাড়া মাথা না থাকে।
+     *
+     * @return array{colour: string, icon: string}
+     */
+    public static function section(?string $section): array
+    {
+        $entry = self::data()['sections'][$section ?? ''] ?? null;
+
+        return ['colour' => $entry[0] ?? self::NEUTRAL, 'icon' => $entry[1] ?? 'folder-open'];
+    }
+
+    /**
      * এক মডিউলের সারিগুলোর রূপ — প্রতিটা সারি: দলের ধরন, দলের নাম, রং, আইকন, আর এখানে নতুন দল শুরু কি না।
      *
      * @param  list<array<string, mixed>>  $rows  পর্দার ক্রমে, প্রতিটায় `key`

@@ -359,4 +359,41 @@ final class MenuGroupsFoldTest extends TestCase
 
         return new DOMXPath($dom);
     }
+
+    /** ⭐ ভাগে সাজানো মেনুর (সিস্টেম ও প্রশাসন) প্রতিটা মাথায় নিজের রঙের টাইল — মালিক, ২৪ নভেম্বর ২০২৬ */
+    public function test_every_section_head_of_the_system_menu_wears_its_own_coloured_tile(): void
+    {
+        $sections = MenuLook::data()['sections'];
+        $this->assertCount(count($sections), array_unique(array_column($sections, 0)), '⛔ দুই ভাগের এক রং');
+        $this->assertCount(count($sections), array_unique(array_column($sections, 1)), '⛔ দুই ভাগের এক চিহ্ন');
+        foreach ($sections as $key => [, $icon]) {
+            $this->assertTrue(LucideIcons::has($icon), "⛔ ভাগ {$key}: \"{$icon}\" Lucide-এ নেই");
+        }
+        $this->assertTrue(LucideIcons::has(MenuLook::section('no-such')['icon']));
+
+        foreach (['rose', 'navy', 'blue'] as $look) {
+            $xpath = $this->menuOf($look, route('system_admin.control-panel'));
+            $heads = $xpath->query('//nav[@data-menu-fold-nav]//button[@data-panel-section]');
+            $this->assertGreaterThan(3, $heads->length, "⛔ {$look}: ভাগের মাথা নেই");
+
+            foreach ($heads as $head) {
+                $section = $head->getAttribute('data-panel-section');
+                $this->assertArrayHasKey($section, $sections, "⛔ {$look}: ভাগ \"{$section}\" তালিকায় নেই — টাইল নিরপেক্ষ রঙে পড়বে");
+                $tile = $xpath->query('.//*[@data-menu-fold-tile]', $head)->item(0);
+                $this->assertNotNull($tile, "⛔ {$look} {$section}: রঙিন টাইল নেই");
+                $this->assertSame($sections[$section][0], $tile->getAttribute('data-menu-fold-tile'));
+                $this->assertSame(1, $xpath->query('.//svg[@data-licon]', $tile)->length, "⛔ {$look} {$section}: টাইলে চিহ্ন নেই");
+            }
+
+            // ⛔ সংরক্ষণের পটি ফুটার ঢাকে না
+            $bar = $xpath->query('//*[@data-save-bar]')->item(0);
+            $this->assertNotNull($bar);
+            $this->assertStringContainsString('md:bottom-(--spacing-status-bar)', $bar->getAttribute('class'), "⛔ {$look}: পটি ফুটারের উপর চাপে");
+        }
+
+        foreach (['tiles', 'dynamic'] as $look) {
+            $html = $this->pageIn($look, route('system_admin.control-panel'));
+            $this->assertStringNotContainsString('data-menu-fold-tile', $html, "⛔ {$look}: টাইল এই রূপে এল");
+        }
+    }
 }
