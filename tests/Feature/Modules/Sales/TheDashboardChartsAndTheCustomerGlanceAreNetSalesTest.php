@@ -48,6 +48,8 @@ final class TheDashboardChartsAndTheCustomerGlanceAreNetSalesTest extends TestCa
 
     private User $owner;
 
+    private User $sr;
+
     private Warehouse $warehouse;
 
     private Customer $rahim;
@@ -73,9 +75,11 @@ final class TheDashboardChartsAndTheCustomerGlanceAreNetSalesTest extends TestCa
 
         $this->rahim = Customer::acrossDealers()->where('name_en', 'Rahim Traders')->firstOrFail();
         $this->rahim->forceFill(['credit_limit' => '100000000', 'credit_days' => 60])->save();
-        // ⓘ বিক্রি দায়িত্বের মানুষের, বিল যিনি কাটেন তাঁর নয় (২৩ নভেম্বর ২০২৬; [[SalesResponsibility]]) — ডেমোতে রহিম আরেকজনের, এখানে মালিকের
+        // ⓘ বিক্রি দায়িত্বের মানুষের, বিল যিনি কাটেন তাঁর নয় (২৩ নভেম্বর ২০২৬; [[SalesResponsibility]]) — দায়িত্ব এই SR-এর; বিল কাটেন মালিক, তাঁর ঘরে কিছু নয়
+        $this->sr = User::factory()->create(['name' => 'Net Sales SR', 'current_company_id' => $this->company->id, 'is_active' => true]);
+        $this->sr->companies()->attach($this->company->id, ['is_active' => true]);
         \App\Modules\Customer\Models\DealerBinding::query()->where('customer_id', $this->rahim->id)->delete();
-        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $this->owner->id, 'customer_id' => $this->rahim->id, 'starts_on' => now()->subYear()->toDateString()]);
+        \App\Modules\Customer\Models\DealerBinding::query()->create(['company_id' => $this->company->id, 'user_id' => $this->sr->id, 'customer_id' => $this->rahim->id, 'starts_on' => now()->subYear()->toDateString()]);
         app(\App\Modules\Sales\Services\SalesResponsibility::class)->forget();
     }
 
@@ -87,6 +91,7 @@ final class TheDashboardChartsAndTheCustomerGlanceAreNetSalesTest extends TestCa
 
         $this->assertSame('90000.0000', bcsub($after['seller'], $before['seller'], 4),
             '⛔ বিক্রেতার দণ্ড VAT বা ফেরত বাদ দেয় না (১,১০,০০০ বা ১,০০,০০০ বেড়েছে)।');
+        $this->assertSame($before['biller'], $after['biller'], '⛔ বিল যিনি কেটেছেন তাঁর দণ্ডও নড়ল — বিক্রি দায়িত্বের SR-এর।');
         $this->assertSame('90000.0000', bcsub($after['area'], $before['area'], 4), '⛔ এরিয়ার দণ্ডের যোগ VAT বা ফেরত বাদ দেয় না।');
 
         // ⓘ ফোনের একই দরজা — একই দণ্ড
@@ -180,7 +185,7 @@ final class TheDashboardChartsAndTheCustomerGlanceAreNetSalesTest extends TestCa
         return [$bill, $return];
     }
 
-    /** @return array{seller: string, area: string, phone_seller: string} মালিকের দণ্ড আর এরিয়ার দণ্ডের যোগ, কমা ছাড়া */
+    /** @return array{seller: string, biller: string, area: string, phone_seller: string} SR-এর আর বিল কাটা মালিকের দণ্ড আর এরিয়ার দণ্ডের যোগ, কমা ছাড়া */
     private function salesBars(): array
     {
         $this->web();
@@ -196,10 +201,11 @@ final class TheDashboardChartsAndTheCustomerGlanceAreNetSalesTest extends TestCa
         $this->phone();
         config(['abos.dashboards_v2' => true]);
         $phoneBar = collect($this->getJson('/api/v1/dashboard/sales')->assertOk()->json('panels'))->firstWhere('label', __('sales::dashboard.by_seller'));
-        $phoneValue = collect($phoneBar['parts'] ?? [])->firstWhere('label', $this->owner->name)['value'] ?? '0';
+        $phoneValue = collect($phoneBar['parts'] ?? [])->firstWhere('label', $this->sr->name)['value'] ?? '0';
 
         return [
-            'seller' => $value($seller, $this->owner->name),
+            'seller' => $value($seller, $this->sr->name),
+            'biller' => $value($seller, $this->owner->name),
             'area' => array_reduce($area?->parts ?? [], fn (string $s, array $p) => bcadd($s, str_replace(',', '', (string) $p['value']), 4), '0.0000'),
             'phone_seller' => bcadd(str_replace(',', '', (string) $phoneValue), '0', 4),
         ];
