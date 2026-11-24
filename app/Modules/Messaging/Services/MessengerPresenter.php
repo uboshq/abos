@@ -268,6 +268,8 @@ final class MessengerPresenter
     {
         return $this->hrDesignations ??= DB::table('hr_employees')
             ->join('mdm_designations', 'mdm_designations.id', '=', 'hr_employees.designation_id')
+            // ⓘ the messenger spans the group: the companies that are working now, named, never "whatever is in the table"
+            ->whereIn('hr_employees.company_id', \App\Models\Company::query()->where('is_active', true)->select('id'))
             ->whereNull('hr_employees.deleted_at')->where('hr_employees.is_active', true)->whereNotNull('hr_employees.user_id')
             ->get(['hr_employees.user_id', 'mdm_designations.name_en', 'mdm_designations.name_bn'])
             ->keyBy('user_id')->all();
