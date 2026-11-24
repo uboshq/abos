@@ -30,6 +30,8 @@ final class EveryChallanConfirmAsksHowTheGoodsTravelTest extends TestCase
         'app/Modules/Sales/Http/Controllers/DeliveryChallanController.php' => 1,
         // ⓘ শেষ সইয়ের পরে অফিসের চালান
         'app/Modules/Sales/Services/SignedChallanConfirmer.php' => 1,
+        // ⓘ তালিকার একসাথে নিশ্চিত — একটা একটা নিশ্চিতের একই সেবা, পরিবহন ছাপার দরজায় (২৩ নভেম্বর ২০২৬)
+        'app/Modules/Sales/Http/Controllers/SalesBulkController.php' => 1,
     ];
 
     /** যে দরজাগুলো আগে নিয়ম জিজ্ঞেস করত — এখন আর নয় */
@@ -38,6 +40,7 @@ final class EveryChallanConfirmAsksHowTheGoodsTravelTest extends TestCase
         'app/Modules/Sales/Http/Controllers/SalesInvoiceController.php',
         'app/Modules/Sales/Http/Controllers/DeliveryChallanController.php',
         'app/Modules/Sales/Services/SignedChallanConfirmer.php',
+        'app/Modules/Sales/Http/Controllers/SalesBulkController.php',
     ];
 
     /** মাল বেরোনোর কাগজ ছাপার রুট — প্রতিটায় পরিবহনের প্রশ্ন */
