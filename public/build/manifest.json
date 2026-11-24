@@ -15,7 +15,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-Dp6cy05D.js",
+    "file": "assets/app-Dy7y_5om.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -25,7 +25,7 @@
     ]
   },
   "resources/js/messenger-call.js": {
-    "file": "assets/messenger-call-CuETSq7I.js",
+    "file": "assets/messenger-call-BMgcmeYg.js",
     "name": "messenger-call",
     "src": "resources/js/messenger-call.js",
     "isDynamicEntry": true,
@@ -46,7 +46,7 @@
     ]
   },
   "resources/js/messenger-share.js": {
-    "file": "assets/messenger-share-DVBFuO4V.js",
+    "file": "assets/messenger-share-DV3UiGa8.js",
     "name": "messenger-share",
     "src": "resources/js/messenger-share.js",
     "isDynamicEntry": true,
