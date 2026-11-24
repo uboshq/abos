@@ -87,7 +87,7 @@ final class AProductHadNoNumberToAimForTest extends TestCase
     {
         $month = Carbon::today()->format('Y-m');
 
-        $this->get(route('sales.product_target.index', ['month' => $month]))->assertOk()->assertSee($this->product->code);
+        $this->get(route('sales.product_target.index', ['month' => $month, 'q' => $this->product->code]))->assertOk()->assertSee($this->product->code);
 
         $this->post(route('sales.product_target.store'), ['month' => $month.'-01', 'target' => [$this->product->id => ['qty' => '40', 'amount' => '900']]])
             ->assertRedirect(route('sales.product_target.index', ['month' => $month]));
@@ -99,6 +99,33 @@ final class AProductHadNoNumberToAimForTest extends TestCase
 
         $this->get(route('sales.product_target.index'))->assertForbidden();
         $this->post(route('sales.product_target.store'), ['month' => $month.'-01', 'target' => [$this->product->id => ['qty' => '1']]])->assertForbidden();
+    }
+
+    /** ⭐ পাতায় পাতায়: এক পাতার সংরক্ষণ অন্য পাতার লক্ষ্য ছোঁয় না, মোট গোটা মাসের, খোঁজা সব পাতার পণ্যে */
+    public function test_a_save_touches_only_the_rows_it_sends_and_the_total_is_the_whole_months(): void
+    {
+        for ($i = Product::query()->count(); $i < 55; $i++) {
+            $copy = $this->product->replicate(['public_id']);
+            $copy->forceFill(['code' => 'ZZ-'.str_pad((string) $i, 3, '0', STR_PAD_LEFT), 'barcode' => null, 'name_en' => 'Target Probe '.$i, 'name_bn' => 'Target Probe '.$i])->save();
+        }
+        $month = Carbon::today()->startOfMonth();
+        $index = fn (array $more = []) => $this->get(route('sales.product_target.index', ['month' => $month->format('Y-m'), 'per_page' => 50] + $more))->assertOk();
+
+        $first = $index()->viewData('rows');
+        $last = $index(['page' => $first->lastPage()])->viewData('rows');
+        $this->assertGreaterThan(1, $first->lastPage(), 'প্রস্তুতিটাই ভুল — পাতা একটাই, দাবি কিছু মাপছে না।');
+        [$mine, $other] = [$first->items()[0]['product'], $last->items()[0]['product']];
+        $this->assertNotSame((int) $mine->id, (int) $other->id);
+
+        $this->targets->setOne((int) $other->id, $month, '7', '300');
+        $this->post(route('sales.product_target.store'), ['month' => $month->toDateString(), 'page' => 1, 'target' => [$mine->id => ['qty' => '', 'amount' => '200']]])->assertRedirect();
+
+        $this->assertSame('300.0000', (string) ProductTarget::query()->where('product_id', $other->id)->value('amount'), '⛔ এক পাতার সংরক্ষণ অন্য পাতার লক্ষ্য মুছল।');
+        $this->assertSame('500.0000', $index()->viewData('sum')['amount'], '⛔ মোট গোটা মাসের নয়, কেবল এই পাতার।');
+
+        $found = $index(['q' => $other->code])->assertSee($other->code)->viewData('rows');
+        $this->assertSame([(int) $other->id], array_map(fn (array $r) => (int) $r['product']->id, $found->items()), '⛔ খোঁজা কেবল চলতি পাতায়।');
+        $this->assertSame(0, count($index(['q' => '%'])->viewData('rows')->items()), '⛔ "%" লিখলে সব পণ্য এল।');
     }
 
     public function test_the_import_takes_the_same_road_as_the_page(): void
@@ -151,8 +178,11 @@ final class AProductHadNoNumberToAimForTest extends TestCase
             (float) app(ReportEngine::class)->run('sales.by_product', ['from' => $today, 'to' => $today], 1, 500)->totals['revenue'],
             (float) $result->totals['net_sales'], 0.01, '⛔ নিট বিক্রি পণ্যভিত্তিক মুনাফার রিপোর্টের মোটের সমান নয়।');
 
+        // ⭐ পাতার মাসের মোট — খোঁজা বা পাতা যা-ই হোক, রিপোর্টের মোট
+        $monthSum = $this->targets->monthTotals(Carbon::today()->startOfMonth());
+        $this->assertSame('4000.0000', $monthSum['amount'], '⛔ মাসের লক্ষ্যের মোট ভুল।');
         // ⭐ লক্ষ্যের পাতার অর্জন রিপোর্টের একই অঙ্ক
-        $board = collect($this->targets->board(Carbon::today()->startOfMonth()))->first(fn (array $r) => (int) $r['product']->id === (int) $this->product->id);
+        $board = collect($this->targets->board(Carbon::today()->startOfMonth(), $this->product->code)->items())->first(fn (array $r) => (int) $r['product']->id === (int) $this->product->id);
         $month = app(ReportEngine::class)->run(ProductInsightReports::TARGET, ['from' => Carbon::today()->startOfMonth()->toDateString(), 'to' => $today], 1, 500);
         $this->assertEqualsWithDelta((float) $mine($month)['net_sales'], (float) $board['sold_amount'], 0.01, '⛔ লক্ষ্যের পাতা আর রিপোর্ট দুই অঙ্ক বলছে।');
     }

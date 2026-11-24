@@ -87,9 +87,10 @@ final class ProductTargetService
     /**
      * লক্ষ্যের পাতার সারি — প্রতি সচল পণ্য এক সারি, লক্ষ্য আর অর্জনসহ (লক্ষ্য আছে এমন অচল পণ্যও, যাতে বসানো লক্ষ্য হারিয়ে না যায়)।
      *
-     * @return list<array{product: Product, qty: ?string, amount: ?string, sold_qty: string, sold_amount: string}>
+     * ⓘ পাতায় পাতায়, কোড বা নাম দিয়ে খোঁজা যায়। সংরক্ষণ কেবল এই পাতার সারি ছোঁয় ([[setForMonth()]] যা আসে তাই বসায়) — অন্য পাতার লক্ষ্য
+     *   অক্ষত; মাসের মোট আলাদা কোয়েরিতে ([[monthTotals()]]), পাতার যোগ নয়।
      */
-    public function board(Carbon $month): array
+    public function board(Carbon $month, ?string $q = null): \Illuminate\Contracts\Pagination\LengthAwarePaginator
     {
         $month = $month->copy()->startOfMonth();
         $to = Carbon::today()->lt($month->copy()->endOfMonth()) ? Carbon::today() : $month->copy()->endOfMonth();
@@ -97,16 +98,41 @@ final class ProductTargetService
         $targets = ProductTarget::query()->whereDate('month', $month->toDateString())->get()->keyBy('product_id');
         $products = Product::query()
             ->where(fn ($q) => $q->where('is_active', true)->orWhereIn('id', $targets->keys()->all()))
-            ->orderBy('code')->get(['id', 'code', 'name_en', 'name_bn']);
+            ->when(filled($q), function ($w) use ($q): void {
+                $like = '%'.addcslashes((string) $q, '%_\\').'%';
+                $w->where(fn ($n) => $n->where('code', 'like', $like)->orWhere('name_en', 'like', $like)->orWhere('name_bn', 'like', $like));
+            })
+            ->orderBy('code')
+            ->paginate(\App\Core\Support\PerPage::of(), ['id', 'code', 'name_en', 'name_bn'])->withQueryString();
         $sold = $to->lt($month) ? collect() : $this->sold($month, $to);
 
-        return $products->map(fn (Product $p) => [
+        return $products->through(fn (Product $p) => [
             'product' => $p,
             'qty' => isset($targets[$p->id]) ? (string) $targets[$p->id]->qty : null,
             'amount' => isset($targets[$p->id]) ? (string) $targets[$p->id]->amount : null,
             'sold_qty' => bcadd((string) ($sold[$p->id]->qty ?? '0'), '0', 4),
             'sold_amount' => bcadd((string) ($sold[$p->id]->net_sales ?? '0'), '0', 4),
-        ])->values()->all();
+        ]);
+    }
+
+    /**
+     * মাসের মোট — সব পণ্যের লক্ষ্যের টাকা আর নিট বিক্রি; পাতা বা খোঁজা যা-ই হোক একই।
+     *
+     * @return array{amount: string, sold: string}
+     */
+    public function monthTotals(Carbon $month): array
+    {
+        $month = $month->copy()->startOfMonth();
+        $to = Carbon::today()->lt($month->copy()->endOfMonth()) ? Carbon::today() : $month->copy()->endOfMonth();
+        $sold = '0.0000';
+
+        if (! $to->lt($month)) {
+            foreach ($this->sold($month, $to) as $row) {
+                $sold = bcadd($sold, (string) $row->net_sales, 4);
+            }
+        }
+
+        return ['amount' => bcadd((string) ProductTarget::query()->whereDate('month', $month->toDateString())->sum('amount'), '0', 4), 'sold' => $sold];
     }
 
     /**
