@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { compactPageHead, foldPageNotes, mergeMoneyHead } from './abos-list-head.js'
+import { compactPageHead, foldPageNotes, mergeFilterBarHead, mergeMoneyHead } from './abos-list-head.js'
 
 /* ⭐ "ABOS" রূপে টাকার পাতার মাথা টুলবারের এক সারিতে (মালিক, ১৯ নভেম্বর ২০২৬, নমুনা Q2W6mM3S v3) — অন্য রূপে কিছুই নড়ে না */
 function page (ui) {
@@ -180,6 +180,71 @@ describe('foldPageNotes', () => {
             expect(foldPageNotes(document)).toBe(0)
             expect(document.querySelector('main > p').hidden).toBe(false)
             expect(document.querySelector('[data-page-info]')).toBeNull()
+        }
+    })
+})
+
+/* ⭐ ছাঁকনির সরু বারওয়ালা পাতা — নাম, ট্যাব, ছাঁকনি, বোতাম এক সারিতে (মালিক, ২৪ নভেম্বর ২০২৬) */
+function dayBook (ui, { lower = false, submit = false } = {}) {
+    document.documentElement.dataset.ui = ui
+    const box = '<section data-boxed><table></table></section>'
+    const bar = `<form id="list-form" method="GET"><div data-filter-bar><div class="toolbar-view"><div class="order-2">
+        <span id="toggle"><button type="button" data-filter-toggle>Filter</button></span><span data-chip-row></span></div></div></div></form>`
+    document.body.innerHTML = `
+        <main>
+            <div class="flex" id="head">
+                <div class="min-w-0"><h1>Day book<span data-page-info title="What was written"></span></h1><p data-page-subtitle>What was written</p></div>
+                <div data-gold-hairline></div>
+                <div data-page-actions><a href="/print">Print</a>${submit ? '<form method="POST"><button type="submit">Go</button></form>' : ''}</div>
+            </div>
+            <nav><a href="/a" aria-current="page">A</a><a href="/b">B</a></nav>
+            ${lower ? box + bar : bar + box}
+        </main>`
+}
+
+describe('mergeFilterBarHead', () => {
+    it('puts the title with its info mark, the tabs and the buttons into the filter bar row and hides the empty head', () => {
+        for (const ui of ['rose', 'navy', 'blue']) {
+            dayBook(ui)
+            compactPageHead(document)
+
+            const row = document.querySelector('[data-filter-bar] .toolbar-view > div')
+            expect(row.querySelector(':scope > h1 [data-page-info]')).not.toBeNull()
+            expect(row.querySelector(':scope > h1 + nav[data-head-tabs]')).not.toBeNull()
+            expect(row.querySelector(':scope > [data-page-actions] a[href="/print"]')).not.toBeNull()
+            expect(row.querySelector('#toggle [data-filter-toggle]')).not.toBeNull()
+            expect(document.querySelector('#head').hidden).toBe(true)
+        }
+    })
+
+    it('runs once', () => {
+        dayBook('blue')
+
+        expect(mergeFilterBarHead(document)).toBe(true)
+        expect(mergeFilterBarHead(document)).toBe(false)
+        expect(document.querySelectorAll('h1').length).toBe(1)
+    })
+
+    it('gives the title back to the page head while printing', () => {
+        dayBook('blue')
+        mergeFilterBarHead(document)
+
+        window.dispatchEvent(new Event('beforeprint'))
+        expect(document.querySelector('#head h1')).not.toBeNull()
+        expect(document.querySelector('#head').hidden).toBe(false)
+
+        window.dispatchEvent(new Event('afterprint'))
+        expect(document.querySelector('[data-filter-bar] h1')).not.toBeNull()
+        expect(document.querySelector('#head').hidden).toBe(true)
+    })
+
+    it('moves nothing in other looks, for a bar of a lower section, or when the buttons hold a form', () => {
+        for (const [ui, opts] of [['apps', {}], ['dynamic', {}], ['tiles', {}], ['blue', { lower: true }], ['blue', { submit: true }]]) {
+            dayBook(ui, opts)
+
+            expect(mergeFilterBarHead(document)).toBe(false)
+            expect(document.querySelector('#head h1')).not.toBeNull()
+            expect(document.querySelector('#head').hidden).toBe(false)
         }
     })
 })
