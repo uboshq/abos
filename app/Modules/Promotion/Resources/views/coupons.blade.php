@@ -95,7 +95,11 @@
         @endif
 
         @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('promotion::coupon_screen.none') }}</p>
+            @if ($abosHead)
+                <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)"><x-ui.empty-state :message="__('promotion::coupon_screen.none')" /></div>
+            @else
+                <p class="text-sm text-(--color-ink-muted)">{{ __('promotion::coupon_screen.none') }}</p>
+            @endif
         @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">
