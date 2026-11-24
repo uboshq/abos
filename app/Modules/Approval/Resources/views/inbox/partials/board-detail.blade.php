@@ -68,7 +68,9 @@
     $skip = [__('accounts::field.date'), __('approval::field.document'), __('approval::field.party'), __('core.company.branch'),
         __('accounts::field.instrument_no'), __('core.print.prepared_by'), __('core.table.narration')];
     foreach ($sheetFacts as $row) {
-        if (! in_array($row['label'], $skip, true) && ! str_contains($said, (string) $row['value'])) {
+        if (! in_array($row['label'], $skip, true) && ! str_contains($said, (string) $row['value'])
+            // ⓘ "1106 — QA ব্যাংক" is the same account the where-tile already names
+            && ! str_contains($said, trim((string) preg_replace('/^[\d.\-]+\s*—\s*/u', '', (string) $row['value'])))) {
             $tiles[] = [$row['label'], e($row['value']), 4, 1];
         }
     }
