@@ -71,12 +71,18 @@ final class AccountsSignature
 
     public const LOAN_INTEREST = 'loan_interest';
 
+    /** ⭐ স্টক ছাড়া বিক্রয় ভাউচার (SV) আর ক্রয় ভাউচার (PUV) — নকশা v5, ২৩ নভেম্বর ২০২৬ ([[TradeVoucherService]]) */
+    public const SALES_VOUCHER = 'sales_voucher';
+
+    public const PURCHASE_VOUCHER = 'purchase_voucher';
+
     /** শেষ সই পড়লে যে কাজগুলো এই মডিউল নিজে শেষ করে */
     public const ACTIONS = [
         self::NOTE, self::CHEQUE_CLEAR, self::CHEQUE_BOUNCE, self::INTER_COMPANY, self::TILL_OPENING,
         self::FIXED_ASSET_REGISTER, self::FIXED_ASSET_DISPOSE, self::TILL_HANDOVER,
         self::LOAN_DRAW, self::LOAN_INSTALMENT, self::LOAN_REPAY, self::LOAN_INTEREST,
         self::FIXED_ASSET_OPENING, self::FIXED_ASSET_ADDITION, self::FIXED_ASSET_REPAIR, self::FIXED_ASSET_REVALUE, self::FIXED_ASSET_IMPAIR,
+        self::SALES_VOUCHER, self::PURCHASE_VOUCHER,
     ];
 
     public function __construct(private readonly DocumentApproval $approval) {}

@@ -148,7 +148,11 @@ final class PurchaseReturnService
         });
     }
 
-    public function confirm(PurchaseReturn $return): PurchaseReturn
+    /**
+     * @param  bool  $approvedUpstream  ⭐ সরবরাহকারীর ডেবিট নোটের "মাল ফেরত গেছে" সারি থেকে — নোটের সই এই ফেরতেরও সই
+     *                                 (নকশা v5, ২৩ নভেম্বর ২০২৬; [[PurchaseBill::noteReturnGoods()]])
+     */
+    public function confirm(PurchaseReturn $return, bool $approvedUpstream = false): PurchaseReturn
     {
         if ($return->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
@@ -160,7 +164,7 @@ final class PurchaseReturnService
 
         // মাল ফেরত মানে সরবরাহকারীর কাছে দায় কমে — ছক বসানো থাকলে
         // সেটাও একটা সিদ্ধান্ত, আর সিদ্ধান্তে সই লাগে।
-        $print = $this->approvals->assertClear(
+        $print = $approvedUpstream ? app(\App\Core\Engines\Approval\DocumentFingerprint::class)->of($return) : $this->approvals->assertClear(
             document: $return,
             module: 'purchase',
             action: 'return',
@@ -748,7 +752,7 @@ final class PurchaseReturnService
      * থাকে — তার উপর [[returnTax()]] আবার ভ্যাটের ভাগ যোগ করত, তাই ১১৫-র মাল ফেরতে দেনা কমত ১৩০। ⓘ সারির অঙ্ক
      * থেকে ভ্যাট বাদ দেওয়া দুই রকম ভ্যাটেই ঠিক: দামের বাইরে হলে অঙ্ক = নিট + ভ্যাট, ভিতরে হলে অঙ্ক = নিট (ভ্যাটসহ)।
      */
-    private function netRate(PurchaseBillLine $billLine): string
+    public function netRate(PurchaseBillLine $billLine): string
     {
         $qty = (string) $billLine->qty;
 

@@ -36,6 +36,11 @@
                    . e(\App\Core\Support\DateFormat::format($s->warranty_to)) . '</span>'
                  : ''))],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::text('serial', __('inventory::field.serial_no'), __('inventory::message.serial_search')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -49,13 +54,14 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed
          class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.serials')"
                           :count="trans_choice('core.count.records', $serials->total(), ['count' => $serials->total()])"
                           :columns="$columns"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
                 <x-slot:actions>
                     @can('inventory.serial.manage')
                         <x-ui.button tone="primary" icon="plus" :href="route('inventory.serial.create')">
@@ -63,16 +69,6 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
-
-                {{-- ⓘ নিজের ঘর, সাধারণ খোঁজার ঘর নয় — ⚠️ এখানে প্রশ্নটা
-                     "নামে কিছু আছে কি না" নয়, "এই নম্বরটা কোথায়"। --}}
-                <label class="block">
-                    <span class="sr-only">{{ __('inventory::field.serial_no') }}</span>
-                    <input type="search" name="serial" value="{{ $serial }}"
-                           placeholder="{{ __('inventory::message.serial_search') }}"
-                           class="h-(--spacing-field) w-full max-w-64 rounded-(--radius-field)
-                                  border border-(--color-border) bg-(--color-surface-card) px-3">
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -85,4 +81,5 @@
         <x-ui.pager :rows="$serials" />
         <x-ui.list-totals :rows="$serials" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

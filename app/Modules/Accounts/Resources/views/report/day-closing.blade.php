@@ -29,7 +29,7 @@
                                  :href="route('executive.dayclose', ['date' => $day->toDateString(), 'export' => 'print'])">
                         {{ __('core.action.print') }}
                     </x-ui.button>
-                    <x-ui.button tone="secondary" data-paper="pdf" :href="route('executive.dayclose', ['date' => $day->toDateString(), 'export' => 'pdf'])">
+                    <x-ui.button tone="secondary" data-paper="pdf" target="_blank" rel="noopener" :href="route('executive.dayclose', ['date' => $day->toDateString(), 'export' => 'pdf'])">
                         {{ __('core.toolbar.export_pdf') }}
                     </x-ui.button>
                 @endcan
@@ -37,10 +37,17 @@
         </x-ui.page-header>
     </x-slot:header>
 
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-report>
-        <x-ui.field name="date" type="date" :label="__('accounts::dayclose.date')" :value="$day->toDateString()" />
-        <x-ui.button type="submit" tone="secondary">{{ __('accounts::dayclose.show') }}</x-ui.button>
-    </form>
+    {{-- ⭐ ঘরগুলো ডান পাশের ছাঁকনির প্যানেলে, একই চাবিতে (মালিক, ২৩ নভেম্বর ২০২৬; [[filter-bar]]); চলে "দেখান" বা Enter-এ --}}
+    @php
+        $panel = \App\Core\ListFilter\Facets::panel([
+            \App\Core\ListFilter\Facets::day('date', __('accounts::dayclose.date'), $day->toDateString()),
+        ]);
+    @endphp
+    <x-ui.filter-layout :filters="$panel" form="list-form" :report="true">
+        <form id="list-form" method="GET" class="contents" data-report>
+            <x-ui.filter-bar :facets="$panel" />
+        </form>
+    </x-ui.filter-layout>
 
     <p class="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm" data-info-line>
         <span><span class="text-(--color-ink-muted)">{{ __('accounts::dayclose.date') }}:</span> <b>{{ $day->format('d/m/Y') }} ({{ $day->copy()->locale(app()->getLocale())->translatedFormat('l') }})</b></span>

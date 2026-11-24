@@ -275,6 +275,7 @@ return [
         'view' => 'View',
         'approve' => 'Approve',
         'print' => 'Print',
+        'print_view' => 'Print view',
         'export' => 'Export',
         'share' => 'Share',
         'duplicate' => 'Duplicate',
@@ -508,6 +509,10 @@ return [
         'fiori' => 'Fiori blue',
         'netsuite' => 'Suite blue',
         'fluent' => 'Fluent blue',
+        /* The three frame colours (owner, 23 Nov 2026) */
+        'white' => 'White',
+        'redwood' => 'Redwood',
+        'navy' => 'Navy',
     ],
 
     /* The names stay in English in both languages — they are identities,
@@ -556,6 +561,14 @@ return [
 
     'report' => [
         'filter_not_allowed' => ':filter — that choice is not on the list, or is outside what you may see. Pick from the list.',
+        // Names of a report's own choice fields — in the right-hand panel ([[ReportChoices]])
+        'choice' => [
+            'kind' => 'Money channel',
+            'reason' => 'Why it is not counted',
+            'direction' => 'Direction',
+            'status' => 'Status',
+            'state' => 'State',
+        ],
         'filters' => [
             'any' => 'All',
             'clear' => 'Clear filters',
@@ -577,6 +590,11 @@ return [
         'section_total' => 'Subtotal',
         'more_in_branch' => 'This branch has :count more rows — choose the branch to see them all, page by page.',
         'grand_total' => 'Grand total',
+        // The first and last columns of a report turned on its side ([[ReportExport::transposed()]])
+        'figure' => 'Figure',
+        'all' => 'All',
+        // The rest after the largest few in a share chart ([[ReportChart]])
+        'others' => 'Others',
         'contribution' => 'Share %',
         'change' => 'Change %',
         'compare_previous' => 'Same length before',
@@ -634,6 +652,46 @@ return [
     'bulk' => [
         'count' => ':n selected',
         'all' => 'Select all on this page',
+        // phase 2 — server-side bulk actions ([[BulkRun]], [[x-ui.bulk-form]])
+        'pick' => 'Pick',
+        'reason' => 'Reason for cancelling',
+        'action' => [
+            'submit' => 'Send for approval',
+            'cancel' => 'Cancel drafts',
+            'approve' => 'Approve',
+            'print' => 'Print',
+            'export' => 'Excel',
+        ],
+        'confirm' => [
+            'submit' => 'Send the picked drafts for approval?',
+            'cancel' => 'Cancel the picked drafts?',
+            'approve' => 'Approve the picked papers?',
+        ],
+        'done' => [
+            'submit' => 'sent',
+            'cancel' => 'cancelled',
+            'approve' => 'approved',
+            'activate' => 'switched on',
+            'deactivate' => 'switched off',
+        ],
+        'result' => ':done :action · :skipped skipped',
+        'skipped_why' => 'Skipped:',
+        'why' => [
+            'not_found' => 'not found — another branch or company, or gone',
+            'not_allowed' => 'you have no permission for this',
+            'not_draft' => 'not a draft',
+            'not_waiting' => 'not waiting for approval',
+            'already_waiting' => 'already waiting for approval',
+            'own_paper' => 'your own paper — another person approves it',
+            'all_branches' => 'all-branches view is read-only — pick one branch',
+            'refused' => 'could not be done — open it and try one by one',
+            'no_reason' => 'a reason is needed to cancel',
+            'unchanged' => 'already in that state',
+            'money' => 'money moves — approve it on its own',
+            'multi_step' => 'more than one approval step — approve it on its own',
+            'no_limit' => 'no approval limit is set for you',
+            'over_limit' => 'over your approval limit',
+        ],
     ],
     // the chart board ([[dashboard/viz-board]]; owner, 20 Nov 2026)
     'viz' => [
@@ -690,6 +748,8 @@ return [
         'revoke_link' => 'Revoke the link',
         'link_revoked' => 'The link is revoked — it opens nothing now',
         'as_file' => 'Download PDF',
+        'open_print' => 'Open the print (new tab)',
+        'preparing' => 'Preparing the print…',
         // ⭐ Paper language (checklist ভা-১৬)
         'paper_language' => 'Paper language',
         'paper_language_company' => 'Company language',
@@ -1482,6 +1542,8 @@ return [
         'changed_after_signing' => ':no changed after the approval was asked for — the approval is for the earlier paper, not this one. Nothing was posted; ask for a new approval.',
         'delegate_not_self' => 'You cannot delegate to yourself — that would open a path to approving your own request.',
         'delegate_bad_dates' => 'The end date cannot fall before the start date.',
+        'second_hand' => 'Second approval',
+        'no_second_signer' => 'Nobody can give the second approval — give someone these three keys: :keys',
         'awaiting' => 'This has gone for approval. It moves on once the approver decides.',
         'awaiting_because' => 'This has gone for approval — :reason. It moves on once the approver decides.',
         'rejected' => 'Approval was refused — :reason. Put that right, edit the document, and it can go again.',
@@ -1651,6 +1713,8 @@ return [
             'limit_request_waiting' => 'When a credit-limit raise waits for my approval',
             'bank_change_waiting' => 'When a supplier bank details change waits for my approval',
             'setting_change_waiting' => 'When a key setting change waits for my approval',
+            'payment_change_waiting' => 'When a change to the salary account of an employee is pending my approval',
+            'payment_change_told' => 'When someone asks to change my salary account, and when it is applied or refused',
             'temporary_limit_ending' => 'When a temporary credit limit ends within three days',
             'role_ending' => 'When a time-bound role ends tomorrow',
             'deposit_maturing_soon' => 'When a deposit matures within seven days or is past maturity',
@@ -1960,6 +2024,7 @@ return [
         'pick_none' => 'Clear this',
         'more' => '+ :n more',
         'clear_chips' => 'Clear all filters',
+        'any' => 'All',
         'date' => 'Date',
         'custom' => 'Pick dates…',
         'preset' => [

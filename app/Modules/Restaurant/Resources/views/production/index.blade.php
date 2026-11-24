@@ -22,6 +22,11 @@
         ['key' => 'status', 'label' => __('inventory::field.state'), 'width' => '8rem',
          'render' => fn ($p) => view('restaurant::partials.production-state', ['production' => $p])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের তারিখের ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -35,14 +40,15 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed
          class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('restaurant::menu.cooking')"
                           :count="trans_choice('inventory::message.production_count', $productions->total(), ['count' => $productions->total()])"
                           :columns="$columns"
                           :search-placeholder="__('inventory::field.production_search')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
                 <x-slot:actions>
                     @can('create', \App\Modules\Restaurant\Models\Production::class)
                         <x-ui.button tone="primary" icon="plus" :href="route('restaurant.production.create')">
@@ -50,8 +56,6 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
-
-                <x-ui.date-range :dates="$dates" />
             </x-ui.toolbar>
         </form>
 
@@ -64,4 +68,5 @@
         <x-ui.pager :rows="$productions" />
         <x-ui.list-totals :rows="$productions" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

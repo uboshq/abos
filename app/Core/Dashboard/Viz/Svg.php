@@ -284,6 +284,14 @@ final class Svg
         foreach (($o['l'] ?? []) as $i => $l) {
             $s .= self::t($x0 + $i * $dx, $y1 + 20, (string) $l, ['size' => 12.5]);
         }
+        // ⓘ ঐচ্ছিক `top` — প্রতিটা বিন্দুর মাথায় লেখা (ফাঁকা হলে নেই); বিন্দু ঘন হলে (16-র বেশি) বেজোড়গুলো একটু উপরে, যাতে লেখা গায়ে না পড়ে
+        foreach (($o['top'] ?? []) as $i => $label) {
+            if ((string) $label === '' || $i >= $n) {
+                continue;
+            }
+            $lift = $n > 16 && $i % 2 === 1 ? 14 : 0;
+            $s .= self::t($x0 + $i * $dx, max(11.0, $y($tot[$i]) - 6 - $lift), (string) $label, ['size' => $n > 16 ? 10.5 : 12.5, 'fill' => self::INK, 'weight' => 700]);
+        }
 
         return self::svg($s);
     }
@@ -369,7 +377,9 @@ final class Svg
             }
             $s .= '<rect x="320" y="'.(60 + $i * 40).'" width="13" height="13" rx="3" fill="'.$col.'"/>';
             $s .= self::t(342, 72 + $i * 40, (string) $part[0], ['size' => 15, 'fill' => self::INK, 'anchor' => 'start']);
-            $s .= self::t(552, 72 + $i * 40, round((float) $part[1] * 100).'%', ['size' => 15, 'fill' => self::INK, 'anchor' => 'end', 'weight' => 700]);
+            // ⓘ 100-এর নিচে নিচের দিকে কাটা — 99.9% কখনো "100%" নয় (মাস্টার ডেটার নিরীক্ষা, ২৩ নভেম্বর ২০২৬)
+            $pct = (float) $part[1] * 100;
+            $s .= self::t(552, 72 + $i * 40, ($pct < 100 ? min(99, (int) floor($pct + 1e-9)) : (int) round($pct)).'%', ['size' => 15, 'fill' => self::INK, 'anchor' => 'end', 'weight' => 700]);
         }
 
         return self::svg($s);

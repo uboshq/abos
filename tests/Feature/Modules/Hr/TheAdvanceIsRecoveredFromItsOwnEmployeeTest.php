@@ -33,6 +33,7 @@ final class TheAdvanceIsRecoveredFromItsOwnEmployeeTest extends TestCase
 {
     use PutsMoneyInTheTill;
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private Company $company;
 
@@ -96,7 +97,7 @@ final class TheAdvanceIsRecoveredFromItsOwnEmployeeTest extends TestCase
     /** মাসের রান বানিয়ে নিশ্চিত — কর্মীর অগ্রিমের কর্তন */
     private function deducted(string $month, Employee $employee): string
     {
-        $run = PayrollRun::query()->forMonth($month)->first() ?? app(PayrollService::class)->confirm(app(PayrollService::class)->build($month));
+        $run = PayrollRun::query()->forMonth($month)->first() ?? $this->confirmedPayroll(app(PayrollService::class)->build($month));
 
         return bcadd((string) $run->payslips()->where('employee_id', $employee->id)->firstOrFail()
             ->lines()->where('head_code', 'ADVANCE')->sum('amount'), '0', 0);

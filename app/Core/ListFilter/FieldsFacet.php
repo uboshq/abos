@@ -13,7 +13,10 @@ use Illuminate\Http\Request;
  *
  * ⓘ সংখ্যা গোনা হয় না (টিকের ঘর নয়); প্রথম ঘরটা ([[$trigger]]) ভরা থাকলে তবেই অংশটা চালু।
  *
- * @phpstan-type Field array{key: string, label: string, type: 'select'|'number'|'date', options?: array<string, string>, placeholder?: string, min?: int, max?: int}
+ * ⓘ ঘরের ধরন: select · number · date · text (লেখা, যেমন "রেফারেন্স") · find (লিখে-খোঁজা, নিচে নামের তালিকা — datalist;
+ *   রিপোর্টের গুদাম/পণ্য/দোকান: লেখা যায় "কোড · নাম", সার্ভার নম্বরে বদলায়)।
+ *
+ * @phpstan-type Field array{key: string, label: string, type: 'select'|'number'|'date'|'text'|'find', options?: array<string, string>, placeholder?: string, min?: int, max?: int}
  */
 final class FieldsFacet extends Facet
 {

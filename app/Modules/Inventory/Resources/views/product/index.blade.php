@@ -180,6 +180,26 @@
             ),
         ));
     }
+
+    /*
+     * ⭐ একসাথে কাজের বার, ধাপ ২ — মালিক, ১৯ নভেম্বর ২০২৬ (নমুনা Q2W6mM3S v3; [[BulkRun]], [[x-ui.bulk-form]])।
+     * ⓘ পণ্য মাস্টার, খসড়া নয় — পাঠানো/বাতিল/অনুমোদন নেই; কেবল "ছাপুন · Excel", বাছা সারি, এই তালিকার নিজের প্রশ্নে
+     *   (শাখার দেয়াল আর ক্রয়মূল্যের ঘর-পাহারা অটুট — [[ListExport::picked()]])। রপ্তানির চাবি না থাকলে ঘরও নেই —
+     *   নইলে বারহীন টিক-বাক্স বসত আর ধাপ ১-এর পাতার বারটাও সরে যেত।
+     * ⛔ কেবল তিন ABOS রূপে; রপ্তানির আঁকায় টিক-বাক্সের কলাম নয় (ফাইলে খালি "বাছুন" কলাম হত)।
+     */
+    $bulk = \App\Core\Bulk\BulkRun::showsHere()
+        && (auth()->user()?->can('system_admin.list.export') ?? false)
+        && ! request()->filled('export');
+
+    if ($bulk) {
+        array_unshift($columns, \App\Core\Bulk\BulkRun::pickColumn('product-bulk', fn ($p) => trim($p->code.' '.$p->name_en)));
+    }
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('inactive', __('inventory::action.show_inactive')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -193,12 +213,14 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.products')" :count="trans_choice('inventory::message.count', $products->total(), ['count' => $products->total()])"
                 :search-placeholder="__('inventory::message.search_placeholder')"
                 :sort="$sortOptions"
                 :columns="$columns"
+                :facets="$facetPanel"
                 view>
         <x-slot:actions>
             @can('create', \App\Modules\Inventory\Models\Product::class)
@@ -207,12 +229,12 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
-                    {{ __('inventory::action.show_inactive') }}
-                </label>
             </x-ui.toolbar>
         </form>
+
+        @if ($bulk)
+            <x-ui.bulk-form id="product-bulk" />
+        @endif
 
         <x-ui.table
             :empty="$q ? __('core.empty.no_results') : __('inventory::message.none_yet')"
@@ -224,4 +246,5 @@
         <x-ui.pager :rows="$products" />
         <x-ui.list-totals :rows="$products" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

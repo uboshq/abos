@@ -63,6 +63,9 @@ final class LeaveApiController extends Controller implements HasMiddleware
                         'taken' => (string) $balance['taken'],
                         // ⓘ null = বছরে সীমা নেই
                         'left' => $balance['left'],
+                        // ⭐ অর্জিত ছুটিতে পাওনার ভাগ — এ বছর অর্জিত আর আগের বছরের জের; বাকি ধরনে null ([[EarnedLeave]], a6, ২১ অক্টোবর ২০২৬)
+                        'accrued' => $balance['accrued'],
+                        'carried' => $balance['carried'],
                     ];
                 })->values(),
             'applications' => $employee === null ? [] : LeaveApplication::query()
@@ -99,6 +102,8 @@ final class LeaveApiController extends Controller implements HasMiddleware
             // ⛔ ওয়েবের একই নিয়ম — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ৯); ⓘ ফোনের JSON সংখ্যা 1e-7 লেখায় "1.0E-7" হয়ে ৫০০ দিত
             'days' => ['required', 'decimal:0,1', 'regex:/^\d+(\.\d)?$/', 'gt:0', 'max:'.LeaveService::MAX_SPAN_DAYS],
             'reason' => ['nullable', 'string', 'max:500'],
+            // ⭐ মাতৃত্বকালীন ছুটিতে প্রসবের সম্ভাব্য দিন (ধারা ৪৭)
+            'expected_delivery_date' => ['nullable', 'date'],
         ], [
             'days.decimal' => __('hr::validation.days_format'),
             'days.regex' => __('hr::validation.days_format'),
@@ -111,6 +116,7 @@ final class LeaveApiController extends Controller implements HasMiddleware
             (string) $data['to_date'],
             (string) $data['days'],
             $data['reason'] ?? null,
+            isset($data['expected_delivery_date']) ? (string) $data['expected_delivery_date'] : null,
         );
 
         return response()->json($this->facts($application->load('leaveType')), 201);
@@ -125,6 +131,7 @@ final class LeaveApiController extends Controller implements HasMiddleware
             'from_date' => $a->from_date?->toDateString(),
             'to_date' => $a->to_date?->toDateString(),
             'days' => (string) $a->days,
+            'expected_delivery_date' => $a->expected_delivery_date?->toDateString(),
             'reason' => (string) ($a->reason ?? ''),
             // ⓘ pending · approved · rejected · cancelled — বাংলা নাম ফোনের নিজের
             'status' => (string) $a->status,

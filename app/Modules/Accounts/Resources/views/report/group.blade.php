@@ -87,6 +87,13 @@
     foreach (['income', 'expense', 'profit', 'asset', 'liability', 'equity'] as $key) {
         $totals[$key] = \App\Core\Support\Money::format($group['total'][$key]);
     }
+
+    /* ⭐ ছাপার কাগজের মাথা — টেবিল আর মোট `x-ui.table` নিজেই ধরে ([[ReportPaper::describe()]], মালিক ২৩ নভেম্বর ২০২৬) */
+    \App\Core\Support\ReportPaper::describe(
+        (string) __('accounts::menu.group_report'),
+        \App\Core\Support\DateFormat::format($group['from']).' – '.\App\Core\Support\DateFormat::format($group['to']),
+        [(string) __('accounts::message.group_not_consolidated')],
+    );
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -99,26 +106,23 @@
                               'to' => \App\Core\Support\DateFormat::format($group['to']),
                           ])">
             <x-slot:actions>
-                <x-ui.button tone="secondary" icon="print" data-action="print">
-                    {{ __('core.action.print') }}
-                </x-ui.button>
+                {{-- ⭐ প্রিন্ট ভিউ — নিজের কাগজ নতুন ট্যাবে, পর্দার ছাপা নয় (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) --}}
+                <x-ui.print-view-button />
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
 
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-report>
-        <x-ui.field name="from" type="date" :label="__('accounts::field.group_from')"
-                    :value="$group['from']" />
-        <x-ui.field name="to" type="date" :label="__('accounts::field.group_to')"
-                    :value="$group['to']" />
-
-        {{-- ⓘ চাবিটা `core.action.apply`, আর সেটা মেপে পাওয়া: প্রথমে
-             `core.action.filter` লিখেছিলাম, আর ওটা **নেই** — আসল নামটা
-             `core.toolbar.filter` ("Filter By"), যা ড্রপডাউনের লেবেল,
-             বোতামের নয়। ⚠️ ভুল চাবিটা [[EveryTranslationKeyExistsTest]]
-             লাল করত, তাই স্থিতিপত্রের ফরমটাই নকল করা হয়েছে। --}}
-        <x-ui.button type="submit" tone="secondary" data-report-show>{{ __('core.action.show') }}</x-ui.button>
-    </form>
+    {{-- ⭐ ঘরগুলো ডান পাশের ছাঁকনির প্যানেলে, একই চাবিতে (মালিক, ২৩ নভেম্বর ২০২৬; [[filter-bar]]); চলে "দেখান" বা Enter-এ --}}
+    @php
+        $panel = \App\Core\ListFilter\Facets::panel([
+            \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        ], shown: ['from' => (string) $group['from'], 'to' => (string) $group['to']]);
+    @endphp
+    <x-ui.filter-layout :filters="$panel" form="list-form" :report="true">
+        <form id="list-form" method="GET" class="contents" data-report>
+            <x-ui.filter-bar :facets="$panel" />
+        </form>
+    </x-ui.filter-layout>
 
     {{-- ⚠️ একটাই কোম্পানি হলে কারণটা লেখা থাকে।
 

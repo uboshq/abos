@@ -41,7 +41,7 @@ return [
     'current_cycle' => 'Current cycle',
     'month_invalid' => 'Give the month as year-month, for example 2026-10.',
 
-    'dashboard_title' => 'Principal commission — current cycle',
+    'dashboard_title' => 'Principal list',
     'dashboard_empty' => 'No principal has a commission set.',
     'dash_inflow' => 'Cumulative inflow',
     'dash_sent' => 'Sent to principal',

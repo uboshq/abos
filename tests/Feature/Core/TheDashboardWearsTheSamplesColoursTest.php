@@ -88,7 +88,8 @@ final class TheDashboardWearsTheSamplesColoursTest extends TestCase
             array_map(fn (?string $t) => CardColours::watch($t), [Stat::BAD, Stat::WARN, Stat::GOOD, Stat::NEUTRAL, null]),
             '⛔ নজরে রাখুন: সারির রং মানে বলে না — এখনই লাল, নজর হলুদ, ভালো সবুজ, বাকি আকাশি।');
 
-        $view = (string) file_get_contents(resource_path('views/dashboard/module-v2.blade.php'));
+        // ⓘ বাক্সটা নিজের ফাইলে (২০ নভেম্বর ২০২৬ থেকে module-v2 তাকে দুই জায়গার একটায় ডাকে)
+        $view = (string) file_get_contents(resource_path('views/dashboard/watch-box.blade.php'));
         $this->assertMatchesRegularExpression('/CardColours::watch\(\$item->tone\).*?data-watch-row=.*?background: color-mix\(in srgb, \{\{ \$c \}\}/s', $view,
             '⛔ নজরে রাখুন: সারি নিয়মের রং পরে না — পাতায় হাতে লেখা রং।');
     }
@@ -121,9 +122,12 @@ final class TheDashboardWearsTheSamplesColoursTest extends TestCase
          *   "মেয়াদ পেরোনো" — কেউ পেরোলে তবেই)। তাই কয়েকটা পাতা দেখা: যার চার্ট আছে তার প্রথমটা জোড়া-সারিতে, যার নেই তার জোড়া-সারিতে
          *   কেবল "নজরে রাখুন"; আর অন্তত একটা পাতায় চার্ট থাকতেই হবে — নাহলে দাবি অন্ধ।
          */
+        // ⓘ ২০ নভেম্বর ২০২৬ (মালিক): গ্রাফের বোর্ডের পাতায় "নজরে রাখুন" জোড়া-সারিতে নয়, সবার শেষে — সেটা
+        //   [[TheWatchBoxSitsLastUnderTheChartsTest]] দেখে। জোড়া-সারি এখন কেবল SAP আর Dynamic রূপে (সেখানে পাতা হুবহু আগের মতো)।
+        $owner->forceFill(['ui' => 'dynamic'])->save();
         $withChart = 0;
         foreach (['customer', 'hr', 'supplier', 'documents', 'master_data', 'backup', 'approval', 'purchase'] as $code) {
-            $page = $this->get(route('module.dashboard', $code));
+            $page = $this->actingAs($owner->refresh())->get(route('module.dashboard', $code));
             if ($page->status() !== 200) {
                 continue;
             }

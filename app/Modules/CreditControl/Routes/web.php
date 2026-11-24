@@ -23,4 +23,9 @@ Route::middleware('auth')->prefix('credit-control')->group(function () {
         ->whereNumber('customer')
         ->name('limit_request.store')
         ->middleware('can:credit_control.request_limit');
+
+    // ⭐ IFRS 9 সম্ভাব্য ক্ষতি আর অনাদায়ী বাদ — কেবল খসড়া ভাউচার লেখে (হিসাবের ফাঁক #১৮)
+    Route::get('/credit-loss', [\App\Modules\CreditControl\Http\Controllers\CreditLossController::class, 'show'])->name('loss.show');
+    Route::post('/credit-loss/provision', [\App\Modules\CreditControl\Http\Controllers\CreditLossController::class, 'provision'])->name('loss.provision');
+    Route::post('/credit-loss/write-off', [\App\Modules\CreditControl\Http\Controllers\CreditLossController::class, 'writeOff'])->name('loss.write_off');
 });

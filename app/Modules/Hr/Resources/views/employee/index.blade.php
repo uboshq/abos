@@ -19,6 +19,11 @@
         ['key' => 'joining_date', 'label' => __('hr::field.joining_date'), 'width' => '10rem',
          'render' => fn ($e) => $e->joining_date?->format('d M Y') ?? '—'],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('left', __('hr::action.show_left')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -32,11 +37,12 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('hr::menu.employees')" :count="trans_choice('core.count.records', $employees->total(), ['count' => $employees->total()])"
                 :columns="$columns" :sort="$sortOptions"
-                          :search-placeholder="__('hr::field.name')">
+                          :search-placeholder="__('hr::field.name')" :facets="$facetPanel">
         <x-slot:actions>
             @can('hr.employee.manage')
                     <x-ui.button tone="primary" icon="plus" :href="route('hr.employee.create')">
@@ -44,10 +50,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="left" value="1" @checked($showLeft) class="size-4">
-                    {{ __('hr::action.show_left') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -59,4 +61,5 @@
 
     <div class="mt-4">{{ $employees->links() }}</div>
     <x-ui.list-totals :rows="$employees" />
+    </x-ui.filter-layout>
 </x-layouts.app>

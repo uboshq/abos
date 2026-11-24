@@ -1,5 +1,17 @@
 # What's new
 
+## 1.3.11 — 24-11-2026
+
+- The approval inbox becomes a board (in the three ABOS looks): papers in coloured boxes by kind on the left, the picked paper on the right; title, tabs and buttons on one row. Other looks keep the cards.
+- Module dashboards wear the sample's titles, with nothing lost and nothing twice; "Keep an eye on" now sits at the bottom.
+- Print opens in a new tab and the counter stays where it was; every report gets a "Print view".
+- Sales reports: target vs sales, trend, product and customer ABC, new/sleeping/lost customers, collection efficiency, scheme and discount cost, sales and dues by area; branches side by side, charts above the tables.
+- List filters move to the right-hand panel; bulk actions on sales orders, challans, invoices, returns, purchase bills and orders, customers, suppliers and products (ABOS looks).
+- Credit notes, debit notes and stock-free vouchers with a lines grid, plus the Mushak-6.7/6.8/6.3 papers.
+- HR and payroll law (the owner's plan of 21 Oct): a leaver's final settlement, expected credit loss (ECL) on customer dues, "approve" wording everywhere.
+- The day-close checklist warns about today's credit bills, supplier bills due today and a cash-count gap.
+- Looks: ABOS Blue without the outer frame, a white ABOS Navy rail, three frame colours.
+
 ## 1.3.10 — 23-11-2026
 
 - Copilot has its own full page: questions and answers on a big screen; each person's earlier talks are kept and open again later.

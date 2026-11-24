@@ -73,13 +73,23 @@
             'numeric' => true,
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই ঘর, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('status', __('promotion::field.status'),
+            collect($statuses)->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all()),
+        \App\Core\ListFilter\Facets::pick('type', __('promotion::field.type'),
+            collect($types)->mapWithKeys(fn ($t) => [$t->value => $t->label()])->all()),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('promotion::menu.promotions') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('promotion::menu.promotions')">
+        <form id="list-form" method="GET" class="contents">
+        <x-ui.toolbar :title="__('promotion::menu.promotions')" :facets="$facetPanel">
             {{-- ⓘ চাবি না থাকলে বোতামটাই নেই — ক্লিক করে ৪০৩ দেখার চেয়ে ভালো --}}
             @can('promotion.create')
                 <x-slot:actions>
@@ -88,17 +98,8 @@
                     </x-ui.button>
                 </x-slot:actions>
             @endcan
-
-            <x-slot:filters>
-                <x-ui.select name="status" :label="__('promotion::field.status')"
-                             :options="collect($statuses)->mapWithKeys(fn ($s) => [$s->value => $s->label()])"
-                             placeholder="—" :value="request('status')" />
-
-                <x-ui.select name="type" :label="__('promotion::field.type')"
-                             :options="collect($types)->mapWithKeys(fn ($t) => [$t->value => $t->label()])"
-                             placeholder="—" :value="request('type')" />
-            </x-slot:filters>
         </x-ui.toolbar>
+        </form>
 
         <x-ui.table :view-url="fn ($r) => route('promotion.show', $r)"
             :empty="__('promotion::message.none_yet')"
@@ -108,4 +109,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

@@ -121,7 +121,8 @@ final class ANoteNamedABillNobodyCheckedTest extends TestCase
 
     public function test_the_form_says_the_number_is_checked(): void
     {
-        $this->get(route('accounts.note.create', ['direction' => Note::CREDIT, 'kind' => Note::KIND_CUSTOMER, 'party_id' => $this->bill->customer_id]))->assertOk()
+        // ⓘ ক্রেডিট নোটের নিজের ফর্ম — পুরনো `?direction=` ঠিকানা এখন সেখানে ফেরায় (নকশা v5, ২৩ নভেম্বর ২০২৬)
+        $this->get(route('accounts.note.cn.create', ['kind' => Note::KIND_CUSTOMER, 'party_id' => $this->bill->customer_id]))->assertOk()
             ->assertSee(__('accounts::note.against_hint'));
     }
 

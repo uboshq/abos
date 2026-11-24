@@ -57,6 +57,9 @@
                             :value="old('to_date', now()->toDateString())" required />
 
                 <x-ui.field name="reason" :label="__('hr::field.reason')" :value="old('reason')" />
+                {{-- ⭐ মাতৃত্বকালীন ছুটিতে প্রসবের সম্ভাব্য দিন — ৮ সপ্তাহ আগে + ৮ সপ্তাহ পরে (ধারা ৪৭); অন্য ধরনে খালি রাখুন --}}
+                <x-ui.field name="expected_delivery_date" type="date" :label="__('hr::field.expected_delivery_date')"
+                            :value="old('expected_delivery_date')" />
             </div>
 
             <div class="mt-3 flex justify-end gap-2">

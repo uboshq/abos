@@ -85,6 +85,9 @@ return [
                 'route_params' => ['slug' => 'exposure-by-salesperson'], 'permission' => 'credit_control.view'],
             ['label' => 'credit_control::lists.trend_title', 'icon' => 'reports', 'route' => 'credit_control.report.show',
                 'route_params' => ['slug' => 'risk-trend'], 'permission' => 'credit_control.view'],
+            // ⭐ IFRS 9 সম্ভাব্য ক্ষতি আর অনাদায়ী বাদ (হিসাবের ফাঁক #১৮)
+            ['label' => 'credit_control::loss.title', 'icon' => 'alert-triangle', 'route' => 'credit_control.loss.show',
+                'permission' => 'credit_control.credit_loss'],
         ],
     ],
 
@@ -102,6 +105,12 @@ return [
          * ([[CreditLimitRequests]]), আর যিনি চাইলেন তিনি সই দিতে পারেন না।
          */
         'credit_control.request_limit',
+
+        /*
+         * ⭐ সম্ভাব্য ক্ষতির সংরক্ষণ আর অনাদায়ী বাদের খসড়া ভাউচার লেখা — IFRS 9 (হিসাবের ফাঁক #১৮)। ⓘ কেবল খসড়া; পাকা হয়
+         * ভাউচারের নিজের পথে (লেখক ≠ পাকাকারী, সই) — তাই লেখার চাবিটাই যথেষ্ট।
+         */
+        'credit_control.credit_loss',
     ],
 
     /*
@@ -130,6 +139,16 @@ return [
         ['key' => 'credit_control.risk_medium_at', 'label' => 'credit_control::settings.risk_medium_at', 'type' => 'integer', 'default' => 20, 'group' => 'risk'],
         ['key' => 'credit_control.risk_high_at', 'label' => 'credit_control::settings.risk_high_at', 'type' => 'integer', 'default' => 45, 'group' => 'risk'],
         ['key' => 'credit_control.risk_critical_at', 'label' => 'credit_control::settings.risk_critical_at', 'type' => 'integer', 'default' => 75, 'group' => 'risk'],
+
+        /*
+         * ⭐ IFRS 9 সম্ভাব্য ক্ষতির হার — বয়সের প্রতিটা ভাগে বকেয়ার কত শতাংশ ([[ReceivableCreditLoss]]; হিসাবের ফাঁক #১৮)।
+         * ⛔ কেবল মালিক — টাকার হিসাব বদলায়। ⭐ ডিফল্ট মালিকের অনুমোদিত 1/3/10/50 (২১ অক্টোবর ২০২৬, "plan onujayi koro");
+         * প্রতিটা কোম্পানি নিজের হার বসাতে পারে ([[ReceivableCreditLoss::DEFAULTS]] একই অঙ্ক)।
+         */
+        ['key' => 'credit_control.ecl_rate_current', 'label' => 'credit_control::settings.ecl_rate_current', 'type' => 'number', 'default' => 1, 'group' => 'loss', 'super_admin_only' => true],
+        ['key' => 'credit_control.ecl_rate_30', 'label' => 'credit_control::settings.ecl_rate_30', 'type' => 'number', 'default' => 3, 'group' => 'loss', 'super_admin_only' => true],
+        ['key' => 'credit_control.ecl_rate_60', 'label' => 'credit_control::settings.ecl_rate_60', 'type' => 'number', 'default' => 10, 'group' => 'loss', 'super_admin_only' => true],
+        ['key' => 'credit_control.ecl_rate_90', 'label' => 'credit_control::settings.ecl_rate_90', 'type' => 'number', 'default' => 50, 'group' => 'loss', 'super_admin_only' => true],
     ],
 
     // ⓘ গ্রাহকের নামে চাপলে তাঁর বাকির পাতা ([[CreditProfile]])

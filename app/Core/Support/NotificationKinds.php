@@ -125,6 +125,10 @@ final class NotificationKinds
             // ⭐ জরুরি সেটিংয়ের বদল দ্বিতীয় হাতের অপেক্ষায় — যিনি চাইলেন তাঁকে নয় (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৭)
             'system_admin.setting_change_waiting' => 'core.notify.kind.setting_change_waiting',
 
+            // ⭐ বেতনের ঠিকানার বদল — সইকারীকে, আর কর্মীকে নিজেকে (#৮, ২০ অক্টোবর ২০২৬; [[PaymentChanges]])
+            'hr.payment_change_waiting' => 'core.notify.kind.payment_change_waiting',
+            'hr.payment_change_told' => 'core.notify.kind.payment_change_told',
+
             /*
              * ⭐ ডকুমেন্ট ম্যানেজমেন্টের বারোটা খবর — মালিকের পরিকল্পনা §২৩ (৯ অক্টোবর ২০২৬)।
              * ⓘ কেবল নামের চিহ্ন; কাকে যায় সেটা মডিউলের সিদ্ধান্ত, আর যিনি কাগজটা দেখতে পান না
@@ -185,6 +189,8 @@ final class NotificationKinds
             $type === 'sales.order_awaits_you' => ['approval', 'high'],
             $type === 'supplier.bank_change_waiting' => ['approval', 'high'],
             $type === 'system_admin.setting_change_waiting' => ['approval', 'high'],
+            $type === 'hr.payment_change_waiting' => ['approval', 'high'],
+            $type === 'hr.payment_change_told' => ['system', 'high'],
             in_array($type, ['sales.order_credit_held', 'sales.signed_challan_stuck', 'sales.signed_sale_stuck', 'finance.rent_overdue', 'customer.cheque_bounce_block', 'customer.limit_request_waiting', 'accounts.staff_cash_held'], true) => ['task', 'high'],
             $type === 'sales.delivery_stage', $type === 'report_ready' => ['update', 'low'],
             $type === 'notification.scheduled' => ['update', 'normal'],

@@ -51,6 +51,14 @@ final class PhonePaperDoor
 
             $route = Route::getRoutes()->getByName($routeName);
 
+            /*
+             * ⛔ ছাপার ঠিকানায় নথির আইডি ছাড়া আরও ঘর থাকলে (স্টক ছাড়া ভাউচার: `{kind}` + `{voucher}`) ফোনের দরজা সেটা বানাতে
+             * পারে না — কেবল প্রথম ঘরটা ভরে ([[DocumentApiController]])। তাই সেই কাগজ ডেস্কেই, ফোনে নয় (বন্ধ মানে বন্ধ, ৫০০ নয়)।
+             */
+            if ($route !== null && count($route->parameterNames()) !== 1) {
+                continue;
+            }
+
             foreach ($route?->signatureParameters(['subClass' => Model::class]) ?? [] as $parameter) {
                 $type = $parameter->getType();
                 $class = $type instanceof ReflectionNamedType ? $type->getName() : null;

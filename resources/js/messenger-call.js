@@ -459,14 +459,14 @@ async function join (payload, { outgoing }) {
     call.lk = lk
 
     /*
-     * ⭐ HD video (owner, 24 Nov 2026: "ভিডিওর রেজুলেশন একদম খারাপ মানের … বাফারিং করে"): the camera is asked for 720p and sent
-     * as 720p with two lighter layers (180p, 360p) beside it — a weak line drops to a lighter layer instead of freezing, a good
-     * line gets HD. ⓘ Before, the Room took the library defaults.
+     * ⛔ `singlePeerConnection: false` — the call server's older `/rtc` path (see the fe/rc1311 note); ⭐ HD video (owner, 24 Nov
+     * 2026: "ভিডিওর রেজুলেশন একদম খারাপ মানের … বাফারিং করে"): 720p camera, sent as 720p with 180p/360p layers beside it.
      */
     const P = lk.VideoPresets
     const room = new lk.Room({
         adaptiveStream: true,
         dynacast: true,
+        singlePeerConnection: false,
         videoCaptureDefaults: { resolution: P.h720.resolution },
         publishDefaults: { simulcast: true, videoEncoding: P.h720.encoding, videoSimulcastLayers: [P.h180, P.h360] },
     })

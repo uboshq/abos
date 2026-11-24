@@ -51,6 +51,35 @@
         </div>
     @endif
 
+    {{-- ⭐ সইয়ের অপেক্ষায় — আরেকজনের "সই দিন" না পড়া পর্যন্ত এই অঙ্ক বসেনি (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬) --}}
+    @if ($waiting !== null)
+        <div data-boxed data-salary-waiting
+             class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+            {{-- ⛔ দ্বিতীয় সই দিতে পারেন এমন কেউ না থাকলে (cb-র রিভিউ, ২১ অক্টোবর ২০২৬) --}}
+            <x-ui.no-second-signer :approval="$waiting['approval']" />
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <h2 class="font-semibold">
+                    {{ __('hr::message.salary_waiting_title', ['date' => \Illuminate\Support\Carbon::parse($waiting['effective_from'])->format('d M Y')]) }}
+                </h2>
+                {{-- ⓘ অনুমোদনের মডিউল বন্ধ থাকলে বোতাম নেই, লেখাটা থাকে --}}
+                @if (\Illuminate\Support\Facades\Route::has('approval.inbox.show'))
+                    <x-ui.button :href="route('approval.inbox.show', $waiting['approval']->id)">
+                        {{ __('hr::action.open_signature') }}
+                    </x-ui.button>
+                @endif
+            </div>
+            <p class="mb-2 text-2xs text-(--color-ink-muted)">{{ __('hr::message.salary_waiting_note') }}</p>
+            <dl class="space-y-1 text-sm">
+                @foreach ($waiting['lines'] as $line)
+                    <div class="flex items-center justify-between gap-2">
+                        <dt class="text-(--color-ink-muted)">{{ $line['head']?->name() ?? '—' }}</dt>
+                        <dd class="num">{{ \App\Core\Support\Money::format($line['amount']) }}</dd>
+                    </div>
+                @endforeach
+            </dl>
+        </div>
+    @endif
+
     @if ($heads->isEmpty())
         <div data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-8 text-center">
             <h2 class="text-lg font-semibold">{{ __('hr::message.empty_heads') }}</h2>

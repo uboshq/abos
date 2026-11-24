@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Http\Controllers;
 
 use App\Core\Engines\Report\ReportEngine;
+use App\Core\ListFilter\Facets;
 use App\Core\Services\MenuBuilder;
 use App\Core\Support\CompanyContext;
 use App\Http\Controllers\Controller;
@@ -88,6 +89,10 @@ class ReportController extends Controller implements HasMiddleware
          * ধরা পড়েছে HP-র পরীক্ষকের ২২টা মেনু ধরে ধরে খোলায়, ১৪ আগস্ট।
          */
         'inflow' => 'accounts.inflow',
+        // ⭐ টাকা আসার ভাগ — দিন, শাখা, মাধ্যম; পাতার ট্যাব ([[CoreReports::inflowBreakdowns()]]; মালিক, ২৩ নভেম্বর ২০২৬)
+        'inflow-day' => \App\Modules\Accounts\Reports\CoreReports::INFLOW_DAY,
+        'inflow-branch' => \App\Modules\Accounts\Reports\CoreReports::INFLOW_BRANCH,
+        'inflow-channel' => \App\Modules\Accounts\Reports\CoreReports::INFLOW_CHANNEL,
         'ledger' => 'accounts.ledger',
         // ⭐ কাস্টমার ও সাপ্লায়ার লেজার — মালিক, ৩ অক্টোবর ২০২৬
         'customer-ledger' => PartyLedgerReports::CUSTOMER,
@@ -176,6 +181,39 @@ class ReportController extends Controller implements HasMiddleware
             : (bool) $request->user()?->can('accounts.report'), 403);
     }
 
+    /**
+     * ⭐ টাকা আসার রূপগুলো — পাতার মাথায় ট্যাব (মালিকের অনুমোদিত নমুনা, ২৩ নভেম্বর ২০২৬): স্লাগ → ট্যাবের নামের চাবি।
+     *
+     * @var array<string, string>
+     */
+    private const INFLOW_TABS = [
+        'inflow-day' => 'accounts::inflow.tab_day',
+        'inflow-branch' => 'accounts::inflow.tab_branch',
+        'inflow-channel' => 'accounts::inflow.tab_channel',
+        'inflow' => 'accounts::inflow.tab_papers',
+    ];
+
+    /**
+     * টাকা আসার পাতায় ট্যাব — অন্য রিপোর্টে কিছুই নয়। ⓘ ঠিকানায় সময় আর ছাঁকনি থেকে যায়; পাতা, খোঁজা আর "Top" নয়।
+     *
+     * @return array{reportTabs?: list<array{key: string, label: string, url: string, active: bool}>}
+     */
+    private function inflowTabs(Request $request, string $slug): array
+    {
+        if (! isset(self::INFLOW_TABS[$slug])) {
+            return [];
+        }
+
+        $carry = $request->except(['page', 'q', 'top', 'compare', 'export', 'print', 'hide', 'sort', 'dir']);
+        $tabs = [];
+
+        foreach (self::INFLOW_TABS as $tab => $label) {
+            $tabs[] = ['key' => $tab, 'label' => (string) __($label), 'url' => route('accounts.report.show', ['slug' => $tab, ...$carry]), 'active' => $tab === $slug];
+        }
+
+        return ['reportTabs' => $tabs];
+    }
+
     public function show(Request $request, string $slug): View|Response
     {
         $this->authorizeReport($request, $slug);
@@ -255,6 +293,7 @@ class ReportController extends Controller implements HasMiddleware
         }
 
         return view('accounts::report.show', [
+            ...$this->inflowTabs($request, $slug),
             'menu' => $this->menu->forUser($request->user()),
             'slug' => $slug,
             'report' => $definition,
@@ -277,7 +316,8 @@ class ReportController extends Controller implements HasMiddleware
                 : collect(),
             'accounts' => $definition->hasFilter('account')
                 // ⓘ টাকার হিসাবে কেবল টাকার খাত — ফোনের একই তালিকা থেকে ([[MoneyAccountFilter]])
-                ? ($key === MonthlyCashReport::KEY
+                // ⓘ টাকা আসার সব রূপেও তাই — সেখানে খাত মানে টাকা যে খাতে ঢুকেছে
+                ? ($key === MonthlyCashReport::KEY || isset(self::INFLOW_TABS[$slug])
                     ? \App\Modules\Accounts\Reports\Filters\MoneyAccountFilter::accounts()->get()
                     : Account::query()->postable()->active()->orderBy('code')->get())
                 : collect(),
@@ -338,8 +378,15 @@ class ReportController extends Controller implements HasMiddleware
                     'name' => app()->getLocale() === 'bn' && filled($p->name_bn) ? $p->name_bn : $p->name_en,
                 ]),
 
-            // ⓘ রিপোর্টের নিজের ছাঁকনি — ভাগের পাতার `$extraFilters` দরজা দিয়ে (চেকের দিক আর অবস্থা)
-            'extraFilters' => $key === ChequeReports::KEY ? 'accounts::report.partials.cheque-filters' : null,
+            // ⓘ রিপোর্টের নিজের ছাঁকনি — চেকের দিক আর অবস্থা, ডান পাশের প্যানেলে ([[ReportPanel]]; আগে `cheque-filters` ঘর, একই চাবি)
+            'extraFacets' => $key === ChequeReports::KEY ? [
+                Facets::pick('direction', __('accounts::cheque.direction'),
+                    collect(['received', 'issued'])->mapWithKeys(fn (string $c) => [$c => __('accounts::cheque.state_'.$c)])->all(),
+                    __('accounts::cheque.direction_all'))->look('violet', '⇄'),
+                Facets::pick('status', __('accounts::cheque.status'),
+                    collect(['pdc', 'due', 'pending', 'deposited', 'cleared', 'bounced', 'cancelled'])->mapWithKeys(fn (string $c) => [$c => __('accounts::cheque.state_'.$c)])->all(),
+                    __('accounts::cheque.status_all'))->look('amber', '●'),
+            ] : (isset(self::INFLOW_TABS[$slug]) ? \App\Core\Engines\Report\ReportChoices::facets($definition) : []),
         ] + ($key === 'accounts.trial_balance' ? [
             // ⭐ রেওয়ামিল বিবরণী আকারে — দল, উপমোট, অবস্থার সারি; একই ইঞ্জিনের সারি থেকে (মালিক, ১৭ নভেম্বর ২০২৬)
             'statement' => app(TrialBalanceStatement::class)->build($request->only($definition->requestKeys())),

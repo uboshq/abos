@@ -32,6 +32,17 @@
         ['key' => 'status', 'label' => __('accounts::field.state'), 'width' => '11rem',
          'render' => fn ($s) => view('sales::scheme.partials.state', ['scheme' => $s])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('status', __('accounts::field.state'),
+            collect([
+                \App\Modules\Sales\Models\Scheme::DRAFT,
+                \App\Modules\Sales\Models\Scheme::ACTIVE,
+                \App\Modules\Sales\Models\Scheme::CANCELLED,
+            ])->mapWithKeys(fn ($state) => [$state => __('sales::scheme_state.' . $state)])->all(),
+            __('sales::scheme_state.all')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -62,13 +73,14 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::menu.schemes')"
                           :columns="$columns"
                           :search-placeholder="__('sales::field.scheme_search')"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
                 {{-- খালি পড়ে থাকা actions স্লটটাই এখন বসানোর পথ — শর্তটা
                      হুবহু সেটাই যেটায় আগে উপরের ফর্মটা দেখা যেত। --}}
                 <x-slot:actions>
@@ -78,25 +90,6 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
-
-                {{-- অবস্থা ধরে ছাঁকনি — খসড়াগুলো আলাদা করে দেখা লাগে,
-                     কারণ ওগুলোই এখনো কিছু দেয় না। --}}
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <select name="status"
-                            class="h-(--spacing-field) rounded-(--radius-field) border
-                                   border-(--color-border) bg-(--color-surface-card) px-3">
-                        <option value="">{{ __('sales::scheme_state.all') }}</option>
-                        @foreach ([
-                            \App\Modules\Sales\Models\Scheme::DRAFT,
-                            \App\Modules\Sales\Models\Scheme::ACTIVE,
-                            \App\Modules\Sales\Models\Scheme::CANCELLED,
-                        ] as $state)
-                            <option value="{{ $state }}" @selected($status === $state)>
-                                {{ __('sales::scheme_state.' . $state) }}
-                            </option>
-                        @endforeach
-                    </select>
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -106,4 +99,5 @@
 
     {{ $schemes->links() }}
     <x-ui.list-totals :rows="$schemes" />
+    </x-ui.filter-layout>
 </x-layouts.app>

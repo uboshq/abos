@@ -12,8 +12,12 @@ use App\Http\Controllers\Controller;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Models\MaternityDelivery;
+use App\Modules\Hr\Services\MaternityDeliveryService;
 use App\Modules\Hr\Services\LeaveService;
+use App\Modules\Hr\Services\LeaveTypeDefaults;
 use App\Modules\Hr\Support\BranchReach;
+use App\Modules\Hr\Support\LeaveSigner;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -36,16 +40,25 @@ class LeaveController extends Controller implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('can:hr.leave.view', only: ['index', 'create', 'types']),
+            // ⓘ তালিকার দরজা নীতিতে ([[LeaveApplicationPolicy::viewAny()]]) — চাবি, বা দল থাকা ব্যবস্থাপক; মেনুর সারিও তাই
+            new Middleware('can:hr.leave.view', only: ['create', 'types']),
             new Middleware('can:hr.leave.manage', only: ['store', 'cancel', 'storeType', 'installTypes']),
-            new Middleware('can:hr.leave.approve', only: ['approve', 'reject']),
+            // ⓘ চাবি দরজায়; "কার ছুটি" — কর্মীর নিজের ব্যবস্থাপক বা HR — সেবায় ([[LeaveSigner]], ঘাটতির তালিকা #১৫)
+            new Middleware('can:hr.leave.approve', only: ['approve', 'reject', 'recordDelivery', 'signDelivery', 'rejectDelivery']),
         ];
     }
 
     public function index(Request $request): View
     {
         // ⭐ শাখার দেয়াল — কেবল নাগালের কর্মীদের আবেদন (চূড়ান্ত অডিট ⛔১৭, [[BranchReach]])
-        $query = $this->reach()->throughEmployee(LeaveApplication::query(), $request->user())
+        // ⭐ আর হেডারের বাছা শাখা ([[BranchReach::viewing()]], fe, ২১ অক্টোবর ২০২৬)
+        // ⭐ সাথে নিজের দলের আবেদন, নাগালের বাইরে হলেও — সারিতে বোতামের বদলে "HR-এর কাছে গেছে" ([[LeaveSigner::fallsToHr()]])
+        $this->authorize('viewAny', LeaveApplication::class);
+
+        // ⭐ চাবি ছাড়া ব্যবস্থাপক — কেবল নিজের দলের আবেদন, শাখার বাকিদের নয় (a6, ২১ অক্টোবর ২০২৬)
+        $query = ($request->user()->can('hr.leave.view')
+                ? LeaveSigner::listFor($request->user())
+                : LeaveApplication::query()->whereIn('hr_leave_applications.employee_id', app(LeaveSigner::class)->teamOf($request->user())))
             ->with(['employee', 'leaveType', 'decider'])
             ->when($request->boolean('pending'), fn ($q) => $q->pending());
 
@@ -114,6 +127,8 @@ class LeaveController extends Controller implements HasMiddleware
             // ⓘ "1e1" পরের হিসাবে (bcmath) ৫০০ দিত, আর "1.55" এক ঘরে মাপা হয়ে কোটা পার হত অথচ খাতায় 1.6 বসত
             'days' => ['required', 'decimal:0,1', 'regex:/^\d+(\.\d)?$/', 'gt:0', 'max:'.LeaveService::MAX_SPAN_DAYS],
             'reason' => ['nullable', 'string', 'max:500'],
+            // ⭐ মাতৃত্বকালীন ছুটিতে প্রসবের সম্ভাব্য দিন (ধারা ৪৭; সেবা দেখে কখন লাগে)
+            'expected_delivery_date' => ['nullable', 'date'],
         ], [
             'days.decimal' => __('hr::validation.days_format'),
             'days.regex' => __('hr::validation.days_format'),
@@ -130,6 +145,7 @@ class LeaveController extends Controller implements HasMiddleware
             $data['to_date'],
             (string) $data['days'],
             $data['reason'] ?? null,
+            $data['expected_delivery_date'] ?? null,
         );
 
         return redirect()->route('hr.leave.index')
@@ -169,6 +185,44 @@ class LeaveController extends Controller implements HasMiddleware
         return back()->with('saved', __('hr::message.leave_cancelled'));
     }
 
+    /**
+     * ⭐ প্রসবের আসল দিন লেখা — কিছুই সরে না, অনুরোধ "সইয়ের অপেক্ষায়" (ধারা ৪৫; [[MaternityDeliveryService::record()]])।
+     */
+    public function recordDelivery(Request $request, int $application): RedirectResponse
+    {
+        $date = $request->validate(['actual_delivery_date' => ['required', 'date']])['actual_delivery_date'];
+
+        app(MaternityDeliveryService::class)->record($this->reachable($request, $application)->load('leaveType'), (string) $date, $request->user());
+
+        return back()->with('saved', __('hr::message.delivery_recorded'));
+    }
+
+    /** ⭐ "সই দিন" — তবেই ছুটির শেষ দিন সরে ([[MaternityDeliveryService::sign()]]) */
+    public function signDelivery(Request $request, int $delivery): RedirectResponse
+    {
+        app(MaternityDeliveryService::class)->sign($this->reachableDelivery($request, $delivery), $request->user());
+
+        return back()->with('saved', __('hr::message.delivery_signed_short'));
+    }
+
+    public function rejectDelivery(Request $request, int $delivery): RedirectResponse
+    {
+        $remarks = $request->validate(['remarks' => ['required', 'string', 'max:500']])['remarks'];
+
+        app(MaternityDeliveryService::class)->reject($this->reachableDelivery($request, $delivery), $request->user(), $remarks);
+
+        return back()->with('saved', __('hr::message.delivery_rejected'));
+    }
+
+    /** অনুরোধটা — কেবল কর্মী নাগালে থাকলে; নইলে ৪০৩ ([[reachable()]]-এর একই দেয়াল) */
+    private function reachableDelivery(Request $request, int $delivery): MaternityDelivery
+    {
+        $found = MaternityDelivery::query()->findOrFail($delivery);
+        $this->reachable($request, (int) $found->leave_application_id);
+
+        return $found;
+    }
+
     // ── ছুটির ধরন ─────────────────────────────────────────────────────
 
     public function types(Request $request): View
@@ -178,7 +232,8 @@ class LeaveController extends Controller implements HasMiddleware
         return view('hr::leave.types', [
             'menu' => $this->menu->forUser($request->user()),
             'types' => $types,
-            'canInstallDefaults' => $types->isEmpty(),
+            // ⭐ কোনো প্রমিত ধরন বাকি থাকলেই — নতুন প্রমিত ধরন (মাতৃত্বকালীন) চলতি কোম্পানিতেও পৌঁছায় ([[LeaveTypeDefaults]], a6, ২১ অক্টোবর ২০২৬)
+            'canInstallDefaults' => app(LeaveTypeDefaults::class)->anyMissing(),
         ]);
     }
 
@@ -213,35 +268,14 @@ class LeaveController extends Controller implements HasMiddleware
     }
 
     /**
-     * প্রমিত ছুটির ধরনগুলো।
+     * প্রমিত ছুটির ধরনগুলো — তালিকা [[LeaveTypeDefaults]]-এ (নতুন কোম্পানি আর কনসোলের একই তালিকা; a6, ২১ অক্টোবর ২০২৬)।
      *
-     * বাংলাদেশের শ্রম আইনের প্রচলিত ভাগ। প্রতিষ্ঠান নিজের নীতি অনুযায়ী
-     * দিন বদলে নেবে — কিন্তু খালি তালিকা থেকে শুরু করতে হবে না।
+     * বাংলাদেশের শ্রম আইনের প্রচলিত ভাগ। প্রতিষ্ঠান নিজের নীতি অনুযায়ী দিন বদলে নেবে — কিন্তু খালি তালিকা থেকে শুরু করতে হবে না।
+     * ⓘ যা আছে তা আবার বসে না; কেবল বাকিগুলো।
      */
     public function installTypes(): RedirectResponse
     {
-        $rows = [
-            ['CASUAL', 'Casual Leave', 'নৈমিত্তিক ছুটি', 10, true],
-            ['SICK', 'Sick Leave', 'অসুস্থতাজনিত ছুটি', 14, true],
-            ['EARNED', 'Earned Leave', 'অর্জিত ছুটি', 15, true],
-            ['UNPAID', 'Leave Without Pay', 'বিনা বেতনে ছুটি', 0, false],
-        ];
-
-        foreach ($rows as [$code, $en, $bn, $days, $paid]) {
-            if (LeaveType::query()->where('code', $code)->withTrashed()->exists()) {
-                continue;
-            }
-
-            LeaveType::create([
-                'code' => $code,
-                'name_en' => $en,
-                'name_bn' => $bn,
-                'days_per_year' => $days,
-                'is_paid' => $paid,
-                'is_active' => true,
-                'created_by' => auth()->id(),
-            ]);
-        }
+        app(LeaveTypeDefaults::class)->install();
 
         return back()->with('saved', __('hr::message.leave_types_installed'));
     }

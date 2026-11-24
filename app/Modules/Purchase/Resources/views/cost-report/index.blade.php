@@ -202,7 +202,7 @@
                                     <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current"><path d="M7 3h10v4H7V3ZM5 9h14a2 2 0 0 1 2 2v6h-4v4H7v-4H3v-6a2 2 0 0 1 2-2Zm4 8h6v4H9v-4Z"/></svg>
                                     {{ __('purchase::cost_report.print') }}
                                 </a>
-                                <a href="{{ $exportUrl('pdf') }}" data-no-prefetch data-download="pdf" class="{{ $button }}">{{ __('purchase::cost_report.pdf') }}</a>
+                                <a href="{{ $exportUrl('pdf') }}" target="_blank" rel="noopener" data-no-prefetch data-download="pdf" class="{{ $button }}">{{ __('purchase::cost_report.pdf') }}</a>
                                 <a href="{{ $exportUrl('xlsx') }}" data-no-prefetch data-download="xlsx" class="{{ $button }}">{{ __('purchase::cost_report.excel') }}</a>
                             @endif
                         </x-slot:actions>

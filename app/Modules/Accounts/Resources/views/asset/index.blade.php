@@ -67,6 +67,16 @@
             'render' => fn ($a) => view('accounts::asset.partials.status', ['asset' => $a]),
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('category', __('accounts::asset.category'),
+            collect($categories)->mapWithKeys(fn ($category) => [$category->id => $category->name()])->all(),
+            __('accounts::asset.all_categories')),
+        \App\Core\ListFilter\Facets::pick('status', __('accounts::asset.status'),
+            collect(\App\Modules\Accounts\Models\FixedAsset::STATUSES)->mapWithKeys(fn ($status) => [$status => __('accounts::asset.status_'.$status)])->all(),
+            __('accounts::asset.all_statuses')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -122,13 +132,15 @@
     {{-- ⭐ শিরোনাম, "নতুন সম্পদ" আর খোঁজা এক বাক্সে, তালিকার মাথায় — মালিকের
          নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*।
          ⓘ অবচয়ের দৌড়টা বাক্সের বাইরে, উপরেই — ওটা তালিকার অংশ নয়, মাসের কাজ। --}}
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('accounts::asset.title')"
                 :subtitle="__('accounts::asset.subtitle')"
                 :search-placeholder="__('accounts::message.asset_search')"
                 :columns="$columns"
-                :filter-labels="['category' => __('accounts::asset.category'), 'status' => __('accounts::asset.status')]">
+                :filter-labels="['category' => __('accounts::asset.category'), 'status' => __('accounts::asset.status')]"
+                :facets="$facetPanel">
                 {{-- শর্তটা হুবহু সেটাই যেটায় আগে নিচের ফর্মটা দেখা যেত। --}}
                 <x-slot:actions>
                     {{-- ⭐ লেবেল ছাপা — এই তালিকার ছাঁকা শাখার সব চালু সম্পদ (ধাপ ৪) --}}
@@ -142,24 +154,6 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
-
-                {{-- ⭐ শ্রেণি আর অবস্থা ধরে ছাঁকা (স্থায়ী সম্পদ ধাপ ১) --}}
-                <select name="category" aria-label="{{ __('accounts::asset.category') }}"
-                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2 text-sm">
-                    <option value="">{{ __('accounts::asset.all_categories') }}</option>
-                    @foreach ($categories as $category)
-                        <option value="{{ $category->id }}" @selected((int) request('category') === $category->id)>{{ $category->name() }}</option>
-                    @endforeach
-                </select>
-                <select name="status" aria-label="{{ __('accounts::asset.status') }}"
-                        class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                               bg-(--color-surface-app) px-2 text-sm">
-                    <option value="">{{ __('accounts::asset.all_statuses') }}</option>
-                    @foreach (\App\Modules\Accounts\Models\FixedAsset::STATUSES as $status)
-                        <option value="{{ $status }}" @selected(request('status') === $status)>{{ __('accounts::asset.status_'.$status) }}</option>
-                    @endforeach
-                </select>
             </x-ui.toolbar>
         </form>
 
@@ -172,4 +166,5 @@
 
     <div class="mt-3">{{ $assets->links() }}</div>
     <x-ui.list-totals :rows="$assets" :grand="$grand ?? []" :columns="$columns" />
+    </x-ui.filter-layout>
 </x-layouts.app>

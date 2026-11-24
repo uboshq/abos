@@ -33,7 +33,7 @@ use Illuminate\Support\Facades\DB;
  * নাহলে লাভ-ক্ষতির হিসাবে আয় থাকত কিন্তু তার পেছনের খরচ থাকত না, আর
  * মুনাফা বাস্তবের চেয়ে বেশি দেখাত।
  */
-class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \App\Core\Contracts\SettlementTerms, \App\Core\Contracts\NoteTarget
+class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \App\Core\Contracts\SettlementTerms, \App\Core\Contracts\NoteTarget, \App\Core\Contracts\NoteTargetLines, \App\Core\Contracts\ReturnsGoodsForNotes
 {
     // ⭐ বিজ্ঞপ্তিতে "নাম · পয়েন্ট" ([[NamesItsCustomerInNotices]])
     use \App\Modules\Sales\Models\Concerns\NamesItsCustomerInNotices;
@@ -768,5 +768,114 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
         $base = bcsub(bcsub(bcsub((string) $this->total, (string) $this->tax, 4), (string) ($this->freight_charge ?? '0'), 4), (string) ($this->rounding_amount ?? '0'), 4);
 
         return bccomp($base, '0', 4) > 0 && bccomp((string) $this->tax, '0', 4) > 0 ? bcdiv((string) $this->tax, $base, 6) : '0';
+    }
+    /**
+     * ⭐ বিলের সারি নোটের জন্য — "⇣ মূল বিল থেকে আনুন" (মালিকের নকশা v5, ২৩ নভেম্বর ২০২৬; [[\App\Core\Contracts\NoteTargetLines]])।
+     *
+     * ⓘ দর এককপ্রতি নিট, ভ্যাট বাদে — বিলের ছাড় আর গোলের ভাগ বাদ দিয়ে, ফেরত যেভাবে মাপে ঠিক সেভাবে
+     * ([[SalesReturnService::shareOfTheBill()]]); তাই নোটের "মাল ফেরত" সারি আর তার বিক্রয় ফেরত একই অঙ্ক বলে।
+     */
+    public function noteTargetLines(): array
+    {
+        $share = app(\App\Modules\Sales\Services\SalesReturnService::class);
+        $bn = app()->getLocale() === 'bn';
+
+        $all = $this->lines()->with(['product.unit', 'invoice'])->get();
+
+        // ⓘ বিলের সারি ধরে পাকা বিক্রয় ফেরত — নোটের পরিমাণের সীমা এটুকু বাদ দেয় (একই মাল দুবার ফেরত নয়)
+        $returned = SalesReturnLine::query()
+            ->whereIn('sales_invoice_line_id', $all->pluck('id'))
+            ->whereHas('return', fn ($q) => $q->withoutGlobalScopes()->whereIn('status', \App\Core\Support\DocumentStatus::POSTED))
+            ->groupBy('sales_invoice_line_id')
+            ->selectRaw('sales_invoice_line_id, COALESCE(SUM(qty), 0) as returned')
+            ->pluck('returned', 'sales_invoice_line_id');
+
+        return $all
+            ->filter(fn (SalesInvoiceLine $l) => bccomp((string) $l->qty, '0', 4) > 0 && $l->product !== null)
+            ->map(function (SalesInvoiceLine $l) use ($share, $bn, $returned) {
+                $qty = (string) $l->qty;
+                [$net, $tax] = $share->shareOfTheBill($l, $qty);
+                $unit = $l->product->unit;
+
+                return [
+                    'line_id' => (int) $l->id,
+                    'product_id' => (int) $l->product_id,
+                    'name' => $l->product->name(),
+                    'unit' => (string) ($unit === null ? '' : ($bn && filled($unit->name_bn) ? $unit->name_bn : $unit->name_en)),
+                    'qty' => bcadd($qty, '0', 4),
+                    'rate' => bcdiv($net, $qty, 4),
+                    'vat_rate' => bccomp($net, '0', 4) > 0 ? bcadd(bcdiv(bcmul($tax, '100', 8), $net, 6), '0.005', 2) : '0.00',
+                    'in_stock' => null,
+                    'returned' => bcadd((string) ($returned[$l->id] ?? '0'), '0', 4),
+                ];
+            })->values()->all();
+    }
+
+    public function noteTargetIssuedAt(): ?\DateTimeInterface
+    {
+        return $this->created_at;
+    }
+
+    /**
+     * ⭐ ক্রেডিট নোটের "মাল ফেরত এসেছে" সারি — বিক্রয় ফেরত (SR), এই বিলে বাঁধা, এখনই পাকা ([[\App\Core\Contracts\ReturnsGoodsForNotes]])।
+     *
+     * ⓘ ফেরতের কারণ বিক্রয় ফেরতের প্রথম চালু কারণ (টীকা লাগে না এমনটা আগে), টীকায় নোটের নম্বর আর বিবরণ। নোটের সই এই ফেরতেরও সই।
+     * ⛔ ফেরতই মাল তাকে তোলে আর টাকা খাতায় তোলে (Dr ৪১১০ · Dr ২১২০ / Cr ১১১০; মজুদ Dr ১১২০ / Cr ৫১০০) — নোট ঐ সারি আবার তোলে না।
+     */
+    public function noteReturnGoods(array $lines, string $date, string $narration, string $noteNo): array
+    {
+        $service = app(\App\Modules\Sales\Services\SalesReturnService::class);
+        $reason = \App\Modules\MasterData\Models\ReasonCode::query()
+            ->inContext(\App\Modules\MasterData\Models\ReasonCode::SALES_RETURN)
+            ->active()
+            ->orderBy('needs_note')
+            ->orderBy('id')
+            ->first();
+        $note = trim($noteNo.' — '.$narration, ' —');
+
+        $return = $service->create([
+            'customer_id' => $this->customer_id,
+            'warehouse_id' => $this->warehouse_id,
+            'sales_invoice_id' => $this->id,
+            'trx_date' => $date,
+            'reason_code_id' => $reason?->id,
+            'reason_note' => $note,
+            'narration' => $note,
+        ], array_map(fn (array $l) => [
+            'product_id' => (int) $l['product_id'],
+            'qty' => (string) $l['qty'],
+            'sales_invoice_line_id' => (int) $l['line_id'],
+            'reason_code_id' => $reason?->id,
+            'reason_note' => $note,
+        ], $lines));
+
+        $return = $service->confirm($return, approvedUpstream: true);
+
+        return [
+            'type' => SalesReturn::drillSourceType(),
+            'id' => (int) $return->id,
+            'no' => (string) $return->document_no,
+            'lines' => $return->lines->map(fn ($rl) => [
+                'line_id' => (int) $rl->sales_invoice_line_id,
+                'amount' => (string) $rl->amount,
+                'tax' => (string) $rl->tax,
+            ])->values()->all(),
+        ];
+    }
+
+    /** নোট বাতিল — তার বিক্রয় ফেরতও বাতিল; আগেই বাতিল হলে কিছু নয় */
+    public static function noteCancelReturn(string $type, int $id, string $reason): void
+    {
+        if ($type !== SalesReturn::drillSourceType()) {
+            return;
+        }
+
+        $return = SalesReturn::query()->withoutGlobalScopes()->whereKey($id)->first();
+
+        if ($return === null || $return->status === \App\Core\Support\DocumentStatus::CANCELLED) {
+            return;
+        }
+
+        app(\App\Modules\Sales\Services\SalesReturnService::class)->cancel($return, $reason);
     }
 }

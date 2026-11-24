@@ -338,5 +338,20 @@ export default function partySearch({ value = '', options = [], uid = 'party', c
             this.announce()
             this.$nextTick(() => this.$refs.trigger?.focus())
         },
+
+        /**
+         * ⭐ বাইরে থেকে মান বসানো — ছাঁকনির প্যানেল ([[filterPanel]]; মালিক, ২৩ নভেম্বর ২০২৬): "সব সরান" ঘর খালি করে, "বন্ধ" খোলার
+         *   সময়ের বাছাই ফেরায়। ⓘ ঘটনা `party-search-set`, `detail.value` — খালি মানে কিছু বাছা নেই।
+         * ⓘ `change` পাঠানো হয় না — প্যানেল নিজেই ডেকেছে, নিজের হিসাব নিজে করে; পাঠালে আবার প্যানেলেই ফিরত।
+         */
+        setFromOutside(event) {
+            const next = event?.detail?.value
+            this.value = next === null || next === undefined ? '' : String(next)
+            this.closeList()
+
+            if (this.$refs.input) {
+                this.$refs.input.value = this.value
+            }
+        },
     }
 }

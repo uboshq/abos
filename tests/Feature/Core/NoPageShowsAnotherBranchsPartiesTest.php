@@ -39,7 +39,7 @@ final class NoPageShowsAnotherBranchsPartiesTest extends TestCase
     /** পাতা → "সব শাখা"-য় কোন নাম দেখা যাওয়ার কথা (খালি = কেবল অনুপস্থিতি মাপা) */
     private const PAGES = [
         'accounts.cheque.create' => ['c', 's'],
-        'accounts.note.create' => ['c'], // ⓘ খোলে ক্রেডিট নোটে — কেবল গ্রাহক
+        'accounts.note.cn.create' => ['c'], // ⓘ ক্রেডিট নোট — প্রথমে গ্রাহক (পুরনো `accounts.note.create` এখন এখানে ফেরায়, নকশা v5)
         'accounts.control.duplicates' => ['c'],
         'finance.hand_loan.create' => ['c', 's'],
         'finance.rental.create' => ['c', 's'],

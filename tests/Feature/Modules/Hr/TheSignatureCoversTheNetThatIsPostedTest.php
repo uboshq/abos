@@ -77,6 +77,18 @@ final class TheSignatureCoversTheNetThatIsPostedTest extends TestCase
          * ⓘ দৌড়টা — সই দেখার মাঝখানে (সইয়ের সারি পড়ার মুহূর্তে) আরেক ট্যাবে মূল বেতন ২০,০০০ থেকে ৩০,০০০, আর "আবার বানান"।
          * একবারই — দ্বিতীয় নিশ্চিতে আর নয়।
          */
+        /*
+         * ⓘ বেতনের রান সবসময় দুই হাতে (fe, ২১ অক্টোবর ২০২৬) — খসড়ার অঙ্কেও সই লাগে। তাই আগে খসড়ার অঙ্কে সই, তারপর দৌড়।
+         */
+        try {
+            app(PayrollService::class)->confirm($run->fresh());
+            $this->fail('⛔ খসড়ার রান সই ছাড়া খাতায় বসল');
+        } catch (ValidationException) {
+        }
+        $signed = Approval::query()->where('approvable_type', $run->getMorphClass())->where('approvable_id', $run->id)
+            ->where('status', Approval::PENDING)->sole();
+        app(ApprovalEngine::class)->approve($signed, $signer->fresh());
+
         $raced = false;
         DB::listen(function (QueryExecuted $query) use (&$raced, $run): void {
             if ($raced || ! str_contains($query->sql, 'from `approvals`')) {
@@ -100,6 +112,9 @@ final class TheSignatureCoversTheNetThatIsPostedTest extends TestCase
         $this->assertSame(0, LedgerEntry::query()->where('source_type', PayrollRun::SOURCE_TYPE)->where('source_id', $run->id)->count(), '⛔ খাতায় বেতন বসল, সই ছাড়া');
 
         $asked = Approval::query()->where('approvable_type', $run->getMorphClass())->where('approvable_id', $run->id)->where('status', Approval::PENDING)->sole();
-        $this->assertSame(0, bccomp((string) $asked->amount, bcadd($draftNet, '10000', 4), 4), '⛔ সই চাওয়া হল পুরনো অঙ্কে');
+        // ⓘ খসড়ার অঙ্কের সই বদলানো কাগজ ঢাকে না — নতুন অনুরোধ, পুরনো সই খাটেনি
+        $this->assertNotSame((int) $signed->id, (int) $asked->id, '⛔ খসড়ার অঙ্কের সইয়ে বদলানো রান পার হওয়ার পথ খোলা');
+        $this->assertFalse($signed->fresh()->isUsed(), '⛔ খসড়ার অঙ্কের সই খাটানো হলো');
+        $this->assertSame(0, bccomp((string) $asked->signedAmount(), bcadd($draftNet, '10000', 4), 4), '⛔ সই চাওয়া হল পুরনো অঙ্কে');
     }
 }

@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Carbon;
 
 /** একটা অনুমোদনের অনুরোধ। polymorphic — যেকোনো ডকুমেন্টে বসে। */
-class Approval extends Model implements Drillable
+class Approval extends Model implements Drillable, \App\Core\Contracts\GuardsFieldsPerRow
 {
     use BelongsToCompany;
     use BustsDashboardFigures;
@@ -40,6 +40,9 @@ class Approval extends Model implements Drillable
      * নতুন অনুরোধ নতুন কাগজে ([[ApprovalEngine::sendBack()]])। ⛔ "না"-র মতো মডিউলকে জানানো হয় না — কাগজটা ফেলে দেওয়ার কিছু নেই।
      */
     public const RETURNED = 'returned';
+
+    /** ⛔ চাবির পেছনের অঙ্ক — `payload`-এর এই ঘরে এনক্রিপ্ট করা, `amount` খালি ([[signedAmount()]], [[ApprovalRules::amountKey()]]) */
+    public const SEALED_AMOUNT = 'sealed_amount';
 
     protected $fillable = [
         'company_id', 'approvable_type', 'approvable_id', 'module', 'action',
@@ -89,6 +92,47 @@ class Approval extends Model implements Drillable
      * ⭐ বাস্তবে কারো পথ আটকায় না: নিচে নামলে অঙ্কটা সীমার নিচে পড়ে আর
      * `request()` এমনিতেই `null` ফেরায়।
      */
+    /**
+     * ⭐ সইয়ের অঙ্ক — খোলা ঘরে থাকলে সেটা, নাহলে `payload`-এ এনক্রিপ্ট করা ([[SEALED_AMOUNT]])। a6, ২১ অক্টোবর ২০২৬।
+     *
+     * ⛔ কেবল ইঞ্জিনের হিসাবের জন্য (সই কোন অঙ্ক ঢাকে, কর্তৃত্বের সীমা) — পর্দায় ছাপার জন্য নয়: যে কাজের অঙ্ক চাবির পেছনে
+     * ([[ApprovalRules::amountKey()]]), তার অঙ্ক কেবল মডিউলের সারাংশ দেখায়, চাবি মেনে।
+     */
+    /**
+     * ⛔ অডিটে অনুরোধের অঙ্ক — যে কাজের অঙ্ক চাবির পেছনে ([[ApprovalRules::amountKey()]], বেতনের রান), তার সারিতে সেই চাবি; বাকিরা
+     * খোলা (fe-র উত্তর খ, a6, ২১ অক্টোবর ২০২৬; [[GuardsFieldsPerRow]])। ⓘ ঢাকনা পড়ার আগের অডিট-সারিতে নিট খোলা লেখা — পড়ার
+     * মুহূর্তে ঢাকা পড়ে। ⓘ কোম্পানির দেয়াল থাকে ([[BelongsToCompany]]); মুছে-যাওয়া বা অন্য কোম্পানির সারি = খোলা নিয়ম নেই।
+     */
+    public static function fieldPermissionFor(int $id, string $field): ?string
+    {
+        if ($field !== 'amount') {
+            return null;
+        }
+
+        $row = static::query()->find($id, ['id', 'module', 'action']);
+
+        return $row === null ? null : app(\App\Core\Engines\Approval\ApprovalRules::class)->amountKey((string) $row->module, (string) $row->action);
+    }
+
+    public function signedAmount(): ?string
+    {
+        if ($this->amount !== null) {
+            return (string) $this->amount;
+        }
+
+        $sealed = ((array) ($this->payload ?? []))[self::SEALED_AMOUNT] ?? null;
+
+        if (! is_string($sealed)) {
+            return null;
+        }
+
+        try {
+            return bcadd(\Illuminate\Support\Facades\Crypt::decryptString($sealed), '0', 4);
+        } catch (\Illuminate\Contracts\Encryption\DecryptException|\ValueError) {
+            return null;
+        }
+    }
+
     public function covers(?string $amount): bool
     {
         /*
@@ -99,7 +143,8 @@ class Approval extends Model implements Drillable
          * `ValueError` ছোঁড়ে — অর্থাৎ পাহারাটা বসানোর ফল হত একটা ভেঙে
          * পড়া পোস্টিং, আটকানো নয়।
          */
-        $signed = $this->amount === null ? null : (string) $this->amount;
+        // ⓘ ঢাকা অঙ্কও — খোলা ঘর খালি, অঙ্কটা `payload`-এ এনক্রিপ্ট করা ([[signedAmount()]], a6, ২১ অক্টোবর ২০২৬)
+        $signed = $this->signedAmount();
 
         $signed = ($signed === null || $signed === '') ? null : $signed;
         $amount = ($amount === null || $amount === '') ? null : $amount;

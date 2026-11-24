@@ -400,6 +400,12 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/', [\App\Modules\Sales\Http\Controllers\CustomerTargetController::class, 'store'])->name('store');
     });
 
+    // ⭐ পণ্যের মাসিক বিক্রির লক্ষ্য — পণ্য ধরে লক্ষ্য বনাম বিক্রয়ের জন্য (মালিক, ২৩ নভেম্বর ২০২৬)
+    Route::prefix('product-targets')->name('product_target.')->group(function () {
+        Route::get('/', [\App\Modules\Sales\Http\Controllers\ProductTargetController::class, 'index'])->name('index');
+        Route::post('/', [\App\Modules\Sales\Http\Controllers\ProductTargetController::class, 'store'])->name('store');
+    });
+
     // রুটের খাতা — তালিকা, একটা রুট, সাপ্তাহিক ছক আর মাসের লক্ষ্য (NEXUS §২৭)
     Route::prefix('routes')->name('route.')->group(function () {
         Route::get('/', [RouteAccountController::class, 'index'])->name('index');
@@ -600,6 +606,20 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/{return}/overview', [\App\Modules\Sales\Http\Controllers\SalesPaperOverviewController::class, 'salesReturn'])->whereNumber('return')->name('overview');
         Route::post('/{return}/cancel', [SalesReturnController::class, 'cancel'])->whereNumber('return')->name('cancel');
     });
+
+    /*
+     * ⭐ তালিকা থেকে একসাথে কাজ — আদেশ, চালান, বিল, ফেরত (মালিক, ১৯ নভেম্বর ২০২৬, নমুনা Q2W6mM3S v3; [[SalesBulkController]])।
+     * ⓘ চাবি পদ্ধতির ভিতরে (`$this->authorize()`): তালিকা দেখার চাবি + একটা একটা দরজার চাবি, কাগজ আর কাজ ধরে।
+     */
+    Route::post('bulk/{paper}/{action}', [\App\Modules\Sales\Http\Controllers\SalesBulkController::class, 'run'])
+        ->whereIn('paper', \App\Modules\Sales\Http\Controllers\SalesBulkController::PAPERS)
+        ->whereIn('action', ['submit', 'cancel'])
+        ->name('bulk');
+    // ⓘ অনুমোদন নিজের নামে — "সব শাখা" দেখাতেও খোলা, একটা একটা অনুমোদনের মতো ([[AllBranchesView::ALLOWED]]); পাঠানো/বাতিল সেখানে থামে
+    Route::post('bulk/{paper}/approve', [\App\Modules\Sales\Http\Controllers\SalesBulkController::class, 'run'])
+        ->whereIn('paper', \App\Modules\Sales\Http\Controllers\SalesBulkController::PAPERS)
+        ->defaults('action', 'approve')
+        ->name('bulk.approve');
 
     // ⭐ বিক্রয়ের সারসংক্ষেপ — প্রতিটা কার্ড নিজের চাবি দেখে ([[SalesOverview]])
     Route::get('/overview', [SalesOverviewController::class, 'index'])->name('overview');

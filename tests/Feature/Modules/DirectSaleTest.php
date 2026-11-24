@@ -539,10 +539,12 @@ class DirectSaleTest extends TestCase
 
         $invoice = SalesInvoice::query()->latest('id')->firstOrFail();
 
-        $response->assertRedirect(route('sales.print.invoice', [
-            'invoice' => $invoice->id,
-            'paper' => '80mm',
-        ]));
+        // ⭐ কাউন্টারেই ফেরে, ছাপা নতুন ট্যাবে (মালিক, ২৩ নভেম্বর ২০২৬; [[print-tab.js]])
+        $response->assertRedirect(route('sales.direct.create'))
+            ->assertSessionHas('print_url', route('sales.print.invoice', [
+                'invoice' => $invoice->id,
+                'paper' => '80mm',
+            ]));
 
         $this->assertSame(0, bccomp((string) $invoice->total, '500', 4));
     }

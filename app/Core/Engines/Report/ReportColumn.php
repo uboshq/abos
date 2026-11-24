@@ -72,8 +72,10 @@ final class ReportColumn
         /*
          * ⭐ অনুপাতের ঘর — `[লব, হর]` দুই ঘরের চাবি (মালিক, ১৪ অক্টোবর ২০২৬: লক্ষ্য বনাম আদায়ের "মোট % = আদায়/লক্ষ্য, গড় নয়")।
          * ⓘ মোট আর উপ-মোটে ঘরটা যোগ হয় না: দুই ঘরের নিজের মোট থেকে আবার গোনা হয় — লব × ১০০ ÷ হর; হর শূন্য হলে খালি।
+         * ⭐ তৃতীয় ঘরে `'change'` লিখলে বাড়া-কমার হার: (লব − হর) × ১০০ ÷ হর — "গত মাসের চেয়ে কত %" (মালিকের অনুমোদিত নমুনা,
+         *   ২৩ নভেম্বর ২০২৬); মোটের সারিতেও দুই ঘরের মোট থেকে, সারির % যোগ করে নয়।
          *
-         * @var array{0: string, 1: string}|null
+         * @var array{0: string, 1: string, 2?: string}|null
          */
         public readonly ?array $ratio = null,
 
@@ -246,7 +248,9 @@ final class ReportColumn
             sourceIdKey: $definition['source_id'] ?? null,
             permission: $definition['permission'] ?? null,
             words: isset($definition['words']) ? [(string) $definition['words'][0], (string) $definition['words'][1]] : null,
-            ratio: isset($definition['ratio']) ? [(string) $definition['ratio'][0], (string) $definition['ratio'][1]] : null,
+            ratio: isset($definition['ratio'])
+                ? [(string) $definition['ratio'][0], (string) $definition['ratio'][1], ...(($definition['ratio'][2] ?? null) === 'change' ? ['change'] : [])]
+                : null,
             partyKey: self::partyKeyOf($definition, $type),
             place: self::placeOf($definition, $type),
             drill: self::drillOf($definition),

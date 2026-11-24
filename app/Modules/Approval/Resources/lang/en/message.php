@@ -62,6 +62,8 @@ return [
     'bulk_skipped_money' => ':count left out — money moves there, so each one is approved on its own.',
     'bulk_skipped_not_allowed' => ':count left out — beyond your authority.',
     'bulk_skipped_not_pending' => ':count left out — already settled.',
+    // ⭐ a module's no_bulk action — e.g. "bank did not pay this line" (fe, 21 Oct 2026)
+    'bulk_skipped_one_by_one' => ':count left out — each of these is looked at and approved one by one.',
     'bulk_none' => 'Nothing selected.',
     'sla_hint' => 'Leave empty for no clock on this step — behaviour stays as it was.',
     'escalate_hint' => 'A time limit with no destination goes nowhere; the exceptions screen flags it.',
@@ -174,4 +176,7 @@ return [
     'delegation_stopped_at' => 'Stopped :date',
     'delegation_changed' => 'Hand-over changed — the earlier one stays in the audit trail.',
     'delegation_changing' => 'Changing the hand-over to :name',
+    // ⭐ the inbox board — a re-asked paper (it changed after the first ask)
+    'changed_short' => 'Changed',
+    'changed_since_asked_short' => 'Changed after the ask',
 ];

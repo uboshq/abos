@@ -118,8 +118,9 @@ final class AGoneEmployeeOrAClosedLeaveTypeTakesNoLeaveTest extends TestCase
 
         return $this->postJson('/api/v1/hr/leave', [
             'leave_type' => $this->annual->public_id,
-            'from_date' => Carbon::today()->addDays(10)->toDateString(),
-            'to_date' => Carbon::today()->addDays(10)->toDateString(),
+            // ⓘ একটা সোমবার — শুক্রবার কাজের দিন নয় ([[WorkCalendar]], a6, ২১ অক্টোবর ২০২৬)
+            'from_date' => Carbon::today()->next(Carbon::MONDAY)->addWeek()->toDateString(),
+            'to_date' => Carbon::today()->next(Carbon::MONDAY)->addWeek()->toDateString(),
             'days' => 1,
         ]);
     }

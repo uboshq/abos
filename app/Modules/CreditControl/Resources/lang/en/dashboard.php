@@ -26,8 +26,8 @@ return [
     'pending_requests_hint' => 'The old limit applies until approved',
     'ageing' => 'Open bills by age',
     'ageing_hint' => 'Click a bucket for its bills',
-    'by_branch' => 'Exposure by branch',
-    'by_branch_hint' => 'Click a name for its customers',
+    'by_branch' => 'Exposure by branch — in taka',
+    'by_branch_hint' => 'Every branch, with or without a limit · click a name for its customers',
     'no_branch' => 'No branch',
     'by_salesperson' => 'Exposure by salesperson',
     'by_salesperson_hint' => 'Bound today; click a name for their dealers',
@@ -63,4 +63,5 @@ return [
     'viz_changes_sub' => 'Limits raised vs lowered each month',
     'viz_raised' => 'Raised',
     'viz_lowered' => 'Lowered',
+    'viz_by_branch' => 'Exposure by branch',
 ];

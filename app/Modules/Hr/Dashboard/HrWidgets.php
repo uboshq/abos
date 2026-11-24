@@ -11,6 +11,7 @@ use App\Core\Services\DataScope;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
+use App\Modules\Hr\Support\LeaveSigner;
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Support\Carbon;
 
@@ -40,20 +41,39 @@ final class HrWidgets implements DashboardWidgets
                 sort: 60,
             ),
 
+            /*
+             * ⭐ "আমার সইয়ের অপেক্ষায়" — কেবল যেগুলোতে এই মানুষ এখনই সই দিতে পারেন (fe, ২১ অক্টোবর ২০২৬; [[LeaveSigner::countSignable()]])।
+             * ⓘ দেখার শাখার কর্মীর ছুটি — ছুটির সারিতে শাখা নেই, কর্মীর আছে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)।
+             */
             new Widget(
                 group: 'todo',
-                label: __('hr::dashboard.leave_awaiting'),
-                // ⭐ দেখার শাখার কর্মীর ছুটি — ছুটির সারিতে শাখা নেই, কর্মীর আছে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
-                value: (string) LeaveApplication::query()->pending()
-                    ->whereIn('employee_id', self::inView(Employee::query(), 'hr_employees.branch_id')->select('id'))
-                    ->count(),
-                href: route('hr.leave.index'),
+                label: __('hr::dashboard.my_pending_leave'),
+                value: (string) app(LeaveSigner::class)->countSignable(auth()->user(), self::pendingInView()),
+                href: route('hr.leave.index', ['pending' => 1]),
                 permission: 'hr.leave.approve',
                 tone: 'warn',
                 sort: 95,
                 icon: 'calendar',
             ),
+            // ⭐ HR-জুড়ে হলে সব অপেক্ষার ছুটিও, আলাদা ঘরে
+            ...(! app(LeaveSigner::class)->isHrWide(auth()->user()) ? [] : [new Widget(
+                group: 'todo',
+                label: __('hr::dashboard.all_pending_leave'),
+                value: (string) self::pendingInView()->count(),
+                href: route('hr.leave.index', ['pending' => 1]),
+                permission: 'hr.leave.view',
+                tone: 'warn',
+                sort: 96,
+                icon: 'calendar',
+            )]),
         ];
+    }
+
+    /** দেখার শাখার কর্মীদের অপেক্ষমাণ ছুটি */
+    private static function pendingInView(): \Illuminate\Database\Eloquent\Builder
+    {
+        return LeaveApplication::query()->pending()
+            ->whereIn('employee_id', self::inView(Employee::query(), 'hr_employees.branch_id')->select('id'));
     }
 
     /** আজ যাদের হাজিরা "উপস্থিত" হিসেবে বসেছে। */

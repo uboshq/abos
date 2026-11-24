@@ -47,8 +47,7 @@ final class ReportCenterPlan
             ['key' => 'expense_analysis', 'module' => 'accounts', 'route' => 'accounts.report.show:expense-analysis', 'step' => 4],
 
             // ── ধাপ ৫ — মানুষ ও নিরাপত্তা
-            ['key' => 'attendance', 'module' => 'hr', 'route' => 'hr.report.show:attendance', 'step' => 5],
-            ['key' => 'payroll', 'module' => 'hr', 'route' => 'hr.report.show:payroll', 'step' => 5],
+            // ⓘ হাজিরার সারাংশ আর বেতনশিট তৈরি — HR-এর মেনু থেকেই ওঠে ([[HrReports]], ঘাটতির তালিকা #১৬; a6, ২১ অক্টোবর ২০২৬)
             ['key' => 'security', 'module' => 'governance', 'route' => 'governance.report.show:security', 'step' => 5],
             ['key' => 'backup_runs', 'module' => 'backup', 'route' => 'backup.report.show:runs', 'step' => 5],
             ['key' => 'customer_activity', 'module' => 'customer', 'route' => 'customer.report.show:activity', 'step' => 5],

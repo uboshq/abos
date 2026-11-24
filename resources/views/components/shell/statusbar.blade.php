@@ -110,7 +110,8 @@
                             @foreach ($announcements as $announcement)
                                 @php
                                     // ⭐ যন্ত্রের জরুরি কথা নিজের রঙে — লাল এখনই, হলুদ অপেক্ষা; মানুষের ঘোষণা আগের মতো (মালিক, ৭ নভেম্বর ২০২৬, পথ ২)
-                                    $tickerTone = ($announcement['kind'] ?? null) === 'own' ? 'own' : ($announcement['tone'] ?? 'info');
+                                    // ⭐ লেখকের "জরুরি" ঘোষণা লাল — মালিক, ১৮ নভেম্বর ২০২৬ ([[StatusNotices::forTicker()]])
+                                    $tickerTone = ($announcement['kind'] ?? null) === 'own' && ! ($announcement['urgent'] ?? false) ? 'own' : ($announcement['tone'] ?? 'info');
                                     $tickerClass = match ($tickerTone) {
                                         'danger' => 'rounded-(--radius-pill) bg-(--color-badge-danger-bg) px-2 font-semibold text-(--color-badge-danger-ink)',
                                         'warning' => 'rounded-(--radius-pill) bg-(--color-badge-warning-bg) px-2 font-semibold text-(--color-badge-warning-ink)',

@@ -257,7 +257,7 @@ final class AttachmentEngine
     /**
      * ⭐ স্লিপের KB সেটিংস থেকে — মালিক, ১৬ নভেম্বর ২০২৬ (*"ছবিগুলোকে কেবি সাইজে নিয়ে আসা"*)।
      *
-     * ⓘ কেবল স্লিপের দরজা ([[SLIP]]) ছোট বাজেট পায়; সাধারণ কাগজ (বিল, চুক্তি) [[ImageEngine::PAPER_BYTES]]-এই থাকে। সেটিং না
+     * ⓘ কেবল স্লিপের দরজা ([[SLIP]]) ছোট বাজেট পায়; সাধারণ কাগজ (বিল, চুক্তি) [[ImageEngine::budgetFor()]] `paper`-এ (`system.image_kb.paper`) থাকে। সেটিং না
      *   থাকলে (মডিউল বন্ধ) ১০০ KB।
      */
     private function budgetFor(?array $only): ?int

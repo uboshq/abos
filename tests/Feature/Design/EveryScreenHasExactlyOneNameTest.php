@@ -30,7 +30,7 @@ final class EveryScreenHasExactlyOneNameTest extends TestCase
     private const TWICE = [
         'sales.price_list.index', 'sales.price_book.index', 'accounts.custody', 'sales.direct.depot_check',
         'sales.lead.index', 'sales.opportunity.index', 'sales.scheme.index', 'purchase.payment_schedule.index',
-        'finance.bank_charge.index', 'finance.insurance.index', 'finance.budget.report', 'accounts.note.index',
+        'finance.bank_charge.index', 'finance.insurance.index', 'finance.budget.report', 'accounts.note.cn.index', // ⓘ নোটের তালিকা এখন তিন পাতা (নকশা v5, ২৩ নভেম্বর ২০২৬); পুরনো ঠিকানা ফেরায়
         'approval.inbox.mine', 'approval.inbox.signed_unposted',
     ];
 

@@ -39,6 +39,18 @@
     $periodLabel = $fyLabel ?? ($from === $to
         ? __('finance::budget.month_long.'.$from).' '.$year
         : __('finance::budget.month_long.'.$from).' – '.__('finance::budget.month_long.'.$to).' '.$year);
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো ([[budget/partials/filters]] + [[budget/partials/period]]), একই চাবি;
+    //   বছরটা পাতা যা ধরে চলেছে তাই দেখায় (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::number('year', __('finance::budget.year'), 2000, 2100, shown: (string) $year),
+        \App\Core\ListFilter\Facets::pick('center', __('finance::budget.center'),
+            $centers->mapWithKeys(fn ($c) => [(string) $c->id => $c->code.' — '.$c->name()])->all(), __('finance::budget.all_centers')),
+        \App\Core\ListFilter\Facets::pick('month', __('finance::budget.period'),
+            collect(range(1, 12))->mapWithKeys(fn ($m) => [(string) $m => __('finance::budget.month_long.'.$m)])->all(),
+            __('finance::budget.scope_'.$scope)),
+        $isReport ? \App\Core\ListFilter\Facets::flag('by_center', __('finance::budget.by_center')) : null,
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -52,16 +64,27 @@
         @include('finance::budget.partials.tabs')
     @endunless
 
-    @include('finance::budget.partials.filters', ['report' => true, 'extra' => view('finance::budget.partials.period', [
-        'month' => $month, 'scope' => $scope, 'byCenter' => $byCenter, 'isReport' => $isReport,
-    ])])
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form" :report="true">
+        <form id="list-form" method="GET" class="contents" data-report>
+            <input type="hidden" name="scope" value="{{ $scope }}">
+            <x-ui.filter-bar :facets="$facetPanel">
+                {{-- ⭐ অর্থবছর — জুলাই থেকে এ মাস, বছর পেরিয়ে (অর্থ M29, ১০ অক্টোবর ২০২৬); ছাঁকনির ঘর নয়, লিংক --}}
+                <a href="{{ request()->fullUrlWithQuery(['scope' => $scope === 'fy' ? 'ytd' : 'fy', 'month' => null]) }}" data-scope-fy
+                   class="text-sm {{ $scope === 'fy' ? 'font-semibold text-(--color-ink)' : 'text-(--color-ink-muted) hover:text-(--color-ink)' }}">
+                    {{ __('finance::budget.scope_fy') }}{{ $scope === 'fy' ? ' ✕' : '' }}
+                </a>
+            </x-ui.filter-bar>
+        </form>
+    </x-ui.filter-layout>
 
     <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         @if ($isReport)
             {{-- ⓘ টুলবার: ছাপা আর CSV — রিপোর্টের কাজটাই এটা --}}
+            {{-- ⭐ প্রিন্ট ভিউ বারেই, নতুন ট্যাবে; কাগজের মাথায় সময়কাল (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) --}}
+            @php \App\Core\Support\ReportPaper::describe((string) __('finance::budget.report'), (string) $periodLabel); @endphp
             <x-ui.toolbar :title="__('finance::budget.report')" :subtitle="$periodLabel" :columns="$columns" :report="true"
-                          :search="false" :filter="false" :share="false"
+                          :search="false" :filter="false" :share="false" :print-view="true"
                           :quiet="['year', 'center', 'month', 'scope', 'by_center']" />
         @else
             <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">

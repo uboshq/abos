@@ -55,6 +55,139 @@ class SalesReportController extends Controller implements HasMiddleware
         'by-biller' => \App\Modules\Sales\Reports\BillerReports::KEY,
         // ⭐ প্রতিদিনের জমার খাতা (জমার খবর ধাপ গ, ১৮ নভেম্বর ২০২৬; [[DepositRegisterReport]])
         'deposit-register' => \App\Modules\Sales\Reports\DepositRegisterReport::KEY,
+        // ⭐ টাকা আসা — আসল টাকা, রূপগুলো পাতার ট্যাবে ([[MoneyInReports]]; মালিক, ২৩ নভেম্বর ২০২৬)
+        'money-in' => \App\Modules\Sales\Reports\MoneyInReports::DAY,
+        'money-in-branch' => \App\Modules\Sales\Reports\MoneyInReports::BRANCH,
+        'money-in-area' => 'sales.money_in_area',
+        'money-in-territory' => 'sales.money_in_territory',
+        'money-in-point' => 'sales.money_in_point',
+        'money-in-customer' => 'sales.money_in_customer',
+        'money-in-salesperson' => \App\Modules\Sales\Reports\MoneyInReports::PERSON,
+        'money-in-channel' => \App\Modules\Sales\Reports\MoneyInReports::CHANNEL,
+        'money-in-receipts' => \App\Modules\Sales\Reports\MoneyInReports::PAPERS,
+        'money-in-excluded' => \App\Modules\Sales\Reports\MoneyInReports::EXCLUDED,
+        'money-in-excluded-papers' => \App\Modules\Sales\Reports\MoneyInReports::EXCLUDED_PAPERS,
+        // ⭐ এলাকা ধরে বিক্রয় (স্তর ধরে) আর শাখা ধরে বিক্রয় ([[AreaSalesReports]]; মালিক, ২৩ নভেম্বর ২০২৬)
+        'area-sales' => 'sales.area_sales_area',
+        'area-sales-territory' => 'sales.area_sales_territory',
+        'area-sales-point' => 'sales.area_sales_point',
+        'area-sales-customer' => 'sales.area_sales_customer',
+        'branch-sales' => \App\Modules\Sales\Reports\AreaSalesReports::BRANCH,
+        // ⭐ লক্ষ্য বনাম বিক্রয় — স্তর আর বিক্রয়কর্মী ধরে ([[CustomerInsightReports]])
+        'target-sales' => 'sales.target_sales_area',
+        'target-sales-territory' => 'sales.target_sales_territory',
+        'target-sales-point' => 'sales.target_sales_point',
+        'target-sales-customer' => 'sales.target_sales_customer',
+        'target-sales-salesperson' => \App\Modules\Sales\Reports\CustomerInsightReports::TARGET_PERSON,
+        // ⭐ পণ্য ধরে — পণ্যের মাসিক লক্ষ্য বনাম বিক্রি ([[ProductInsightReports::TARGET]]; মালিক, ২৩ নভেম্বর ২০২৬)
+        'target-sales-product' => \App\Modules\Sales\Reports\ProductInsightReports::TARGET,
+        // ⭐ বিক্রির ধারা — মাস আর তিন মাস ধরে ([[SalesTrendReports]])
+        'sales-trend' => \App\Modules\Sales\Reports\SalesTrendReports::MONTHLY,
+        'sales-trend-quarterly' => \App\Modules\Sales\Reports\SalesTrendReports::QUARTERLY,
+        // ⭐ ABC — পণ্য আর গ্রাহক ([[ProductInsightReports]], [[CustomerInsightReports]])
+        'product-abc' => \App\Modules\Sales\Reports\ProductInsightReports::ABC,
+        'customer-abc' => \App\Modules\Sales\Reports\CustomerInsightReports::ABC,
+        // ⭐ নতুন, ঘুমন্ত আর হারানো গ্রাহক
+        'customers-new' => \App\Modules\Sales\Reports\CustomerInsightReports::NEW,
+        'customers-idle-30' => 'sales.customers_idle_30',
+        'customers-idle-60' => 'sales.customers_idle_60',
+        'customers-idle-90' => 'sales.customers_idle_90',
+        // ⭐ আদায়ের দক্ষতা আর DSO — স্তর আর শাখা ধরে
+        'collection-efficiency' => 'sales.collection_efficiency_area',
+        'collection-efficiency-territory' => 'sales.collection_efficiency_territory',
+        'collection-efficiency-point' => 'sales.collection_efficiency_point',
+        'collection-efficiency-customer' => 'sales.collection_efficiency_customer',
+        'collection-efficiency-branch' => \App\Modules\Sales\Reports\CustomerInsightReports::EFFICIENCY_BRANCH,
+        // ⭐ স্কিম ও ছাড়ের খরচ ([[SchemeCostReports]])
+        'scheme-cost' => \App\Modules\Sales\Reports\SchemeCostReports::SCHEMES,
+        'scheme-cost-bills' => \App\Modules\Sales\Reports\SchemeCostReports::BILLS,
+        'discount-by-salesperson' => \App\Modules\Sales\Reports\SchemeCostReports::DISCOUNTS,
+        // ⭐ দামের প্রাপ্তি ([[ProductInsightReports]])
+        'price-realisation' => \App\Modules\Sales\Reports\ProductInsightReports::PRICE,
+        // ⭐ ফেরতের হার — পণ্য আর জায়গার স্তর ধরে ([[ReturnRateReports]])
+        'return-rate' => \App\Modules\Sales\Reports\ReturnRateReports::PRODUCT,
+        'return-rate-area' => 'sales.return_rate_area',
+        'return-rate-territory' => 'sales.return_rate_territory',
+        'return-rate-point' => 'sales.return_rate_point',
+        'return-rate-customer' => 'sales.return_rate_customer',
+        // ⭐ বিক্রয়কর্মীর কাজের হিসাব ([[SalesForceReports]])
+        'salesperson-productivity' => \App\Modules\Sales\Reports\SalesForceReports::KEY,
+        // ⭐ এলাকা ধরে বাকির বয়স ([[DueAgeingReports]])
+        'due-ageing' => 'sales.due_ageing_area',
+        'due-ageing-territory' => 'sales.due_ageing_territory',
+        'due-ageing-point' => 'sales.due_ageing_point',
+        'due-ageing-customer' => 'sales.due_ageing_customer',
+        // ⭐ দৈনিক বিক্রি ও আদায়ের সারাংশ ([[DailySummaryReports]])
+        'daily-summary' => \App\Modules\Sales\Reports\DailySummaryReports::KEY,
+    ];
+
+    /**
+     * ⭐ এক রিপোর্টের কয়েক রূপ — পাতার মাথায় ট্যাব (মালিকের অনুমোদিত নমুনা, ২৩ নভেম্বর ২০২৬): স্লাগ → ট্যাবের নামের চাবি।
+     * ⓘ ট্যাব বদলালে সময় আর ছাঁকনি সাথে যায় — যে ছাঁকনি নতুন রূপ চেনে না, ইঞ্জিন সেটা ফেলে দেয়।
+     *
+     * @var list<array<string, string>>
+     */
+    private const TABS = [
+        [
+            'money-in' => 'sales::money_in.tab_day',
+            'money-in-branch' => 'sales::money_in.tab_branch',
+            'money-in-area' => 'sales::money_in.tab_area',
+            'money-in-territory' => 'sales::money_in.tab_territory',
+            'money-in-point' => 'sales::money_in.tab_point',
+            'money-in-customer' => 'sales::money_in.tab_customer',
+            'money-in-salesperson' => 'sales::money_in.tab_person',
+            'money-in-channel' => 'sales::money_in.tab_channel',
+            'money-in-receipts' => 'sales::money_in.tab_papers',
+            'money-in-excluded' => 'sales::money_in.tab_excluded',
+        ],
+        [
+            'area-sales' => 'sales::area_sales.tab_area',
+            'area-sales-territory' => 'sales::area_sales.tab_territory',
+            'area-sales-point' => 'sales::area_sales.tab_point',
+            'area-sales-customer' => 'sales::area_sales.tab_customer',
+        ],
+        [
+            'target-sales' => 'sales::area_sales.tab_area',
+            'target-sales-territory' => 'sales::area_sales.tab_territory',
+            'target-sales-point' => 'sales::area_sales.tab_point',
+            'target-sales-customer' => 'sales::area_sales.tab_customer',
+            'target-sales-salesperson' => 'sales::customer_insight.tab_person',
+            'target-sales-product' => 'sales::product_target.tab_product',
+        ],
+        [
+            'sales-trend' => 'sales::sales_trend.tab_monthly',
+            'sales-trend-quarterly' => 'sales::sales_trend.tab_quarterly',
+        ],
+        [
+            'customers-new' => 'sales::customer_insight.tab_new',
+            'customers-idle-30' => 'sales::customer_insight.tab_idle_30',
+            'customers-idle-60' => 'sales::customer_insight.tab_idle_60',
+            'customers-idle-90' => 'sales::customer_insight.tab_idle_90',
+        ],
+        [
+            'collection-efficiency' => 'sales::area_sales.tab_area',
+            'collection-efficiency-territory' => 'sales::area_sales.tab_territory',
+            'collection-efficiency-point' => 'sales::area_sales.tab_point',
+            'collection-efficiency-customer' => 'sales::area_sales.tab_customer',
+            'collection-efficiency-branch' => 'sales::customer_insight.tab_branch',
+        ],
+        [
+            'scheme-cost' => 'sales::scheme_cost.tab_schemes',
+            'discount-by-salesperson' => 'sales::scheme_cost.tab_discounts',
+        ],
+        [
+            'return-rate' => 'sales::return_rate.tab_product',
+            'return-rate-area' => 'sales::area_sales.tab_area',
+            'return-rate-territory' => 'sales::area_sales.tab_territory',
+            'return-rate-point' => 'sales::area_sales.tab_point',
+            'return-rate-customer' => 'sales::area_sales.tab_customer',
+        ],
+        [
+            'due-ageing' => 'sales::area_sales.tab_area',
+            'due-ageing-territory' => 'sales::area_sales.tab_territory',
+            'due-ageing-point' => 'sales::area_sales.tab_point',
+            'due-ageing-customer' => 'sales::area_sales.tab_customer',
+        ],
     ];
 
     /**
@@ -117,6 +250,7 @@ class SalesReportController extends Controller implements HasMiddleware
         );
 
         return view('accounts::report.show', [
+            ...$this->tabsFor($request, $slug),
             'menu' => $this->menu->forUser($request->user()),
             'slug' => $slug,
             'report' => $definition,
@@ -124,7 +258,10 @@ class SalesReportController extends Controller implements HasMiddleware
             'branches' => $definition->hasFilter('branch')
                 ? Branch::query()->active()->orderBy('name_en')->get()
                 : collect(),
-            'accounts' => collect(),
+            // ⓘ টাকা আসার রিপোর্টে খাত বাছা যায় — কেবল টাকার খাত (নগদ, ব্যাংক, মোবাইল ব্যাংকিং), হিসাবের একই তালিকা থেকে
+            'accounts' => $definition->hasFilter('account')
+                ? \App\Modules\Accounts\Reports\Filters\MoneyAccountFilter::accounts()->get()
+                : collect(),
             /*
              * পক্ষের ধরনের ছাঁকনি — কেবল যে রিপোর্ট চেয়েছে তার জন্য।
              *
@@ -137,7 +274,47 @@ class SalesReportController extends Controller implements HasMiddleware
                 : collect(),
             // ⭐ ফলটা এক লাইনে — যে রিপোর্ট সারাংশ ঘোষণা করে (OTIF %, ৬ অক্টোবর ২০২৬); ⓘ আগে এই দরজা পাঠাতই না, তাই কোনো
             // বিক্রয় রিপোর্টের ফল পাতায় দেখাত না, অথচ হিসাবের রিপোর্টে দেখাত ([[ReportController]])
-            'summary' => $definition->summary === null ? null : ($definition->summary)($result->totals),
+            // ⓘ ছাঁকনিও যায় (হিসাবের দরজার মতো) — টাকা আসার "দিনে গড়" সময়ের দিন গোনে; বাকিরা দ্বিতীয়টা নেয় না
+            'summary' => $definition->summary === null ? null : ($definition->summary)($result->totals, $result->filters),
+            // ⭐ রিপোর্টের নিজের বাছাই (টাকার মাধ্যম, বাদ পড়ার কারণ…) — ডান পাশের প্যানেলে, ঘোষণা থেকেই ([[ReportChoices]])
+            'extraFacets' => \App\Core\Engines\Report\ReportChoices::facets($definition),
         ]);
+    }
+
+    /**
+     * এই স্লাগ যে দলে, তার ট্যাবগুলো — দল না থাকলে কিছুই নয় (পাতা তখন আগের মতো)।
+     *
+     * ⓘ ঠিকানায় সময় আর ছাঁকনি থেকে যায়; পাতা, খোঁজা আর "Top" নয় — ওগুলো এক রূপের নিজের।
+     *
+     * @return array{reportTabs?: list<array{key: string, label: string, url: string, active: bool}>}
+     */
+    private function tabsFor(Request $request, string $slug): array
+    {
+        foreach (self::TABS as $group) {
+            // ⓘ দলের ভেতরের পাতা (যেমন "বাদ যাওয়া কাগজ") ট্যাবে নেই, তবু দলের ট্যাব দেখায় — তার মূল রূপটা চালু
+            $home = isset($group[$slug]) ? $slug : collect(array_keys($group))
+                ->sortByDesc(fn (string $s) => strlen($s))
+                ->first(fn (string $s) => str_starts_with($slug, $s.'-'));
+
+            if ($home === null) {
+                continue;
+            }
+
+            $carry = $request->except(['page', 'q', 'top', 'compare', 'export', 'print', 'hide', 'sort', 'dir']);
+            $tabs = [];
+
+            foreach ($group as $tab => $label) {
+                $tabs[] = [
+                    'key' => $tab,
+                    'label' => (string) __($label),
+                    'url' => route('sales.report.show', ['slug' => $tab, ...$carry]),
+                    'active' => $tab === $home,
+                ];
+            }
+
+            return ['reportTabs' => $tabs];
+        }
+
+        return [];
     }
 }

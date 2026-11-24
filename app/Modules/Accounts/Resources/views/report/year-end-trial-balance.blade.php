@@ -30,7 +30,7 @@
                                  :href="route('accounts.year_end_trial_balance', [...$query, 'export' => 'print', 'lang' => 'en'])">
                         {{ __('accounts::fs.ytb.print_en') }}
                     </x-ui.button>
-                    <x-ui.button tone="secondary" data-paper="pdf"
+                    <x-ui.button tone="secondary" data-paper="pdf" target="_blank" rel="noopener"
                                  :href="route('accounts.year_end_trial_balance', [...$query, 'export' => 'pdf'])">
                         {{ __('core.toolbar.export_pdf') }}
                     </x-ui.button>
@@ -39,21 +39,22 @@
         </x-ui.page-header>
     </x-slot:header>
 
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-ytb-filter data-report>
-        <x-ui.select name="year_id" :label="__('accounts::fs.ytb.year')"
-                     :options="$years->mapWithKeys(fn ($fy) => [$fy->id => __('accounts::fs.ytb.year_range', [
-                         'name' => $fy->name, 'from' => $day((string) $fy->starts_on), 'to' => $day((string) $fy->ends_on)])])"
-                     :selected="$y['year']->id" />
-
-        @if ($branches->count() > 1)
-            <x-ui.select name="branch_id" :label="__('core.company.branch')"
-                         :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])"
-                         :placeholder="__('accounts::field.all_branches')"
-                         :selected="$branchId" />
-        @endif
-
-        <x-ui.button type="submit" tone="secondary" data-report-show>{{ __('core.action.show') }}</x-ui.button>
-    </form>
+    {{-- ⭐ ঘরগুলো ডান পাশের ছাঁকনির প্যানেলে, একই চাবিতে (মালিক, ২৩ নভেম্বর ২০২৬; [[filter-bar]]); চলে "দেখান" বা Enter-এ --}}
+    @php
+        $panel = \App\Core\ListFilter\Facets::panel([
+            // ⓘ অর্থবছরে "সব" নেই (আগের ঘরেও ছিল না) — চলতিটা শুরুতে বাছা
+            \App\Core\ListFilter\Facets::one('year_id', __('accounts::fs.ytb.year'), $years->mapWithKeys(fn ($fy) => [(string) $fy->id => __('accounts::fs.ytb.year_range', [
+                'name' => $fy->name, 'from' => $day((string) $fy->starts_on), 'to' => $day((string) $fy->ends_on)])])->all(), (string) $y['year']->id),
+            $branches->count() > 1
+                ? \App\Core\ListFilter\Facets::pick('branch_id', __('core.company.branch'), $branches->mapWithKeys(fn ($b) => [(string) $b->id => $b->name()])->all(), __('accounts::field.all_branches'))->look('blue', '🏬')
+                : null,
+        ]);
+    @endphp
+    <x-ui.filter-layout :filters="$panel" form="list-form" :report="true">
+        <form id="list-form" method="GET" class="contents" data-ytb-filter data-report>
+            <x-ui.filter-bar :facets="$panel" />
+        </form>
+    </x-ui.filter-layout>
 
     <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         {{-- ── অবস্থার সারি: মেলে কি না · বন্ধের আগের · সমন্বয় কয়টা · বাদ পড়া ভাউচার · উল্টো জের · তালা দেওয়া মাস ── --}}

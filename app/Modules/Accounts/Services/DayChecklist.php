@@ -67,6 +67,15 @@ final class DayChecklist
             $items[] = ['key' => 'not_counted', 'count' => 1, 'amount' => null, 'url' => $url('accounts.count.index'), 'tone' => 'danger'];
         }
 
+        // ⭐ গোনায় তফাত — আগে কেবল দিন বন্ধের সময় দেখা হত; এখন চেকলিস্টেও (মালিক, ১৮ নভেম্বর ২০২৬: "নগদ গোনা হয়নি, বা গোনায় তফাত")
+        $gaps = CashCount::query()->whereIn('status', DocumentStatus::POSTED)->where('trx_date', $d)
+            ->where('difference', '!=', 0)
+            ->tap(fn ($q) => ViewedBranch::narrow($q, 'cash_counts.branch_id'));
+        if (($n = (clone $gaps)->count()) > 0) {
+            $items[] = ['key' => 'count_gap', 'count' => $n, 'amount' => (string) (clone $gaps)->sum('difference'),
+                'url' => $url('accounts.count.index'), 'tone' => 'danger'];
+        }
+
         $staff = $this->staffCash($d);
         if ($staff !== []) {
             $items[] = ['key' => 'staff_cash', 'count' => count($staff), 'amount' => array_reduce($staff, fn ($s, $r) => bcadd($s, $r['amount'], 4), '0'),
@@ -128,6 +137,24 @@ final class DayChecklist
                 'url' => $url('accounts.integrity'), 'tone' => 'danger'];
         }
 
+        /*
+         * ── ⭐ কোম্পানির BIN নেই, অথচ আজ ভ্যাটের কাগজ (ক্রেডিট নোট মূসক-৬.৭, গ্রাহকের ডেবিট নোট মূসক-৬.৮, বিক্রয় ভাউচার মূসক-৬.৩) ──
+         * মালিকের নকশা v5 (২৩ নভেম্বর ২০২৬): সতর্কতা কেবল, থামায় না। ⓘ লাইভে ADI-র BIN খালি।
+         */
+        if (blank(\App\Models\Company::query()->whereKey(CompanyContext::id())->value('bin'))) {
+            $vatPapers = DB::table('acc_notes')->where('company_id', CompanyContext::id())->whereNull('deleted_at')
+                ->whereIn('note_type', ['cn', 'cdn'])->where('trx_date', $d)->count()
+                + (DB::getSchemaBuilder()->hasTable('acc_trade_vouchers')
+                    ? DB::table('acc_trade_vouchers')->where('company_id', CompanyContext::id())->whereNull('deleted_at')
+                        ->where('kind', 'sale')->where('trx_date', $d)->count()
+                    : 0);
+
+            if ($vatPapers > 0) {
+                $items[] = ['key' => 'bin_missing', 'count' => $vatPapers, 'amount' => null,
+                    'url' => $url('system_admin.company.edit', ['company' => CompanyContext::id()]), 'tone' => 'warning'];
+            }
+        }
+
         // ── সরবরাহকারীকে আজ যা দেওয়া হলো (নিশ্চিত করার জন্য তথ্য) ──
         // ⓘ খাতা থেকে: সরবরাহকারীর পাওনায় ডেবিট, টাকা দেওয়ার কাগজে — যে পথেই কাগজ বসুক, খাতায় যা বসেছে তাই
         $paid = ViewedBranch::narrow(LedgerEntry::query(), 'ledger_entries.branch_id')
@@ -138,7 +165,87 @@ final class DayChecklist
                 'url' => $url('accounts.voucher.index', ['type' => 'payment']), 'tone' => 'info'];
         }
 
+        // ── আজকের বাকিতে বিক্রি, আর আজ শোধের দিন অথচ সরবরাহকারীকে দেওয়া হয়নি (মালিক, ১৮ নভেম্বর ২০২৬) ──
+        if (($credit = $this->creditSales($d)) !== null) {
+            $items[] = ['key' => 'credit_bills', 'count' => $credit[0], 'amount' => $credit[1], 'url' => $url('sales.invoice.index'), 'tone' => 'info'];
+        }
+
+        if (($owed = $this->supplierDueUnpaid($d)) !== null) {
+            $items[] = ['key' => 'supplier_due', 'count' => $owed[0], 'amount' => $owed[1], 'url' => $url('purchase.payment.index'), 'tone' => 'warning'];
+        }
+
         return $items;
+    }
+
+    /**
+     * ⭐ আজকের যে বিল বাকিতে গেল — কয়টা আর কত বাকি।
+     *
+     * ⓘ বাকি গোনে বিক্রয় মডিউল নিজে ([[PartyOpenBills]] — বিলের পাতা আর গ্রাহকের বকেয়া যে অঙ্ক দেখায়); হিসাব মডিউল বিক্রয়ের মডেল জানে না
+     *   ([[BoundariesTest]]), তাই কেবল টেবিলের নাম আর মূল চুক্তি। ⓘ কেবল আজকের পাকা বিলের গ্রাহক — হাতে গোনা কয়েকজন।
+     * ⓘ তথ্য, সতর্কতা নয় — বাকিতে বিক্রি দোষ নয়, দিন শেষে চোখ বুলিয়ে নেওয়া। ⛔ কিছু আটকায় না।
+     *
+     * @return array{0: int, 1: string}|null
+     */
+    private function creditSales(string $d): ?array
+    {
+        if (! DB::getSchemaBuilder()->hasTable('sal_invoices')) {
+            return null;
+        }
+
+        $today = DB::table('sal_invoices')->where('company_id', CompanyContext::id())->whereNull('deleted_at')
+            ->where('status', DocumentStatus::CONFIRMED)->where('trx_date', $d)
+            ->tap(fn ($q) => ViewedBranch::narrow($q, 'sal_invoices.branch_id'))
+            ->get(['id', 'customer_id as party_id']);
+
+        return $this->stillOwed($today, fn (int $party) => app(\App\Core\Contracts\PartyOpenBills::class)->openBills('customer', $party, 200));
+    }
+
+    /**
+     * ⭐ আজ শোধের শেষ দিন, অথচ সরবরাহকারীর বিলে এখনো বাকি — ক্রয় মডিউলের [[PayableOpenBills]] যে বাকি বলে তা-ই। ⛔ কিছু আটকায় না।
+     *
+     * @return array{0: int, 1: string}|null
+     */
+    private function supplierDueUnpaid(string $d): ?array
+    {
+        if (! DB::getSchemaBuilder()->hasTable('pur_bills')) {
+            return null;
+        }
+
+        $due = DB::table('pur_bills')->where('company_id', CompanyContext::id())->whereNull('deleted_at')
+            ->where('status', DocumentStatus::CONFIRMED)->where('due_on', $d)
+            ->tap(fn ($q) => ViewedBranch::narrow($q, 'pur_bills.branch_id'))
+            ->get(['id', 'supplier_id as party_id']);
+
+        return $this->stillOwed($due, fn (int $party) => app(\App\Core\Contracts\PayableOpenBills::class)->openBills('supplier', $party, 200));
+    }
+
+    /**
+     * এই বিলগুলোর কোনটায় এখনো বাকি — পক্ষ ধরে একবার মডিউলের খোলা বিলের তালিকা, তা থেকে কেবল এই বিলগুলো।
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $bills
+     * @param  \Closure(int): list<array<string, mixed>>  $open
+     * @return array{0: int, 1: string}|null
+     */
+    private function stillOwed(\Illuminate\Support\Collection $bills, \Closure $open): ?array
+    {
+        if ($bills->isEmpty()) {
+            return null;
+        }
+
+        $wanted = $bills->pluck('id')->map(fn ($id) => (int) $id)->flip();
+        $count = 0;
+        $amount = '0';
+
+        foreach ($bills->pluck('party_id')->filter()->unique() as $party) {
+            foreach ($open((int) $party) as $row) {
+                if (isset($wanted[(int) ($row['id'] ?? 0)]) && bccomp((string) ($row['outstanding'] ?? '0'), '0', 4) > 0) {
+                    $count++;
+                    $amount = bcadd($amount, (string) $row['outstanding'], 4);
+                }
+            }
+        }
+
+        return $count > 0 ? [$count, $amount] : null;
     }
 
     /**

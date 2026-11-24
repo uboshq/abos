@@ -82,6 +82,11 @@ return [
     'image_kb_slip' => 'Largest size of a deposit slip photo (KB)',
     'slip_max_kb_image' => 'Largest photo accepted as a slip, before it is made smaller (KB)',
     'slip_max_kb_pdf' => 'Largest PDF accepted as a slip (KB)',
+    'image_kb_paper' => 'Largest size of a paper photo — bills, contracts, staff and product photos (KB)',
+    'image_kb_photo' => 'Largest size of a photo sent in messages (KB)',
+    'image_kb_face' => 'Largest size of a profile photo (KB)',
+    'image_kb_cover' => 'Largest size of a profile cover photo (KB)',
+    'image_kb_mark' => 'Largest size of a logo or seal picture (KB, up to 500 KB)',
     'date_format' => 'How dates are written',
     'time_format' => 'How the clock is written',
 
@@ -138,4 +143,6 @@ return [
     'change_not_pending' => 'This change is no longer waiting.',
     'change_maker_cannot_sign' => 'The person who asked for the change cannot approve it.',
     'change_no_key' => 'Approving needs the settings key.',
+    // ⓘ a setting with its own screen (owned_by) — a6, 21 Oct 2026
+    'owned_elsewhere' => 'This setting is changed on its own screen, not here.',
 ];

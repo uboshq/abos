@@ -16,11 +16,13 @@ use App\Models\User;
 use App\Models\UserDataScope;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveType;
+use App\Modules\Hr\Models\PaymentChange;
 use App\Modules\Hr\Services\AttendanceService;
 use App\Modules\Hr\Services\EmployeePhotoService;
 use App\Modules\Hr\Services\EmployeeService;
 use App\Modules\Hr\Services\JobHistory;
 use App\Modules\Hr\Services\LeaveService;
+use App\Modules\Hr\Services\PaymentChanges;
 use App\Modules\Hr\Services\SalaryStructureService;
 use App\Modules\Hr\Support\BranchReach;
 use App\Modules\MasterData\Models\Department;
@@ -57,6 +59,8 @@ class EmployeeController extends Controller implements HasMiddleware
         return [
             new Middleware('can:hr.employee.view', only: ['index', 'show']),
             new Middleware('can:hr.employee.manage', only: ['create', 'store', 'edit', 'update', 'destroy']),
+            // ⓘ সই আর ফেরানো — কর্মীর পাতা দেখার চাবি; বাকিটা [[PaymentChanges]] নিজে দেখে (সইয়ের চাবি, লেখক নন)
+            new Middleware('can:hr.employee.view', only: ['approvePaymentChange', 'rejectPaymentChange']),
         ];
     }
 
@@ -71,11 +75,8 @@ class EmployeeController extends Controller implements HasMiddleware
          * [[EmployeePolicy]]-র নিয়মেই। ⚠️ তালিকা আর পাতা দুই নিয়মে চললে
          * তালিকায় এমন সারি থাকত যেটা চাপলে ৪০৩ আসে।
          */
-        $branches = app(DataScope::class)->idsFor($request->user(), UserDataScope::BRANCH);
-
-        if ($branches !== null) {
-            $query->where(fn ($q) => $q->whereIn('branch_id', $branches)->orWhereNull('branch_id'));
-        }
+        // ⭐ আর হেডারের বাছা শাখা — একটা শাখা বাছা থাকলে কেবল তার কর্মী (মালিকের নিয়ম; [[BranchReach::viewing()]], fe, ২১ অক্টোবর ২০২৬)
+        app(BranchReach::class)->employeesInView($query, $request->user());
 
         /*
          * ছেড়ে যাওয়া কর্মীরা ডিফল্টে তালিকায় নেই।
@@ -133,9 +134,12 @@ class EmployeeController extends Controller implements HasMiddleware
         $employee = $this->employees->create($this->validated($request));
         $this->savePhoto($request, $employee);
 
+        // ⓘ প্রথম ব্যাংক/MFS তথ্য দ্বিতীয় সইয়ের অপেক্ষায় — সেটাই বলা (fe, ২১ অক্টোবর ২০২৬; [[EmployeeService::create()]])
         return redirect()
             ->route('hr.employee.salary', $employee)
-            ->with('saved', __('hr::message.employee_created'));
+            ->with('saved', app(PaymentChanges::class)->pendingFor($employee) === null
+                ? __('hr::message.employee_created')
+                : __('hr::payment_change.waiting_saved'));
     }
 
     public function show(Request $request, Employee $employee): View
@@ -143,6 +147,14 @@ class EmployeeController extends Controller implements HasMiddleware
         $this->authorize('view', $employee);
 
         $seesSalary = (bool) $request->user()?->can('viewSalary', $employee);
+
+        // ⭐ কে কার বেতন বা পরিচয় দেখলেন — নিরীক্ষায়, অঙ্ক ছাড়া (ঘাটতির তালিকা #১৮; [[SensitiveViews]])
+        if ($seesSalary) {
+            app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($employee, 'salary_viewed', $employee);
+        }
+        if (\App\Core\Security\FieldSecurity::visible($employee, 'national_id')) {
+            app(\App\Modules\Hr\Services\SensitiveViews::class)->seen($employee, 'identity_viewed', $employee);
+        }
 
         $employee->load(['department', 'designation', 'employmentType', 'branch', 'creator', 'user', 'photo',
             'reportsTo.designation', 'reports' => fn ($q) => $q->active()->with('designation')->orderBy('name_en')]);
@@ -166,6 +178,8 @@ class EmployeeController extends Controller implements HasMiddleware
             'employee' => $employee,
             'components' => $seesSalary ? $this->salaries->componentsOn($employee, now()) : [],
             'totals' => $seesSalary ? $this->salaries->totalsOn($employee, now()) : null,
+            // ⭐ ভবিষ্য তহবিলের খাতা — বেতনের চাবিতে, নিশ্চিত রানের স্লিপ থেকে (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund::ledgerOf()]])
+            'pfLedger' => $seesSalary ? app(\App\Modules\Hr\Services\ProvidentFund::class)->ledgerOf($employee) : [],
             'month' => $month,
             'attendance' => $seesAttendance ? [
                 'summary' => $this->attendance->monthlySummary($employee, $month),
@@ -177,9 +191,46 @@ class EmployeeController extends Controller implements HasMiddleware
                     ->all()
                 : null,
 
+            /*
+             * ⭐ চাকরি ছাড়লে না-নেওয়া অর্জিত ছুটির টাকা — বেতন আর ছুটির দুই চাবিতেই (টাকার অঙ্ক বেতনের চাবির পেছনে); ছাড়ার তারিখ বসানো থাকলে
+             * সেদিনের, নইলে আজকের ([[LeaveService::earnedLeaveEncashment()]]; ধারা ১১, ১১৭, ২(৪৫); a6, ২১ অক্টোবর ২০২৬)।
+             */
+            'encashment' => $seesSalary && $seesLeave
+                ? ['on' => ($employee->leaving_date ?? now())->toDateString()]
+                    + $this->leaves->earnedLeaveEncashment($employee, ($employee->leaving_date ?? now())->copy())
+                : null,
+
             // ⭐ চাকরির ইতিহাস — নিরীক্ষার খাতা থেকে ([[JobHistory]]); প্রোফাইল খোলার চাবিতেই, কারণ পদবি-বিভাগ এখানে আগে থেকেই খোলা
             'history' => app(JobHistory::class)->of($employee),
+
+            // ⭐ বেতনের ঠিকানার অপেক্ষার বদল (#৮) — পাতার মাথায়, সই আর ফেরানোর বোতামসহ
+            'paymentChange' => app(PaymentChanges::class)->pendingFor($employee),
         ]);
+    }
+
+    /** ⭐ দ্বিতীয় হাতের সই — বেতনের ঠিকানা এখন বসে (#৮, ২০ অক্টোবর ২০২৬) */
+    public function approvePaymentChange(Request $request, Employee $employee, PaymentChange $change): RedirectResponse
+    {
+        $this->authorize('view', $employee);
+        abort_unless((int) $change->employee_id === (int) $employee->id, 404);
+
+        $after = app(PaymentChanges::class)->approve($change, $request->user());
+
+        // ⓘ কোম্পানির নিজের কয়েক ধাপের ছকে এটা শেষ সই না-ও হতে পারে — তখন "বসেছে" বলা মিথ্যা (a6, ২১ অক্টোবর ২০২৬)
+        return redirect()->route('hr.employee.show', $employee)->with('saved', $after->status === PaymentChange::APPLIED
+            ? __('hr::payment_change.applied')
+            : __('hr::payment_change.signed_waiting'));
+    }
+
+    /** না — বা লেখক নিজে ফিরিয়ে নিলেন; কর্মীর সারি যেমন ছিল */
+    public function rejectPaymentChange(Request $request, Employee $employee, PaymentChange $change): RedirectResponse
+    {
+        $this->authorize('view', $employee);
+        abort_unless((int) $change->employee_id === (int) $employee->id, 404);
+
+        app(PaymentChanges::class)->reject($change, $request->user(), $request->string('note')->toString());
+
+        return redirect()->route('hr.employee.show', $employee)->with('saved', __('hr::payment_change.rejected'));
     }
 
     public function edit(Request $request, Employee $employee): View
@@ -198,12 +249,18 @@ class EmployeeController extends Controller implements HasMiddleware
         $this->authorize('update', $employee);
 
         $this->checkPhoto($request, $employee);
+
+        // ⓘ বেতনের ঠিকানার নতুন অপেক্ষার বদল হলে সেটাই বলা — "সংশোধিত" বললে মানুষ ভাবতেন নতুন হিসাবে বেতন যাবে
+        $before = app(PaymentChanges::class)->pendingFor($employee)?->id;
         $this->employees->update($employee, $this->validated($request, $employee));
+        $after = app(PaymentChanges::class)->pendingFor($employee)?->id;
         $this->savePhoto($request, $employee);
 
         return redirect()
             ->route('hr.employee.show', $employee)
-            ->with('saved', __('hr::message.employee_updated'));
+            ->with('saved', $after !== null && $after !== $before
+                ? __('hr::payment_change.waiting_saved')
+                : __('hr::message.employee_updated'));
     }
 
     /**
@@ -276,7 +333,7 @@ class EmployeeController extends Controller implements HasMiddleware
          * অনুপস্থিত চাবি `$employee->update($data)` ছোঁয় না, তাই
          * আগের মানটা যেমন ছিল তেমনই থাকে।
          */
-        foreach (['national_id', 'bank_account_no', 'bank_routing_no', 'mfs_number'] as $guarded) {
+        foreach (Employee::GUARDED as $guarded) {
             if (! FieldSecurity::visible(Employee::class, $guarded)) {
                 $request->request->remove($guarded);
             }
@@ -291,11 +348,17 @@ class EmployeeController extends Controller implements HasMiddleware
             'mobile' => ['nullable', 'string', 'max:32'],
             'email' => ['nullable', 'email', 'max:120'],
             'national_id' => ['nullable', 'string', 'max:32'],
+            // ⭐ e-TIN — বাংলাদেশের করদাতা নম্বর, ১২ অঙ্ক (আয়কর আইন ২০২৩; a6, ২১ অক্টোবর ২০২৬)
+            'e_tin' => ['nullable', 'string', 'regex:/^\d{12}$/'],
 
             // ⭐ প্রোফাইলের মানুষটা — মালিকের অনুমোদিত নকশা, ২ অক্টোবর ২০২৬। সবই ঐচ্ছিক: পুরনো কর্মীদের এগুলো কেউ লেখেনি।
             'date_of_birth' => ['nullable', 'date', 'before:today'],
             'mother_name' => ['nullable', 'string', 'max:150'],
             'blood_group' => ['nullable', Rule::in(Employee::BLOOD_GROUPS)],
+            // ⭐ লিঙ্গ — পরিচয়ের চাবির পেছনে, উপরের দুই পাহারায় ([[Employee::GUARDED]]; a6, ২১ অক্টোবর ২০২৬)
+            'gender' => ['nullable', Rule::in(Employee::GENDERS)],
+            // ⭐ জীবিত সন্তান — মাতৃত্বকালীন সুবিধার শর্ত (ধারা ৪৬(৩)); খালি = তথ্য নেই
+            'surviving_children' => ['nullable', 'integer', 'min:0', 'max:30'],
             'present_address' => ['nullable', 'string', 'max:500'],
             'permanent_address' => ['nullable', 'string', 'max:500'],
             'emergency_name' => ['nullable', 'string', 'max:150'],
@@ -395,6 +458,7 @@ class EmployeeController extends Controller implements HasMiddleware
             'mfs_number' => ['nullable', 'string', 'max:32'],
         ], [
             'branch_id.required' => __('hr::validation.branch_required'),
+            'e_tin.regex' => __('hr::validation.e_tin_shape'),
         ]);
 
         /*
@@ -402,7 +466,7 @@ class EmployeeController extends Controller implements HasMiddleware
          * ঠিকানার query-ও পড়ে: `PUT /hr/employees/12?bank_account_no=…` পাঠালে পরিচয়ের চাবি ছাড়াই ব্যাংকের নম্বর বদলাত, আর পরের
          * ব্যাংক-ফাইল বেতন সেই হিসাবে পাঠাত — যিনি বদলালেন তিনি আগের নম্বরটা কখনো দেখেননি।
          */
-        foreach (['national_id', 'bank_account_no', 'bank_routing_no', 'mfs_number'] as $guarded) {
+        foreach (Employee::GUARDED as $guarded) {
             if (! FieldSecurity::visible(Employee::class, $guarded)) {
                 unset($data[$guarded]);
             }
@@ -431,6 +495,7 @@ class EmployeeController extends Controller implements HasMiddleware
             'paymentMethods' => Employee::PAYMENT_METHODS,
             'taggableUsers' => $this->taggableUsers($employee),
             'bloodGroups' => Employee::BLOOD_GROUPS,
+            'genders' => Employee::GENDERS,
 
             // ⓘ যাঁর অধীনে বসানো যায় — এই কোম্পানির চালু কর্মীরা, নিজে বাদ
             // ⛔ শাখার দেয়াল — কর্মী মডেলে শাখার স্কোপ নেই, তাই তালিকায় অন্য শাখার সবার নাম-পদবি আসত (পুনঃঅডিট ৯ অক্টোবর ২০২৬, HR ১০)

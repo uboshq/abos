@@ -100,6 +100,9 @@ return [
     'bindings' => [
         CreditHolds::class => CreditExposure::class,
 
+        // ⭐ স্টক ছাড়া বিক্রয় ভাউচারের (SV) বাকির দেয়াল — বিলের একই দেয়াল (নকশা v5, ২৩ নভেম্বর ২০২৬)
+        \App\Core\Contracts\CreditWall::class => \App\Modules\Sales\Services\SalesCreditWall::class,
+
         // ⭐ মজুদের ড্যাশবোর্ডের "মজুদ শেষ" — খোলা আদেশে আটকে থাকা চাহিদা আর হারানো বিক্রি ([[StockDemand]])
         \App\Core\Contracts\StockDemand::class => \App\Modules\Sales\Services\SalesStockDemand::class,
 
@@ -401,6 +404,39 @@ return [
             /* ⭐ আদায়ের লক্ষ্য বনাম অর্জন — ডিলার ধরে, পরিকল্পনা সংস্করণ ২ §৯ ঙ ([[CollectionTargetReports]]) */
             ['label' => 'sales::collection_target.title', 'icon' => 'wallet', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'collection-target'], 'permission' => 'sales.report'],
+            /* ⭐ টাকা আসা — আসল টাকা কত এল; বাকি রূপ পাতার ট্যাবে ([[MoneyInReports]]; মালিক, ২৩ নভেম্বর ২০২৬) */
+            ['label' => 'sales::money_in.menu', 'icon' => 'wallet', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'money-in'], 'permission' => 'sales.report'],
+            /* ⭐ এলাকা ধরে বিক্রয় — স্তর পাতার ট্যাবে; আর শাখা ধরে বিক্রয় ([[AreaSalesReports]]; মালিক, ২৩ নভেম্বর ২০২৬) */
+            ['label' => 'sales::area_sales.menu', 'icon' => 'globe', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'area-sales'], 'permission' => 'sales.report'],
+            ['label' => 'sales::area_sales.menu_branch', 'icon' => 'reports', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'branch-sales'], 'permission' => 'sales.report'],
+            /* ⭐ আন্তর্জাতিক মানের বিশ্লেষণ — রূপগুলো পাতার ট্যাবে ([[CustomerInsightReports]], [[ProductInsightReports]], [[SalesTrendReports]]) */
+            ['label' => 'sales::customer_insight.menu_target', 'icon' => 'scale', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'target-sales'], 'permission' => 'sales.report'],
+            ['label' => 'sales::sales_trend.menu', 'icon' => 'calendar', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'sales-trend'], 'permission' => 'sales.report'],
+            ['label' => 'sales::product_insight.menu_abc', 'icon' => 'inventory', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'product-abc'], 'permission' => 'sales.report'],
+            ['label' => 'sales::customer_insight.menu_abc', 'icon' => 'customer', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'customer-abc'], 'permission' => 'sales.report'],
+            ['label' => 'sales::customer_insight.menu_customers', 'icon' => 'people', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'customers-new'], 'permission' => 'sales.report'],
+            ['label' => 'sales::customer_insight.menu_efficiency', 'icon' => 'wallet', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'collection-efficiency'], 'permission' => 'sales.report'],
+            ['label' => 'sales::scheme_cost.menu', 'icon' => 'megaphone', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'scheme-cost'], 'permission' => 'sales.report'],
+            ['label' => 'sales::product_insight.menu_price', 'icon' => 'wallet', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'price-realisation'], 'permission' => 'sales.report'],
+            ['label' => 'sales::return_rate.menu', 'icon' => 'refresh', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'return-rate'], 'permission' => 'sales.report'],
+            ['label' => 'sales::sales_force.menu', 'icon' => 'people', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'salesperson-productivity'], 'permission' => 'sales.report'],
+            ['label' => 'sales::due_ageing.menu', 'icon' => 'clock', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'due-ageing'], 'permission' => 'sales.report'],
+            ['label' => 'sales::daily_summary.menu', 'icon' => 'calendar', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'daily-summary'], 'permission' => 'sales.report'],
 
             /*
              * রিকল — এই লটটা কাদের কাছে গেছে।
@@ -432,6 +468,9 @@ return [
             // ⭐ ডিলারের মাসিক আদায়ের লক্ষ্য — বিলের "টার্গেট রিমাইন্ডার" (মালিক, ৩ অক্টোবর ২০২৬)
             ['label' => 'sales::customer_target.title', 'icon' => 'scale', 'route' => 'sales.customer_target.index',
                 'permission' => 'sales.customer_target.view'],
+            // ⭐ পণ্যের মাসিক বিক্রির লক্ষ্য — পণ্য ধরে লক্ষ্য বনাম বিক্রয়ের জন্য (মালিক, ২৩ নভেম্বর ২০২৬); চাবি লক্ষ্যমাত্রার
+            ['label' => 'sales::product_target.title', 'icon' => 'scale', 'route' => 'sales.product_target.index',
+                'permission' => 'sales.target.view'],
 
             /* রুটের খাতা — লক্ষ্যমাত্রার পাশে: দুইটাই মাস ধরে দেখা হয় (NEXUS §২৭) */
             ['label' => 'sales::route.title', 'icon' => 'globe', 'route' => 'sales.route.index',
@@ -853,6 +892,8 @@ return [
     // ডিলারের মাসিক লক্ষ্য একসাথে অনেকের (৩ অক্টোবর ২০২৬; [[CustomerTargetImporter]])
     'imports' => [
         'customer_target' => \App\Modules\Sales\Imports\CustomerTargetImporter::class,
+        // পণ্যের মাসিক লক্ষ্য একসাথে অনেকের (২৩ নভেম্বর ২০২৬; [[ProductTargetImporter]])
+        'product_target' => \App\Modules\Sales\Imports\ProductTargetImporter::class,
     ],
 
     /*
@@ -887,6 +928,20 @@ return [
         \App\Modules\Sales\Reports\PartyTargetReport::class,
         // ⭐ প্রতিদিনের জমার খাতা — খবর, মিল, খাতায়, অপেক্ষা (ধাপ গ, ১৮ নভেম্বর ২০২৬)
         \App\Modules\Sales\Reports\DepositRegisterReport::class,
+        // ⭐ টাকা আসা — দিন, শাখা, এলাকার স্তর, বিক্রয়কর্মী, মাধ্যম, রসিদ, বাদ গেছে (মালিক, ২৩ নভেম্বর ২০২৬)
+        \App\Modules\Sales\Reports\MoneyInReports::class,
+        // ⭐ এলাকা ধরে বিক্রয় (এরিয়া › টেরিটরি › পয়েন্ট › গ্রাহক) আর শাখা ধরে বিক্রয় (মালিক, ২৩ নভেম্বর ২০২৬)
+        \App\Modules\Sales\Reports\AreaSalesReports::class,
+        // ⭐ আন্তর্জাতিক মানের বিশ্লেষণ — লক্ষ্য বনাম বিক্রয়, গ্রাহকের ABC, নতুন/ঘুমন্ত/হারানো, আদায়ের দক্ষতা ও DSO; পণ্যের ABC; বিক্রির ধারা
+        \App\Modules\Sales\Reports\CustomerInsightReports::class,
+        \App\Modules\Sales\Reports\ProductInsightReports::class,
+        \App\Modules\Sales\Reports\SalesTrendReports::class,
+        // ⭐ স্কিম ও ছাড়ের খরচ, ফেরতের হার, বিক্রয়কর্মীর কাজ, এলাকা ধরে বাকির বয়স, দৈনিক সারাংশ (রিপোর্ট ১০–১৫; দামের প্রাপ্তি পণ্যের ফাইলে)
+        \App\Modules\Sales\Reports\SchemeCostReports::class,
+        \App\Modules\Sales\Reports\ReturnRateReports::class,
+        \App\Modules\Sales\Reports\SalesForceReports::class,
+        \App\Modules\Sales\Reports\DueAgeingReports::class,
+        \App\Modules\Sales\Reports\DailySummaryReports::class,
     ],
 
     /*

@@ -144,7 +144,8 @@ final class TheDepositWentForApprovalAndTookTheSaleWithItTest extends TestCase
             'lines' => [['product_id' => $this->product->id, 'qty' => '10', 'rate' => '100']],
         ]);
 
-        $response->assertRedirectContains('/print/invoice/');
+        $response->assertRedirect(route('sales.direct.create'))
+            ->assertSessionHas('print_url', fn ($url) => str_contains((string) $url, '/print/invoice/'));
         $response->assertSessionHas('saved');
     }
 

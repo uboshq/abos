@@ -74,6 +74,9 @@ class ModuleServiceProvider extends ServiceProvider
         // ⓘ বিক্রয় বন্ধ থাকলে ডিও বা খসড়া বিল নেই — আটকে থাকা টাকা শূন্য
         $this->app->bind(CreditHolds::class, NoCreditHolds::class);
 
+        // ⭐ স্টক ছাড়া বিক্রয় ভাউচারের বাকির দেয়াল — বিক্রয় বন্ধ থাকলে নেই (নকশা v5, ২৩ নভেম্বর ২০২৬)
+        $this->app->bind(\App\Core\Contracts\CreditWall::class, \App\Core\Services\NoCreditWall::class);
+
         // ⭐ মজুদের ড্যাশবোর্ডের চাহিদা ও যোগান — বিক্রয়/ক্রয় বন্ধ থাকলে শূন্য (মালিকের চূড়ান্ত নমুনা, 10 নভেম্বর 2026 রাত)
         $this->app->bind(\App\Core\Contracts\StockDemand::class, \App\Core\Services\NoStockDemand::class);
         $this->app->bind(\App\Core\Contracts\StockSupply::class, \App\Core\Services\NoStockSupply::class);
@@ -98,6 +101,8 @@ class ModuleServiceProvider extends ServiceProvider
         $this->app->bind(PartyOpenBills::class, NoPartyOpenBills::class);
         // ⓘ ক্রয় বন্ধ থাকলে পরিশোধ ভাউচারে সরবরাহকারীর খোলা বিল নেই ([[\App\Core\Contracts\PayableOpenBills]], cb-ma-5)
         $this->app->bind(\App\Core\Contracts\PayableOpenBills::class, \App\Core\Services\NoPayableOpenBills::class);
+        // ⓘ হিসাব বন্ধ থাকলে চলন্ত বারে দিন বন্ধের খবর নেই ([[\App\Core\Contracts\DayCloseReminder]])
+        $this->app->bind(\App\Core\Contracts\DayCloseReminder::class, \App\Core\Services\NoDayCloseReminder::class);
 
         // ⓘ বিক্রয় বন্ধ থাকলে হোমের ছাঁকনিতে বাছার কিছু নেই ([[HomeSalesFilters]])
         $this->app->bind(HomeSalesFilters::class, NoHomeSalesFilters::class);

@@ -153,12 +153,21 @@ final class TheDashboardCountsTodaysRollTest extends TestCase
         $clerk->givePermissionTo('hr.payroll.view');
         $this->actingAs($clerk->fresh());
 
+        // ⛔ রানের চাবি একা যথেষ্ট নয় — বেতনের অঙ্ক কেবল `hr.salary.view`-এ (fe, ২১ অক্টোবর ২০২৬)
+        $this->assertNotContains($label, $labels(), '⛔ বেতনের চাবি ছাড়াই বেতন খরচের অঙ্ক দেখা গেছে।');
+
+        \Spatie\Permission\Models\Permission::findOrCreate('hr.salary.view', 'web');
+        $clerk->givePermissionTo('hr.salary.view');
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->actingAs($clerk->fresh());
+
         $panel = collect(HrDashboard::dashboard()->panels)->firstWhere('label', $label);
         $this->assertNotNull($panel, 'বেতনের চাবি থাকা সত্ত্বেও বেতন খরচের চার্ট নেই।');
         $this->assertCount(6, $panel->points, 'ছয় মাসের দণ্ড নেই।');
 
         $now = $panel->points[array_key_last($panel->points)];
-        $this->assertSame(0, bccomp((string) $now['first'], '50000', 2), '⛔ এ মাসের মোট আয়ে খসড়া শিটও গোনা — বা নিশ্চিতটা বাদ।');
-        $this->assertSame(0, bccomp((string) $now['second'], '45000', 2), 'এ মাসের হাতে পাওয়া অঙ্ক ভুল।');
+        // ⓘ ২৩ নভেম্বর ২০২৬ থেকে এই কলাম হাতে পাওয়া আর কর্তন (মোট আয় গ্রাফের বোর্ডে, মূল বেতন + ভাতা)
+        $this->assertSame(0, bccomp((string) $now['first'], '45000', 2), '⛔ এ মাসের হাতে পাওয়ায় খসড়া শিটও গোনা — বা নিশ্চিতটা বাদ।');
+        $this->assertSame(0, bccomp((string) $now['second'], '5000', 2), 'এ মাসের কর্তন (মোট আয় − হাতে পাওয়া) ভুল।');
     }
 }

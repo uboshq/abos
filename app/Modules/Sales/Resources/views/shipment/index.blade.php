@@ -52,6 +52,12 @@
             'render' => fn ($d) => view('sales::components.status-badge', ['document' => $d]),
         ],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        \App\Core\ListFilter\Facets::flag('cancelled', __('sales::action.show_cancelled')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -65,11 +71,12 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('sales::shipment.title')" :count="__('sales::shipment.subtitle')"
                 :columns="$columns" :search-placeholder="__('sales::shipment.subtitle')"
-                :sort="$sortOptions">
+                :sort="$sortOptions" :facets="$facetPanel">
         <x-slot:actions>
             @can('create', \App\Modules\Sales\Models\Shipment::class)
                     <x-ui.button tone="primary" icon="plus" :href="route('sales.shipment.create')">
@@ -77,12 +84,6 @@
                     </x-ui.button>
                 @endcan
         </x-slot:actions>
-                <x-ui.date-range :dates="$dates" />
-
-                <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                    <input type="checkbox" name="cancelled" value="1" @checked($showCancelled) class="size-4">
-                    {{ __('sales::action.show_cancelled') }}
-                </label>
             </x-ui.toolbar>
         </form>
 
@@ -95,4 +96,5 @@
         <x-ui.pager :rows="$shipments" />
         <x-ui.list-totals :rows="$shipments" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

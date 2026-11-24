@@ -492,7 +492,7 @@ final class SalesReports
      *
      * @param  array<string, mixed>  $f
      */
-    private static function lineUnion(array $f): \Illuminate\Database\Query\Builder
+    public static function lineUnion(array $f): \Illuminate\Database\Query\Builder
     {
         $bills = DB::table('sal_invoice_lines as il')
             ->join('sal_invoices as i', 'i.id', '=', 'il.sales_invoice_id')

@@ -20,4 +20,21 @@ return [
     'approved' => 'Approved',
     'rejected' => 'Rejected',
     'cancelled' => 'Withdrawn',
+    // ⭐ gender (a6, 21 Oct 2026)
+    'gender_female' => 'Female',
+    'gender_male' => 'Male',
+    'gender_other' => 'Other',
+    // ⭐ ভবিষ্য তহবিল — BLA ধারা ২৬৪ (a6, ২১ অক্টোবর ২০২৬; [[ProvidentFund]])
+    'employer_share' => 'employer share',
+    'pf_member' => 'Member',
+    'pf_not_member' => 'Not a member',
+    'pf_changes' => 'Will change',
+    // ⭐ অধিকাল — BLA ধারা ১০৮ (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])
+    'ot_signed' => 'Approved',
+    'ot_waiting' => 'Pending approval',
+    // ⭐ উৎসব ভাতা — শ্রম বিধিমালা ২০১৫ বিধি ১১১ (a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])
+    'run_salary' => 'Monthly salary',
+    'run_bonus' => 'Festival bonus',
+    // ⓘ বেতনশিট আটকে — সই-না-পড়া হিসাব (fe, ২১ অক্টোবর ২০২৬)
+    'held' => 'Held — account not approved',
 ];

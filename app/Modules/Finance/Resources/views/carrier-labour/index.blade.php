@@ -7,6 +7,11 @@
 
     $keep = ['tab' => $tab, 'from' => $from, 'to' => $to];
     $sum = fn (string $k) => $parties->reduce(fn (string $c, $p) => bcadd($c, $p[$k], 4), '0');
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই তারিখের ঘর, একই চাবি; পাতা যে পরিসর ধরে চলেছে সেটাই দেখায় (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ], shown: ['from' => $from, 'to' => $to]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -30,23 +35,18 @@
                 {{ __('finance::carrier_labour.'.$key) }}
             </a>
         @endforeach
+    </nav>
 
-        <form method="GET" action="{{ route('finance.carrier_labour.index') }}" class="ms-auto flex flex-wrap items-end gap-2 pb-1">
+    {{-- ⓘ তারিখ বেছে — ডান পাশের ছাঁকনির প্যানেলে, একই চাবি (tab, party সাথে যায়); চলে "দেখান" বা Enter-এ --}}
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form" :report="true">
+        <form id="list-form" method="GET" action="{{ route('finance.carrier_labour.index') }}" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
             @if ($party !== null)
                 <input type="hidden" name="party" value="{{ $party }}">
             @endif
-            <label class="text-2xs text-(--color-ink-muted)">
-                {{ __('finance::carrier_labour.from') }}
-                <x-ui.date name="from" :value="$from" />
-            </label>
-            <label class="text-2xs text-(--color-ink-muted)">
-                {{ __('finance::carrier_labour.to') }}
-                <x-ui.date name="to" :value="$to" />
-            </label>
-            <x-ui.button type="submit" tone="secondary">{{ __('finance::carrier_labour.show') }}</x-ui.button>
+            <x-ui.filter-bar :facets="$facetPanel" />
         </form>
-    </nav>
+    </x-ui.filter-layout>
 
     @if ($head === null)
         <p class="rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2 text-sm text-(--color-badge-pending-ink)">

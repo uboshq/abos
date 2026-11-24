@@ -27,6 +27,11 @@
                 ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
                  'render' => fn ($l) => view('master_data::location.partials.actions', ['location' => $l])],
             ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::flag('inactive', __('master_data::action.show_inactive')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -79,16 +84,17 @@
             @endcan
         </div>
     @else
+        <x-ui.filter-layout :filters="$facetPanel" form="list-form">
         <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-            <form method="GET" class="contents">
+            <form id="list-form" method="GET" class="contents">
                 {{-- ⓘ মই-টা ("দেশ › বিভাগ › …") আর শিরোনামের পাশে লেখা নেই —
                      ১৯ সেপ্টেম্বর ২০২৬। নিচের ট্যাবগুলো ঠিক ঐ কথাটাই বলে,
                      আর বেশি বলে: প্রতিটায় ক্লিক করা যায়, পাশে সংখ্যা থাকে।
                      ⚠️ দুইটা একসাথে থাকলে একই মই পর্দায় দুইবার — মালিক ধূসর
                      লেখাটাকেই দাগিয়ে বলেছিলেন "এগুলো আলাদা ট্যাব হবে"। --}}
                 <x-ui.toolbar :title="__('master_data::menu.locations')"
-                :columns="$columns">
+                :columns="$columns" :facets="$facetPanel">
         <x-slot:actions>
             @can('master_data.manage')
                     {{-- ⓘ স্তরের পাতায় বোতামটা **ঐ স্তরেরই** — "নতুন পয়েন্ট",
@@ -112,10 +118,6 @@
                     @endif
                 @endcan
         </x-slot:actions>
-                    <label class="flex min-h-(--spacing-touch) items-center gap-2 text-sm">
-                        <input type="checkbox" name="inactive" value="1" @checked($showInactive) class="size-4">
-                        {{ __('master_data::action.show_inactive') }}
-                    </label>
                 </x-ui.toolbar>
             </form>
 
@@ -236,5 +238,6 @@
                 </div>
             @endif
         </div>
+        </x-ui.filter-layout>
     @endif
 </x-layouts.app>

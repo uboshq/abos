@@ -104,6 +104,7 @@ return [
         'accounts_voucher' => 'Voucher',
         'accounts_transfer' => 'Fund transfer',
         'accounts_note' => 'Debit/credit note',
+        'accounts_trade_voucher' => 'Sales/purchase voucher',
         'hr_payslip' => 'Payslip',
         'inventory_transfer' => 'Stock transfer',
     ],

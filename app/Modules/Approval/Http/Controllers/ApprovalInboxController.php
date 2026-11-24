@@ -59,6 +59,55 @@ class ApprovalInboxController extends Controller implements HasMiddleware
      */
     private const INBOX_LIMIT = 50;
 
+    /**
+     * ⭐ The inbox board (owner "ok", 23 Nov 2026, sample YRFmwfF7 v5) — papers grouped by kind in coloured boxes on the
+     * left, the picked paper on the right — only in the three ABOS looks (rose "ABOS Smart", navy, blue).
+     *
+     * ⛔ SAP, Dynamic, Odoo and every other look keep their own inbox exactly as it is (owner: "ওই চেহারা যেভাবে থাকে,
+     *    ওইখানকার অনুমোদন যেভাবে হয় এইভাবেই হবে") — the same list view, not one pixel moved.
+     */
+    public const BOARD_LOOKS = ['rose', 'navy', 'blue'];
+
+    /**
+     * The colour of a paper kind on the board — the money kinds wear their own tokens (the same as the money pages), any
+     * other kind a fixed chart colour by its name, so one kind always wears one colour (never by its place in the list).
+     *
+     * @return array{0: string, 1: string} [colour, deep colour]
+     */
+    public static function kindTone(string $module, string $action): array
+    {
+        $key = strtolower($module.'.'.$action);
+        $named = [
+            'receipt' => ['var(--color-kind-receipt)', 'var(--color-kind-receipt-deep)'],
+            'collection' => ['var(--color-kind-receipt)', 'var(--color-kind-receipt-deep)'],
+            'payment' => ['var(--color-kind-payment)', 'var(--color-kind-payment-deep)'],
+            'expense' => ['var(--color-kind-expense)', 'var(--color-kind-expense-deep)'],
+            'journal' => ['var(--color-kind-journal)', 'var(--color-kind-journal-deep)'],
+            'contra' => ['var(--color-kind-contra)', 'var(--color-kind-contra-deep)'],
+            'transfer' => ['var(--color-kind-transfer)', 'var(--color-kind-transfer-deep)'],
+            'loan' => ['var(--color-kind-loan)', 'var(--color-kind-loan-deep)'],
+        ];
+
+        foreach ($named as $word => $tone) {
+            if (str_contains($key, $word)) {
+                return $tone;
+            }
+        }
+
+        $one = 'var(--color-chart-'.(crc32($key) % 8 + 1).')';
+
+        return [$one, $one];
+    }
+
+    public static function boardLook(?User $user): bool
+    {
+        return in_array(
+            \App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen($user?->ui)),
+            self::BOARD_LOOKS,
+            true,
+        );
+    }
+
     public function __construct(
         private readonly MenuBuilder $menu,
         private readonly ApprovalEngine $engine,
@@ -317,7 +366,9 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * ⭐ কার · কী বাবদ · কোথায় — ২০ সেপ্টেম্বর ২০২৬। কাগজগুলো ধরন ধরে একবারে তোলা হয় ([[ApprovalFacts]]), সারি ধরে নয়।
              * ⓘ দেয়াল তোলা কেবল নিজের সারিতে — অন্যের সারি দেখা রিপোর্ট-পাঠক নিজের দেয়ালেই ([[ApprovalFacts::VIEW_WALLS]])
              */
-            'facts' => $this->facts->of($rows, $own),
+            'facts' => $this->facts->of($rows, $own, $board = self::boardLook($user)),
+            // ⭐ the kind-grouped board — only rose, navy and blue ([[BOARD_LOOKS]])
+            'board' => $board,
             // ⭐ ছকের বাইরের সই — কেবল নিজের বাক্সে, অন্যের বাক্স দেখার সময় নয়
             'elsewhere' => $own ? $elsewhere : [],
             'visibleTotal' => $visibleTotal,
@@ -362,7 +413,8 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * [[BulkApproval]] সার্ভারেও আলাদা করে দেখে — লুকানো একটা চেকবক্স হাতে বানিয়ে পাঠানো যায়।
              */
             'bulkable' => $own && in_array($tab, ['waiting', 'behalf'], true)
-                ? $rows->reject(fn (Approval $a) => $this->bulk->movesMoney($a))->pluck('id')->all()
+                // ⛔ আর মডিউল যে কাজ একটা একটা করে চায় (`no_bulk`; fe, ২১ অক্টোবর ২০২৬)
+                ? $rows->reject(fn (Approval $a) => $this->bulk->movesMoney($a) || $this->bulk->oneByOne($a))->pluck('id')->all()
                 : [],
 
             'opened' => $opened,
@@ -540,6 +592,56 @@ class ApprovalInboxController extends Controller implements HasMiddleware
      *
      * @return array<string, mixed>|null
      */
+    /**
+     * ⭐ "এই পক্ষের আগের কাগজ" — the party's open papers, newest first, each linked (owner, 23 Nov 2026: every number and
+     * amount links to its source).
+     *
+     * ⓘ The modules answer ([[PartyOpenBills]] — sales today); a party no module knows gives an empty box, never a guess.
+     * ⓘ The paper being signed is left out — it is already the whole right side.
+     *
+     * @return list<array{no: string, date: ?string, amount: string, url: ?string}>
+     */
+    private function partyPapersOf(string $type, int $id, ?object $document): array
+    {
+        try {
+            $bills = app(\App\Core\Contracts\PartyOpenBills::class)->openBills($type, $id, 6);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [];
+        }
+
+        $drill = app(\App\Core\Engines\Drill\DrillResolver::class);
+        $out = [];
+
+        foreach ($bills as $bill) {
+            $source = (string) ($bill['against_type'] ?? '');
+            $billId = (int) ($bill['id'] ?? 0);
+
+            if ($document instanceof \Illuminate\Database\Eloquent\Model
+                && method_exists($document, 'drillSourceType')
+                && $document::drillSourceType() === $source && (int) $document->getKey() === $billId) {
+                continue;
+            }
+
+            $paper = $source !== '' && $billId > 0 ? $drill->resolve($source, $billId) : null;
+            $route = $paper?->drillRoute();
+
+            $out[] = [
+                'no' => (string) ($bill['no'] ?? ''),
+                'date' => $bill['date'] ?? null,
+                'amount' => (string) ($bill['outstanding'] ?? '0'),
+                'url' => isset($route[0]) && \Illuminate\Support\Facades\Route::has($route[0]) ? route($route[0], $route[1] ?? []) : null,
+            ];
+
+            if (count($out) === 5) {
+                break;
+            }
+        }
+
+        return $out;
+    }
+
     private function detailFor(Approval $entry, User $user): ?array
     {
         $entry->loadMissing(['requester', 'decisions.user', 'decisions.forwardedTo', 'decisions.onBehalfOf']);
@@ -709,7 +811,7 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              * আর অঙ্ক লেখা থাকত।
              */
             'facts' => $mayReadDocument
-                ? ($this->facts->of(collect([$entry]), true)[$entry->id] ?? [])
+                ? ($this->facts->of(collect([$entry]), true, self::boardLook($user))[$entry->id] ?? [])
                 : [],
 
             /*
@@ -736,6 +838,11 @@ class ApprovalInboxController extends Controller implements HasMiddleware
              */
             'partyCard' => isset($sheet['party'])
                 ? app(FactRegistry::class)->forRecord($sheet['party']['type'].'-card', $sheet['party']['id'])
+                : [],
+
+            // ⭐ the board's "এই পক্ষের আগের কাগজ" box (sample YRFmwfF7 v5) — only in the three ABOS looks
+            'partyPapers' => isset($sheet['party']) && self::boardLook($user)
+                ? $this->partyPapersOf((string) $sheet['party']['type'], (int) $sheet['party']['id'], $document)
                 : [],
 
             /*

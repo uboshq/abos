@@ -293,4 +293,8 @@ return [
     'impact_money' => ':account — balance',
     'impact_money_ok' => '✓ The account has the money',
     'impact_money_short' => '⚠ The account will run short after this payment',
+
+    'pl_wppf' => '5. Workers\' profit participation fund',
+    'pl_wppf_line' => 'Workers\' profit participation fund (WPPF)',
+    'profit_before_tax' => 'Profit before tax',
 ];

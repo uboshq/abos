@@ -16,6 +16,22 @@
         'other' => __('accounts::field.equity_other'),
         'closing' => __('accounts::field.equity_closing'),
     ];
+
+    /* ⭐ ছাপার কাগজ — পর্দার একই সংখ্যা, কেন্দ্রীয় ছাঁচে ([[ReportPaper]], মালিক ২৩ নভেম্বর ২০২৬) */
+    $paperBranch = $branchId !== null ? $branches->firstWhere('id', $branchId) : null;
+    \App\Core\Support\ReportPaper::capture(
+        (string) __('accounts::menu.equity_statement'),
+        \App\Core\Support\DateFormat::format($statement['from']).' – '.\App\Core\Support\DateFormat::format($statement['to']),
+        array_filter([
+            $paperBranch ? __('core.company.branch').': '.$paperBranch->name() : null,
+            $statement['agrees'] ? __('accounts::field.equity_agrees') : __('accounts::field.equity_does_not_agree'),
+        ]),
+        [[__('accounts::field.equity_component'), false], ...array_map(fn ($c) => [$c['label'], true], $statement['columns']), [__('accounts::field.equity_total'), true]],
+        array_map(fn ($key, $label) => [
+            'cells' => [$label, ...array_map(fn ($c) => $money($c[$key]), $statement['columns']), $money($statement['total'][$key])],
+            'kind' => in_array($key, ['opening', 'closing'], true) ? 'total' : 'row',
+        ], array_keys($rows), $rows),
+    );
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -25,26 +41,26 @@
         <x-ui.page-header :title="__('accounts::menu.equity_statement')"
                           :subtitle="\App\Core\Support\DateFormat::format($statement['from']).' – '.\App\Core\Support\DateFormat::format($statement['to'])">
             <x-slot:actions>
-                <x-ui.button tone="secondary" icon="print" data-action="print">
-                    {{ __('core.action.print') }}
-                </x-ui.button>
+                {{-- ⭐ প্রিন্ট ভিউ — নিজের কাগজ নতুন ট্যাবে, পর্দার ছাপা নয় (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) --}}
+                <x-ui.print-view-button />
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
 
-    <form method="GET" class="mb-4 flex flex-wrap items-end gap-3 print-hide" data-report>
-        <x-ui.field name="from" type="date" :label="__('accounts::field.equity_from')" :value="$statement['from']" />
-        <x-ui.field name="to" type="date" :label="__('accounts::field.equity_to')" :value="$statement['to']" />
-
-        @if ($branches->count() > 1)
-            <x-ui.select name="branch_id" :label="__('core.company.branch')"
-                         :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])"
-                         :placeholder="__('accounts::field.all_branches')"
-                         :selected="$branchId" />
-        @endif
-
-        <x-ui.button type="submit" tone="secondary" data-report-show>{{ __('core.action.show') }}</x-ui.button>
-    </form>
+    {{-- ⭐ ঘরগুলো ডান পাশের ছাঁকনির প্যানেলে, একই চাবিতে (মালিক, ২৩ নভেম্বর ২০২৬; [[filter-bar]]); চলে "দেখান" বা Enter-এ --}}
+    @php
+        $panel = \App\Core\ListFilter\Facets::panel([
+            \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+            $branches->count() > 1
+                ? \App\Core\ListFilter\Facets::pick('branch_id', __('core.company.branch'), $branches->mapWithKeys(fn ($b) => [(string) $b->id => $b->name()])->all(), __('accounts::field.all_branches'))->look('blue', '🏬')
+                : null,
+        ], shown: ['from' => (string) $statement['from'], 'to' => (string) $statement['to']]);
+    @endphp
+    <x-ui.filter-layout :filters="$panel" form="list-form" :report="true">
+        <form id="list-form" method="GET" class="contents" data-report>
+            <x-ui.filter-bar :facets="$panel" />
+        </form>
+    </x-ui.filter-layout>
 
     @if ($branchId !== null)
         <p role="note" class="mb-4 rounded-(--radius-field) bg-(--color-badge-pending-bg) px-3 py-2

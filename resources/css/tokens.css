@@ -1170,6 +1170,83 @@
     --rail-tile-on-bg: var(--rail-tile-bg);
 }
 
+/* ⭐ ABOS Navy-র মডিউল-রেল সাদা (মালিক, ২৩ নভেম্বর ২০২৬, ছবিতে লাল বাক্সে) — কেবল আলো থিমে; রাতে আগের মতো গাঢ়।
+   রঙিন মডিউলে টাইল নিজের মডিউলের রঙে, চিহ্ন সাদা (আগের মতোই); নাম Navy-র ফিকে কালি #41525E, সাদায় ৮.১ঃ১।
+   ⓘ শান্ত রূপে (সুইচ বন্ধ) টাইল স্বচ্ছ — চিহ্ন অ্যাকসেন্টের ৯০০, সাদায় প্রতিটা ≥ ৮.৯ঃ১ (মাপা); দাগ আর চালুর ছোপও এখানে, কারণ
+   `:root`-এর `--rail-tile-on-edge` গোড়াতেই সাদা হয়ে নেমে আসে। ⛔ কেবল `[data-ui='navy']` — বাকি রূপের একটা পিক্সেলও নড়ে না। */
+:root[data-ui='navy']:not([data-theme='dark']) nav[data-rail] {
+    background: #ffffff;
+    border-inline-end-color: var(--color-border);
+    --rail-label-ink: #41525e;
+    --rail-rule: rgb(11 31 51 / 0.2);
+}
+
+:root[data-modules='calm'][data-ui='navy']:not([data-theme='dark']) nav[data-rail] {
+    --rail-tile-ink: rgb(var(--accent-900, 6 50 60));
+    --rail-tile-on-edge: rgb(var(--accent-900, 6 50 60));
+    --rail-tile-on-bg: rgb(var(--accent-100, 196 238 244));
+}
+
+/* ⭐ ফ্রেমের রং — প্রোফাইল › চেহারা › রং-এর সাদা · Redwood · Navy (মালিক, ২৩ নভেম্বর ২০২৬; [[Accent::frame()]])।
+   ABOS Navy-র পুরো ফ্রেম — উপরের বার আর মডিউল-রেল — ঐ রঙে, কালি রংটাই বলে (`--frame-ink`), আলো থিমে।
+   ⓘ `:root:root…` — রূপের রং `<style data-look>`-এ `:root:root:not([data-theme='dark'])` (০,৩,০); এটা তাকে জেতে। */
+:root:root[data-ui='navy'][data-accent-frame]:not([data-theme='dark']) {
+    --color-topbar: rgb(var(--frame-bg));
+    --color-topbar-border: rgb(var(--frame-border));
+    --color-topbar-field: rgb(var(--frame-field));
+    --color-topbar-hover: rgb(var(--frame-hover));
+    --color-topbar-ink: rgb(var(--frame-ink));
+    --color-topbar-ink-muted: rgb(var(--frame-ink-muted));
+}
+
+:root[data-ui='navy'][data-accent-frame]:not([data-theme='dark']) nav[data-rail] {
+    background: rgb(var(--frame-bg));
+    border-inline-end-color: rgb(var(--frame-border));
+    --rail-label-ink: rgb(var(--frame-ink-muted));
+    --rail-rule: rgb(var(--frame-ink) / 0.3);
+}
+
+:root[data-modules='calm'][data-ui='navy'][data-accent-frame]:not([data-theme='dark']) nav[data-rail] {
+    --rail-tile-ink: rgb(var(--frame-ink));
+    --rail-tile-on-edge: rgb(var(--frame-ink));
+    --rail-tile-on-bg: rgb(var(--frame-hover));
+}
+
+/* ⓘ সাদা ফ্রেমে নামের নিচের পদবি — উজ্জ্বল সোনালি #FFD54F সাদায় মাত্র ১.৪ঃ১; এখানে গাঢ় সোনালি #8A5A00 (৫.৯ঃ১)। কেবল পদবির ঘরে —
+   Ai চিহ্নের সোনালি বিন্দু অটুট। */
+:root[data-ui='navy'][data-accent-frame='white']:not([data-theme='dark']) [data-profile-identity] {
+    --color-brand-gold-bright: #8a5a00;
+}
+
+/* ⭐ ABOS Navy-র নিচের বারে "Notice" চিহ্ন (মালিক, ২৩ নভেম্বর ২০২৬: "অ্যাবস নেভিতে ফুটারের চলমান নোটিশগুলো দেখাচ্ছে না") — "ABOS"-এর
+   চিহ্নের গড়ন, রং নেভির নিজের: বোতামের রং (`--accent-600`) আর তার কালি, যার কনট্রাস্ট ≥ ৪.৫ঃ১ [[AppearanceTest]] মাপে — সাদা ফ্রেমেও
+   পড়া যায়। চলা (`abos-ticker`) আগে থেকেই সব রূপে এক ([[app.css]]); এখানে কেবল চিহ্ন আর চলা সারির ফাঁক। ⛔ কেবল `[data-ui='navy']`। */
+:root[data-ui='navy'] footer[data-footer] [data-ticker],
+:root[data-ui='navy'] footer[data-footer] [data-ticker-quiet] {
+    gap: 8px;
+}
+
+:root[data-ui='navy'] .abos-notice-tag {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 9px;
+    border-radius: 999px;
+    background: rgb(var(--accent-600, 8 127 145));
+    color: rgb(var(--accent-ink, 255 255 255));
+    font-size: 11px;
+    font-weight: 600;
+}
+
+:root[data-ui='navy'] .abos-notice-tag > i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 0 3px rgb(var(--accent-ink, 255 255 255) / 0.35);
+}
+
 /* ─────────────────────────────────────────────────────────────────
    ⭐ বারের বাঁ কোণ — গ্রাহকের নিজের লোগো, আর রেলের মাথায় ABOS (মালিক, ২১ অক্টোবর ২০২৬)।
 

@@ -552,6 +552,14 @@ final class ModuleDefinition
          * @var list<class-string<\App\Core\Contracts\ContributesToAProfile>>
          */
         public readonly array $profile = [],
+
+        /**
+         * ⭐ অনুমোদনের কাজ ধরে নিয়ম — সইকারীর চাবি (`signer_key`) আর ইনবক্সের সারির লেখা (`summary`); a6, ২১ অক্টোবর ২০২৬
+         * (Hr §৮ ⚠️৫, fe-র উত্তর ২ ও ৪; [[ApprovalRules]])। ⓘ শেষে, ডিফল্টসহ — নাম ধরে ডাকা প্রতিটা জায়গা অবিকল চলে।
+         *
+         * @var array<string, array{signer_key?: string, amount_key?: string, second_hand?: list<string>, no_bulk?: bool, summary?: class-string<\App\Core\Contracts\SummarisesAnApproval>}>
+         */
+        public readonly array $approvalRules = [],
     ) {}
 
     /**
@@ -666,6 +674,15 @@ final class ModuleDefinition
                     );
                 }
 
+                // ⭐ চাবির পাশে পাতার নিজের নীতি — [ক্ষমতা, মডেলের ক্লাস]; ভুল লিখলে সারি নীরবে লুকাত (a6, ২১ অক্টোবর ২০২৬; [[MenuBuilder::pageLets()]])
+                if (isset($item['policy']) && (! is_array($item['policy']) || count($item['policy']) !== 2
+                    || ! is_string($item['policy'][0]) || ! is_string($item['policy'][1]) || ! class_exists($item['policy'][1]))) {
+                    throw new InvalidArgumentException(
+                        "{$path}: menu item '{$item['route']}' has a 'policy' that is not [ability, existing model class]. "
+                        .'The row would ask a question nobody answers and stay hidden.'
+                    );
+                }
+
                 if (isset($item['setting']) && $host === null) {
                     $declared = array_column($raw['settings'] ?? [], 'key');
 
@@ -768,7 +785,71 @@ final class ModuleDefinition
             assistantTools: self::validateImplements($raw['assistant_tools'] ?? [], \App\Core\Engines\Assistant\AssistantTool::class, 'assistant tool', $path),
             forecasts: self::validateImplements($raw['forecasts'] ?? [], \App\Core\Engines\Forecast\ForecastSource::class, 'forecast source', $path),
             profile: self::validateImplements($raw['profile'] ?? [], \App\Core\Contracts\ContributesToAProfile::class, 'profile provider', $path),
+            approvalRules: self::validateApprovalRules(
+                $raw['approval_rules'] ?? [],
+                $raw['approvals'] ?? [],
+                $raw['permissions'] ?? [],
+                $path,
+            ),
         );
+    }
+
+    /**
+     * ⛔ অচেনা কাজ, এই মডিউলের নয় এমন চাবি, বা চুক্তি না মানা ক্লাস — বুটেই ভাঙে; নীরবে কাজ না করা নিয়ম পাহারা নয়।
+     *
+     * @param  array<mixed>  $rules
+     * @param  array<mixed>  $approvals
+     * @param  array<mixed>  $permissions
+     * @return array<string, array{signer_key?: string, summary?: string}>
+     */
+    private static function validateApprovalRules(array $rules, array $approvals, array $permissions, string $path): array
+    {
+        foreach ($rules as $action => $rule) {
+            if (! is_string($action) || ! array_key_exists($action, $approvals) || ! is_array($rule)) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval_rules names '".(is_string($action) ? $action : gettype($action))
+                    ."', which is not one of this module's approval actions (or its rule is not a map)."
+                );
+            }
+
+            // ⓘ `amount_key` (a6, ২১ অক্টোবর ২০২৬) — অনুরোধের অঙ্ক খোলা জমা হয় না ([[ApprovalRules::amountKey()]]); একই যাচাই
+            foreach (['signer_key', 'amount_key'] as $slot) {
+                $key = $rule[$slot] ?? null;
+
+                if ($key !== null && (! is_string($key) || ! in_array($key, $permissions, true))) {
+                    throw new InvalidArgumentException(
+                        "{$path}: approval_rules.{$action}.{$slot} must be a permission this module declares."
+                    );
+                }
+            }
+
+            /*
+             * ⭐ `second_hand` — ছক না থাকলেও আরেকজনের সই, যে চাবিগুলো থাকলে তিনি সই দিতে পারেন (মালিকের একমাত্র ব্যতিক্রম, a6, ২১ অক্টোবর
+             * ২০২৬; [[ApprovalRules::secondHand()]])। ⛔ খালি তালিকা বা অজানা চাবি বুটেই থামে — নাহলে "কেউ সই দিতে পারেন না" নীরবে বসত।
+             */
+            $second = $rule['second_hand'] ?? null;
+
+            if ($second !== null && (! is_array($second) || $second === [] || array_diff($second, $permissions) !== [])) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval_rules.{$action}.second_hand must be a non-empty list of permissions this module declares."
+                );
+            }
+
+            // ⭐ `no_bulk` — একসাথে সইয়ে নয় ([[ApprovalRules::noBulk()]]); ⛔ বুলিয়ান ছাড়া কিছু ("yes", 1) বুটেই থামে, নীরবে উপেক্ষিত নয়
+            if (array_key_exists('no_bulk', $rule) && ! is_bool($rule['no_bulk'])) {
+                throw new InvalidArgumentException("{$path}: approval_rules.{$action}.no_bulk must be true or false.");
+            }
+
+            $summary = $rule['summary'] ?? null;
+
+            if ($summary !== null && (! is_string($summary) || ! is_subclass_of($summary, \App\Core\Contracts\SummarisesAnApproval::class))) {
+                throw new InvalidArgumentException(
+                    "{$path}: approval_rules.{$action}.summary must be a class implementing SummarisesAnApproval."
+                );
+            }
+        }
+
+        return $rules;
     }
 
     /**

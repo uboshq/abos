@@ -73,8 +73,9 @@ final class ThePhoneAsksForLeaveAndShowsThePayslipTest extends TestCase
 
     public function test_leave_is_asked_in_ones_own_name_and_waits_for_approval(): void
     {
-        $from = Carbon::today()->addDays(10)->toDateString();
-        $to = Carbon::today()->addDays(11)->toDateString();
+        // ⓘ সোম–মঙ্গল — শুক্রবার এখন কাজের দিন নয় ([[WorkCalendar]], a6, ২১ অক্টোবর ২০২৬); আগের "আজ + ১০"-এ কোনো সপ্তাহে শুক্রবার পড়ত
+        $from = Carbon::today()->next(Carbon::MONDAY)->addWeek()->toDateString();
+        $to = Carbon::parse($from)->addDay()->toDateString();
 
         $sent = $this->phone($this->me)->postJson('/api/v1/hr/leave', [
             'leave_type' => $this->annual->public_id, 'from_date' => $from, 'to_date' => $to, 'days' => 2, 'reason' => 'বিয়ে',

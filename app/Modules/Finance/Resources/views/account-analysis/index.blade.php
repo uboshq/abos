@@ -12,33 +12,38 @@
         ->mapWithKeys(fn ($p) => [$p => __('finance::account_analysis.'.$p)]);
 
     $keep = $account ? ['account_id' => $account->id] : [];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের তিন ঘর (খাত, দুই তারিখ), একই চাবি; পাতা যে পরিসর ধরে চলেছে সেটাই দেখায় (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('account_id', __('finance::account_analysis.account'), $accounts),
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ], shown: ['from' => $from, 'to' => $to]);
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::account_analysis.title') }}</x-slot:title>
 
     <x-slot:header>
+        {{-- ⭐ প্রিন্ট ভিউ — মাস ধরে টেবিলটা কেন্দ্রীয় কাগজে, নতুন ট্যাবে (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPaper]]) --}}
+        @php \App\Core\Support\ReportPaper::describe((string) __('finance::account_analysis.title'),
+            \App\Core\Support\DateFormat::format($from).' – '.\App\Core\Support\DateFormat::format($to),
+            $account ? [__('finance::account_analysis.account').': '.$account->label()] : []); @endphp
         <x-ui.page-header :title="__('finance::account_analysis.title')"
-                          :subtitle="__('finance::account_analysis.subtitle')" />
+                          :subtitle="__('finance::account_analysis.subtitle')">
+            @if ($account)
+                <x-slot:actions>
+                    <x-ui.print-view-button />
+                </x-slot:actions>
+            @endif
+        </x-ui.page-header>
     </x-slot:header>
 
-    <form method="GET" action="{{ route('finance.account_analysis.index') }}" data-report
-          class="mb-3 flex flex-wrap items-end gap-2">
-        <div class="min-w-72">
-            <x-ui.select name="account_id" :label="__('finance::account_analysis.account')"
-                         :options="$accounts" :selected="$account?->id" placeholder="—" />
-        </div>
-        <input type="hidden" name="period" value="custom">
-        <label class="text-2xs text-(--color-ink-muted)">
-            {{ __('finance::account_analysis.from') }}
-            <x-ui.date name="from" :value="$from" />
-        </label>
-        <label class="text-2xs text-(--color-ink-muted)">
-            {{ __('finance::account_analysis.to') }}
-            <x-ui.date name="to" :value="$to" />
-        </label>
-        <x-ui.button type="submit" tone="primary">{{ __('finance::account_analysis.show') }}</x-ui.button>
-    </form>
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form" :report="true">
+        <form id="list-form" method="GET" action="{{ route('finance.account_analysis.index') }}" data-report class="contents">
+            <input type="hidden" name="period" value="custom">
+            <x-ui.filter-bar :facets="$facetPanel" />
+        </form>
+    </x-ui.filter-layout>
 
     <nav class="mb-3 flex flex-wrap gap-1 border-b border-(--color-border) text-sm"
          aria-label="{{ __('finance::account_analysis.title') }}">

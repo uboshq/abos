@@ -63,18 +63,23 @@ final class ApprovalFacts
      */
     public const VIEW_WALLS = ['user-branch', 'user-warehouse', 'viewed-branch-warehouse'];
 
-    public function __construct(private readonly PaperParties $parties) {}
+    public function __construct(
+        private readonly PaperParties $parties,
+        private readonly \App\Core\Services\PartyRegistry $registry,
+    ) {}
 
     /**
      * @param  iterable<Approval>  $approvals
      * @return array<int, array{party: ?string, about: ?string, where: ?string, branch: ?string}>
      */
-    public function of(iterable $approvals, bool $pastWalls = false): array
+    public function of(iterable $approvals, bool $pastWalls = false, bool $links = false): array
     {
         $idsByType = [];
         $rows = [];
+        $seen = [];
 
         foreach ($approvals as $approval) {
+            $seen[] = $approval;
             $rows[(int) $approval->id] = ['no' => null, 'party' => null, 'about' => null, 'where' => null, 'branch' => null];
 
             if (is_string($approval->approvable_type) && class_exists($approval->approvable_type)) {
@@ -120,7 +125,10 @@ final class ApprovalFacts
          * পয়েন্টের নাম"*)। ⛔ আগে কাগজের ধরন প্রতি আলাদা গ্রাহক-প্রশ্ন, আর সরবরাহকারী/ব্যক্তি সারি ধরে তোলা হত (N+1);
          * এখন পক্ষের ধরন প্রতি একটা প্রশ্ন ([[PaperParties::of()]]) — গ্রাহক হলে "নাম · পয়েন্ট", বাকিরা নাম।
          */
-        $partyLabels = $this->parties->of(collect($loaded)->flatMap(fn (array $pair) => $pair[1]->all()));
+        $allPapers = collect($loaded)->flatMap(fn (array $pair) => $pair[1]->all());
+        $partyLabels = $this->parties->of($allPapers);
+        // ⓘ only the inbox board asks ($links) — home, boards and the phone keep their query count
+        $partyLinks = $links ? $this->partyLinks($allPapers) : [];
 
         foreach ($loaded as $class => [$ids, $documents]) {
             $this->loadFallbackParties($class, $documents, $partyLabels);
@@ -139,12 +147,96 @@ final class ApprovalFacts
                         'where' => $this->where($document, $accountNames),
                         // ⭐ কোন শাখার কাগজ — মালিক, ১৪ অক্টোবর ২০২৬: *"kon branch e joma tar ullekh nai"*
                         'branch' => $branchNames[(int) ($document->getAttribute('branch_id') ?? 0)] ?? null,
-                    ];
+                        // ⭐ links for the inbox board (owner, 23 Nov 2026: never miss a hyperlink) — extra keys only
+                        'url' => $links ? self::urlOf($document) : null,
+                    ] + ($partyLinks[PaperParties::slot($document)] ?? ['party_name' => null, 'party_url' => null, 'point' => null]);
                 }
             }
         }
 
+        /*
+         * ⭐ অনুরোধ নিজে যা বলে — কাগজের "কী বাবদ"-এর জায়গায় (a6, ২১ অক্টোবর ২০২৬; fe-র উত্তর ৪; [[ApprovalRules::summaryOf()]])।
+         * ⓘ বেতনের কাঠামো বদলে কাগজটা কর্মী, বদলটা অনুরোধে — সারি আগে-পরের অঙ্ক দেখায়, চাবি না থাকলে ঢাকা; একসাথে সইয়ের তালিকাও এই সারিই।
+         */
+        $rules = app(\App\Core\Engines\Approval\ApprovalRules::class);
+
+        foreach ($seen as $approval) {
+            $summary = $rules->summaryOf($approval);
+
+            if ($summary !== null) {
+                $rows[(int) $approval->id]['about'] = $summary;
+            }
+        }
+
         return $rows;
+    }
+
+    /**
+     * ⭐ The party of each paper apart — its own name, its page and its point — for the inbox board (owner, 23 Nov 2026:
+     * "হাইপার লিঙ্কগুলো কোনোভাবেই মিস করা যাবে না"; sample YRFmwfF7 v5 shows party and point as two linked columns).
+     *
+     * ⓘ `party` above stays the joined "name · point" the list and the phone already show; these are extra keys.
+     * ⓘ One query per party type ([[PartyRegistry::routesOf()]], [[PartyRegistry::placesOf()]]) — never per row.
+     * ⓘ The page comes from the party model's own `drillRoute()`; no page → no link (never a guessed address).
+     *
+     * @param  Collection<int, Model>  $papers
+     * @return array<string, array{party_name: ?string, party_url: ?string, point: ?string}>
+     */
+    private function partyLinks($papers): array
+    {
+        $keys = [];
+
+        foreach ($papers as $paper) {
+            if (($key = $this->parties->keyOf($paper)) !== null) {
+                $keys[PaperParties::slot($paper)] = $key;
+            }
+        }
+
+        if ($keys === []) {
+            return [];
+        }
+
+        $pairs = array_values($keys);
+        $names = $this->registry->labelsOf($pairs);
+        $routes = $this->registry->routesOf($pairs);
+        $places = $this->registry->placesOf($pairs);
+        $out = [];
+
+        foreach ($keys as $slot => [$type, $id]) {
+            $name = $names[$type.':'.$id] ?? null;
+            $point = $places[$type.':'.$id] ?? null;
+
+            // ⓘ the joined label carries " · point · branch" — the board shows the point in its own column, the branch in the paper
+            if ($name !== null && str_contains($name, ' · ')) {
+                $name = strstr($name, ' · ', true);
+            }
+
+            $out[$slot] = [
+                'party_name' => $name,
+                'party_url' => isset($routes[$type.':'.$id]) ? self::routeUrl($routes[$type.':'.$id]) : null,
+                'point' => $point,
+            ];
+        }
+
+        return $out;
+    }
+
+    /** ⓘ a model's own page, when it has one and the route exists — ⛔ never a guessed address */
+    private static function urlOf(Model $model): ?string
+    {
+        return $model instanceof \App\Core\Contracts\Drillable ? self::routeUrl($model->drillRoute()) : null;
+    }
+
+    /** @param array<int, mixed> $route */
+    private static function routeUrl(array $route): ?string
+    {
+        $name = $route[0] ?? null;
+
+        try {
+            return is_string($name) && \Illuminate\Support\Facades\Route::has($name) ? route($name, $route[1] ?? []) : null;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**

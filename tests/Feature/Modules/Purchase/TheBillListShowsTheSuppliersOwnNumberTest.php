@@ -57,10 +57,10 @@ final class TheBillListShowsTheSuppliersOwnNumberTest extends TestCase
         $this->bill('619');
         $html = (string) $this->get(route('purchase.bill.index'))->assertOk()->getContent();
 
-        $this->assertSame($this->labels([
+        $this->assertSame([...$this->pick(), ...$this->labels([
             'date', 'inv_number', 'supp_inv_no', 'supplier', 'branch', 'warehouse', 'items',
             'due_on', 'total', 'bill_paid', 'bill_due', 'state', 'created_by',
-        ]) + [13 => (string) __('core.table.action_menu')], $this->headers($html), 'কলামগুলো মালিকের ক্রমে নেই।');
+        ]), (string) __('core.table.action_menu')], $this->headers($html), 'কলামগুলো মালিকের ক্রমে নেই।');
     }
 
     /** ⭐ হেডারে একটা শাখা বাছা — শাখার কলাম নেই, বাকিগুলো একই ক্রমে */
@@ -71,10 +71,10 @@ final class TheBillListShowsTheSuppliersOwnNumberTest extends TestCase
 
         $html = (string) $this->actingAs($this->owner->fresh())->get(route('purchase.bill.index'))->assertOk()->getContent();
 
-        $this->assertSame($this->labels([
+        $this->assertSame([...$this->pick(), ...$this->labels([
             'date', 'inv_number', 'supp_inv_no', 'supplier', 'warehouse', 'items',
             'due_on', 'total', 'bill_paid', 'bill_due', 'state', 'created_by',
-        ]) + [12 => (string) __('core.table.action_menu')], $this->headers($html), 'এক শাখা বাছার পরও শাখার কলাম আছে, বা বাকিগুলোর ক্রম ভেঙেছে।');
+        ]), (string) __('core.table.action_menu')], $this->headers($html), 'এক শাখা বাছার পরও শাখার কলাম আছে, বা বাকিগুলোর ক্রম ভেঙেছে।');
     }
 
     public function test_the_row_shows_what_each_column_promises(): void
@@ -195,6 +195,17 @@ final class TheBillListShowsTheSuppliersOwnNumberTest extends TestCase
                 'supplier_bill_no' => $supplierNo],
             $products->map(fn ($id) => ['product_id' => $id, 'qty' => '10', 'rate' => '100'])->all(),
         )->fresh(['warehouse', 'branch']);
+    }
+
+    /**
+     * ⓘ ABOS রূপে প্রথম কলাম টিক-বাক্সের ("বাছুন") — তালিকার একসাথে কাজ (মালিক, ১৯ নভেম্বর ২০২৬; [[BulkRun::pickColumn()]]);
+     *   SAP আর Dynamic-এ নেই। মালিকের ক্রম তার পর থেকে একই।
+     *
+     * @return list<string>
+     */
+    private function pick(): array
+    {
+        return \App\Core\Bulk\BulkRun::showsHere() ? [(string) __('core.bulk.pick')] : [];
     }
 
     /** @return list<string> */

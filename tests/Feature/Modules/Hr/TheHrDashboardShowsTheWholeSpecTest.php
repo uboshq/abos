@@ -39,6 +39,7 @@ use Tests\TestCase;
 final class TheHrDashboardShowsTheWholeSpecTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\SignsTheSecondHand;
 
     private const PANELS = ['by_branch', 'by_designation', 'allowance_deduction', 'cost_by_department'];
 
@@ -103,7 +104,7 @@ final class TheHrDashboardShowsTheWholeSpecTest extends TestCase
 
         $month = Carbon::today()->startOfMonth();
         $payroll = app(PayrollService::class);
-        $run = $payroll->confirm($payroll->build($month->toDateString(), Carbon::today()->toDateString()))->fresh();
+        $run = $this->confirmedPayroll($payroll->build($month->toDateString(), Carbon::today()->toDateString()))->fresh();
 
         $paid = HrDashboard::dashboard();
         $range = DateRange::label($month, $month->copy()->endOfMonth());

@@ -1093,10 +1093,12 @@ final class ReportEngine
 
             [$top, $bottom] = $column->ratio;
             $den = $totals[$bottom] ?? '0';
+            // ⭐ বাড়া-কমার হার — (লব − হর) ÷ হর; সাধারণ অনুপাতে লব ÷ হর ([[ReportColumn::$ratio]])
+            $num = ($column->ratio[2] ?? null) === 'change' ? bcsub($totals[$top] ?? '0', $den, 6) : ($totals[$top] ?? '0');
 
             // ⓘ হর শূন্য — অনুপাত নেই; ঘরটা খালি থাকে, ০% নয়
             if (bccomp($den, '0', 4) > 0) {
-                $totals[$column->key] = bcdiv(bcmul($totals[$top] ?? '0', '100', 6), $den, $column->decimals());
+                $totals[$column->key] = bcdiv(bcmul($num, '100', 6), $den, $column->decimals());
             }
         }
 

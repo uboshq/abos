@@ -94,6 +94,25 @@
                 : '',
         ]]);
     }
+
+    /*
+     * ⭐ একসাথে কাজ — সারির টিক-বাক্স আর বার (তালিকার একসাথে কাজ, ধাপ ২; মালিক, ১৯ নভেম্বর ২০২৬; [[SalesBulkController]])।
+     * ⛔ কেবল তিন ABOS রূপে ([[BulkRun::showsHere()]]) — SAP আর Dynamic-এ একটা পিক্সেলও বদলায় না।
+     */
+    $bulkActions = null;
+
+    if (\App\Core\Bulk\BulkRun::showsHere() && (auth()->user()?->can('sales.invoice.view') ?? false)) {
+        $bulkActions = \App\Modules\Sales\Http\Controllers\SalesBulkController::actionsFor('invoice', auth()->user());
+    }
+
+    // ⛔ কোনো কাজ খোলা নেই (চাবি নেই, রপ্তানিও নয়) — বারও নেই, টিক-বাক্সও নয় ([[BulkRun::barOpen()]])
+    if ($bulkActions !== null && ! \App\Core\Bulk\BulkRun::barOpen($bulkActions)) {
+        $bulkActions = null;
+    }
+
+    if ($bulkActions !== null) {
+        array_unshift($columns, \App\Core\Bulk\BulkRun::pickColumn('sales-invoice-bulk', fn ($d) => (string) $d->document_no));
+    }
 @endphp
 
 <x-layouts.app :menu="$menu" :process-band="$processBand ?? []">
@@ -119,6 +138,10 @@
              "এই চালানের বিল করুন" থাকল — সেই ব্যবস্থা তৈরি হওয়া পর্যন্ত আদেশের মালের একমাত্র পথ। --}}
             </x-ui.toolbar>
         </form>
+
+        @if ($bulkActions !== null)
+            <x-ui.bulk-form id="sales-invoice-bulk" :actions="$bulkActions" />
+        @endif
 
         <x-ui.table
             :grand="['total' => $totals['money']]"

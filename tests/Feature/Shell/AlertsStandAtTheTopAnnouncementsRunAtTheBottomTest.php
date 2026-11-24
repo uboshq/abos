@@ -156,8 +156,12 @@ final class AlertsStandAtTheTopAnnouncementsRunAtTheBottomTest extends TestCase
         $html = $this->dashboard();
         $this->assertStringContainsString('গুদামে পানি উঠেছে', $this->part($html, '<div data-message-strips', 'data-message-strips-end'),
             '⛔ জরুরি টিকের পরেও ঘোষণাটা উপরের ফিতায় ওঠেনি।');
-        $this->assertStringNotContainsString('গুদামে পানি উঠেছে', $this->part($html, '<footer data-footer', '</footer>'),
-            '⛔ একই নোটিশ দুই জায়গায় — জরুরিটা চলন্ত বারেও ঘুরছে।');
+        // ⭐ মালিক, ১৮ নভেম্বর ২০২৬ (রাত): পপআপে যা, তা পপআপ কাটার পরেও নিচের বারে ঠিক না হওয়া পর্যন্ত — জরুরিটা লাল রঙে
+        //   (আগের "একই নোটিশ দুই জায়গায় নয়" এই সিদ্ধান্তে বদলেছে; [[StatusNotices::forTicker()]])
+        $footer = $this->part($html, '<footer data-footer', '</footer>');
+        $this->assertStringContainsString('গুদামে পানি উঠেছে', $footer, '⛔ জরুরি ঘোষণা নিচের চলন্ত বারে নেই — পপআপ কাটলে হারিয়ে যায়।');
+        $this->assertMatchesRegularExpression('/data-ticker-tone="danger">\s*<a[^>]*>\s*<span[^>]*><\/span>\s*গুদামে পানি উঠেছে/u', $footer,
+            '⛔ জরুরি ঘোষণা নিচের বারে লাল নয়।');
         $this->assertSame(['0', '1'], $this->urgentChange($notice, 1), '⛔ জরুরি টিকের বদল নিরীক্ষায় আগে/পরে সহ বসেনি।');
 
         // ⓘ উৎসেও একবারই — ফোনের বার দুই তালিকা জোড়ে ([[NoticeBoard::onTheBars()]]), আর চলন্ত বারের জায়গা সীমিত

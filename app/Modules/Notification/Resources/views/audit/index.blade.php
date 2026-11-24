@@ -1,38 +1,25 @@
 {{--
     ⭐ বিজ্ঞপ্তির নিরীক্ষার খাতা — কে, কী, কখন, কোনটায়, ফল (মালিকের স্পেক §১৩; বিজ্ঞপ্তি ব্যবস্থাপনা, ধাপ ১)। কেবল পড়া।
 --}}
+@php
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('action', __('notification::audit.action'),
+            collect($actions)->mapWithKeys(fn ($a) => [$a => __('notification::audit.actions.'.$a)])->all(), __('core.notify.any')),
+        \App\Core\ListFilter\Facets::pick('outcome', __('notification::audit.outcome'),
+            collect(['done', 'denied', 'failed'])->mapWithKeys(fn ($o) => [$o => __('notification::audit.outcomes.'.$o)])->all(), __('core.notify.any')),
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::audit.title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::audit.title')" :search="false" :export="false" :share="false">
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::audit.action') }}
-                <select name="action" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach ($actions as $action)
-                        <option value="{{ $action }}" @selected(($filters['action'] ?? '') === $action)>{{ __('notification::audit.actions.'.$action) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::audit.outcome') }}
-                <select name="outcome" class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
-                    <option value="">{{ __('core.notify.any') }}</option>
-                    @foreach (['done', 'denied', 'failed'] as $outcome)
-                        <option value="{{ $outcome }}" @selected(($filters['outcome'] ?? '') === $outcome)>{{ __('notification::audit.outcomes.'.$outcome) }}</option>
-                    @endforeach
-                </select>
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::audit.from') }}
-                <x-ui.date name="from" :value="$filters['from'] ?? ''" />
-            </label>
-            <label class="grid gap-1 text-2xs text-(--color-ink-muted)">
-                {{ __('notification::audit.to') }}
-                <x-ui.date name="to" :value="$filters['to'] ?? ''" />
-            </label>
+        <form id="list-form" method="GET" class="contents">
+        <x-ui.toolbar :title="__('notification::audit.title')" :search="false" :export="false" :share="false" :facets="$facetPanel">
         </x-ui.toolbar>
+        </form>
 
         <p class="text-sm text-(--color-ink-muted)">{{ __('notification::audit.note') }}</p>
 
@@ -70,4 +57,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

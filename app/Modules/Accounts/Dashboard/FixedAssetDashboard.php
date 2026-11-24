@@ -93,6 +93,7 @@ final class FixedAssetDashboard
                     empty: __('accounts::asset_report.nothing_expiring'),
                     href: $report('asset-expiring'),
                 ),
+                self::fullList($inBooks, $accumulatedOf),
             ],
             tiles: [
                 new Tile(label: __('accounts::menu.assets'), href: route('accounts.asset.index'), permission: 'accounts.asset.view'),
@@ -223,6 +224,42 @@ final class FixedAssetDashboard
                 sub: $count === null ? $t('viz_counted_none') : $t('viz_counted_sub', ['no' => $count->document_no, 'on' => $count->closed_on?->format('d M Y') ?? '—']),
                 href: route('accounts.asset.verify.index'), colour: Svg::PALETTE[7]),
         ];
+    }
+
+    /**
+     * ⭐ সম্পদের পুরো তালিকা — নমুনার নিচের সারি (boards15 "fa": "করের অবচয় · সম্পদের পুরো তালিকা · খাতার যাচাই"); আগে কেবল একটা টাইল
+     * ছিল, তালিকাটা পাতায় ছিল না (ড্যাশবোর্ড যাচাই, ২৩ নভেম্বর ২০২৬)। খাতায় থাকা সম্পদ, খাতার দাম বড় থেকে ছোট, প্রথম দশটা; "সব দেখুন"
+     * সম্পদের তালিকায়।
+     * ⓘ খাতার দাম উপরের একবার পড়া সঞ্চিত ক্ষয় থেকে — গ্রাফের "শ্রেণি ধরে খাতার দাম"-এর একই অঙ্ক; ⛔ টাকার কলাম কেবল `accounts.report`
+     *   চাবিতে (গ্রাফের টাকার কার্ডের একই চাবি)।
+     *
+     * @param  Collection<int, FixedAsset>  $inBooks
+     * @param  Collection<int, string>  $accumulatedOf
+     */
+    private static function fullList(Collection $inBooks, Collection $accumulatedOf): Listing
+    {
+        $money = (bool) auth()->user()?->can('accounts.report');
+        $rows = $inBooks
+            ->map(fn (FixedAsset $a) => ['asset' => $a, 'nbv' => bcsub((string) $a->cost, (string) $accumulatedOf[$a->id], 4)])
+            ->sort(fn (array $x, array $y) => bccomp($y['nbv'], $x['nbv'], 4) ?: strcmp((string) $x['asset']->document_no, (string) $y['asset']->document_no))
+            ->take(10)->values();
+
+        return new Listing(
+            label: __('accounts::asset_report.full_list'),
+            columns: [
+                ['key' => 'no', 'label' => __('accounts::asset_report.document_no'), 'width' => '8rem', 'render' => fn (array $r) => $r['asset']->document_no],
+                ['key' => 'name', 'label' => __('accounts::asset_report.name'), 'render' => fn (array $r) => $r['asset']->name],
+                ['key' => 'category', 'label' => __('accounts::asset_report.category'), 'width' => '9rem',
+                    'render' => fn (array $r) => $r['asset']->category?->name() ?? __('accounts::asset_report.no_category')],
+                ['key' => 'status', 'label' => __('accounts::asset_report.status'), 'width' => '7rem',
+                    'render' => fn (array $r) => __('accounts::asset.status_'.$r['asset']->status)],
+                ...($money ? [['key' => 'nbv', 'label' => __('accounts::asset_report.nbv'), 'width' => '9rem', 'numeric' => true,
+                    'render' => fn (array $r) => Money::format($r['nbv'])]] : []),
+            ],
+            rows: $rows,
+            empty: __('accounts::asset_report.full_list_empty'),
+            href: route('accounts.asset.index'),
+        );
     }
 
     /** @return Collection<int, array{ends_on: string, what: string, name: string}> */

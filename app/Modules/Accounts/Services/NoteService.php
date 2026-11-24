@@ -11,7 +11,9 @@ use App\Core\Support\CompanyContext;
 use App\Core\Support\DocumentStatus;
 use App\Models\IssuedNumber;
 use App\Modules\Accounts\Models\Account;
+use App\Core\Contracts\NoteTarget;
 use App\Modules\Accounts\Models\Note;
+use App\Modules\Accounts\Models\NoteLine;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -40,6 +42,11 @@ final class NoteService
      */
     public function create(array $data): Note
     {
+        // ⭐ সারির নোট — নকশা v5 (২৩ নভেম্বর ২০২৬); একটা অঙ্কের পুরনো পথ (API, পুরনো পরীক্ষা) নিচে আগের মতো
+        if (is_array($data['lines'] ?? null)) {
+            return $this->createWithLines($data);
+        }
+
         $direction = (string) $data['direction'];
 
         $this->assertDirection($direction);
@@ -103,6 +110,7 @@ final class NoteService
                 'document_no' => $documentNo,
                 'trx_date' => $data['trx_date'],
                 'direction' => $direction,
+                'note_type' => $direction === Note::CREDIT ? Note::TYPE_CN : ($kind === Note::KIND_CUSTOMER ? Note::TYPE_CDN : Note::TYPE_DN),
                 'party_type' => Note::KINDS[$kind],
                 'party_id' => (int) $data['party_id'],
                 'party_kind' => $kind,
@@ -212,8 +220,10 @@ final class NoteService
          * সইয়ের নিয়ম এখানে পৌঁছাত না। ⓘ থামলে নোটটা খসড়াই থাকে; শেষ সই পড়লে
          * [[FinishTheAccountsPaperOnTheLastSignature]] এই মেথডটাই আবার ডাকে, আর তখন সই পাওয়া বলে এগোয়।
          */
-        if (app(AccountsSignature::class)->holds($note, AccountsSignature::NOTE,
-            bcadd((string) $note->amount, (string) ($note->tax_amount ?? '0'), 4), $note->narration)) {
+        // ⛔ সই চাওয়ার আগেই জায়গা আবার মাপা — খসড়ার পরে অন্য ফেরত বা নোট বসে থাকতে পারে; মালিকের সইয়ের পরে থামা নয়
+        $this->assertLinesStillFit($note);
+
+        if ($this->waitsForASignature($note)) {
             return $note;
         }
 
@@ -229,22 +239,47 @@ final class NoteService
             }
 
             // ⭐ খসড়ার পরে বিলে ফেরত বা আরেকটা ক্রেডিট বসে থাকতে পারে — পাকা করার সময় আবার মাপা
+            $target = null;
+
             if (filled($note->against_no)) {
                 $target = $this->findTarget((string) $note->against_no, (string) $note->party_type, (int) $note->party_id);
 
                 if ($target !== null) {
-                    $this->assertRoom((string) $note->direction, $target, (string) $note->total, (int) $note->id);
+                    $this->assertRoom((string) $note->direction, $target, $note->grandTotal(), (int) $note->id);
                 }
             }
 
-            $this->posting->post(
-                sourceType: $note->sourceType(),
-                sourceId: $note->id,
-                trxDate: $note->trx_date,
-                lines: $this->lines($note),
-                documentNo: $note->document_no,
-                branchId: $note->branch_id,
-            );
+            $hasLines = $note->lines()->exists();
+
+            /*
+             * ⭐ "মাল ফেরত" সারির ফেরতের কাগজ — আগে, একই লেনদেনে (নকশা v5)। ⛔ ঐ সারির টাকা আর মাল ফেরতের কাগজ তোলে; নোটের দাখিলায়
+             * ঐ সারি নেই ([[NotePosting]]), তাই টাকা দুবার ওঠে না।
+             */
+            if ($hasLines) {
+                $this->assertLinesStillFit($note);
+                $this->returnTheGoods($note, $target);
+            }
+
+            // ⭐ সরবরাহকারীর ডেবিট নোট — দামের ছাড় মজুদের স্তরেও, খাতার Cr ১১২০ ঠিক ততটা (মজুদ-মূল্য = খাতা)
+            if ($hasLines && $note->type() === Note::TYPE_DN) {
+                $this->revalueTheStock($note, $target, -1, $note->trx_date->toDateString());
+            }
+
+            $lines = $hasLines
+                ? app(NotePosting::class)->lines($note, $this->accounts->of($note)['control'])
+                : $this->lines($note);
+
+            // ⓘ কেবল ফেরতের সারি থাকলে নোটের নিজের দাখিলা নেই — ফেরতের কাগজই সব তুলেছে
+            if ($lines !== []) {
+                $this->posting->post(
+                    sourceType: $note->sourceType(),
+                    sourceId: $note->id,
+                    trxDate: $note->trx_date,
+                    lines: $lines,
+                    documentNo: $note->document_no,
+                    branchId: $note->branch_id,
+                );
+            }
 
             $note->forceFill([
                 'status' => DocumentStatus::CONFIRMED,
@@ -285,7 +320,16 @@ final class NoteService
              * ⓘ ফেরানোর তারিখ **আজ**, কাগজের তারিখ নয় — বন্ধ হয়ে যাওয়া
              * মাসে ফিরিয়ে নিলে ঐ মাসের বন্ধ করা হিসাব বদলে যেত।
              */
+            /*
+             * ⭐ নোটের ফেরতের কাগজও ফেরে — মাল আর খাতা দুটোই (নকশা v5)। ⓘ নোটের নিজের দাখিলা না থাকলে (কেবল ফেরতের সারি)
+             * উল্টানোর কিছু নেই।
+             */
             if ($note->isConfirmed()) {
+                $this->cancelTheReturns($note, $reason);
+                $this->restoreTheStock($note, $reason);
+            }
+
+            if ($note->isConfirmed() && \App\Models\LedgerEntry::query()->where('source_type', $note->sourceType())->where('source_id', $note->id)->exists()) {
                 $this->posting->reverse(
                     sourceType: $note->sourceType(),
                     sourceId: $note->id,
@@ -304,6 +348,365 @@ final class NoteService
 
             return $note->refresh();
         });
+    }
+
+    /**
+     * ⭐ সারির নোট — ক্রেডিট নোট, গ্রাহকের ডেবিট নোট, সরবরাহকারীর ডেবিট নোট (মালিকের নকশা v5, ২৩ নভেম্বর ২০২৬)।
+     *
+     * ⓘ খসড়া — খাতায় কিছুই যায় না। সারির যাচাই [[NoteLineBuilder]]-এ; ভাগ থেকেই দিক আর পক্ষের ধরনের তালিকা ([[Note::TYPE_KINDS]])।
+     * ⛔ নোটের `amount/tax_amount/total` কেবল নোটের নিজের সারির — "মাল ফেরত" সারি ফেরতের কাগজের ভাগ (`returned_total`)।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function createWithLines(array $data): Note
+    {
+        $type = (string) ($data['note_type'] ?? '');
+
+        if (! array_key_exists($type, Note::TYPES)) {
+            throw ValidationException::withMessages(['note_type' => __('accounts::note.unknown_direction')]);
+        }
+
+        $direction = Note::TYPES[$type];
+        $kind = (string) ($data['party_kind'] ?? '') ?: Note::TYPE_KINDS[$type][0];
+
+        if (! in_array($kind, Note::TYPE_KINDS[$type], true)) {
+            throw ValidationException::withMessages(['party_kind' => __('accounts::note.party_not_found')]);
+        }
+
+        $data['direction'] = $direction;
+        $data['party_kind'] = $kind;
+
+        [$kind, $controlId] = $this->resolveControl($kind, $data);
+
+        $target = $this->target($kind, $data);
+        $supplierNote = $type === Note::TYPE_DN && filled($data['supplier_note_no'] ?? null) && filled($data['supplier_note_date'] ?? null);
+        $built = app(NoteLineBuilder::class)->build($type, $kind, $target, (array) $data['lines'], $supplierNote, null);
+
+        if ($target !== null) {
+            $this->assertRoom($direction, $target, bcadd($built['total'], $built['returned'], 4));
+        }
+
+        return DB::transaction(function () use ($data, $type, $direction, $kind, $controlId, $built, $target, $supplierNote) {
+            $documentNo = $this->numbers->next($direction === Note::CREDIT ? 'CN' : 'DN');
+
+            $note = Note::query()->create([
+                'company_id' => CompanyContext::id(),
+                'branch_id' => CompanyContext::branchId(),
+                'document_no' => $documentNo,
+                'trx_date' => $data['trx_date'] ?? Carbon::today()->toDateString(),
+                'direction' => $direction,
+                'note_type' => $type,
+                'party_type' => Note::KINDS[$kind],
+                'party_id' => (int) $data['party_id'],
+                'party_kind' => $kind,
+                'control_account_id' => $controlId,
+                'other_account_id' => $built['first_account_id'] ?? ($built['lines'][0]['account_id'] ?? null),
+                'against_type' => $target?->noteTargetType(),
+                'against_id' => $target === null ? null : (int) $target->getKey(),
+                'against_no' => $target?->noteTargetNumber() ?? (trim((string) ($data['against_no'] ?? '')) ?: null),
+                'supplier_note_no' => $supplierNote ? trim((string) $data['supplier_note_no']) : null,
+                'supplier_note_date' => $supplierNote ? $data['supplier_note_date'] : null,
+                'amount' => $built['amount'],
+                'tax_amount' => $built['tax'],
+                'total' => $built['total'],
+                'returned_total' => $built['returned'],
+                'reason' => in_array($data['reason'] ?? null, Note::REASONS, true) ? $data['reason'] : 'other',
+                'narration' => trim((string) ($data['narration'] ?? '')) ?: null,
+                'status' => DocumentStatus::DRAFT,
+                'created_by' => auth()->id(),
+            ]);
+
+            foreach ($built['lines'] as $line) {
+                $note->lines()->create([...$line, 'company_id' => $note->company_id]);
+            }
+
+            IssuedNumber::query()
+                ->where('document_no', $documentNo)
+                ->whereNull('source_id')
+                ->update(['source_type' => $note->sourceType(), 'source_id' => $note->id]);
+
+            return $note->load('lines');
+        });
+    }
+
+    /**
+     * পক্ষটা সত্যিই এই ধরনের আর এই কোম্পানির; পক্ষের খাত — [[resolve()]]-এর প্রথম অর্ধেক।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array{0: string, 1: int}
+     */
+    private function resolveControl(string $kind, array $data): array
+    {
+        $partyId = (int) ($data['party_id'] ?? 0);
+
+        if (! $this->accounts->kindMatches($kind, $partyId)) {
+            throw ValidationException::withMessages(['party_id' => __('accounts::note.party_not_found')]);
+        }
+
+        $controls = $this->accounts->controls($kind, $partyId);
+
+        if ($controls->isEmpty()) {
+            throw ValidationException::withMessages(['control_account_id' => __('accounts::note.control_none')]);
+        }
+
+        $controlId = (int) ($data['control_account_id'] ?? 0) ?: (int) $this->accounts->defaultControl($kind, $partyId);
+
+        if ($controlId === 0 || ! $controls->contains('id', $controlId)) {
+            throw ValidationException::withMessages(['control_account_id' => __('accounts::note.control_choose')]);
+        }
+
+        return [$kind, $controlId];
+    }
+
+    /** ⭐ ক্রেডিট নোটের সই — মালিকের ছাড়ের ছক (প্রতিটা কোম্পানিতে বসানো, OwnerSignsDiscounts) */
+    public const DISCOUNT_MODULE = 'sales';
+
+    public const DISCOUNT_ACTION = 'discount';
+
+    /**
+     * ⭐ কার সই লাগবে — ক্রেডিট নোট মালিকের ছাড়ের ছকে, বাকি নোট হিসাবের নোটের ছকে (নকশা v5)।
+     *
+     * ⛔ ক্রেডিট নোট গ্রাহককে ছাড় — মালিকের নিয়ম (১ অক্টোবর ২০২৬): *"বিলে কোনো ছাড় মালিকের অনুমতি ছাড়া দিতে পারবে না"*;
+     * সীমা নেই, আর ছক না থাকলে ছাড় যায় না (fail-closed)। ⓘ অঙ্ক = নোট + ফেরতের ভাগ — মালিক পুরো সিদ্ধান্তে সই দেন।
+     * ⓘ সই পড়লে [[FinishTheAccountsPaperOnTheLastSignature]] এই নোটটাই পাকা করে। পুরনো এক-অঙ্কের নোট আগের পথে।
+     */
+    private function waitsForASignature(Note $note): bool
+    {
+        if ($note->type() !== Note::TYPE_CN || ! $note->lines()->exists()) {
+            return app(AccountsSignature::class)->holds($note, AccountsSignature::NOTE,
+                bcadd((string) $note->amount, (string) ($note->tax_amount ?? '0'), 4), $note->narration);
+        }
+
+        $amount = $note->grandTotal();
+        $engine = app(\App\Core\Engines\Approval\ApprovalEngine::class);
+
+        if ($engine->latestFor($note, self::DISCOUNT_ACTION) === null
+            && $engine->firstSigner(self::DISCOUNT_MODULE, self::DISCOUNT_ACTION, $amount, class_basename(Note::class)) === null) {
+            throw ValidationException::withMessages(['status' => __('accounts::note.discount_no_signer')]);
+        }
+
+        return app(\App\Core\Engines\Approval\DocumentApproval::class)
+            ->stopping($note, self::DISCOUNT_MODULE, self::DISCOUNT_ACTION, $amount, $note->narration) !== null;
+    }
+
+    /**
+     * ⭐ "মাল ফেরত" সারিগুলোর ফেরতের কাগজ — বিলের মডেল বানায় আর পাকা করে ([[\App\Core\Contracts\ReturnsGoodsForNotes]])।
+     *
+     * ⓘ ফেরতের কাগজ যে অঙ্কে তুলল, নোটের সারিও সেই অঙ্কে বসে — পর্দা, ছাপা আর খাতা একই কথা বলে।
+     */
+    private function returnTheGoods(Note $note, ?NoteTarget $target): void
+    {
+        $moved = $note->lines()->where('goods_moved', true)->whereNull('return_id')->get();
+
+        if ($moved->isEmpty()) {
+            return;
+        }
+
+        if (! $target instanceof \App\Core\Contracts\ReturnsGoodsForNotes) {
+            throw ValidationException::withMessages(['lines' => __('accounts::note.return_needs_bill')]);
+        }
+
+        $made = $target->noteReturnGoods(
+            $moved->map(fn (NoteLine $l) => ['line_id' => (int) $l->source_line_id, 'product_id' => (int) $l->product_id, 'qty' => (string) $l->qty])->values()->all(),
+            $note->trx_date->toDateString(),
+            (string) ($note->narration ?? ''),
+            (string) $note->document_no,
+        );
+
+        // ⓘ ফেরতের সারি নোটের সারির একই ক্রমে বানানো — ক্রম ধরে মেলানো, যাতে একই বিলের সারি দুবার এলেও প্রতিটা নিজের অঙ্ক পায়
+        $made['lines'] = array_values($made['lines']);
+        $returned = '0';
+
+        foreach ($moved->values() as $i => $line) {
+            $share = $made['lines'][$i] ?? null;
+            $amount = $share === null ? (string) $line->amount : bcadd((string) $share['amount'], '0', 4);
+            $tax = $share === null ? (string) $line->vat_amount : bcadd((string) $share['tax'], '0', 4);
+
+            $line->forceFill([
+                'amount' => $amount,
+                'vat_amount' => $tax,
+                'total' => bcadd($amount, $tax, 4),
+                'rate' => bccomp((string) $line->qty, '0', 4) > 0 ? bcdiv($amount, (string) $line->qty, 4) : (string) $line->rate,
+                'return_type' => $made['type'],
+                'return_id' => $made['id'],
+                'return_no' => $made['no'],
+            ])->save();
+
+            $returned = bcadd($returned, bcadd($amount, $tax, 4), 4);
+        }
+
+        $note->forceFill(['returned_total' => $returned])->save();
+    }
+
+    /**
+     * ⛔ নোটের সারিগুলো এখনো বিলের জায়গায় ধরে কি না — তৈরির একই মাপে, নোট নিজেকে বাদ দিয়ে ([[NoteLineBuilder::build()]])।
+     */
+    private function assertLinesStillFit(Note $note): void
+    {
+        $lines = $note->lines()->get();
+
+        if ($lines->isEmpty() || blank($note->against_no)) {
+            return;
+        }
+
+        $target = $this->findTarget((string) $note->against_no, (string) $note->party_type, (int) $note->party_id);
+
+        if ($target === null) {
+            return;
+        }
+
+        // ⓘ কেবল এখনো ফেরতের কাগজ না-পাওয়া সারি — পাকা হয়ে যাওয়া সারি তাদের ফেরতের কাগজেই গোনা
+        $input = $lines->filter(fn (NoteLine $l) => $l->line_type === NoteLine::PRODUCT && $l->return_id === null)
+            ->map(fn (NoteLine $l) => ['type' => NoteLine::PRODUCT, 'source_line_id' => $l->source_line_id, 'qty' => (string) $l->qty,
+                'rate' => (string) $l->rate, 'amount' => (string) $l->amount, 'goods_moved' => (bool) $l->goods_moved])
+            ->values()->all();
+
+        if ($input !== []) {
+            app(NoteLineBuilder::class)->build($note->type(), (string) ($note->party_kind ?: Note::KIND_CUSTOMER), $target, $input, false, (int) $note->id);
+        }
+    }
+
+    /**
+     * ⭐ সরবরাহকারীর ডেবিট নোটের দামের ছাড় মজুদের দামের স্তরে — কমানো (`-1`, পাকা হলে) বা ফেরানো (`+1`, বাতিলে)।
+     *
+     * ⓘ পাকা হলে প্রতিটা সারিতে লেখা থাকে স্তর যতটা কমল (`stock_value`, Cr ১১২০ ঠিক এটা) আর এককপ্রতি কমা (`revalue_unit`);
+     * বাতিলে একই এককপ্রতি অঙ্কে ফেরে।
+     *
+     * @return string  তাকের মালের দাম যতটা বদলাল, সব সারি মিলে
+     */
+    private function revalueTheStock(Note $note, ?NoteTarget $target, int $sign, string $date): string
+    {
+        if (! $target instanceof \App\Core\Contracts\RevaluesStockForNotes) {
+            return '0';
+        }
+
+        $lines = $note->lines()->where('line_type', NoteLine::PRODUCT)->where('goods_moved', false)->whereNotNull('source_line_id')->get()
+            ->filter(fn (NoteLine $l) => $sign < 0 || $l->revalue_unit !== null)->values();
+
+        if ($lines->isEmpty()) {
+            return '0';
+        }
+
+        $moved = $target->noteRevalueStock($lines->map(fn (NoteLine $l) => [
+            'line_id' => (int) $l->source_line_id,
+            'product_id' => (int) $l->product_id,
+            'amount' => (string) $l->amount,
+            'per_unit' => $sign > 0 ? (string) $l->revalue_unit : null,
+        ])->all(), $sign, $date, (string) $note->document_no);
+
+        $total = '0';
+
+        foreach ($lines as $i => $line) {
+            $shelf = bcadd((string) ($moved[$i]['shelf'] ?? '0'), '0', 4);
+            $total = bcadd($total, $shelf, 4);
+
+            if ($sign < 0) {
+                $amount = (string) $line->amount;
+                $shelf = bccomp($shelf, $amount, 4) > 0 ? $amount : $shelf;
+                $line->forceFill([
+                    'stock_value' => $shelf,
+                    'revalue_unit' => (string) ($moved[$i]['per_unit'] ?? '0'),
+                    'stock_share' => bccomp($amount, '0', 4) > 0 ? bcdiv($shelf, $amount, 6) : '0',
+                ])->save();
+            }
+        }
+
+        return $total;
+    }
+
+    /**
+     * ⭐ বাতিলে মজুদের স্তর ফেরানো — আর পাকা হওয়ার পরে যে মাল বিক্রি হয়ে গেছে, তার ভাগ খরচে (মালিকের নির্দেশ, ২৩ নভেম্বর ২০২৬)।
+     *
+     * ⓘ খাতার উল্টো দাখিলা Dr ১১২০ ফেরায় পাকা হওয়ার দিনের পুরো অঙ্ক; স্তর ফেরে কেবল তাকে এখনো যা আছে তার উপর। মাঝে বিক্রি
+     * হওয়া মালের ভাগ কম দামে খরচে গেছে — সেটুকু Cr ১১২০ / Dr ৫১৫০ (`note:restock`), যাতে মজুদ-মূল্য আর খাতা আবার এক।
+     */
+    private function restoreTheStock(Note $note, string $reason): void
+    {
+        if ($note->type() !== Note::TYPE_DN) {
+            return;
+        }
+
+        $posted = (string) $note->lines()->whereNotNull('stock_value')->sum('stock_value');
+
+        if (bccomp($posted, '0', 4) <= 0) {
+            return;
+        }
+
+        $restored = $this->revalueTheStock($note, $this->targetOf($note), 1, Carbon::today()->toDateString());
+        $gap = bcsub($posted, $restored, 4);
+
+        if (bccomp($gap, '0', 4) === 0) {
+            return;
+        }
+
+        $inventory = StandardChart::accountFor(StandardChart::INVENTORY)->id;
+        $variance = StandardChart::accountFor(StandardChart::PURCHASE_PRICE_VARIANCE)->id;
+        $amount = bccomp($gap, '0', 4) > 0 ? $gap : bcmul($gap, '-1', 4);
+        $narration = $note->document_no.' — '.$reason;
+
+        $this->posting->post(
+            sourceType: $note->sourceType().':restock',
+            sourceId: $note->id,
+            trxDate: Carbon::today(),
+            lines: bccomp($gap, '0', 4) > 0
+                ? [['account_id' => $variance, 'debit' => $amount, 'narration' => $narration], ['account_id' => $inventory, 'credit' => $amount, 'narration' => $narration]]
+                : [['account_id' => $inventory, 'debit' => $amount, 'narration' => $narration], ['account_id' => $variance, 'credit' => $amount, 'narration' => $narration]],
+            documentNo: $note->document_no,
+            branchId: $note->branch_id,
+        );
+    }
+
+    /** নোট বাতিল — তার ফেরতের কাগজও বাতিল (বিলের মডেল আগে বাতিল হওয়া কাগজে কিছু করে না) */
+    private function cancelTheReturns(Note $note, string $reason): void
+    {
+        $links = $note->lines()->whereNotNull('return_id')->get(['return_type', 'return_id'])
+            ->unique(fn (NoteLine $l) => $l->return_type.':'.$l->return_id);
+
+        if ($links->isEmpty() || blank($note->against_type)) {
+            return;
+        }
+
+        $class = app(\App\Core\Engines\Drill\DrillResolver::class)->map()[(string) $note->against_type] ?? null;
+
+        if (! is_string($class) || ! is_subclass_of($class, \App\Core\Contracts\ReturnsGoodsForNotes::class)) {
+            return;
+        }
+
+        foreach ($links as $link) {
+            $class::noteCancelReturn((string) $link->return_type, (int) $link->return_id, $reason);
+        }
+    }
+
+    /**
+     * ⭐ "⇣ মূল বিল থেকে আনুন" — এই পক্ষের এই নম্বরের পাকা বিলের সারি (নকশা v5)।
+     *
+     * @return array{no: string, issued_at: string|null, room: string|null, lines: list<array<string, mixed>>}|null
+     */
+    public function billFor(string $type, string $kind, int $partyId, string $number): ?array
+    {
+        if (! array_key_exists($type, Note::TYPES) || ! array_key_exists($kind, Note::KINDS) || trim($number) === '') {
+            return null;
+        }
+
+        $target = $this->findTarget(trim($number), Note::KINDS[$kind], $partyId);
+
+        if (! $target instanceof \App\Core\Contracts\NoteTargetLines) {
+            return null;
+        }
+
+        return [
+            'no' => $target->noteTargetNumber(),
+            'issued_at' => $target->noteTargetIssuedAt()?->format('d M Y · H:i'),
+            'room' => Note::TYPES[$type] === Note::CREDIT ? $target->noteCreditRoom() : null,
+            'lines' => $target->noteTargetLines(),
+        ];
+    }
+
+    /** ⓘ ছাপার জন্য — নোটের বাঁধা বিল (মূসক-৬.৭/৬.৮-এর মূল চালানপত্রের ক্রমিক, তারিখ ও সময়) */
+    public function targetOf(Note $note): ?NoteTarget
+    {
+        return blank($note->against_no) ? null
+            : $this->findTarget((string) $note->against_no, (string) $note->party_type, (int) $note->party_id);
     }
 
     /** নোটের অবস্থা, সারি তালা দিয়ে (ম২) */

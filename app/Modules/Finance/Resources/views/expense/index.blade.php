@@ -41,15 +41,21 @@
              'render' => fn ($r) => view('finance::expense.partials.change', ['row' => $r])],
             /* ⓘ খাতের খতিয়ান — সারির চোখের বোতাম ([[x-ui.table]] :view-url), দেখার অনুমতি না থাকলে বোতাম নয় */
         ];
+
+        // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের দুই তারিখের ঘর, একই চাবি; পাতা যে পরিসর ধরে চলেছে সেটাই দেখায় (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+        $facetPanel = \App\Core\ListFilter\Facets::panel([
+            \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+        ], shown: ['from' => $from, 'to' => $to]);
     @endphp
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('finance::menu.expense')"
                           :subtitle="__('finance::message.expense_note')"
                           :columns="$expenseColumns"
-                          :search-placeholder="__('finance::message.head_search')">
+                          :search-placeholder="__('finance::message.head_search')" :facets="$facetPanel">
                 <x-slot:actions>
                     {{-- খরচ লেখা হয় ভাউচারেই — এখানে আরেকটা ফর্ম বানালে একই
                          জিনিসের দুইটা পথ হত, আর দুইটার যাচাই একদিন আলাদা হয়ে যেত। --}}
@@ -63,19 +69,6 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
-
-                {{-- সময়ের পরিসর — ডিফল্ট চলতি মাস, কারণ ভাড়া-বেতন-বিদ্যুৎ মাসের
-                     হিসাব, আর "আজ কত গেল" প্রশ্নটা কেউ করে না। --}}
-                <x-ui.date name="from"
-                           value="{{ $from }}"
-                           aria-label="{{ __('finance::field.from') }}"
-                           :submit-on-change="true"
-                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
-                <x-ui.date name="to"
-                           value="{{ $to }}"
-                           aria-label="{{ __('finance::field.to') }}"
-                           :submit-on-change="true"
-                           class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm" />
             </x-ui.toolbar>
         </form>
 
@@ -95,6 +88,7 @@
             :rows="$heads"
             :columns="$expenseColumns" />
     </div>
+    </x-ui.filter-layout>
 
     {{--
         অনুমোদনের অপেক্ষায় — উপরের যোগফলে এগুলো **নেই**।

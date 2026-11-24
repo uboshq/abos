@@ -120,6 +120,15 @@ final class ChoiceFacet extends Facet
         return $query->count();
     }
 
+    /**
+     * ⓘ একটাই ঘরের টিক ("বাতিলসহ", "কেবল আমার") — ঠিকানায় পুরোনো একক চাবি (`?cancelled=1`), অ্যারে নয়।
+     *   ⛔ অ্যারে হলে তালিকার `$request->boolean('cancelled')` মিথ্যা পড়ত আর টিকটা কিছুই করত না।
+     */
+    public function flat(): bool
+    {
+        return $this->multi && count($this->options) === 1;
+    }
+
     public function findable(): bool
     {
         return count($this->options) > self::FIND_FROM;

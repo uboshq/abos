@@ -5,9 +5,16 @@ declare(strict_types=1);
 use App\Core\Contracts\KnowsAUsersEmployee;
 use App\Core\Engines\Print\PaperSize;
 use App\Core\Events\ApprovalDecided;
+use App\Core\Events\ApprovalWithdrawn;
 use App\Modules\Hr\Dashboard\HrDashboard;
 use App\Modules\Hr\Dashboard\HrWidgets;
 use App\Modules\Hr\Listeners\FinishTheClaimOnTheLastSignature;
+use App\Modules\Hr\Listeners\CloseThePaymentChangeOnWithdrawal;
+use App\Modules\Hr\Listeners\ReleaseHeldWagesWhenTheVoucherFalls;
+use App\Modules\Hr\Listeners\FinishThePaymentChangeOnTheLastSignature;
+use App\Modules\Hr\Listeners\FinishTheBankUnpaidLineOnTheLastSignature;
+use App\Modules\Hr\Listeners\FinishTheSalaryChangeOnTheLastSignature;
+use App\Modules\Hr\Listeners\FinishTheFinalSettlementOnTheLastSignature;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\ExpenseClaim;
 use App\Modules\Hr\Models\PayrollRun;
@@ -15,6 +22,7 @@ use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryStructure;
 use App\Modules\Hr\Panels\EmployeeFacts;
+use App\Modules\Hr\Reports\HrReports;
 use App\Modules\Hr\Services\UserEmployee;
 
 /**
@@ -62,14 +70,51 @@ return [
         'master' => [
             ['label' => 'hr::menu.employees', 'icon' => 'people', 'route' => 'hr.employee.index', 'permission' => 'hr.employee.view'],
             ['label' => 'hr::menu.salary_heads', 'icon' => 'wallet', 'route' => 'hr.salary_head.index', 'permission' => 'hr.salary.manage'],
+            // ⭐ ছুটির দিনের তালিকা — সরকারি ছুটি আর উৎসব (শ্রম আইন ধারা ১১৮; [[HolidayController]]; a6, ২১ অক্টোবর ২০২৬)
+            ['label' => 'hr::menu.holidays', 'icon' => 'calendar', 'route' => 'hr.holiday.index', 'permission' => 'hr.attendance.view'],
+            // ⭐ ভবিষ্য তহবিলের প্রস্তাবিত বদল — আজকের বনাম প্রস্তাবিত হার, তারিখ ধরে বসানো (a6, ২১ অক্টোবর ২০২৬)
+            ['label' => 'hr::menu.pf_proposal', 'icon' => 'wallet', 'route' => 'hr.pf.proposal', 'permission' => 'hr.salary.view'],
         ],
 
         'transactions' => [
             ['label' => 'hr::menu.payroll', 'icon' => 'cash', 'route' => 'hr.payroll.index', 'permission' => 'hr.payroll.view'],
             ['label' => 'hr::menu.attendance', 'icon' => 'calendar', 'route' => 'hr.attendance.index', 'permission' => 'hr.attendance.view'],
-            ['label' => 'hr::menu.leave', 'icon' => 'clock', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view'],
+            // ⭐ অধিকালের শিট — হাজিরা থেকে, ব্যবস্থাপকের সই (BLA ধারা ১০৮; a6, ২১ অক্টোবর ২০২৬)
+            // ⭐ চাবি না থাকলেও পাতার নিজের নীতি — দল থাকা ব্যবস্থাপক সারি দেখেন আর পাতা খোলে (a6, ২১ অক্টোবর ২০২৬; [[MenuBuilder::pageLets()]])
+            ['label' => 'hr::menu.overtime', 'icon' => 'clock', 'route' => 'hr.overtime.index', 'permission' => 'hr.attendance.view',
+                'policy' => ['viewAny', \App\Modules\Hr\Models\OvertimeSheet::class]],
+            ['label' => 'hr::menu.leave', 'icon' => 'clock', 'route' => 'hr.leave.index', 'permission' => 'hr.leave.view',
+                'policy' => ['viewAny', \App\Modules\Hr\Models\LeaveApplication::class]],
             // ⭐ খরচের দাবি আর অগ্রিম — কর্মী নিজে (মালিকের আদেশ, ৭ অক্টোবর ২০২৬; [[ExpenseClaimController]])
             ['label' => 'hr::menu.claims', 'icon' => 'wallet', 'route' => 'hr.claim.index', 'permission' => 'hr.claim.self'],
+        ],
+
+        /*
+         * ⭐ HR-এর চারটা রিপোর্ট (ঘাটতির তালিকা #১৬; a6, ২১ অক্টোবর ২০২৬) — প্রতিটা তার পর্দার চাবিতে।
+         * ⚠️ স্লাগ [[HrReportController::SLUGS]]-এর হুবহু; চাবিও সেখানকার — নইলে সারি দেখা যায় আর চাপলে ৪০৩/৪০৪।
+         */
+        'reports' => [
+            ['label' => 'hr::menu.report_attendance', 'icon' => 'calendar', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'attendance'], 'permission' => 'hr.attendance.view'],
+            ['label' => 'hr::menu.report_payroll', 'icon' => 'cash', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'payroll'], 'permission' => 'hr.payroll.view'],
+            ['label' => 'hr::menu.report_headcount', 'icon' => 'people', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'headcount'], 'permission' => 'hr.employee.view'],
+            ['label' => 'hr::menu.report_leave_balance', 'icon' => 'clock', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'leave-balance'], 'permission' => 'hr.leave.view'],
+            // ⭐ ভবিষ্য তহবিলের খাতা — পুরোটাই টাকা, বেতনের চাবিতে (a6, ২১ অক্টোবর ২০২৬)
+            ['label' => 'hr::menu.report_provident_fund', 'icon' => 'wallet', 'route' => 'hr.report.show',
+                'route_params' => ['slug' => 'provident-fund'], 'permission' => 'hr.salary.view'],
+            // ⭐ গ্র্যাচুইটির দায় — বেতনের চাবিতে (fe, ২১ অক্টোবর ২০২৬, দফা ৮)
+            ['label' => 'hr::menu.report_gratuity', 'icon' => 'wallet', 'route' => 'hr.gratuity.report', 'permission' => 'hr.salary.view'],
+            // ⭐ চূড়ান্ত পাওনা — চাকরি ছাড়া কর্মীর এক কাগজ, মালিকের অনুমোদনে (মালিক, ২১ অক্টোবর ২০২৬; [[FinalSettlements]])
+            ['label' => 'hr::menu.final_settlements', 'icon' => 'wallet', 'route' => 'hr.final_settlement.index', 'permission' => 'hr.salary.view'],
+            /*
+             * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — শ্রম আইন ২০০৬, অধ্যায় ১৫ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])।
+             * ⛔ সারিটা কোম্পানির সুইচে (`hr.wppf.enabled`, ডিফল্টে বন্ধ) — বন্ধে সারিও নেই, দরজাও ৪০৪ ([[WppfController]])।
+             */
+            ['label' => 'hr::menu.wppf', 'icon' => 'cash', 'route' => 'hr.wppf.show', 'permission' => 'hr.wppf.view',
+                'setting' => 'hr.wppf.enabled'],
         ],
     ],
 
@@ -153,6 +198,20 @@ return [
          */
         'hr.leave.self',
         'hr.payslip.self',
+
+        /*
+         * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল — দেখা আর জাবেদার "সই দিন" আলাদা (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])।
+         * ⓘ কোনো রোলে ডিফল্টে নেই — মালিক (super admin) সব চাবি পান, কাকে দেবেন তিনিই ঠিক করেন।
+         */
+        'hr.wppf.view',
+        'hr.wppf.manage',
+
+        /*
+         * ⭐ চূড়ান্ত পাওনা (মালিক, ২১ অক্টোবর ২০২৬; [[FinalSettlements]]) — কাগজ বানানো `manage` (সাথে বেতনের চাবি), অনুমোদন `approve`।
+         * ⛔ `approve` কোনো রোলে ডিফল্টে নেই — তাই অনুমোদন দেন কেবল মালিক, যতক্ষণ না তিনি নিজে কাউকে দেন।
+         */
+        'hr.final_settlement.manage',
+        'hr.final_settlement.approve',
     ],
 
     /*
@@ -228,6 +287,96 @@ return [
         // ⭐ কর্মীর খরচের দাবি আর অগ্রিম — আলাদা কাজ, যাতে দুইটার আলাদা সীমা বসানো যায় (মালিকের আদেশ, ৭ অক্টোবর ২০২৬)
         'expense_claim' => 'hr::approval.expense_claim',
         'cash_advance' => 'hr::approval.cash_advance',
+        /*
+         * ⭐ বেতনের কাঠামো বদল — §৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬ ([[SalaryStructureService::change()]])। ⓘ ছক কেউ বসান না, কোম্পানি
+         * চাইলে চালু করে (SOX/ITGC maker-checker); ⛔ বসানো হয় না। ⭐ ছক না থাকলেও দ্বিতীয় সই — নিচের `second_hand` (মালিক, ২১ অক্টোবর ২০২৬)।
+         */
+        'salary_change' => 'hr::approval.salary_change',
+        /*
+         * ⭐ কর্মীর বেতনের ঠিকানা (ব্যাংক/MFS) বদল — cb-র অপেক্ষার বদল ([[PaymentChanges]], ee99f3eaa), সই এখন ইঞ্জিনে; ছক না থাকলেও
+         * দ্বিতীয় সই (নিচের `second_hand`; মালিক, a6, ২১ অক্টোবর ২০২৬)।
+         */
+        'payment_change' => 'hr::approval.payment_change',
+        // ⓘ WPPF-এর জাবেদা — কোম্পানি চাইলে ছক বসায়; না থাকলে "সই দিন" চাপা মানুষটিই সই ([[WppfService::provision()]])
+        'wppf_provision' => 'hr::approval.wppf_provision',
+        /*
+         * ⭐ "ব্যাংক এই লাইন দেয়নি" — বাতিল রানের ব্যাংক ফাইলে যাওয়া বকেয়া মজুরি আবার দেওয়ার তালিকায়, কেবল দ্বিতীয় সইয়ে (fe-র সিদ্ধান্ত ২,
+         * ২১ অক্টোবর ২০২৬; [[HeldWages::askBankUnpaid()]]); ছক না থাকলেও দ্বিতীয় সই (নিচের `second_hand`)।
+         */
+        'bank_unpaid' => 'hr::approval.bank_unpaid',
+        // ⭐ চূড়ান্ত পাওনা — সবসময় মালিকের অনুমোদন (নিচের `second_hand`; মালিক, ২১ অক্টোবর ২০২৬)
+        'final_settlement' => 'hr::approval.final_settlement',
+    ],
+
+    /*
+     * ⭐ বেতন-বদলের সইয়ের নিয়ম — fe-র উত্তর ২ ও ৪, a6, ২১ অক্টোবর ২০২৬ ([[ApprovalRules]])।
+     *  · `signer_key` — ছকের ধাপে বেতনের চাবি ছাড়া কাউকে (মানুষ বা রোল) বসানো যায় না; নাহলে অঙ্ক না দেখে সই ([[ApprovalFlowService]])।
+     *  · `summary` — ইনবক্স আর একসাথে সইয়ের তালিকায় প্রতিটা সারিতে আগে → পরের অঙ্ক, চাবি না থাকলে ঢাকা ([[SalaryChangeSummary]])।
+     */
+    /*
+     * ⛔ `second_hand` — মালিকের একমাত্র ব্যতিক্রম, ২১ অক্টোবর ২০২৬ (a6; [[ApprovalRules::secondHand()]]): "সই বন্ধ মানে বন্ধ", কেবল বেতনের
+     * রান নিশ্চিত, বেতনের কাঠামো বদল আর কর্মীর বেতনের ঠিকানা (ব্যাংক/MFS) বদল ছাড়া। সব ছক বন্ধ থাকা কোম্পানিতেও (UB) এগুলোয়
+     * আরেকজনের "সই দিন" লাগে — যন্ত্রের নিজের এক ধাপ "দ্বিতীয় সই", চাবি থাকা যেকোনো একজন, যিনি চাইলেন তিনি নন — মালিকও নন
+     * (fe, ২১ অক্টোবর ২০২৬; [[ApprovalEngine::twoHands()]]); কোম্পানির ছকের সীমা-শর্ত নিয়মটা নামাতে পারে না। ⓘ ছক বসানো হয় না ([[MoneyFlowDefaults]] আগের মতোই);
+     * কোম্পানির নিজের চালু ছক থাকলে সেটাই খাটে।
+     */
+    'approval_rules' => [
+        'salary_change' => [
+            'signer_key' => 'hr.salary.view',
+            'second_hand' => ['hr.salary.manage'],
+            'summary' => \App\Modules\Hr\Services\SalaryChangeSummary::class,
+        ],
+        /*
+         * ⛔ বেতনের রানের সই — নিট কেবল `hr.salary.view`-এ (fe, ২১ অক্টোবর ২০২৬, a6)।
+         *  · `amount_key` — অনুরোধের নিট `approvals.amount`-এ খোলা বসে না, এনক্রিপ্ট করা থাকে; ইনবক্স, সইয়ের পাতা, ফোন, খবর,
+         *    রিপোর্ট, খোঁজা — সবখানে খালি ([[ApprovalRules::amountKey()]])।
+         *  · `summary` — মাস, জন, নিট; নিট চাবি ছাড়া ঢাকা ([[PayrollRunSummary]])।
+         *  · `signer_key` — চাবি ছাড়া কেউ সইকারী নন, ছকের পর্দায় আর নিজে-বসানো ছকেও ([[ApprovalFlowService]]); নিজে-বসানো ছকের
+         *    সইকারী মালিক বা চাবি থাকা রোল (HR-এর প্রধান), হিসাবরক্ষক কখনো নন ([[MoneyFlowDefaults::keyHolders()]]; fe, ২১ অক্টোবর ২০২৬)।
+         */
+        'payroll' => [
+            'signer_key' => 'hr.salary.view',
+            'second_hand' => ['hr.payroll.manage'],
+            'amount_key' => 'hr.salary.view',
+            'summary' => \App\Modules\Hr\Services\PayrollRunSummary::class,
+        ],
+        /*
+         * ⛔ বেতনের ঠিকানার বদল — সই দেন বদলটা লেখার চাবি থাকা আরেকজন (`hr.employee.manage` + `hr.identity.view`), যিনি চাইলেন তিনি নন।
+         * ⓘ পুরো নম্বর তাঁর চোখে খোলে (পরিচয়ের চাবি) — মিলিয়ে দেখে সই; চাবি ছাড়া কেউ ধাপে বসেন না (`signer_key`)।
+         */
+        'payment_change' => [
+            'signer_key' => 'hr.identity.view',
+            'second_hand' => ['hr.employee.manage'],
+            'summary' => \App\Modules\Hr\Services\PaymentChangeSummary::class,
+        ],
+        /*
+         * ⛔ "ব্যাংক এই লাইন দেয়নি" — মজুরি আবার দেওয়ার তালিকায় ফেরে, তাই বেতনের রানের অবিকল নিয়ম: `hr.payroll.manage` + `hr.salary.view`
+         * থাকা আরেকজন, যিনি চাইলেন তিনি কখনো নন — মালিকও নন (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬; [[HeldWages::finishBankUnpaid()]])।
+         *
+         * ⓘ কেন `moves_money`-তে নেই: সেই তালিকার প্রতিটা কাজে [[MoneyFlowDefaults]] প্রতিটা কোম্পানিতে একটা সইয়ের ছক বসায় — সব সই বন্ধ
+         * রাখা কোম্পানিতেও (UB) ছক জন্মাত, মালিকের "সই বন্ধ মানে বন্ধ" নিয়ম ভাঙত। দুই হাত এমনিতেই নিশ্চিত — উপরের `second_hand`, ছক
+         * ছাড়াই সবসময়।
+         * ⛔ কেন `no_bulk`: এটা টাকা আবার বেরোনোর পথ — প্রতিটা লাইনের কারণ আর ব্যাংকের প্রমাণ নিজের পাতায় দেখে, নিজের সইয়ে; একসাথে সই
+         * মানে না দেখে সই (fe, ২১ অক্টোবর ২০২৬; [[BulkApproval::oneByOne()]], [[ACancelledRunsBankLineIsNotReleasedByItselfTest::test_a_bank_line_is_never_signed_in_bulk_but_its_own_page_signs_it]])।
+         */
+        'bank_unpaid' => [
+            'signer_key' => 'hr.salary.view',
+            'second_hand' => ['hr.payroll.manage'],
+            'no_bulk' => true,
+        ],
+        /*
+         * ⛔ চূড়ান্ত পাওনা — "এক কাগজ, মালিকের অনুমোদনে" (মালিক, ২১ অক্টোবর ২০২৬; [[FinalSettlements]])।
+         *  · `second_hand` — চাবিটা কোনো রোলে নেই, তাই ছক না থাকলে বা সব ছক বন্ধ থাকলেও (UB) অনুমোদন দেন কেবল মালিক; যিনি বানালেন তিনি নন।
+         *  · `amount_key` — নিট `approvals.amount`-এ খোলা বসে না (বেতনের রানের একই নিয়ম)।
+         *  · `no_bulk` — টাকা বেরোনোর কাগজ, প্রতিটা নিজের পাতায় দেখে।
+         */
+        'final_settlement' => [
+            'signer_key' => 'hr.salary.view',
+            'second_hand' => ['hr.final_settlement.approve'],
+            'amount_key' => 'hr.salary.view',
+            'no_bulk' => true,
+            'summary' => \App\Modules\Hr\Services\FinalSettlementSummary::class,
+        ],
     ],
 
     /*
@@ -240,6 +389,11 @@ return [
      *
      * ⚠️ নামগুলো `approvals`-এ থাকতেই হবে — [[ModuleDefinition]]
      * মিলিয়ে দেখে। ⛔ একটা টাইপো নীরবে কাগজটাকে bulk-এ ঢুকিয়ে দিত।
+     */
+    /*
+     * ⛔ `salary_change` এখানে নেই, ইচ্ছে করে — a6, ২১ অক্টোবর ২০২৬ (§৮ ⚠️৫)। এই তালিকার প্রতিটা কাজে [[MoneyFlowDefaults]]
+     * প্রতিটা কোম্পানিতে একটা ছক **বসিয়ে দেয়** (হিসাবরক্ষকের সই); বেতন-বদলের সই কোম্পানির নিজের সিদ্ধান্ত, কোডের নয়।
+     * ⓘ ফলে ইনবক্সে একসাথে সই দেওয়া যায় — মালিক চাইলে আলাদা প্রশ্ন।
      */
     'moves_money' => ['payroll', 'expense_claim', 'cash_advance'],
 
@@ -322,7 +476,20 @@ return [
         EmployeeFacts::class,
     ],
 
+    /*
+     * ⭐ নতুন কোম্পানিতে প্রমিত ছুটির ধরন — মাতৃত্বকালীন সহ (শ্রম আইন; [[LeaveTypeDefaults]]; a6, ২১ অক্টোবর ২০২৬)।
+     * ⓘ চলতি কোম্পানিতে `abos:hr-install-leave-types` বা ছুটির ধরনের পর্দার বোতাম; বারবার চালানো নিরাপদ।
+     */
+    'provisions' => [
+        \App\Modules\Hr\Services\LeaveTypeDefaults::class,
+    ],
+
     'dashboard' => HrDashboard::class,
+
+    // ⭐ রিপোর্ট ইঞ্জিন boot-এ নিবন্ধন করে — হাজিরা, বেতনশিট, কর্মী সংখ্যা, ছুটির জের ([[HrReports]])
+    'reports' => [
+        HrReports::class,
+    ],
 
     'widgets' => [
         HrWidgets::class,
@@ -365,11 +532,54 @@ return [
          * (সেবা স্তরেও দ্বিতীয় পাহারা আছে: যে দিনের সারি লেখা নেই সেটা
          * গোনাই হয় না। কিন্তু বেতনের মতো জায়গায় একটা পাহারা যথেষ্ট নয়।)
          */
+        /*
+         * ⭐ শ্রমিকের মুনাফায় অংশগ্রহণ তহবিল (WPPF) — শ্রম আইন ২০০৬, অধ্যায় ১৫ (a6, ২১ অক্টোবর ২০২৬; [[WppfService]])।
+         * ⛔ ডিফল্টে বন্ধ — আইনটা সব প্রতিষ্ঠানে খাটে না (ধারা ২৩২: পরিশোধিত মূলধন ≥ ১ কোটি বা স্থায়ী সম্পদ ≥ ২ কোটি), আর যন্ত্র
+         * সেটা আন্দাজ করে না। বন্ধ থাকলে কোথাও কিছু নেই।
+         */
+        [
+            'key' => 'hr.wppf.enabled',
+            'label' => 'hr::settings.wppf_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+        ],
         [
             'key' => 'hr.attendance_affects_salary',
             'label' => 'hr::settings.attendance_affects_salary',
             'type' => 'boolean',
             'default' => false,
+            'group' => 'entry',
+        ],
+        /*
+         * ⭐ সাপ্তাহিক ছুটি — ডিফল্ট শুক্রবার (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; বাংলাদেশ শ্রম আইন ২০০৬ ধারা ১০৩; [[WorkCalendar]];
+         * a6, ২১ অক্টোবর ২০২৬)।
+         * ⓘ ছুটির আবেদনের দিন গোনায় এই দিনগুলো বাদ, আর এই দিনে লেখা "অনুপস্থিত" বেতন থেকে কাটে না। সরকারি ছুটি আর উৎসব আলাদা
+         * তালিকায় ([[HolidayController]])। ⛔ সপ্তাহের দিন সারি হয়ে বসে না — ৫২টা সারি ভুলে গেলে গোটা বছর কাজের দিন হত।
+         */
+        [
+            'key' => 'hr.weekly_off',
+            'label' => 'hr::settings.weekly_off',
+            'type' => 'choice',
+            'options' => array_keys(\App\Modules\Hr\Support\WorkCalendar::WEEKLY_OFF),
+            'option_label' => 'hr::settings.weekly_off_',
+            'default' => \App\Modules\Hr\Support\WorkCalendar::DEFAULT_WEEKLY_OFF,
+            'group' => 'entry',
+            // ⭐ শাখা নিজের দিন বাছতে পারে — দোকান আর কারখানা আলাদা (ধারা ১০৩, ১১৪; fe, ২১ অক্টোবর ২০২৬); বদলটা ছুটির দিনের পর্দায় ([[HolidayController::storeWeeklyOff()]])
+            'per_branch' => true,
+            // ⭐ এক নিয়ম, এক জায়গা — কোম্পানির ডিফল্টও ছুটির দিনের পর্দার কার্ডে; সেটিংসের পাতা আর কন্ট্রোল প্যানেল দেখায় না (fe-র উত্তর ৪)
+            'owned_by' => 'hr.holiday.index',
+            'owned_where' => 'hr::settings.weekly_off_owned',
+        ],
+        /*
+         * ⭐ অর্জিত ছুটির জের — বছর শেষে বড়জোর কত দিন পরের বছরে যায়, ডিফল্ট ৪০ (মালিকের অনুমোদন, ২১ অক্টোবর ২০২৬; শ্রম আইন ধারা
+         * ১১৭; [[EarnedLeave::closingOf()]]; a6, ২১ অক্টোবর ২০২৬)। ⓘ অর্জন নিজে আইনের হার — প্রতি ১৮ দিন কাজে ১ দিন — সেটিং নয়।
+         */
+        [
+            'key' => 'hr.earned_leave_carry_cap',
+            'label' => 'hr::settings.earned_leave_carry_cap',
+            'type' => 'integer',
+            'default' => \App\Modules\Hr\Services\EarnedLeave::DEFAULT_CARRY_CAP,
             'group' => 'entry',
         ],
         [
@@ -378,6 +588,125 @@ return [
             'type' => 'boolean',
             'default' => false,
             'group' => 'entry',
+        ],
+
+        /*
+         * ⭐ ভবিষ্য তহবিল — BLA ২০০৬ ধারা ২৬৪, শ্রম বিধিমালা ২০১৫ বিধি ২৬২ (মালিকের অনুমোদিত আইনি বেতনের পরিকল্পনা, a6, ২১ অক্টোবর
+         * ২০২৬; [[ProvidentFund]])।
+         * ⓘ সুইচ ডিফল্টে বন্ধ: চালু হলে প্রতিষ্ঠানের সমান ভাগ বেতনের স্লিপে আলাদা সারি হয়ে বসে আর খাতায় খরচ (৫২২৫) ও তহবিলের দায়
+         * (২১৩১)। কর্মীর ভাগের হার কর্মীর বেতন-কাঠামোয়; ⛔ এখানকার ৮% পুরনো কাঠামো নীরবে বদলায় না — প্রস্তাবিত বদলের পাতা থেকে একটা
+         * তারিখ ধরে হাতে বসাতে হয়। ⛔ কেবল সুপার অ্যাডমিন — বেতন থেকে টাকা কাটার নিয়ম।
+         */
+        [
+            'key' => 'hr.pf.enabled',
+            'label' => 'hr::settings.pf_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.pf.employee_percent',
+            'label' => 'hr::settings.pf_employee_percent',
+            'type' => 'number',
+            'default' => 8,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        /*
+         * ⭐ প্রতিষ্ঠানের ভাগ কতটা কর্মীর প্রাপ্য — চাকরির পূর্ণ বছর ধরে (BLA ধারা ২৬৭; fe, ২১ অক্টোবর ২০২৬; [[ProvidentFund::vest()]])।
+         * ⛔ ডিফল্ট খালি = "বসানো নেই" (১০০% নয়) — চূড়ান্ত নিষ্পত্তি তখন হিসাব করবে না। লেখার ধরন: "3:50, 5:100"।
+         */
+        /*
+         * ⭐ গ্র্যাচুইটির মাসিক সঞ্চিতি — চালু থাকলে মাসের বেতন নিশ্চিত হওয়ার সাথে সেই মাসের দায় পর্যন্ত খাতায় (BLA ধারা 2(10), IAS 19;
+         * fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])। ⓘ ডিফল্টে বন্ধ — রিপোর্ট আর হাতের বোতাম সবসময় চলে।
+         */
+        [
+            'key' => 'hr.gratuity.enabled',
+            'label' => 'hr::settings.gratuity_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.pf.vesting_steps',
+            'label' => 'hr::settings.pf_vesting_steps',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.pf.employer_percent',
+            'label' => 'hr::settings.pf_employer_percent',
+            'type' => 'number',
+            'default' => 8,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+
+        /*
+         * ⭐ অধিকাল — BLA ২০০৬ ধারা ১০৮: মূল ÷ ২০৮ × ২ × বাড়তি ঘণ্টা (a6, ২১ অক্টোবর ২০২৬; [[OvertimeService]])।
+         * ⓘ সুইচ ডিফল্টে বন্ধ। দিনের কাজের ঘণ্টা ডিফল্ট ৮; কারা পান — নিয়োগের ধরনের কোড, কমা দিয়ে (ডিফল্ট `WORKER` = শ্রমিক)।
+         * ⛔ ব্যবস্থাপকের সই হওয়া ঘণ্টাই কেবল বেতনে।
+         */
+        [
+            'key' => 'hr.ot.enabled',
+            'label' => 'hr::settings.ot_enabled',
+            'type' => 'boolean',
+            'default' => false,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.ot.daily_hours',
+            'label' => 'hr::settings.ot_daily_hours',
+            'type' => 'number',
+            'default' => 8,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        /*
+         * ⭐ বেতন থেকে উৎসে কর — আয়কর আইন ২০২৩ ধারা ৮৬ (a6, ২১ অক্টোবর ২০২৬; সূত্র [[SalaryTax]])।
+         * ⓘ ধাপ ডিফল্টে খালি = কিছুই কাটা হয় না, আর রানের পাতায় "করের ধাপ বসানো নেই"। লেখার ধরন: "350000:0, 100000:5, …, *:30"।
+         * ছাড়ের সীমা — বেতনের এক-তৃতীয়াংশ বা এই অঙ্ক, যেটা কম (ডিফল্ট 450000)।
+         */
+        /*
+         * ⭐ উৎসব ভাতা — মূলের শতাংশ (শ্রম বিধিমালা ২০১৫ বিধি ১১১: এক মাসের মূল পর্যন্ত; a6, ২১ অক্টোবর ২০২৬; [[PayrollService::buildBonus()]])।
+         * ⓘ ডিফল্ট 100 — কমানো যায়, 100-এর বেশি ধরা হয় না। বছরে বড়জোর দুইটা রান, এক বছরের চাকরি — কোডের নিয়ম, সেটিং নয়।
+         */
+        [
+            'key' => 'hr.bonus.percent_of_basic',
+            'label' => 'hr::settings.bonus_percent_of_basic',
+            'type' => 'number',
+            'default' => 100,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.tax.slabs',
+            'label' => 'hr::settings.tax_slabs',
+            'type' => 'string',
+            'default' => '',
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.tax.exemption_cap',
+            'label' => 'hr::settings.tax_exemption_cap',
+            'type' => 'number',
+            'default' => 450000,
+            'group' => 'entry',
+            'super_admin_only' => true,
+        ],
+        [
+            'key' => 'hr.ot.eligible_types',
+            'label' => 'hr::settings.ot_eligible_types',
+            'type' => 'string',
+            'default' => 'WORKER',
+            'group' => 'entry',
+            'super_admin_only' => true,
         ],
 
         /*
@@ -450,16 +779,28 @@ return [
      * ⭐ খরচের দাবি বা অগ্রিমের শেষ সই — অনুমোদিত আর খসড়া ভাউচার; "না" হলে ফেরানো ([[FinishTheClaimOnTheLastSignature]])।
      */
     'listeners' => [
-        ApprovalDecided::class => [FinishTheClaimOnTheLastSignature::class],
+        // ⭐ বেতনের কাঠামো বদলের শেষ সই — তবে বসে (§৮ ⚠️৫, a6, ২১ অক্টোবর ২০২৬)
+        ApprovalDecided::class => [
+            FinishTheClaimOnTheLastSignature::class,
+            FinishTheSalaryChangeOnTheLastSignature::class,
+            FinishThePaymentChangeOnTheLastSignature::class,
+            // ⭐ বকেয়া মজুরির খসড়া ভাউচার সইয়ে "না" — মজুরি আবার দেওয়ার অপেক্ষায় (fe, ২১ অক্টোবর ২০২৬)
+            ReleaseHeldWagesWhenTheVoucherFalls::class,
+            // ⭐ "ব্যাংক এই লাইন দেয়নি"-র শেষ সই — মজুরি আবার দেওয়ার তালিকায়, একবারই (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬)
+            FinishTheBankUnpaidLineOnTheLastSignature::class,
+            // ⭐ চূড়ান্ত পাওনার শেষ সিদ্ধান্ত — অনুমোদনে খাতায়, "না"-তে বন্ধ (মালিক, ২১ অক্টোবর ২০২৬)
+            FinishTheFinalSettlementOnTheLastSignature::class,
+        ],
+        // ⭐ বকেয়া মজুরির খসড়া ভাউচার বাতিল — একই কথা ([[HeldWages::releaseFor()]])
+        \App\Modules\Accounts\Events\VoucherCancelled::class => [ReleaseHeldWagesWhenTheVoucherFalls::class],
+        // ⭐ অনুমোদনের কেন্দ্রের "ফিরিয়ে নিন" — বেতনের ঠিকানার অপেক্ষার বদলটাও বন্ধ (fe, ২১ অক্টোবর ২০২৬)
+        ApprovalWithdrawn::class => [CloseThePaymentChangeOnWithdrawal::class, FinishTheBankUnpaidLineOnTheLastSignature::class,
+            FinishTheFinalSettlementOnTheLastSignature::class],
     ],
 
     'sensitive_fields' => [
-        Employee::class => [
-            'national_id' => 'hr.identity.view',
-            'bank_account_no' => 'hr.identity.view',
-            'bank_routing_no' => 'hr.identity.view',
-            'mfs_number' => 'hr.identity.view',
-        ],
+        // ⭐ পরিচয় আর ব্যক্তিগত তথ্য — এক তালিকা ([[Employee::GUARDED]]; ঘাটতির তালিকা #১৯)
+        Employee::class => array_fill_keys(Employee::GUARDED, 'hr.identity.view'),
         Payslip::class => [
             'bank_account_no' => 'hr.identity.view',
             'bank_routing_no' => 'hr.identity.view',

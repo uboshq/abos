@@ -39,17 +39,18 @@
 
     {{-- ⓘ ভাগের টুলবার — খোঁজ, ছাপা আর ছাঁকনি অন্য তালিকার জায়গাতেই; মাস ছাঁকনির ঘরে (১১ অক্টোবর ২০২৬, Design: নিজের লেখা
          টুলবার)। রপ্তানি বন্ধ: এই পাতার নিয়ন্ত্রক রপ্তানি দেয় না, তাই বোতামটা কেবল পাতাটাই আবার আনত। --}}
-    <form method="GET" class="contents">
+    {{-- ⭐ মাস ডান পাশের ছাঁকনির প্যানেলে, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets::month()]]) --}}
+    @php
+        $facetPanel = \App\Core\ListFilter\Facets::panel([
+            \App\Core\ListFilter\Facets::month('month', __('sales::route.month'), $month->format('Y-m')),
+        ]);
+    @endphp
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+    <form id="list-form" method="GET" class="contents">
         <x-ui.toolbar :title="__('sales::route.title')" :subtitle="__('sales::route.subtitle')"
-                      :search-placeholder="__('sales::route.search')" :export="false">
-            <label class="text-sm">
-                <span class="mb-1 block text-(--color-ink-muted)">{{ __('sales::route.month') }}</span>
-                <x-ui.month name="month" :value="$month->format('Y-m')"
-                            class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border)
-                                   bg-(--color-surface-card) px-2" />
-            </label>
-        </x-ui.toolbar>
+                      :search-placeholder="__('sales::route.search')" :export="false" :facets="$facetPanel" />
     </form>
+    </x-ui.filter-layout>
 
     @if ($unrouted > 0)
         <div role="status"

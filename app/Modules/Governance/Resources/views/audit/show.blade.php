@@ -78,9 +78,9 @@
                         ['key' => 'field', 'label' => __('governance::field.field'), 'width' => '14rem',
                          'render' => fn ($c) => $c->field],
                         ['key' => 'old_value', 'label' => __('governance::field.old_value'),
-                         'render' => fn ($c) => \App\Core\Security\FieldSecurity::show($trail->auditable_type, $c->field, $c->old_value ?? '—')],
+                         'render' => fn ($c) => \App\Core\Security\FieldSecurity::show($trail->auditable_type, $c->field, $c->old_value ?? '—', $trail->auditable_id)],
                         ['key' => 'new_value', 'label' => __('governance::field.new_value'),
-                         'render' => fn ($c) => \App\Core\Security\FieldSecurity::show($trail->auditable_type, $c->field, $c->new_value ?? '—')],
+                         'render' => fn ($c) => \App\Core\Security\FieldSecurity::show($trail->auditable_type, $c->field, $c->new_value ?? '—', $trail->auditable_id)],
                     ]" />
             @endif
         </section>

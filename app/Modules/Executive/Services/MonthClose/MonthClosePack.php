@@ -22,6 +22,7 @@ use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Models\Voucher;
 use App\Modules\Accounts\Services\MonthEndChecklist;
 use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\CreditControl\Services\ReceivableCreditLoss;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Finance\Models\Budget;
 use App\Modules\Hr\Models\PayrollRun;
@@ -54,15 +55,19 @@ use Illuminate\Support\Facades\DB;
  */
 final class MonthClosePack
 {
-    /** ⓘ সম্ভাব্য ক্ষতির খরচের খাত — ec/post-freeze-1 093905c42-এর [[StandardChart::IMPAIRMENT_LOSS]]; সেটা না আসা পর্যন্ত শূন্য */
-    public const IMPAIRMENT_LOSS = '5223';
+    /**
+     * ⓘ সম্ভাব্য ক্ষতির খরচের খাত — [[StandardChart::IMPAIRMENT_LOSS]] (5228)।
+     * ⛔ আগে এখানে '5223' লেখা ছিল, যেটা এখন WPPF-এর খরচ ([[StandardChart::WPPF_EXPENSE]]) — মাস শেষের লাভ-ক্ষতিতে শ্রমিকের মুনাফার
+     * ভাগ "সম্ভাব্য ক্ষতি" হয়ে বসত। এখন খাতের নিজের ধ্রুবক।
+     */
+    public const IMPAIRMENT_LOSS = StandardChart::IMPAIRMENT_LOSS;
 
     /** ⓘ বয়সের ভাগ → হারের সেটিং (ঐ শাখার [[ReceivableCreditLoss::RATES]]) আর মালিকের অনুমোদিত হার (২১ অক্টোবর ২০২৬: 1/3/10/50) */
     public const ECL_RATES = [
-        'bucket_current' => ['credit_control.ecl_rate_current', '1'],
-        'bucket_30' => ['credit_control.ecl_rate_30', '3'],
-        'bucket_60' => ['credit_control.ecl_rate_60', '10'],
-        'bucket_90' => ['credit_control.ecl_rate_90', '50'],
+        'bucket_current' => [ReceivableCreditLoss::RATES['bucket_current'], ReceivableCreditLoss::DEFAULTS['bucket_current']],
+        'bucket_30' => [ReceivableCreditLoss::RATES['bucket_30'], ReceivableCreditLoss::DEFAULTS['bucket_30']],
+        'bucket_60' => [ReceivableCreditLoss::RATES['bucket_60'], ReceivableCreditLoss::DEFAULTS['bucket_60']],
+        'bucket_90' => [ReceivableCreditLoss::RATES['bucket_90'], ReceivableCreditLoss::DEFAULTS['bucket_90']],
     ];
 
     /** ডেলিভারির খরচ — গাড়ি আর শ্রম */

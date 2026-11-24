@@ -7,6 +7,7 @@ import { abosDate } from './date.js'
 import { followTheDevice } from './theme.js'
 import { listKeys } from './list-keys.js'
 import { approvalKeys } from './approval-keys.js'
+import { inboxBoard } from './inbox-board.js'
 import { searchAsYouType, searched } from './search-as-you-type.js'
 import { listSwap } from './list-swap.js'
 import { guardOneSubmit } from './one-submit.js'
@@ -32,6 +33,7 @@ import documentScan from './document-scan.js'
 import { listenForColumnChoice } from './columns.js'
 import { listenForFreshData } from './live.js'
 import { guardAllBranchesView } from './all-branches-view.js'
+import { holdPrintTabOnSubmit, handPrintToTab } from './print-tab.js'
 
 /*
  * Alpine শুধু ছোট UI ইন্টারঅ্যাকশনে — ড্রপডাউন, পাসওয়ার্ড দেখানো, ট্যাব
@@ -157,6 +159,9 @@ listKeys()
 // ⭐ অনুমোদনের ← → A S R আর পপ-আপের ফোকাস — দফা ২০ ([[approval-keys.js]])
 approvalKeys()
 
+// ⭐ the approval inbox board — rose, navy, blue only; no board on the page = nothing wired ([[inbox-board.js]])
+inboxBoard()
+
 // তালিকার খোঁজ — টাইপ করতেই, Enter ছাড়া; নিয়ম `search-as-you-type.js`-এ
 searchAsYouType()
 
@@ -194,6 +199,9 @@ guardConfirmOverview()
 guardOneSubmit()
 // ⭐ এক ব্যাংক-সারি, কয়েকটা কাগজ — টিকের চলতি মোট (মালিক, ২১ নভেম্বর ২০২৬; [[match-total.js]])
 watchMatchTotals()
+// ⭐ ছাপা নতুন ট্যাবে — কাউন্টার যেখানে ছিল সেখানেই (মালিক, ২৩ নভেম্বর ২০২৬; [[print-tab.js]]); একবার-জমার পাহারার পরে, তাই থামানো জমায় ট্যাব খোলে না
+holdPrintTabOnSubmit()
+handPrintToTab()
 
 // ⭐ "ABOS" রূপে টাকার পাতার মাথা টুলবারের এক সারিতে — Alpine-এর আগে, তাই সরানো বোতামগুলো নতুন জায়গাতেই জাগে ([[abos-list-head.js]])
 mergeMoneyHead()

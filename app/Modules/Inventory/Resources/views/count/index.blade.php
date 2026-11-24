@@ -23,6 +23,11 @@
         ['key' => 'status', 'label' => __('inventory::field.state'), 'width' => '9rem',
          'render' => fn ($c) => view('inventory::count.partials.status', ['count' => $c])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+    ]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -36,13 +41,14 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed
          class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('inventory::menu.counts')"
                           :count="trans_choice('core.count.records', $counts->total(), ['count' => $counts->total()])"
                           :columns="$columns"
-                          :sort="$sortOptions">
+                          :sort="$sortOptions" :facets="$facetPanel">
                 <x-slot:actions>
                     @can('create', \App\Modules\Inventory\Models\StockCount::class)
                         <x-ui.button tone="primary" icon="plus" :href="route('inventory.count.create')">
@@ -50,8 +56,6 @@
                         </x-ui.button>
                     @endcan
                 </x-slot:actions>
-
-                <x-ui.date-range :dates="$dates" />
             </x-ui.toolbar>
         </form>
 
@@ -64,4 +68,5 @@
         <x-ui.pager :rows="$counts" />
         <x-ui.list-totals :rows="$counts" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

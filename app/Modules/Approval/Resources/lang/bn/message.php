@@ -65,6 +65,8 @@ return [
     'bulk_skipped_money' => ':countটা বাদ — টাকা নড়ার কাজ, একটা একটা করে দেখতে হবে।',
     'bulk_skipped_not_allowed' => ':countটা বাদ — আপনার কর্তৃত্বের বাইরে।',
     'bulk_skipped_not_pending' => ':countটা বাদ — আগেই মীমাংসিত।',
+    // ⭐ মডিউলের `no_bulk` কাজ — যেমন "ব্যাংক এই লাইন দেয়নি" (fe, ২১ অক্টোবর ২০২৬)
+    'bulk_skipped_one_by_one' => ':countটা বাদ — এগুলো একটা একটা করে দেখে অনুমোদন দিতে হয়।',
     'bulk_none' => 'বাছাই করা কিছু নেই।',
     'sla_hint' => 'খালি রাখলে এই ধাপে কোনো ঘড়ি নেই — আচরণ আগের মতোই।',
     'escalate_hint' => 'সময়সীমা বসিয়ে গন্তব্য না বসালে কাগজ কোথাও যায় না; ব্যতিক্রমের পর্দা সেটা দেখাবে।',
@@ -178,4 +180,7 @@ return [
     'delegation_stopped_at' => 'থামানো হয়েছে :date',
     'delegation_changed' => 'দায়িত্ব বদলানো হলো — আগেরটা নিরীক্ষার খাতায় আছে।',
     'delegation_changing' => 'বদলাচ্ছেন: :name-এর দায়িত্ব',
+    // ⭐ the inbox board — a re-asked paper (it changed after the first ask)
+    'changed_short' => 'বদলেছে',
+    'changed_since_asked_short' => 'অনুমোদন চাওয়ার পরে বদলেছে',
 ];

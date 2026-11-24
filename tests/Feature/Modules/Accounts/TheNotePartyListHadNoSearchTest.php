@@ -111,7 +111,7 @@ final class TheNotePartyListHadNoSearchTest extends TestCase
 
             // ⓘ আসল ফেরত-পথ: শূন্য টাকায় জমা → ভুল → একই পাতায় ফেরা
             $html = (string) $this->followingRedirects()
-                ->from(route('accounts.note.create', ['direction' => $direction]))
+                ->from($this->formUrl($direction))
                 ->post(route('accounts.note.store'), [
                     'direction' => $direction,
                     'party_id' => (string) $party['id'],
@@ -151,7 +151,13 @@ final class TheNotePartyListHadNoSearchTest extends TestCase
 
     private function page(string $direction): TestResponse
     {
-        return $this->get(route('accounts.note.create', ['direction' => $direction]));
+        return $this->get($this->formUrl($direction));
+    }
+
+    /** ⓘ নোটের নিজের ফর্ম — ক্রেডিট নোট, সরবরাহকারীর ডেবিট নোট; পুরনো `?direction=` ঠিকানা এখন এখানে ফেরায় (নকশা v5, ২৩ নভেম্বর ২০২৬) */
+    private function formUrl(string $direction): string
+    {
+        return route($direction === Note::CREDIT ? 'accounts.note.cn.create' : 'accounts.note.dn.create');
     }
 
     /** পিকারের `x-data` — ব্রাউজার যেমন পড়ে, `&quot;` খুলে */

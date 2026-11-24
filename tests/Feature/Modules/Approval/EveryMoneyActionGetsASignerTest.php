@@ -59,6 +59,7 @@ final class EveryMoneyActionGetsASignerTest extends TestCase
     {
         $expected = $this->moneyKeysFromTheRegistry();
         $role = $this->accountantRoleIn($this->company);
+        $owner = $this->ownerRoleIn($this->company);
 
         $report = app(MoneyFlowDefaults::class)->ensure($this->company);
 
@@ -83,7 +84,8 @@ final class EveryMoneyActionGetsASignerTest extends TestCase
 
             $this->assertSame(1, (int) $step->level, $key);
             $this->assertSame(ApprovalFlowStep::BY_ROLE, $step->approver_type, $key);
-            $this->assertSame((int) $role->id, (int) $step->approver_id, $key);
+            // ⭐ বেতনের রান মালিকের (চাবির কাজ), হিসাবরক্ষকের নয় — fe, ২১ অক্টোবর ২০২৬ ([[MoneyFlowDefaults::keyHolders()]])
+            $this->assertSame($key === 'hr.payroll' ? (int) $owner->id : (int) $role->id, (int) $step->approver_id, $key);
         }
     }
 
@@ -237,6 +239,7 @@ final class EveryMoneyActionGetsASignerTest extends TestCase
         $this->assertNotEmpty($this->flowsIn($other), 'দৃশ্যটাই বানানো যায়নি — পাশের কোম্পানিতে ছক বসেনি।');
 
         $this->accountantRoleIn($this->company);
+        $this->ownerRoleIn($this->company);
         $report = app(MoneyFlowDefaults::class)->ensure($this->company);
 
         $this->assertEqualsCanonicalizing($this->moneyKeysFromTheRegistry(), $report['created'],
@@ -247,6 +250,7 @@ final class EveryMoneyActionGetsASignerTest extends TestCase
     public function test_the_command_lays_the_flows_and_says_so(): void
     {
         $this->accountantRoleIn($this->company);
+        $this->ownerRoleIn($this->company);
 
         $this->artisan('abos:sync-money-flows', ['--company' => 'MF'])->assertSuccessful();
 
@@ -294,7 +298,31 @@ final class EveryMoneyActionGetsASignerTest extends TestCase
         $this->assertNotSame((int) $maker->id, (int) $signed->decisions()->first()->user_id);
     }
 
+    /**
+     * ⛔ চাবির কাজে (বেতনের রান) মালিকের রোল বা চাবি থাকা রোল না থাকলে ছক বসে না, নাম ধরে বলা হয় — হিসাবরক্ষক বিকল্প নন
+     * (fe, ২১ অক্টোবর ২০২৬, a6)। বাকি টাকার কাজ আগের মতোই হিসাবরক্ষকের।
+     */
+    public function test_a_keyed_money_action_with_nobody_holding_the_key_is_named_not_given_to_the_accountant(): void
+    {
+        $role = $this->accountantRoleIn($this->company);
+
+        $report = app(MoneyFlowDefaults::class)->ensure($this->company);
+
+        $this->assertSame(['hr.payroll'], $report['no_signer']);
+        $this->assertNotContains('hr.payroll', $report['created']);
+        $this->assertEqualsCanonicalizing(array_values(array_diff($this->moneyKeysFromTheRegistry(), ['hr.payroll'])), $report['created']);
+        $this->assertSame(0, ApprovalFlow::query()->where('company_id', $this->company->id)->where('module', 'hr')->where('action', 'payroll')->count());
+        $this->assertSame((int) $role->id, $report['role_id']);
+    }
+
     // ── সহায়ক ────────────────────────────────────────────────────────
+
+    /** ⓘ কোম্পানির মালিকের রোল (super admin) — চাবির কাজের নিজে-বসানো সইকারী */
+    private function ownerRoleIn(Company $company): Role
+    {
+        return CompanyContext::forCompany((int) $company->id,
+            fn () => Role::findOrCreate(\App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE, 'web'));
+    }
 
     /**
      * রেজিস্ট্রি থেকে সরাসরি — সেবার নিজের তালিকা দিয়ে নয়।

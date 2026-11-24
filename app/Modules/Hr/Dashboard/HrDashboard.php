@@ -24,6 +24,7 @@ use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
 use App\Modules\Hr\Models\PayrollRun;
+use App\Modules\Hr\Support\LeaveSigner;
 use App\Modules\Hr\Models\Payslip;
 use App\Modules\Hr\Models\PayslipLine;
 use App\Modules\Hr\Models\SalaryHead;
@@ -90,16 +91,28 @@ final class HrDashboard implements ProvidesDashboard
                  * করছেন, আর সিদ্ধান্ত না দিলে তিনি জানেন না কাল আসবেন
                  * কি না।
                  */
+                /*
+                 * ⭐ "আমার সইয়ের অপেক্ষায়" — কেবল যেগুলোতে এই মানুষ এখনই সই দিতে পারেন (fe, ২১ অক্টোবর ২০২৬; [[LeaveSigner::countSignable()]])।
+                 * ⓘ আগে এখানে দেখার শাখার সব অপেক্ষমাণ ছুটি গোনা হত, আর ব্যবস্থাপক অন্য দলের ছুটিও নিজের করণীয় ভাবতেন।
+                 */
                 new Stat(
+                    label: __('hr::dashboard.my_pending_leave'),
+                    value: (string) app(LeaveSigner::class)->countSignable(auth()->user(), self::leaveInView()->pending()),
+                    hint: __('hr::dashboard.my_pending_leave_hint'),
+                    href: route('hr.leave.index', ['pending' => 1]),
+                    tone: Stat::WARN,
+                    permission: 'hr.leave.approve',
+                ),
+                // ⭐ HR-জুড়ে হলে সব অপেক্ষার ছুটিও, আলাদা লাইনে — দেখার শাখার কর্মীর (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
+                ...(! app(LeaveSigner::class)->isHrWide(auth()->user()) ? [] : [new Stat(
                     label: __('hr::dashboard.pending_leave'),
-                    // ⭐ দেখার শাখার কর্মীর ছুটি — ছুটির সারিতে শাখা নেই, কর্মীর আছে (পুনঃনিরীক্ষা, ৯ অক্টোবর ২০২৬)
                     value: (string) self::leaveInView()->where('status', 'pending')->count(),
                     hint: __('hr::dashboard.pending_leave_hint'),
                     href: route('hr.leave.index'),
                     tone: Stat::WARN,
                     // ⛔ ছুটির চাবি ছাড়া ঢাকা — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ২০; [[ThePendingLeaveCountWentOverTheBranchWallTest]])
                     permission: 'hr.leave.view',
-                ),
+                )]),
                 // ⛔ বেতনের রানের গোনাও বেতনের খবর — ফোনের উত্তরে নয় (মালিক, ১৭ অক্টোবর ২০২৬; [[PhoneAnswer]])
                 ...(PhoneAnswer::active() ? [] : [new Stat(
                     label: __('hr::dashboard.payroll_runs'),
@@ -116,7 +129,7 @@ final class HrDashboard implements ProvidesDashboard
              * ⛔ অপেক্ষমাণ ছুটির তালিকা কেবল ছুটির চাবিতে — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (ⓘ২০)। ⓘ কর্মী দেখার চাবিওয়ালা
              * কেউ ছুটির চাবি ছাড়াই নাম, তারিখ আর দিন দেখতেন; এ মাসের ছুটির চার্ট ([[leaveThisMonth()]]) আগেই চাবি মানত।
              */
-            listings: ! auth()->user()?->can('hr.leave.view') ? [] : [
+            listings: [...self::heldWages(), ...(! auth()->user()?->can('hr.leave.view') ? [] : [
                 new Listing(
                     label: __('hr::dashboard.pending_leave'),
                     columns: [
@@ -132,13 +145,15 @@ final class HrDashboard implements ProvidesDashboard
                     empty: __('hr::dashboard.no_pending_leave'),
                     href: route('hr.leave.index'),
                 ),
-            ],
+            ])],
 
             // ⭐ খোলার পর্দায় ছয়টা গ্রাফ — মালিক, ২০ নভেম্বর ২০২৬ (নমুনা boards15 "ok"); যে সংখ্যা-চার্ট গ্রাফে এল, পাতায় আর আলাদা নয়
+            // ⓘ হাতে পাওয়া ও কর্তনের মাস ধরে কলাম আর খাত ধরে টাকা ঢাকা নয় — গ্রাফ এখন মূল বেতন ও ভাতা দেখায় আর প্রবাহে খাতের অঙ্ক নেই,
+            //   তাই ঐ দুটো নিচে থাকে (নিরীক্ষা, ২৩ নভেম্বর ২০২৬: কিছু হারায় না)
             sections: [Card::board(fn (): array => self::charts($today), covers: [
-                __('hr::dashboard.present_today'), __('hr::dashboard.todays_roll'), __('hr::dashboard.salary_cost'),
+                __('hr::dashboard.present_today'), __('hr::dashboard.todays_roll'),
                 __('hr::dashboard.by_department'), __('hr::dashboard.cost_by_department'), __('hr::dashboard.leave_this_month'),
-                __('hr::dashboard.coming_and_going', ['year' => Carbon::today()->year]), __('hr::dashboard.allowance_deduction'),
+                __('hr::dashboard.coming_and_going', ['year' => Carbon::today()->year]),
             ])],
         );
     }
@@ -166,18 +181,20 @@ final class HrDashboard implements ProvidesDashboard
             sub: __('hr::dashboard.viz_roll_hint', ['n' => number_format($here), 'of' => number_format($roll['headcount'])]),
             href: route('hr.attendance.index'), colour: '#16a34a');
 
-        // ── বেতন খরচ — ছয় মাস, হাতে পাওয়া + কর্তন = মোট আয় ────────────────────────────
+        // ── বেতন খরচ — ছয় মাস, নমুনার মতো মূল বেতন + ভাতা = মোট আয়; মাথায় প্রতি মাসের মোট আয় ─────────────────
+        // ⓘ মূল বেতন = বেতনশিটের যে আয়ের খাত "মূল" (`is_basic`); ভাতা = মোট আয় − মূল। হাতে পাওয়া আর কর্তন নিচের কলামে ([[salaryCost()]])
         if ($pay) {
             $months = self::salaryMonths();
             $last = '0';
             foreach ($months as $m) {
                 $last = bccomp($m['gross'], '0', 4) !== 0 ? $m['gross'] : $last;
             }
-            $cards[] = Card::make(__('hr::dashboard.salary_cost'), 'stackedArea', [
-                'series' => [array_column($months, 'net'), array_map(fn (array $m) => bcsub($m['gross'], $m['net'], 4), $months)],
+            $cards[] = Card::make(__('hr::dashboard.viz_salary'), 'stackedArea', [
+                'series' => [array_column($months, 'basic'), array_map(fn (array $m) => bcsub($m['gross'], $m['basic'], 4), $months)],
                 'colors' => ['#2160d8', '#7c3aed'], 'l' => array_column($months, 'label'),
+                'top' => array_map(fn (array $m) => bccomp($m['gross'], '0', 4) === 0 ? '' : self::short($m['gross']), $months),
             ], value: bccomp($last, '0', 4) === 0 ? '' : self::short($last), sub: __('hr::dashboard.viz_salary_sub'), legend: [
-                [__('hr::field.net'), '#2160d8'], [__('hr::dashboard.viz_deductions'), '#7c3aed'],
+                [__('hr::dashboard.viz_basic'), '#2160d8'], [__('hr::dashboard.viz_allowances'), '#7c3aed'],
             ], href: route('hr.payroll.index'), colour: '#2160d8');
         }
 
@@ -351,7 +368,7 @@ final class HrDashboard implements ProvidesDashboard
     /**
      * বেতন খরচ, মাস ধরে, গত ছয় মাস — নিশ্চিত রানের মোট আয় আর হাতে পাওয়া (লেখা, bcmath)। ⛔ ডাকার আগে [[showsPay()]]।
      *
-     * @return list<array{label: string, gross: string, net: string}>
+     * @return list<array{label: string, gross: string, net: string, basic: string}>
      */
     private static function salaryMonths(): array
     {
@@ -365,6 +382,18 @@ final class HrDashboard implements ProvidesDashboard
             ->groupByRaw($expr)
             ->toBase()->get()->keyBy('ym');
 
+        // ⓘ মূল বেতন — একই রানগুলোর বেতনশিটের "মূল" আয়ের খাত ([[SalaryHead]] `is_basic`), মাস ধরে
+        $basic = PayslipLine::query()
+            ->join('hr_payslips', 'hr_payslips.id', '=', 'hr_payslip_lines.payslip_id')
+            ->join('hr_payroll_runs', 'hr_payroll_runs.id', '=', 'hr_payslips.payroll_run_id')
+            ->whereNull('hr_payslips.deleted_at')
+            ->whereIn('hr_payslips.payroll_run_id', self::payrollRuns()->where('hr_payroll_runs.month', '>=', $start->toDateString())->select('hr_payroll_runs.id'))
+            ->where('hr_payslip_lines.kind', SalaryHead::EARNING)
+            ->whereIn('hr_payslip_lines.salary_head_id', SalaryHead::withTrashed()->where('is_basic', true)->select('id'))
+            ->selectRaw("DATE_FORMAT(hr_payroll_runs.month, '%Y-%m') as ym, COALESCE(SUM(hr_payslip_lines.amount), 0) as total")
+            ->groupByRaw("DATE_FORMAT(hr_payroll_runs.month, '%Y-%m')")
+            ->toBase()->pluck('total', 'ym');
+
         $months = [];
 
         for ($month = $start->copy(); $month->lessThanOrEqualTo(Carbon::today()); $month->addMonth()) {
@@ -373,6 +402,7 @@ final class HrDashboard implements ProvidesDashboard
                 'label' => $month->translatedFormat('M'),
                 'gross' => (string) ($row->gross ?? '0'),
                 'net' => (string) ($row->net ?? '0'),
+                'basic' => (string) ($basic[$month->format('Y-m')] ?? '0'),
             ];
         }
 
@@ -470,7 +500,7 @@ final class HrDashboard implements ProvidesDashboard
 
         $net = bcsub($totals[$earn], $totals[$ded], 4);
 
-        return Card::make(__('hr::dashboard.allowance_deduction'), 'sankey', $heads === null ? [] : [
+        return Card::make(__('hr::dashboard.viz_heads'), 'sankey', $heads === null ? [] : [
             'left' => $left, 'right' => [[$earn, $totals[$earn]], [$ded, $totals[$ded]]],
         ], value: $heads === null ? '' : self::short($net), sub: $heads === null ? __('hr::dashboard.viz_heads_none')
             : __('hr::dashboard.viz_heads_sub', ['month' => $heads['month'], 'net' => self::short($net)]),
@@ -494,6 +524,8 @@ final class HrDashboard implements ProvidesDashboard
         $rows = PayslipLine::query()
             ->join('hr_payslips', 'hr_payslips.id', '=', 'hr_payslip_lines.payslip_id')
             ->whereNull('hr_payslips.deleted_at')
+            // ⓘ কেবল আয় আর কর্তন — প্রতিষ্ঠানের অংশ (ভবিষ্য তহবিল) কর্মীর ভাতাও নয়, কর্তনও নয় ([[PayslipLine::EMPLOYER]])
+            ->whereIn('hr_payslip_lines.kind', SalaryHead::KINDS)
             ->whereIn('hr_payslips.payroll_run_id', self::payrollRuns()->where('hr_payroll_runs.month', $month->toDateString())->select('hr_payroll_runs.id'))
             ->selectRaw('hr_payslip_lines.kind, hr_payslip_lines.head_code, MAX(hr_payslip_lines.head_name_en) as name_en, '
                 .'MAX(hr_payslip_lines.head_name_bn) as name_bn, MIN(hr_payslip_lines.sort_order) as sort, SUM(hr_payslip_lines.amount) as total')
@@ -533,6 +565,40 @@ final class HrDashboard implements ProvidesDashboard
             bccomp($a, '1000', 4) >= 0 => $sign.'৳'.bcdiv($a, '1000', 0).'k',
             default => $sign.'৳'.bcadd($a, '0', 0),
         };
+    }
+
+    /**
+     * ⛔ আটকে থাকা মজুরি — পাওনা, পথ নেই; আইনের শেষ দিনসহ, পেরোলে "⛔" (শ্রম আইন ধারা ১২৩; fe, ২১ অক্টোবর ২০২৬;
+     * [[PayrollService::heldWagesOwed()]])। ⓘ কেবল বেতনের রান দেখার চাবিতে, নাগালের কর্মীদের।
+     *
+     * @return list<Listing>
+     */
+    private static function heldWages(): array
+    {
+        $user = auth()->user();
+
+        if (! $user?->can('hr.payroll.view')) {
+            return [];
+        }
+
+        return [new Listing(
+            label: __('hr::payroll.held_owed_title'),
+            columns: [
+                ['key' => 'employee', 'label' => __('hr::dashboard.employee'), 'render' => fn ($l) => $l['employee']],
+                ['key' => 'run', 'label' => __('hr::payroll.held_run'), 'width' => '9rem', 'render' => fn ($l) => $l['run']],
+                // ⭐ সই-পড়া পথ — দেওয়ার অপেক্ষায় (ব্যাংক/MFS), নাহলে "হিসাব সইয়ের অপেক্ষায়" (fe, ২১ অক্টোবর ২০২৬)
+                ['key' => 'channel', 'label' => __('hr::field.payment_method'), 'width' => '10rem',
+                    // ⭐ বাতিল রানের ব্যাংক ফাইলে গিয়েছিল — "ব্যাংকে পাঠানো — নিশ্চিতের অপেক্ষায়" (fe-র সিদ্ধান্ত ২, ২১ অক্টোবর ২০২৬)
+                    'render' => fn ($l) => ($l['state'] ?? null) === 'bank_awaiting' ? __('hr::payroll.bank_awaiting')
+                        : ($l['channel'] === null ? __('hr::payroll.held_channel_waiting') : __('hr::payroll.held_ready_on', ['way' => __('hr::kind.'.$l['channel'])]))],
+                ['key' => 'deadline', 'label' => __('hr::payroll.held_until'), 'width' => '12rem',
+                    'render' => fn ($l) => \Illuminate\Support\Carbon::parse($l['deadline'])->format('d M Y')
+                        .($l['late'] ? ' · '.__('hr::payroll.held_late') : '')],
+            ],
+            rows: app(\App\Modules\Hr\Services\PayrollService::class)->heldWagesOwed($user),
+            empty: __('hr::payroll.held_owed_none'),
+            href: route('hr.payroll.held.index'),
+        )];
     }
 
     /**
@@ -673,7 +739,8 @@ final class HrDashboard implements ProvidesDashboard
      */
     private static function showsPay(): bool
     {
-        return (bool) auth()->user()?->can('hr.payroll.view') && ! PhoneAnswer::active();
+        // ⛔ বেতনের অঙ্ক কেবল `hr.salary.view`-এ — সব জায়গায় এক নিয়ম (fe, ২১ অক্টোবর ২০২৬)
+        return (bool) auth()->user()?->can('hr.payroll.view') && (bool) auth()->user()?->can('hr.salary.view') && ! PhoneAnswer::active();
     }
 
     /**
@@ -693,19 +760,20 @@ final class HrDashboard implements ProvidesDashboard
 
         $start = Carbon::today()->startOfMonth()->subMonths(5);
 
+        // ⓘ গ্রাফের বোর্ড মোট আয়কে মূল বেতন আর ভাতায় ভাঙে (মাথায় মোট আয়) — এখানে তার বাকি দুই ভাগ: হাতে পাওয়া আর কর্তন, মাস ধরে
         $points = array_map(fn (array $m) => [
             'label' => $m['label'],
-            'first' => $m['gross'],
-            'second' => $m['net'],
-            'firstTitle' => Money::format($m['gross']),
-            'secondTitle' => Money::format($m['net']),
+            'first' => $m['net'],
+            'second' => bcsub($m['gross'], $m['net'], 4),
+            'firstTitle' => Money::format($m['net']),
+            'secondTitle' => Money::format(bcsub($m['gross'], $m['net'], 4)),
         ], self::salaryMonths());
 
         return [new Series(
             label: __('hr::dashboard.salary_cost'),
             points: $points,
-            firstLabel: __('hr::field.gross'),
-            secondLabel: __('hr::field.net'),
+            firstLabel: __('hr::field.net'),
+            secondLabel: __('hr::dashboard.viz_deductions'),
             // ⓘ টাকা — মাউস/কিবোর্ডে পুরো অঙ্কের পরে "টাকা" ([[Series::$money]], ২০ অক্টোবর ২০২৬)
             money: true,
             // ⓘ কবে থেকে কবে — মালিক, ৫ অক্টোবর ২০২৬: প্রতিটা চার্টে তারিখ
