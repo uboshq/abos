@@ -7,6 +7,8 @@
     ⚠️ Alpine নেই, ইচ্ছাকৃত: সাধারণ ফর্ম, CSP-র ফাঁদে পড়ার মতো কিছু নেই।
 --}}
 @php
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $switchLine = $switchOn ? __('customer::binding.switch_on') : __('customer::binding.switch_off');
     $date = fn ($value) => \App\Core\Support\DateFormat::format($value);
     $card = 'rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4';
     $field = 'h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2';
@@ -20,11 +22,15 @@
     <x-slot:title>{{ __('customer::binding.title') }}</x-slot:title>
 
     <x-slot:header>
-        <x-ui.page-header :title="__('customer::binding.title')" :subtitle="__('customer::binding.subtitle')">
+        <x-ui.page-header :title="__('customer::binding.title')" :subtitle="__('customer::binding.subtitle')" :info="$abosHead ? $switchLine : null">
             <x-slot:actions>
+                @if ($abosHead)
+                <x-ui.button tone="secondary" :href="route('customer.binding.tree')">{{ __('customer::binding.tree_link') }}</x-ui.button>
+                @else
                 <a href="{{ route('customer.binding.tree') }}" class="text-sm text-(--color-brand-500) underline-offset-2 hover:underline">
                     {{ __('customer::binding.tree_link') }}
                 </a>
+                @endif
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
@@ -41,14 +47,16 @@
         </div>
     @endif
 
-    <p data-switch="{{ $switchOn ? 'on' : 'off' }}" class="mb-4 text-sm">
-        {{ $switchOn ? __('customer::binding.switch_on') : __('customer::binding.switch_off') }}
+    <p data-switch="{{ $switchOn ? 'on' : 'off' }}" @if ($abosHead) data-page-subtitle @endif class="mb-4 text-sm">
+        {{ $switchLine }}
     </p>
 
     {{-- ⭐ আগাম দেখা — দেয়ালের ভিতরে শূন্য দেখা মানুষ লাল --}}
     <section data-boxed data-preview class="{{ $card }} mb-4">
-        <h2 class="mb-2 font-semibold">{{ __('customer::binding.preview') }}</h2>
-        <p class="mb-3 text-xs text-(--color-ink-muted)">{{ __('customer::binding.preview_hint') }}</p>
+        <h2 class="mb-2 font-semibold">{{ __('customer::binding.preview') }}@if ($abosHead)<span class="ms-1 inline-block align-middle" title="{{ __('customer::binding.preview_hint') }}" aria-label="{{ __('customer::binding.preview_hint') }}"><x-ui.icon name="info" :size="15" /></span>@endif</h2>
+        @unless ($abosHead)
+            <p class="mb-3 text-xs text-(--color-ink-muted)">{{ __('customer::binding.preview_hint') }}</p>
+        @endunless
 
         <ul class="space-y-2">
             @foreach ($preview as $row)

@@ -2,18 +2,27 @@
 @php
     // ⓘ ব্যাখ্যা নামের পাশে ⓘ-এ, "নতুন" মাথার সারিতে — কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $abosHead = \App\Core\Support\AbosHead::on();
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $facetPanel = \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('state', __('notification::rule.state'),
+            collect(['active', 'inactive'])->mapWithKeys(fn ($s) => [$s => __('notification::rule.states.'.$s)])->all(), __('core.notify.any')),
+    ]);
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::group.title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('notification::group.title')" :info="__('notification::group.note')" :search="false" :export="false" :share="false" >
+        <form id="list-form" method="GET" class="contents">
+        <x-ui.toolbar :title="__('notification::group.title')" :info="__('notification::group.note')" :search="false" :export="false" :share="false" :facets="$facetPanel">
             @if ($abosHead)
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('notification.groups.create')">{{ __('notification::group.new') }}</x-ui.button>
                 </x-slot:actions>
             @endif
         </x-ui.toolbar>
+        </form>
 
         @unless ($abosHead)
             <div class="flex items-center justify-between gap-2">
@@ -24,6 +33,8 @@
 
         @include('notification::partials.flash')
 
+        {{-- ⓘ ABOS রূপে তালিকার সাদা কার্ড, বাকি তালিকার মতো --}}
+        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead, 'p-3' => $abosHead && $rows->isEmpty()]) @if ($abosHead) data-boxed @endif>
         @if ($rows->isEmpty())
             <p class="text-sm text-(--color-ink-muted)">{{ __('notification::group.empty') }}</p>
         @else
@@ -52,8 +63,10 @@
                 </table>
             </div>
         @endif
+        </div>
 
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

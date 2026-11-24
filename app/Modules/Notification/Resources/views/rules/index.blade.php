@@ -38,6 +38,8 @@
 
         @include('notification::partials.flash')
 
+        {{-- ⓘ ABOS রূপে তালিকার সাদা কার্ড, বাকি তালিকার মতো --}}
+        <div @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)' => $abosHead, 'p-3' => $abosHead && $rows->isEmpty()]) @if ($abosHead) data-boxed @endif>
         @if ($rows->isEmpty())
             <p class="text-sm text-(--color-ink-muted)">{{ __('notification::rule.empty') }}</p>
         @else
@@ -73,6 +75,7 @@
                 </table>
             </div>
         @endif
+        </div>
 
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
