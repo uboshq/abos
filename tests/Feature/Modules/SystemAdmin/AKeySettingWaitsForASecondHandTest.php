@@ -64,7 +64,8 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
 
         // ⛔ কর্মী নিজের চাওয়ায় নিজে নয় — মালিকের চাওয়া ছাপিয়ে তাঁর নিজের চাওয়া
         $maker = $this->secondAdmin();
-        $this->actingAs($maker)->put(route('system_admin.settings.update'), ['settings' => [self::KEY => $wanted]])->assertRedirect();
+        // ⓘ এই চাবি পর্দায় কেবল সুপার অ্যাডমিনের, তাই চাওয়াটা সেবা দিয়ে
+        $this->assertTrue(app(SignedSettings::class)->propose(self::KEY, $wanted, $maker));
         $change = SettingChange::query()->where('key', self::KEY)->where('status', SettingChange::PENDING)->latest('id')->firstOrFail();
         $this->assertSame((int) $maker->id, (int) $change->requested_by);
         $this->actingAs($maker)->post(route('system_admin.setting-change.sign', $change->public_id));
@@ -132,7 +133,10 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
         $only = $this->secondAdmin();
         User::query()->whereKeyNot($only->id)->update(['is_active' => false]);
 
-        $response = $this->actingAs($only)->put(route('system_admin.settings.update'), ['settings' => [self::KEY => (string) ((int) $before + 9)]]);
+        $key = 'credit_control.risk_points_block';
+        $was = (string) SignedSettings::stored(app(SettingsService::class)->get($key));
+        $response = $this->actingAs($only)->put(route('system_admin.settings.update'), ['settings' => [$key => (string) ((int) $was + 9)]]);
+        $this->assertSame($was, (string) SignedSettings::stored(app(SettingsService::class)->get($key)), '⛔ দ্বিতীয় কেউ নেই, তবু এক হাতে বসে গেল।');
 
         $this->assertSame($before, (string) SignedSettings::stored(app(SettingsService::class)->get(self::KEY)), '⛔ দ্বিতীয় কেউ নেই, তবু এক হাতে বসে গেল।');
         $this->assertSame(0, SettingChange::query()->count(), '⛔ অনুমোদনের কেউ নেই, তবু অপেক্ষার সারি লেখা হলো — কেউ কখনো ছাড়বে না।');

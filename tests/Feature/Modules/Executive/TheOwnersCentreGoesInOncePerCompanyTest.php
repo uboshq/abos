@@ -7,7 +7,12 @@ namespace Tests\Feature\Modules\Executive;
 use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Models\User;
+use App\Core\Support\DocumentStatus;
+use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Models\Voucher;
+use App\Modules\Accounts\Services\StandardChart;
+use App\Modules\Accounts\Services\VoucherService;
+use App\Modules\Customer\Models\Customer;
 use App\Modules\Executive\Services\Alerts;
 use App\Modules\Executive\Services\Board;
 use App\Modules\Executive\Services\CompanyLens;
@@ -91,6 +96,19 @@ final class TheOwnersCentreGoesInOncePerCompanyTest extends TestCase
     {
         $to = Carbon::today();
         $from = $to->copy()->subDays(29);
+
+        // ⓘ ডেমোতে কোনো আদায় নেই — দুই পথের দুটো করে নিজেরা
+        app(StandardChart::class)->install();
+        $customer = Customer::query()->firstOrFail();
+        $bank = Account::query()->money()->postable()->active()->firstOrFail();
+        foreach ([1, 2] as $n) {
+            Collection::query()->create(['branch_id' => CompanyContext::branchId(), 'document_no' => 'COL-OC-'.$n, 'customer_id' => $customer->id,
+                'account_id' => $bank->id, 'trx_date' => $to->toDateString(), 'amount' => (string) (100 * $n), 'status' => DocumentStatus::CONFIRMED]);
+            $voucher = app(VoucherService::class)->create(['type' => Voucher::RECEIPT, 'trx_date' => $to->toDateString(), 'party_type' => 'customer',
+                'party_id' => $customer->id, 'narration' => 'x'], app(VoucherService::class)->twoLineEntry(Voucher::RECEIPT,
+                    (int) StandardChart::find(StandardChart::RECEIVABLE)->id, (int) $bank->id, (string) (1000 * $n), null, null));
+            $voucher->forceFill(['status' => DocumentStatus::CONFIRMED])->saveQuietly();
+        }
 
         // ⓘ দুই পথের আদায় আলাদা দিনে, আর একদিনে দুটোই
         $c = Collection::query()->withoutGlobalScopes()->where('company_id', CompanyContext::id())->orderBy('id')->limit(2)->pluck('id');
