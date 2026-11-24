@@ -88,8 +88,9 @@ final class ACancelledRunsBankLineIsNotReleasedByItselfTest extends TestCase
         $this->actingAs($this->owner);
 
         // ⓘ UB-র মতো — ছক আছে, একটাও চালু নয়
-        ApprovalFlow::query()->create(['company_id' => $this->company->id, 'module' => 'sales', 'action' => 'discount',
-            'document_type' => '', 'threshold_amount' => null, 'is_active' => false]);
+        // ⓘ the demo already has this row since 1.3.10 — make it exist and stay off, never a second copy (unique flow scope)
+        ApprovalFlow::query()->updateOrCreate(['company_id' => $this->company->id, 'module' => 'sales', 'action' => 'discount',
+            'document_type' => ''], ['threshold_amount' => null, 'is_active' => false]);
         app()->forgetInstance(ApprovalEngine::class);
 
         $this->accountant = $this->person(self::PAYROLL);
