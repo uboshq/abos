@@ -31,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Thread extends Model
 {
     use BelongsToCompany;
+    use \App\Modules\Messaging\Models\Concerns\FollowsThePerson;
     use HasPublicId;
     use IsAudited;
 

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Modules\Messaging\Services;
 
-use App\Core\Services\SettingsService;
-use App\Core\Support\CompanyContext;
 use App\Models\User;
 use App\Modules\Messaging\Models\Member;
 use App\Modules\Messaging\Models\Thread;
@@ -13,23 +11,23 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Who may message or call whom — owner's plan: "কে কাকে বার্তা/কল দিতে পারবে — রোল দিয়ে".
+ * Who may message or call whom.
  *
- * ⭐ Three walls, in order:
- *   1. both people carry `messaging.use` in THIS company;
- *   2. both are active members of this company (company_user, is_active);
- *   3. the role allow-list (setting `messaging.who_may_talk`): `{ "<sender role>": ["<receiver role>", …] }`,
- *      `"*"` meaning anyone. ⓘ An empty or missing list = everyone in the company may talk to everyone (the plan's default).
- *      ⓘ A role missing from a non-empty list may START a conversation with nobody — but may still answer inside a
- *      thread someone else opened with them; the wall is on starting (new direct thread, call, adding to a group).
+ * ⭐ Everyone of the group, SR to owner, with everyone — owner, 24 Nov 2026: "পুরো গ্রুপের যে কয়টা কোম্পানি থাকে সব কয়টা
+ *   কোম্পানির যত এমপ্লয়ি আছে সবার সাথে সবাই কথা বলতে পারবে, এটার মধ্যে কোনো রেস্ট্রিকশান নেই এবং থাকবেও না".
+ *   So the only questions are: are both people active accounts, and active in some company of the group (company_user)?
+ *   ⓘ The role allow-list and the per-person key are gone; `messaging.use` always opens for an active account
+ *     ([[AppServiceProvider]] gate). ⓘ "The group" = every company on this installation — the owner's own businesses; a
+ *     rented ABOS runs on its own installation, so the group never spans two customers.
+ *   ⓘ Customers are not users (they sign in to the customer portal), so they are never in this list. The owner's rule
+ *     for them — a request the customer accepts first — belongs to the portal chat, when it is built.
  *
- * ⛔ The allow-list never opens a thread to a non-member: reading and writing a thread always asks [[isMember]].
+ * ⛔ The wall that stays is the person: reading or writing a thread always asks [[isMember]]; a call only its two people.
  */
 final class MessengerAccess
 {
-    public const SETTING = 'messaging.who_may_talk';
-
-    public function __construct(private readonly SettingsService $settings) {}
+    /** @var array<int, list<int>> per request: the companies where a person is active */
+    private array $companies = [];
 
     public function mayUse(User $user): bool
     {
@@ -49,108 +47,40 @@ final class MessengerAccess
     /** May `$from` start talking to `$to` (new direct thread, call, add to a group)? */
     public function mayTalk(User $from, User $to): bool
     {
-        if ((int) $from->id === (int) $to->id) {
-            return false;
-        }
-
-        if (! $this->inCompany($to) || ! $this->inCompany($from)) {
-            return false;
-        }
-
-        if (! $this->mayUse($from) || ! $to->can('messaging.use')) {
-            return false;
-        }
-
-        $rules = $this->rules();
-
-        if ($rules === []) {
-            return true;
-        }
-
-        $targets = [];
-        foreach ($this->roles($from) as $role) {
-            foreach ($rules[$role] ?? [] as $allowed) {
-                $targets[(string) $allowed] = true;
-            }
-        }
-
-        if (isset($targets['*'])) {
-            return true;
-        }
-
-        foreach ($this->roles($to) as $role) {
-            if (isset($targets[$role])) {
-                return true;
-            }
-        }
-
-        return false;
+        return (int) $from->id !== (int) $to->id
+            && (bool) $from->is_active && (bool) $to->is_active
+            && $this->companiesOf($from) !== [] && $this->companiesOf($to) !== [];
     }
 
     /**
-     * The people `$from` may start talking to — the list behind "নতুন বার্তা", the online strip and the share sheet.
+     * The people `$from` may start talking to — the list behind "নতুন বার্তা", the online strip and the share sheet:
+     * everyone active in any company of the group, found by name or by mobile (owner, 23 Nov 2026).
      *
      * @return Collection<int, User>
      */
     public function reachable(User $from, string $q = '', int $limit = 200): Collection
     {
-        $ids = DB::table('company_user')
-            ->where('company_id', CompanyContext::id())
-            ->where('is_active', true)
-            ->where('user_id', '!=', $from->id)
-            ->pluck('user_id');
-
-        $query = User::query()->whereIn('id', $ids)->where('is_active', true);
+        $query = User::query()
+            ->whereHas('companies', fn ($c) => $c->where('company_user.is_active', true))
+            ->whereKeyNot($from->id)
+            ->where('is_active', true);
 
         if ($q !== '') {
-            $query->where('name', 'like', '%'.addcslashes($q, '%_\\').'%');
+            $like = '%'.addcslashes($q, '%_\\').'%';
+            $digits = (string) preg_replace('/\D+/', '', $q);
+            $query->where(fn ($w) => $w->where('name', 'like', $like)
+                ->when(strlen($digits) >= 3, fn ($m) => $m->orWhere('mobile', 'like', '%'.$digits.'%')));
         }
 
-        return $query->orderBy('name')->limit($limit * 2)->get()
-            ->filter(fn (User $u): bool => $this->mayTalk($from, $u))
-            ->take($limit)
-            ->values();
+        return $query->orderBy('name')->limit($limit)->get()->values();
     }
 
-    private function inCompany(User $user): bool
+    /** @return list<int> the companies where this person is active */
+    public function companiesOf(User $user): array
     {
-        return DB::table('company_user')
-            ->where('company_id', CompanyContext::id())
-            ->where('user_id', $user->id)
-            ->where('is_active', true)
-            ->exists();
-    }
+        $uid = (int) $user->id;
 
-    /** @return list<string> */
-    private function roles(User $user): array
-    {
-        try {
-            return array_values(array_map('strval', $user->getRoleNames()->all()));
-        } catch (\Throwable) {
-            return [];
-        }
-    }
-
-    /** @return array<string, list<string>> */
-    private function rules(): array
-    {
-        $raw = $this->settings->get(self::SETTING);
-
-        if (is_string($raw)) {
-            $raw = json_decode($raw, true);
-        }
-
-        if (! is_array($raw)) {
-            return [];
-        }
-
-        $out = [];
-        foreach ($raw as $role => $targets) {
-            if (is_string($role) && is_array($targets)) {
-                $out[$role] = array_values(array_filter(array_map('strval', $targets), fn (string $t): bool => $t !== ''));
-            }
-        }
-
-        return $out;
+        return $this->companies[$uid] ??= DB::table('company_user')->where('user_id', $uid)->where('is_active', true)
+            ->orderBy('company_id')->pluck('company_id')->map(fn ($id) => (int) $id)->all();
     }
 }

@@ -94,6 +94,14 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Core\Services\ReadWindow::class);
         $this->app->singleton(\App\Core\Services\GateMemo::class);
         Gate::before(fn ($user, string $ability, array $arguments = []): mixed => app(\App\Core\Services\GateMemo::class)->recall($user, $ability, $arguments));
+
+        /*
+         * ⭐ The messenger is for every active person of the group, SR to owner — no key to hand out, nothing to take away
+         * (owner, 24 Nov 2026: "সবার সাথে সবাই কথা বলতে পারবে, এটার মধ্যে কোনো রেস্ট্রিকশান নেই এবং থাকবেও না").
+         * ⓘ The key `messaging.use` stays the doors' name (routes, menu, the phone's /me) — it simply always opens for an
+         *   active account. Groups and the audit keep their own keys.
+         */
+        Gate::before(fn ($user, string $ability): ?bool => $ability === 'messaging.use' && (bool) ($user->is_active ?? false) ? true : null);
         Gate::after(function ($user, string $ability, mixed $result, array $arguments = []): mixed {
             app(\App\Core\Services\GateMemo::class)->remember($user, $ability, $result, $arguments);
 

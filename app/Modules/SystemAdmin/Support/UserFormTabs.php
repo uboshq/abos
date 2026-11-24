@@ -25,8 +25,13 @@ final class UserFormTabs
         };
     }
 
-    /** @param  list<string|int>  $errorFields */
-    public static function open(array $errorFields): string
+    /**
+     * ⓘ A field with an error opens its tab first; otherwise the tab the address asks for (`?tab=security` — the user list's
+     *   "রিসেট" opens the password straight away, owner 24 Nov 2026: "এই পর্দায় কোনোভাবেই … ঢুকতে পারতেছি না"); else identity.
+     *
+     * @param  list<string|int>  $errorFields
+     */
+    public static function open(array $errorFields, ?string $asked = null): string
     {
         $tabs = array_map(fn ($f) => self::of((string) $f), $errorFields);
 
@@ -36,6 +41,6 @@ final class UserFormTabs
             }
         }
 
-        return 'identity';
+        return in_array($asked, self::ORDER, true) ? (string) $asked : 'identity';
     }
 }

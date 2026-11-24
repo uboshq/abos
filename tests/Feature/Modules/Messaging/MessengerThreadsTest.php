@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Modules\Messaging;
 
-use App\Core\Support\CompanyContext;
 use App\Models\Company;
 use App\Modules\Messaging\Models\Member;
 use App\Modules\Messaging\Models\Message;
@@ -32,18 +31,19 @@ final class MessengerThreadsTest extends TestCase
 
     // ── the key ──────────────────────────────────────────────────────────
 
-    public function test_without_messaging_use_the_list_door_is_403_and_with_it_200(): void
+    /**
+     * ⭐ Owner, 24 Nov 2026: everyone talks to everyone, "রেস্ট্রিকশান নেই এবং থাকবেও না" — an active account opens the
+     * messenger with no key handed out. ⛔ An inactive account still does not (the account wall, not the messenger's).
+     * ⓘ This claim used to say the opposite (no key → 403) — the owner's decision replaced it.
+     */
+    public function test_every_active_person_opens_the_messenger_without_a_key(): void
     {
-        $nobody = $this->person('No Key', use: false);
+        $plain = $this->person('No Key', use: false);
         $friend = $this->person('Friend');
 
-        $this->phone($nobody, 'GET', '/api/v1/messenger/threads')->assertForbidden();
-        $this->phone($nobody, 'POST', '/api/v1/messenger/direct', ['person' => (string) $friend->id])->assertForbidden();
-        $this->assertSame(0, Thread::query()->count(), '⛔ চাবি ছাড়াই কথোপকথন তৈরি হয়েছে / a thread was made without messaging.use');
-
-        $this->grant($nobody, ['messaging.use']);
-
-        $this->phone($nobody, 'GET', '/api/v1/messenger/threads')->assertOk()->assertJsonPath('unread_total', 0);
+        $this->phone($plain, 'GET', '/api/v1/messenger/threads')->assertOk()->assertJsonPath('unread_total', 0);
+        $this->phone($plain, 'POST', '/api/v1/messenger/direct', ['person' => (string) $friend->id])->assertSuccessful();
+        $this->assertSame(1, Thread::query()->count());
     }
 
     // ── direct ───────────────────────────────────────────────────────────
@@ -100,38 +100,30 @@ final class MessengerThreadsTest extends TestCase
             ->assertForbidden()->assertJsonPath('error', 'may_not_talk');
     }
 
-    // ── the role allow-list ──────────────────────────────────────────────
+    // ── everyone with everyone ───────────────────────────────────────────
 
-    public function test_the_allow_list_walls_starting_but_not_answering(): void
+    /**
+     * ⭐ Owner, 24 Nov 2026: "একদম এসআর থেকে মালিক পর্যন্ত সবাই সবার সাথে কথা বলতে পারবে" — no role list: the SR starts a chat
+     * with the accountant and the manager, and every one of them is in the SR's people list.
+     * ⛔ Only a person can't talk to themselves. ⓘ This claim replaces the old role allow-list.
+     */
+    public function test_from_the_sr_to_the_owner_everyone_starts_a_chat_with_everyone(): void
     {
         $sales = $this->person('Field Seller', role: 'Field Sales');
         $manager = $this->person('Manager Man', role: 'Manager');
         $accountant = $this->person('Account Ant', role: 'Accountant');
 
-        /* ⓘ opened while the list is still empty (everyone may talk) */
-        $managersThread = $this->direct($manager, $accountant);
-
-        $this->allowList(['Field Sales' => ['Manager']]);
-
-        $refused = $this->phone($sales, 'POST', '/api/v1/messenger/direct', ['person' => (string) $accountant->id])
-            ->assertForbidden()->assertJsonPath('error', 'may_not_talk');
-        $this->assertNotSame('', (string) $refused->json('message'), 'the refusal has no sentence for the app to show');
-
-        $this->phone($sales, 'POST', '/api/v1/messenger/direct', ['person' => (string) $manager->id])->assertCreated();
-
-        /* ⭐ the Accountant is in no rule, yet answers inside the thread the Manager opened */
-        $this->say($accountant, $managersThread, 'জি স্যার');
-        $this->assertSame($managersThread,
-            $this->phone($accountant, 'POST', '/api/v1/messenger/direct', ['person' => (string) $manager->id])->assertOk()->json('data.id'),
-            '⛔ উত্তর দেওয়ার পথ বন্ধ / the Accountant could not reach the existing thread');
-
-        /* ⛔ but may not START with anyone */
-        $this->phone($accountant, 'POST', '/api/v1/messenger/direct', ['person' => (string) $sales->id])
-            ->assertForbidden()->assertJsonPath('error', 'may_not_talk');
+        $this->phone($sales, 'POST', '/api/v1/messenger/direct', ['person' => (string) $accountant->id])->assertCreated();
+        $this->phone($accountant, 'POST', '/api/v1/messenger/direct', ['person' => (string) $manager->id])->assertCreated();
+        $this->phone($manager, 'POST', '/api/v1/messenger/direct', ['person' => (string) $sales->id])->assertCreated();
 
         $people = array_column($this->phone($sales, 'GET', '/api/v1/messenger/people')->assertOk()->json('data'), 'id');
         $this->assertContains((string) $manager->id, $people);
-        $this->assertNotContains((string) $accountant->id, $people, '⛔ নিষিদ্ধ মানুষ "নতুন বার্তা"-র তালিকায় / the people list offers a walled person');
+        $this->assertContains((string) $accountant->id, $people);
+        $this->assertNotContains((string) $sales->id, $people, '⛔ the person is offered to themselves');
+
+        $this->phone($sales, 'POST', '/api/v1/messenger/direct', ['person' => (string) $sales->id])
+            ->assertForbidden()->assertJsonPath('error', 'may_not_talk');
     }
 
     // ── groups ───────────────────────────────────────────────────────────
@@ -260,9 +252,14 @@ final class MessengerThreadsTest extends TestCase
         $this->assertFalse($this->byId($people, (string) $b->id)['online'] ?? null, '⛔ দুই মিনিট পরেও অনলাইন / still online after 2 minutes');
     }
 
-    // ── the company wall ─────────────────────────────────────────────────
+    // ── the group, and the wall that stays ─────────────────────────────────
 
-    public function test_a_person_of_another_company_is_never_reached_and_never_sees_this_companys_threads(): void
+    /**
+     * ⭐ Owner, 23–24 Nov 2026: "যে কোনো কোম্পানি থেকে যে কোনো ব্রাঞ্চে গ্রুপ অফ কোম্পানিতে" — a colleague of a sister company is
+     * reachable (found, written to, called). ⛔ The wall that stays is the person: someone outside a chat never sees it.
+     * ⓘ This claim used to say the opposite (a person of another company is never reached) — the owner's decision replaced it.
+     */
+    public function test_a_person_of_a_sister_company_is_reached_but_never_sees_a_chat_they_are_not_in(): void
     {
         $other = Company::query()->where('code', 'FMART')->firstOrFail();
         $a = $this->person('Asif');
@@ -272,19 +269,14 @@ final class MessengerThreadsTest extends TestCase
         $thread = $this->direct($a, $b);
         $this->say($a, $thread, 'TDEPOT only');
 
-        $status = $this->phone($a, 'POST', '/api/v1/messenger/direct', ['person' => (string) $x->id])->getStatusCode();
-        $this->assertContains($status, [403, 404], '⛔ অন্য কোম্পানির মানুষের সাথে কথোপকথন খুলেছে / reached a person of another company');
-
         $people = array_column($this->phone($a, 'GET', '/api/v1/messenger/people')->assertOk()->json('data'), 'id');
-        $this->assertNotContains((string) $x->id, $people);
+        $this->assertContains((string) $x->id, $people, '⛔ বোন-কোম্পানির সহকর্মী তালিকায় নেই / the sister company colleague is not listed');
 
-        /* ⓘ Xenia's own door works — the empties below are the wall */
-        $this->phone($x, 'GET', '/api/v1/messenger/threads')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('unread_total', 0);
+        $this->phone($a, 'POST', '/api/v1/messenger/direct', ['person' => (string) $x->id])->assertSuccessful();
+
+        /* ⛔ Xenia is not in Asif ↔ Bina — she never sees it, whichever company is open */
         $this->phone($x, 'GET', "/api/v1/messenger/threads/{$thread}/messages")->assertNotFound();
-        $this->phone($x, 'POST', '/api/v1/messenger/direct', ['person' => (string) $a->id])->assertForbidden();
-
-        CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
-        $this->assertSame(1, Thread::query()->count(), '⛔ অন্য কোম্পানির সাথে কথোপকথন তৈরি / a cross-company thread was made');
-        $this->assertSame(0, Thread::query()->withoutGlobalScopes()->where('company_id', $other->id)->count());
+        $this->assertNotContains($thread, array_column($this->phone($x, 'GET', '/api/v1/messenger/threads')->assertOk()->json('data'), 'id'),
+            '⛔ a chat Xenia is not in shows in her list');
     }
 }

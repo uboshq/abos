@@ -217,14 +217,9 @@ final class CallsTest extends TestCase
         Queue::assertNotPushed(SendPushToUser::class);
     }
 
-    public function test_the_allow_list_stops_a_call(): void
+    /** ⓘ no role list any more (owner, 24 Nov 2026) — the one call refused is a call to oneself */
+    public function test_a_call_to_oneself_is_refused(): void
     {
-        // ⓘ a non-empty list where the caller's roles appear nowhere → may start talking to nobody
-        app(SettingsService::class)->set(MessengerAccess::SETTING, json_encode(['Somebody Else' => ['*']]));
-
-        $this->phone($this->caller, 'POST', '/api/v1/messenger/calls', ['person' => (string) $this->callee->id])
-            ->assertForbidden()->assertJsonPath('error', 'may_not_talk');
-
         $this->phone($this->caller, 'POST', '/api/v1/messenger/calls', ['person' => (string) $this->caller->id])
             ->assertForbidden()->assertJsonPath('error', 'may_not_talk');
 

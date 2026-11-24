@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Model;
 class HiddenMessage extends Model
 {
     use BelongsToCompany;
+    use \App\Modules\Messaging\Models\Concerns\FollowsThePerson;
     use HasPublicId;
 
     public const UPDATED_AT = null;

@@ -38,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class Message extends Model
 {
     use BelongsToCompany;
+    use \App\Modules\Messaging\Models\Concerns\FollowsThePerson;
     use HasPublicId;
 
     public const KINDS = ['text', 'image', 'file', 'voice', 'paper', 'location', 'system'];

@@ -71,9 +71,37 @@ class UserController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
+        /*
+         * ⭐ ছাঁকনির পছন্দ — অন্য সব তালিকার একই "ছাঁকনি" বোতামে (মালিক, ২৪ নভেম্বর ২০২৬)।
+         * ⓘ কোম্পানি: সুপার অ্যাডমিন নিজের সব কোম্পানি, বাকিরা কেবল চলতিটা (তখন ঘরটাই আঁকা হয় না); রোল: ঐ কোম্পানিগুলোর রোল।
+         */
+        $seen = $request->user()?->hasRole('super_admin')
+            ? $request->user()->companies()->pluck('companies.id')->map(fn ($id) => (int) $id)->all()
+            : [(int) CompanyContext::id()];
+        $companyChoices = Company::query()->whereKey($seen)->orderBy('id')->get()
+            ->mapWithKeys(fn (Company $c) => [(int) $c->id => $c->name()])->all();
+        $roleChoices = \Spatie\Permission\Models\Role::query()->whereIn('company_id', $seen)->orderBy('name')->pluck('name')
+            ->unique()->mapWithKeys(fn ($name) => [(string) $name => RoleLabel::for((string) $name)])->all();
+
+        $status = (string) $request->query('status', '');
+        $company = (int) $request->query('company', 0);
+        $role = (string) $request->query('role', '');
+
         return view('system_admin::user.index', [
             'menu' => $this->menu->forUser($request->user()),
+            'companyChoices' => $companyChoices,
+            'roleChoices' => $roleChoices,
             'users' => User::query()
+                ->when(in_array($status, ['active', 'inactive'], true), fn ($q) => $q->where('is_active', $status === 'active'))
+                // ⓘ only a company the reader may see — never widens the wall below
+                ->when($company > 0 && in_array($company, $seen, true), fn ($q) => $q->whereHas('companies', fn ($c) => $c->whereKey($company)))
+                // ⓘ straight from the grants — spatie's `roles` relation sees only the open company (teams)
+                ->when(isset($roleChoices[$role]), fn ($q) => $q->whereIn('users.id', \Illuminate\Support\Facades\DB::table('model_has_roles')
+                    ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                    ->where('roles.name', $role)
+                    ->where('model_has_roles.model_type', (new User)->getMorphClass())
+                    ->whereIn('model_has_roles.company_id', $seen)
+                    ->select('model_has_roles.model_id')))
                 ->with(['roles', 'currentBranch', 'companies'])
 
                 /*

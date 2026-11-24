@@ -14,7 +14,7 @@
         ->map(fn ($id) => (int) $id)->all();
 
     // ⭐ ট্যাব (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৮) — ভুল যে ট্যাবে, সেটাই খুলে থাকে ([[UserFormTabs]])
-    $openTab = \App\Modules\SystemAdmin\Support\UserFormTabs::open(array_keys($errors->getMessages()));
+    $openTab = \App\Modules\SystemAdmin\Support\UserFormTabs::open(array_keys($errors->getMessages()), is_string(request()->query('tab')) ? request()->query('tab') : null);
     $tabs = ['identity' => __('system_admin::field.tab_identity'), 'access' => __('system_admin::field.tab_access'),
         'security' => __('system_admin::field.tab_security')] + (($effective ?? []) !== [] ? ['power' => __('system_admin::permission.effective_access')] : [])
         + ($isNew ? [] : ['history' => __('system_admin::field.tab_history')]);

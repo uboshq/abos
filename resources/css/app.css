@@ -1641,6 +1641,28 @@ input[type='number'] {
         display: none;
     }
 
+    /* ⛔ live, 24 Nov 2026 (owner: "নেভি থিমে … মেনুগুলো খোলে না"): closed, the box shrank to 0 px on a full bar, and its
+       icon — pushed out to the left by `justify-end` — lay over the ☰ menu button; a tap on ☰ opened search instead.
+       Closed, the box now keeps its icon's width; the company name gives way instead (it truncates). */
+    [data-shell-search]:not([data-expanded="true"]) {
+        flex: 0 0 auto;
+    }
+
+    /* ⓘ and the bar fits a 390 px phone: ☰ · logo · search · + · four icons · me came to ~460 px, so the logo slid under the
+       search icon. The bar's buttons are 36 px here (44 elsewhere) and sit closer — nothing is dropped. */
+    .topbar {
+        --spacing-touch: 36px;
+        column-gap: 4px;
+    }
+
+    .topbar [data-shell-actions] {
+        column-gap: 0;
+    }
+
+    .topbar [data-shell-start] {
+        flex-shrink: 0;
+    }
+
     [data-shell-search][data-expanded="true"] {
         position: fixed;
         inset-inline: 0;

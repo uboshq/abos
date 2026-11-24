@@ -148,6 +148,13 @@
                     .e(__('system_admin::field.never_signed_in')).'</span>'),
         ],
         [
+            // ⭐ পাসওয়ার্ড রিসেট — এক চাপে নিরাপত্তার ট্যাব (মালিক, ২৪ নভেম্বর ২০২৬: "এখানে রিসেটের একটা কলাম করে দিয়ে দেও")
+            'key' => 'password',
+            'label' => __('system_admin::field.password_column'),
+            'width' => '8.5rem',
+            'render' => fn ($u) => view('system_admin::user.partials.reset', ['user' => $u]),
+        ],
+        [
             'key' => 'actions',
             'label' => __('core.table.action_menu'),
             'width' => '8rem',
@@ -176,10 +183,47 @@
                  ⓘ খোঁজা নাম ও ইমেইলে (UserController::index)। সাজানো নেই —
                  তালিকা সবসময় নামের ক্রমে, আর অন্য কোনো ক্রম কন্ট্রোলার
                  জানে না। --}}
+            {{-- ⭐ ছাঁকনি — অন্য সব তালিকার একই "ছাঁকনি" বোতাম (মালিক, ২৪ নভেম্বর ২০২৬: "ফিল্টারের … বারটা … এক করার দরকার"):
+                 অবস্থা · কোম্পানি · রোল; ঠিকানার নাম status, company, role ([[UserController::index()]]) --}}
+            @php
+                $field = 'h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm';
+                $statusNames = ['active' => __('system_admin::field.status_active'), 'inactive' => __('system_admin::field.status_inactive')];
+            @endphp
             <x-ui.toolbar :title="__('system_admin::menu.users')"
                           :subtitle="__('system_admin::message.users_note')"
                           :search-placeholder="__('system_admin::message.user_search')"
-                          :columns="$columns">
+                          :columns="$columns"
+                          :filter-labels="[
+                              'status' => __('system_admin::field.filter_status'),
+                              'company' => __('system_admin::field.filter_company'),
+                              'role' => __('system_admin::field.filter_role'),
+                          ]"
+                          :filter-values="[
+                              'status' => $statusNames,
+                              'company' => collect($companyChoices)->mapWithKeys(fn ($name, $id) => [(string) $id => $name])->all(),
+                              'role' => collect($roleChoices)->mapWithKeys(fn ($name, $key) => [(string) $key => $name])->all(),
+                          ]">
+                <select name="status" aria-label="{{ __('system_admin::field.filter_status') }}" data-action="submit-form" class="{{ $field }}">
+                    <option value="">{{ __('system_admin::field.filter_status') }}: {{ __('system_admin::field.filter_all') }}</option>
+                    @foreach ($statusNames as $key => $name)
+                        <option value="{{ $key }}" @selected(request('status') === $key)>{{ $name }}</option>
+                    @endforeach
+                </select>
+                @if (count($companyChoices) > 1)
+                    <select name="company" aria-label="{{ __('system_admin::field.filter_company') }}" data-action="submit-form" class="{{ $field }}">
+                        <option value="">{{ __('system_admin::field.filter_company') }}: {{ __('system_admin::field.filter_all') }}</option>
+                        @foreach ($companyChoices as $id => $name)
+                            <option value="{{ $id }}" @selected((string) request('company') === (string) $id)>{{ $name }}</option>
+                        @endforeach
+                    </select>
+                @endif
+                <select name="role" aria-label="{{ __('system_admin::field.filter_role') }}" data-action="submit-form" class="{{ $field }}">
+                    <option value="">{{ __('system_admin::field.filter_role') }}: {{ __('system_admin::field.filter_all') }}</option>
+                    @foreach ($roleChoices as $key => $name)
+                        <option value="{{ $key }}" @selected(request('role') === $key)>{{ $name }}</option>
+                    @endforeach
+                </select>
+                <noscript><button type="submit" class="text-xs underline">{{ __('core.action.apply') }}</button></noscript>
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('system_admin.user.create')">
                         {{ __('core.action.create') }}

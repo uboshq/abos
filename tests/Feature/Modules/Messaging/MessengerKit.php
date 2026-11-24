@@ -76,11 +76,6 @@ trait MessengerKit
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
-    /** @param  array<string, list<string>>  $rules */
-    protected function allowList(array $rules): void
-    {
-        CompanyContext::forCompany($this->company->id, fn () => app(SettingsService::class)->set(MessengerAccess::SETTING, $rules));
-    }
 
     /** A JSON phone call as `$user`. @param  array<string, mixed>  $body */
     protected function phone(User $user, string $method, string $url, array $body = []): TestResponse
