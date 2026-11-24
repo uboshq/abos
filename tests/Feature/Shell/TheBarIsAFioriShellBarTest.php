@@ -129,18 +129,13 @@ final class TheBarIsAFioriShellBarTest extends TestCase
         $this->assertStringNotContainsString('data-shell-approvals', $clerkBar, '⛔ যিনি সইদাতা নন তাঁর বারেও অনুমোদনের চিহ্ন।');
     }
 
-    public function test_the_page_head_says_date_company_and_branch_in_english_digits(): void
+    /** ⭐ মালিক, ২৪ নভেম্বর ২০২৬: তারিখ · কোম্পানি · শাখার লাইন পাতার মাথায় আর নয় — কোম্পানি আর শাখা উপরের বারেই */
+    public function test_the_page_head_has_no_date_company_and_branch_line(): void
     {
         $html = $this->page(route('accounts.period.index'));
 
-        $this->assertMatchesRegularExpression('/data-page-context[^>]*>([^<]+)</u', $html, '⛔ পাতার মাথায় তারিখ · কোম্পানি · শাখা নেই।');
-        preg_match('/data-page-context[^>]*>([^<]+)</u', $html, $m);
-        $line = html_entity_decode($m[1]);
-
-        $this->assertStringContainsString(now()->format('Y'), $line, '⛔ সাল ইংরেজি অঙ্কে নেই।');
-        $this->assertDoesNotMatchRegularExpression('/[০-৯]/u', $line, '⛔ তারিখে বাংলা অঙ্ক।');
-        $this->assertStringContainsString($this->company->name(), $line);
-        $this->assertSame(3, count(explode(' · ', $line)), '⛔ তিনটা অংশ নয় (তারিখ · কোম্পানি · শাখা)।');
+        $this->assertStringNotContainsString('data-page-context', $html, '⛔ পাতার মাথায় তারিখ · কোম্পানি · শাখার লাইন ফিরে এসেছে।');
+        $this->assertStringContainsString(e($this->company->name()), $this->bar($html), '⛔ কোম্পানির নাম উপরের বারেও নেই।');
     }
 
     public function test_the_money_box_dues_equal_the_homes_dues(): void

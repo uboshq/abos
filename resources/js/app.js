@@ -7,6 +7,7 @@ import { abosDate } from './date.js'
 import { followTheDevice } from './theme.js'
 import { listKeys } from './list-keys.js'
 import { approvalKeys } from './approval-keys.js'
+import { barStays } from './abos-bar-stays.js'
 import { inboxBoard } from './inbox-board.js'
 import { searchAsYouType, searched } from './search-as-you-type.js'
 import { listSwap } from './list-swap.js'
@@ -206,6 +207,9 @@ handPrintToTab()
 // ⭐ "ABOS" রূপে টাকার পাতার মাথা টুলবারের এক সারিতে — Alpine-এর আগে, তাই সরানো বোতামগুলো নতুন জায়গাতেই জাগে ([[abos-list-head.js]])
 mergeMoneyHead()
 compactPageHead()
+
+// ⭐ ছাঁকনির বার স্থির, দুই পাশের পাতায় যার যার স্ক্রল ([[abos-bar-stays.js]]) — মাথা সাজানোর পরে, শেষ মাপে
+barStays()
 foldPageNotes()
 bulkBars()
 pickColumns()

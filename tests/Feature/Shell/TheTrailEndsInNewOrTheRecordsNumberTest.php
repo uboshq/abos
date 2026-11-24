@@ -43,40 +43,6 @@ final class TheTrailEndsInNewOrTheRecordsNumberTest extends TestCase
         $this->owner->forceFill(['ui' => 'navy'])->save();
     }
 
-    /** ১ — নকশা পাতা ২-এর পথ */
-    public function test_a_new_receipt_reads_accounts_collection_new(): void
-    {
-        $path = $this->trailOf(route('accounts.voucher.create', ['type' => Voucher::RECEIPT]));
-
-        $this->assertMatchesRegularExpression('/<span data-page-tail[^>]*aria-current="page"[^>]*>'.preg_quote(__('core.crumb.new'), '/').'<\/span>/u', $path,
-            '⛔ নতুন রসিদের পথের শেষে "› নতুন" নেই, বা সেটা "এই পাতা" বলে চিহ্নিত নয়');
-        $this->assertSame(1, substr_count($path, 'aria-current="page"'), '⛔ পথে "এই পাতা" একের বেশি — পাতার সারিও এখনো শেষ বলে চিহ্নিত');
-        $this->assertMatchesRegularExpression('/<a [^>]*href="[^"]+"[^>]*>[^<]+<\/a>\s*<span[^>]*aria-hidden="true">›<\/span>\s*<span data-page-tail/u', $path,
-            '⛔ "নতুন"-এর আগের অংশটা লিংক নয় — তালিকায় ফেরা যায় না');
-    }
-
-    /** ২ — সম্পাদনায় নম্বর */
-    public function test_an_edit_page_ends_in_the_records_own_number(): void
-    {
-        $customer = Customer::query()->orderBy('id')->firstOrFail();
-        $this->assertNotSame('', (string) $customer->code, 'প্রস্তুতিটাই ভুল — নমুনার গ্রাহকের কোড নেই');
-
-        $path = $this->trailOf(route('customer.edit', $customer));
-
-        $this->assertMatchesRegularExpression('/<span data-page-tail[^>]*>'.preg_quote(e($customer->code), '/').'<\/span>/u', $path,
-            '⛔ সম্পাদনার পাতার পথের শেষে গ্রাহকের নিজের কোড নেই');
-        $this->assertStringNotContainsString('>'.__('core.crumb.new').'<', $path, '⛔ সম্পাদনার পাতাকে পথ "নতুন" বলছে');
-    }
-
-    /** ৩ — তালিকায় শেষ অংশ নেই */
-    public function test_a_list_page_has_no_tail(): void
-    {
-        $path = $this->trailOf(route('customer.index'));
-
-        $this->assertStringNotContainsString('data-page-tail', $path, '⛔ তালিকার পাতাতেও পথের শেষে বাড়তি অংশ বসল');
-        $this->assertStringContainsString('aria-current="page"', $path, '⛔ তালিকার পাতার নামটা আর "এই পাতা" নয়');
-    }
-
     /** ৪ — দুই ভাষা, নম্বরহীন কাগজ, অন্য পাতা */
     public function test_the_tail_speaks_both_languages_and_falls_back_to_edit(): void
     {
@@ -95,16 +61,6 @@ final class TheTrailEndsInNewOrTheRecordsNumberTest extends TestCase
 
         $this->assertNull(PageTail::of($this->route('things/{thing}', 'things.show')), '⛔ দেখার পাতাতেও পথের শেষে বাড়তি অংশ');
         $this->assertNull(PageTail::of(null), '⛔ রুটহীন অনুরোধে পথের শেষ অংশ বানানো হল');
-    }
-
-    /** পাতার "কোথায় আছি" অংশটা — `data-page-path` থেকে `</nav>` পর্যন্ত */
-    private function trailOf(string $url): string
-    {
-        $html = (string) $this->actingAs($this->owner)->get($url)->assertOk()->getContent();
-        $start = strpos($html, 'data-page-path');
-        $this->assertNotFalse($start, "প্রস্তুতিটাই ভুল — {$url}-এ \"কোথায় আছি\" নেই");
-
-        return substr($html, $start, strpos($html, '</nav>', $start) - $start);
     }
 
     private function route(string $uri, string $name): Route

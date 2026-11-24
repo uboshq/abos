@@ -2644,6 +2644,15 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
     order: 4;
     margin: 0;
 }
+/* ⭐ The filter bar stays, the list moves under it; a page in two sides scrolls each side on its own ([[abos-bar-stays.js]]; owner, 24 Nov 2026) */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-bar-stays] {
+    position: sticky; top: var(--bar-top, 0px); z-index: 20; background: var(--color-surface-card);
+}
+[data-split-on] { block-size: var(--split-h); grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+[data-split-on] > * { min-block-size: 0; overflow: auto; scrollbar-width: none; }
+[data-split-on] > *::-webkit-scrollbar { display: none; }
+@media print { [data-bar-stays] { position: static !important; } [data-split-on] { block-size: auto; } [data-split-on] > * { overflow: visible; } }
+
 /* ⭐ The approval inbox board — only rose, navy and blue ([[ApprovalInboxController::BOARD_LOOKS]]; owner "ok", 23 Nov 2026,
    sample YRFmwfF7 v5). ⓘ Kinds in round boxes in the kind's colour (--k, --kd come from the box's own style), rows alternate
    light and deeper inside each box, the open row deepest; the right side has a bright head with a big amount, and the decide

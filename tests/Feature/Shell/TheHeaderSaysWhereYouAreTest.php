@@ -36,20 +36,18 @@ final class TheHeaderSaysWhereYouAreTest extends TestCase
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
     }
 
-    public function test_the_abos_look_says_module_and_page_above_the_title(): void
+    /** ⭐ মালিক, ২৪ নভেম্বর ২০২৬: পথ · তারিখ · কোম্পানি · শাখার লাইন কোনো পাতাতেই নয় — তিন ABOS রূপে */
+    public function test_no_abos_look_draws_the_path_or_the_date_company_line(): void
     {
-        $this->owner->forceFill(['ui' => 'navy'])->save();
+        foreach (['rose', 'navy', 'blue'] as $look) {
+            $this->owner->forceFill(['ui' => $look])->save();
 
-        $html = $this->actingAs($this->owner)->get(route('accounts.period.index'))->assertOk()->getContent();
-
-        $start = strpos($html, 'data-page-path');
-        $this->assertNotFalse($start, '⛔ ABOS রূপে পাতার মাথায় "কোথায় আছি" নেই।');
-        $path = substr($html, $start, strpos($html, '</nav>', $start) - $start);
-
-        $this->assertStringContainsString(e(__('accounts::menu.periods')), $path, '⛔ পথে পাতার নাম নেই।');
-        $this->assertMatchesRegularExpression('/<a [^>]*href="[^"]+"[^>]*>[^<]+<\/a>/', $path, '⛔ মডিউলের নামটা লিংক নয় — উপরে ফেরা যায় না।');
-        $this->assertStringContainsString('aria-current="page"', $path, '⛔ শেষেরটা "এই পাতা" বলে চিহ্নিত নয়।');
-        $this->assertLessThan(strpos($html, '<h1', $start), $start, '⛔ পথটা শিরোনামের পরে বসেছে।');
+            foreach (['accounts.period.index', 'customer.index', 'system_admin.control-panel'] as $name) {
+                $html = (string) $this->actingAs($this->owner->fresh())->get(route($name))->assertOk()->getContent();
+                $this->assertStringNotContainsString('data-page-path', $html, "⛔ {$look}: {$name}-এ পথের লাইন ফিরে এসেছে।");
+                $this->assertStringNotContainsString('data-page-context', $html, "⛔ {$look}: {$name}-এ তারিখ · কোম্পানি · শাখার লাইন ফিরে এসেছে।");
+            }
+        }
     }
 
     public function test_another_look_keeps_its_own_crumbbar_and_gets_nothing_new(): void
