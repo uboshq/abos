@@ -151,7 +151,7 @@
             // ⭐ পাসওয়ার্ড রিসেট — এক চাপে নিরাপত্তার ট্যাব (মালিক, ২৪ নভেম্বর ২০২৬: "এখানে রিসেটের একটা কলাম করে দিয়ে দেও")
             'key' => 'password',
             'label' => __('system_admin::field.password_column'),
-            'width' => '7rem',
+            'width' => '8.5rem',
             'render' => fn ($u) => view('system_admin::user.partials.reset', ['user' => $u]),
         ],
         [
