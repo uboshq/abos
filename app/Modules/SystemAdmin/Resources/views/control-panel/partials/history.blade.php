@@ -10,6 +10,9 @@
                     <span class="font-medium">{{ $row['label'] }}</span>
                     <span class="text-(--color-ink-muted)">{{ $say($row['from']) }} → {{ $say($row['to']) }}</span>
                     <span class="text-2xs text-(--color-ink-muted)">{{ $row['who'] ?? '—' }}</span>
+                    @if ($row['self'] ?? false)
+                        <span data-owner-self-mark title="{{ __('core.owner_self.mark_hint') }}"><x-ui.badge tone="info">{{ __('core.owner_self.mark') }}</x-ui.badge></span>
+                    @endif
                 </li>
             @endforeach
         </ul>

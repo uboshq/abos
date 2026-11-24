@@ -239,6 +239,10 @@
 | `payment_term` | MasterData | PaymentTerm |
 | `payment_voucher` | Accounts | Voucher |
 | `payroll_run` | Hr | PayrollRun |
+| `final_settlement` | Hr | FinalSettlement |
+| `gratuity_provision` | Hr | GratuityProvision |
+| `wppf_provision` | Hr | WppfProvision |
+| `setting_change` | SystemAdmin | SettingChange |
 | `person` | MasterData | Person |
 | `price_list` | MasterData | PriceList |
 | `product` | Inventory | Product |
