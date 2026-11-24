@@ -56,7 +56,7 @@
     @if ($abosHead)
         <form id="list-form" method="GET" class="contents">
             <x-ui.toolbar :title="__('backup::screen.verify_title')" :info="__('backup::screen.verify_subtitle').' '.$sinceLine"
-                          :search="false" :export="false" :share="false" :columns="$columns" :facets="$facetPanel" />
+                          :search="false" :export="false" :print="false" :share="false" :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]" :columns="$columns" :facets="$facetPanel" />
         </form>
     @endif
 
