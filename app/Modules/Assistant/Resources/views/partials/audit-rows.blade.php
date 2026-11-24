@@ -2,6 +2,9 @@
         @if ($rows->isEmpty())
             <p class="text-sm text-(--color-ink-muted)">{{ __('assistant::audit.empty') }}</p>
         @else
+            @if (\App\Core\Support\AbosHead::on())
+            <x-ui.table :rows="$rows" :columns="$columns" :row-attributes="fn ($r) => ['data-audit-row' => $r->kind, 'class' => 'align-top']" />
+            @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">
                     <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
@@ -67,6 +70,7 @@
                     </tbody>
                 </table>
             </div>
+            @endif
         @endif
 
         <x-ui.pager :rows="$rows" />
