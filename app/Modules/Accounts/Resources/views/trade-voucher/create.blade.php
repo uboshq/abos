@@ -17,9 +17,11 @@
     ];
 
     // ⓘ কেবল এই কাগজের দামের দিক — বিক্রয় ভাউচারের পাতায় কেনা দাম যায় না
+    // ⛔ কেনা দর কেবল `inventory.cost.view`-এ — চাবি না থাকলে পাতায়ই যায় না, দর হাতে লেখা
+    $seesCost = auth()->user()?->can('inventory.cost.view') === true;
     $pickProducts = array_map(fn (array $p) => [
         'id' => $p['id'], 'name' => $p['name'], 'unit' => $p['unit'],
-        'sale_price' => $sale ? $p['sale_price'] : '0', 'purchase_price' => $sale ? '0' : $p['purchase_price'],
+        'sale_price' => $sale ? $p['sale_price'] : '0', 'purchase_price' => ! $sale && $seesCost ? $p['purchase_price'] : '0',
         'tax_id' => $p['tax_id'], 'vat_rate' => $p['vat_rate'],
     ], $products);
 
