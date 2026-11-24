@@ -97,12 +97,7 @@
     <x-ui.filter-layout :filters="$filters" form="list-form" :noun="__('notification::party_log.noun')">
         {{-- ⭐ আজকের চার সংখ্যা — আজ পাঠানো · পৌঁছেছে · অপেক্ষায় · ব্যর্থ (দেয়ালের ভিতরে, ছাঁকনি ছাড়া); তালিকার কার্ডের ছাঁচ, লিংক নয় --}}
         <div class="list-cards" data-list-cards data-party-today>
-            @foreach ([
-                'sent' => ['#2346d8', '#3b82f6', 'send'],
-                'delivered' => ['#059669', '#10b981', 'check'],
-                'waiting' => ['#b45309', '#f59e0b', 'clock'],
-                'failed' => ['#be123c', '#f43f5e', 'alert-triangle'],
-            ] as $key => [$a, $b, $icon])
+            @foreach ($todayCards as $key => [$a, $b, $icon])
                 <div class="list-card" data-card="{{ $key }}" style="--a: {{ $a }}; --b: {{ $b }}">
                     <span class="list-card-icon" aria-hidden="true"><x-ui.icon :name="$icon" :size="14" /></span>
                     <span class="min-w-0">
