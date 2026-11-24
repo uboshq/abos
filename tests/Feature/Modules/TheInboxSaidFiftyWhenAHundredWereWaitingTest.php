@@ -128,7 +128,7 @@ class TheInboxSaidFiftyWhenAHundredWereWaitingTest extends TestCase
 
         // ⓘ বাকিগুলো কোথায় — পাতা বদল আর "সব Nটার মোট", পর্দাতেই
         $this->assertSame(3, $page->viewData('approvals')->lastPage(), '⛔ বাকি কাগজের পাতা নেই।');
-        $page->assertSee(__('approval::field.all_total', ['count' => self::PURCHASE + self::PAYROLL]));
+        $page->assertSee(__('approval::field.board_total', ['count' => self::PURCHASE + self::PAYROLL]));
     }
 
     /**

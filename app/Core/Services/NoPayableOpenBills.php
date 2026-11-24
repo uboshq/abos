@@ -13,4 +13,9 @@ final class NoPayableOpenBills implements PayableOpenBills
     {
         return [];
     }
+
+    public function partyType(): string
+    {
+        return '';
+    }
 }
