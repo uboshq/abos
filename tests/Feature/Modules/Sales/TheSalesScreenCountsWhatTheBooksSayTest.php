@@ -447,8 +447,8 @@ final class TheSalesScreenCountsWhatTheBooksSayTest extends TestCase
         // মালিকের একটা বিল — টার্গেট আছে
         $mine = $this->billToday();
 
-        // টার্গেটহীন একজনের বিল
-        $this->actingAs($stranger);
+        // টার্গেটহীন একজনের দোকান, বিল কাটলেন টার্গেটওয়ালা মালিকই — বিল কাটার মানুষ ধরলে শতাংশ ফুলে উঠত
+        $this->actingAs($this->owner);
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
         $service = app(SalesInvoiceService::class);
         $service->confirm($service->create(['customer_id' => $shops[1]->id] + $this->header(),
