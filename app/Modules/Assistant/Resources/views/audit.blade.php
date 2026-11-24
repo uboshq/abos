@@ -21,7 +21,7 @@
         \App\Core\ListFilter\Facets::pick('user_id', __('assistant::audit.who'),
             collect($people)->mapWithKeys(fn ($person) => [(string) $person->id => $person->name])->all(),
             __('assistant::audit.anyone')),
-        \App\Core\ListFilter\Facets::text('q', __('assistant::audit.search')),
+        \App\Core\Support\AbosHead::on() ? null : \App\Core\ListFilter\Facets::text('q', __('assistant::audit.search')),
         \App\Core\ListFilter\Facets::text('ip', 'IP'),
     ]);
 @endphp
@@ -33,7 +33,7 @@
         <x-ui.filter-layout :filters="$facetPanel" form="list-form">
         <div class="space-y-4" data-assistant-audit>
             <form id="list-form" method="GET" class="contents">
-                <x-ui.toolbar :title="__('assistant::audit.title', ['name' => $name])" :info="__('assistant::audit.note')" :search="false" :export="false" :share="false" :facets="$facetPanel" />
+                <x-ui.toolbar :title="__('assistant::audit.title', ['name' => $name])" :info="__('assistant::audit.note')" :search-placeholder="__('assistant::audit.search')" :export="false" :share="false" :facets="$facetPanel" />
             </form>
 
             @include('assistant::partials.audit-rows')

@@ -36,6 +36,7 @@ final class DocumentTemplateController extends Controller
         return view('documents::templates.index', [
             'menu' => $this->menu->forUser($request->user()),
             'rows' => DocumentTemplate::query()
+                ->when(trim($request->string('q')->value()), fn ($q, $s) => $q->where(fn ($w) => $w->where('title', 'like', '%'.addcslashes($s, '%_\\').'%')->orWhere('code', 'like', '%'.addcslashes($s, '%_\\').'%')))
                 ->when($request->string('doc_type')->value(), fn ($q, $v) => $q->where('doc_type', $v))
                 ->when($request->string('folder')->value(), fn ($q, $v) => $q->where('folder', $v))
                 ->orderBy('title')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),

@@ -15,7 +15,7 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::group.title')" :info="__('notification::group.note')" :search="false" :export="false" :share="false" :facets="$facetPanel">
+        <x-ui.toolbar :title="__('notification::group.title')" :info="__('notification::group.note')" :search-placeholder="__('notification::group.name')" :export="false" :share="false" :facets="$facetPanel">
             @if ($abosHead)
                 <x-slot:actions>
                     <x-ui.button tone="primary" icon="plus" :href="route('notification.groups.create')">{{ __('notification::group.new') }}</x-ui.button>

@@ -12,6 +12,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('promotion::coupon.title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="$offer ? __('promotion::coupon.title').' · '.$offer->code : __('promotion::coupon_screen.all_offers')">
             @if ($offer)
@@ -21,6 +22,7 @@
             @endif
         </x-ui.page-header>
     </x-slot:header>
+    @endunless
 
     <x-ui.errors />
 
@@ -29,6 +31,7 @@
                                 text-sm text-(--color-badge-success-ink)">{{ session('saved') }}</p>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         {{-- ⭐ তৈরির ফর্ম — কেবল যখন সত্যিই সম্ভব; নাহলে কারণটা, বোতাম নয় --}}
         @if ($offer)
@@ -60,9 +63,27 @@
                 @endif
             </section>
         @else
-            <p class="text-sm text-(--color-ink-muted)">{{ __('promotion::coupon_screen.pick_offer') }}</p>
+            @unless ($abosHead)
+                <p class="text-sm text-(--color-ink-muted)">{{ __('promotion::coupon_screen.pick_offer') }}</p>
+            @endunless
         @endif
 
+        @if ($abosHead)
+            <form id="list-form" method="GET" action="{{ route('promotion.coupon.index') }}" class="contents">
+                @if ($offer)
+                    <input type="hidden" name="offer" value="{{ $offer->id }}">
+                @endif
+                <x-ui.toolbar :title="$offer ? __('promotion::coupon.title').' · '.$offer->code : __('promotion::coupon_screen.all_offers')"
+                              :info="$offer ? null : __('promotion::coupon_screen.pick_offer')"
+                              :search-placeholder="__('promotion::coupon_screen.search')" :export="false" :share="false" :facets="$facetPanel" :quiet="['offer']">
+                    @if ($offer)
+                        <x-slot:actions>
+                            <x-ui.button :href="route('promotion.show', $offer)" tone="secondary">{{ __('promotion::coupon_screen.back_to_offer') }}</x-ui.button>
+                        </x-slot:actions>
+                    @endif
+                </x-ui.toolbar>
+            </form>
+        @else
         {{-- ⓘ খোঁজা GET-এ, আর অফারটা সাথে যায় — নাহলে খুঁজতেই পাতাটা সব অফারে ছড়িয়ে পড়ত --}}
         <form method="GET" action="{{ route('promotion.coupon.index') }}" class="flex flex-wrap items-end gap-3">
             @if ($offer)
@@ -71,6 +92,7 @@
             <x-ui.field name="q" :value="$search" :label="__('promotion::coupon_screen.search')" />
             <x-ui.button type="submit" tone="secondary">{{ __('promotion::coupon_screen.search_button') }}</x-ui.button>
         </form>
+        @endif
 
         @if ($rows->isEmpty())
             <p class="text-sm text-(--color-ink-muted)">{{ __('promotion::coupon_screen.none') }}</p>
@@ -138,4 +160,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

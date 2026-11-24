@@ -5,19 +5,33 @@
     -R১, -R২ …; পুরনোগুলো কেবল পড়ার জন্য। ⓘ প্রতিটা সারি এক লাইনে একটা কথা (মালিকের পর্দা ডান দিক কাটে, ১ অক্টোবর ২০২৬),
     আর "সংস্করণ তুলনা" — পুরো ইতিহাস পাশাপাশি এক চাপে।
 --}}
+@php
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([\App\Core\ListFilter\Facets::dates(__('core.list_filter.date'))]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::quotation.revisions.title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('sales::quotation.revisions.title')" :subtitle="__('sales::quotation.revisions.note')" />
     </x-slot:header>
+    @endunless
 
+    <x-ui.filter-layout :filters="$abosHead ? $facetPanel : \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <section data-boxed data-revision-families
              class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        @if ($abosHead)
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :title="__('sales::quotation.revisions.title')" :info="__('sales::quotation.revisions.note')"
+                              :search-placeholder="__('sales::quotation.search')" :export="false" :share="false" :facets="$facetPanel" />
+            </form>
+        @else
         <form method="GET" action="{{ route('sales.quotation.revisions') }}" class="flex flex-wrap items-end gap-2 border-b border-(--color-border) p-4">
             <x-ui.field name="q" :label="__('sales::quotation.search')" :value="$q" />
             <x-ui.button type="submit" tone="secondary">{{ __('core.action.search') }}</x-ui.button>
         </form>
+        @endif
 
         @if ($roots->isEmpty())
             <p class="p-4 text-sm text-(--color-ink-muted)">{{ $q ? __('core.empty.no_results') : __('sales::quotation.revisions.empty') }}</p>
@@ -56,4 +70,5 @@
         @endif
         <x-ui.list-totals :rows="$roots" />
     </section>
+    </x-ui.filter-layout>
 </x-layouts.app>

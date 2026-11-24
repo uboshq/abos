@@ -73,10 +73,12 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('governance::menu.login_history') }}</x-slot:title>
 
+    @unless (\App\Core\Support\AbosHead::on())
     <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-hover) px-3 py-2 text-2xs
               text-(--color-ink-muted)">
         {{ __('governance::message.login_why') }}
     </p>
+    @endunless
 
     {{--
         গত চব্বিশ ঘণ্টার ব্যর্থ চেষ্টা — পাতার মাথায়, একটা সংখ্যা।
@@ -100,7 +102,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
             {{-- খাতাটা নিজে রপ্তানি হয় না — রপ্তানির খাতার একই কারণে --}}
-            <x-ui.toolbar :title="__('governance::menu.login_history')" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :search="false" :facets="$facetPanel">
+            <x-ui.toolbar :title="__('governance::menu.login_history')" :info="\App\Core\Support\AbosHead::on() ? __('governance::message.login_why') : null" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :search="false" :facets="$facetPanel">
             </x-ui.toolbar>
         </form>
 

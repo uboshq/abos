@@ -41,6 +41,7 @@
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]), এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([\App\Core\ListFilter\Facets::pick('category', __('inventory::field.category'), $categories)]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -66,13 +67,14 @@
 
     <x-ui.errors />
 
+    <x-ui.filter-layout :filters="$abosHead ? $facetPanel : \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
         {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe"); খোঁজার ঘর নেই — এই পাতার নিয়ন্ত্রক খোঁজে না --}}
         @if ($abosHead)
             <form id="list-form" method="GET" class="contents">
                 <x-ui.toolbar :title="__('sales::price_list.title')" :info="__('sales::price_list.subtitle').' '.__('sales::price_list.history_note')"
-                              :search-placeholder="__('sales::price_list.search')" :filter="false" :columns="$columns" />
+                              :search-placeholder="__('sales::price_list.search')" :columns="$columns" :facets="$facetPanel" />
             </form>
         @else
             <x-ui.toolbar :title="__('sales::price_list.title')" :search="false" :filter="false" :columns="$columns" />
@@ -87,4 +89,5 @@
 
     <x-ui.pager :rows="$products" />
     <x-ui.list-totals :rows="$products" />
+    </x-ui.filter-layout>
 </x-layouts.app>

@@ -27,9 +27,10 @@ class NotificationGroupController extends Controller
 
     public function index(Request $request): View
     {
-        $f = $request->validate(['state' => ['nullable', \Illuminate\Validation\Rule::in(['active', 'inactive'])]]);
+        $f = $request->validate(['q' => ['nullable', 'string', 'max:120'], 'state' => ['nullable', \Illuminate\Validation\Rule::in(['active', 'inactive'])]]);
 
         $rows = NotificationRecipientGroup::query()
+            ->when($f['q'] ?? null, fn ($q, $s) => $q->where('name', 'like', '%'.addcslashes($s, '%_\\').'%'))
             ->when($f['state'] ?? null, fn ($q, $s) => $q->where('is_active', $s === 'active'))
             ->orderBy('name')->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 

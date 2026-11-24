@@ -38,7 +38,7 @@ final class PriceBookService
      *
      * @return LengthAwarePaginator<PriceList>
      */
-    public function lists(string $target, ?string $q): LengthAwarePaginator
+    public function lists(string $target, ?string $q, ?bool $active = null): LengthAwarePaginator
     {
         $query = PriceList::query();
 
@@ -50,6 +50,7 @@ final class PriceBookService
         };
 
         return $query
+            ->when($active !== null, fn ($w) => $w->where('is_active', $active))
             ->when(filled($q), function ($w) use ($q) {
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim((string) $q)).'%';
                 $w->where(fn ($x) => $x->where('code', 'like', $like)->orWhere('name_en', 'like', $like)->orWhere('name_bn', 'like', $like));

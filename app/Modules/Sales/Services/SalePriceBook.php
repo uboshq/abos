@@ -34,11 +34,12 @@ final class SalePriceBook
      *
      * @return LengthAwarePaginator<Product>
      */
-    public function list(?string $q): LengthAwarePaginator
+    public function list(?string $q, ?int $category = null): LengthAwarePaginator
     {
         return Product::query()
             ->active()
             ->with('unit')
+            ->when($category !== null, fn ($query) => $query->where('category_id', $category))
             ->when(filled($q), function ($query) use ($q) {
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim((string) $q)).'%';
 

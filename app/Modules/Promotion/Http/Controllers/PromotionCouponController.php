@@ -87,12 +87,18 @@ final class PromotionCouponController extends Controller implements HasMiddlewar
         $rows = PromotionCoupon::query()
             ->with(['promotion', ...Customer::placeVia('customer')])
             ->when($offer !== null, fn ($q) => $q->where('promotion_id', $offer->id))
+            ->when(in_array($request->query('state'), ['on', 'off'], true), fn ($q) => $q->where('is_active', $request->query('state') === 'on'))
             ->when($search !== '', fn ($q) => $q->where('code', 'like', '%'.addcslashes($search, '%_\\').'%'))
             ->orderByDesc('id')
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
+        $abosHead = \App\Core\Support\AbosHead::on();
+
         return view('promotion::coupons', [
+            'abosHead' => $abosHead,
+            // ⓘ ছাঁকনি কেবল ABOS রূপের বারে (মালিক, ২৪ নভেম্বর ২০২৬); পাতায় php ব্লক নেই, তাই এখানে
+            'facetPanel' => \App\Core\ListFilter\Facets::panel($abosHead ? [\App\Core\ListFilter\Facets::pick('state', __('promotion::coupon.is_active'), ['on' => __('promotion::coupon.is_active'), 'off' => __('promotion::coupon_screen.off')])] : []),
             'menu' => $this->menu->forUser($request->user()),
             'offer' => $offer,
             'rows' => $rows,

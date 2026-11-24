@@ -29,6 +29,7 @@
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]), এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
     $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([\App\Core\ListFilter\Facets::pick('status', __('sales::price_book.is_active'), ['active' => __('sales::price_book.active'), 'inactive' => __('sales::price_book.inactive')])]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -64,13 +65,14 @@
 
     <x-ui.list-tabs :tabs="$tabs" :label="__('sales::price_book.title')" />
 
+    <x-ui.filter-layout :filters="$abosHead ? $facetPanel : \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
         @if ($abosHead)
             <form id="list-form" method="GET" class="contents">
                 <input type="hidden" name="target" value="{{ $target }}">
                 <x-ui.toolbar :title="__('sales::price_book.title_'.$target)" :info="__('sales::price_book.subtitle')"
-                              :search-placeholder="__('sales::price_book.search')" :filter="false" :columns="$columns" :quiet="['target']">
+                              :search-placeholder="__('sales::price_book.search')" :columns="$columns" :facets="$facetPanel" :quiet="['target']">
                     @if ($canManage)
                         <x-slot:actions>
                             <x-ui.button :href="route('sales.price_book.create', ['target' => $target])" tone="primary" icon="plus" data-new-price-list>{{ __('sales::price_book.new') }}</x-ui.button>
@@ -87,4 +89,5 @@
 
     <x-ui.pager :rows="$lists" />
     <x-ui.list-totals :rows="$lists" />
+    </x-ui.filter-layout>
 </x-layouts.app>
