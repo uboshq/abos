@@ -49,6 +49,7 @@ final class AFestivalBonusNeedsASecondHandTest extends TestCase
 {
     use \Tests\Concerns\OpensTheYears;
     use RefreshDatabase;
+    use \Tests\Concerns\SeesTheOwnersOwnMark;
     use SignsMoneyOff;
     use SignsTheSecondHand;
 
@@ -138,7 +139,7 @@ final class AFestivalBonusNeedsASecondHandTest extends TestCase
         $this->assertSame(0, bccomp($this->posted($run, StandardChart::SALARY_PAYABLE, 'credit'), self::BASIC, 4), '⛔ প্রদেয় বেতনে ভাতার নিট নেই।');
     }
 
-    public function test_the_owner_as_maker_cannot_sign_his_own_bonus_run(): void
+    public function test_the_owner_as_maker_signs_his_own_bonus_run_with_the_mark(): void
     {
         $run = app(PayrollService::class)->buildBonus('2026-04-10', 'Eid');
 
@@ -150,13 +151,17 @@ final class AFestivalBonusNeedsASecondHandTest extends TestCase
 
         $own = $this->pendingFor($run);
         $this->assertSame((int) $this->owner->id, (int) $own->requested_by);
-        $this->assertFalse(app(ApprovalEngine::class)->canDecide($own->fresh(), $this->owner->fresh()), '⛔ মালিক নিজের ভাতার রানে নিজেই সই।');
+        $this->assertSame(0, $this->entries($run), '⛔ অনুমোদনের আগেই ভাতা খাতায়।');
 
-        $this->as($this->owner)->post(route('approval.inbox.approve', $own->id));
-        $this->assertSame(Approval::PENDING, (string) $own->fresh()->status, '⛔ মালিকের নিজের সই পড়ল।');
+        // ⓘ দ্বিতীয় চাপ অনুমোদন নয়
         $this->as($this->owner)->post(route('hr.payroll.confirm', $run));
-        $this->assertSame(DocumentStatus::DRAFT, (string) $run->fresh()->status, '⛔ মালিকের দ্বিতীয় চাপে ভাতা খাতায় বসল।');
-        $this->assertSame(0, $this->entries($run));
+        $this->assertSame(DocumentStatus::DRAFT, (string) $run->fresh()->status, '⛔ অনুমোদন ছাড়া দ্বিতীয় চাপে ভাতা খাতায় বসল।');
+
+        // ⭐ মালিক নিজে, দাগসহ (মালিক, ২০ নভেম্বর ২০২৬)
+        $this->as($this->owner)->post(route('approval.inbox.approve', $own->id))->assertRedirect();
+        $this->assertOwnerSelfMarked($own);
+        $this->as($this->owner)->post(route('hr.payroll.confirm', $run))->assertSessionHasNoErrors();
+        $this->assertSame(DocumentStatus::CONFIRMED, (string) $run->fresh()->status);
     }
 
     // ── সাহায্যকারী ─────────────────────────────────────────────────────

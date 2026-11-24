@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Contracts\ShownInOwnerSelfReport;
 use App\Models\Branch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property array<string, mixed>|null $details
  */
-class FinalSettlement extends Model
+class FinalSettlement extends Model implements ShownInOwnerSelfReport
 {
     use BelongsToCompany;
     use HasPublicId;
@@ -72,6 +73,12 @@ class FinalSettlement extends Model
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
+    }
+
+    /** ⓘ মালিকের নিজে-অনুমোদিত কাগজের রিপোর্টে — লিংক কর্মীর পাতায় */
+    public static function ownerSelfSource(): array
+    {
+        return [Employee::drillSourceType(), 'employee_id'];
     }
 
     public function isPending(): bool

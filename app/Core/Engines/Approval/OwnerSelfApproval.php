@@ -6,6 +6,7 @@ namespace App\Core\Engines\Approval;
 
 use App\Core\Contracts\Drillable;
 use App\Core\Contracts\IsAMasterRecord;
+use App\Core\Contracts\ShownInOwnerSelfReport;
 use App\Core\Engines\Report\ReportEngine;
 use App\Core\Services\PartyRegistry;
 use App\Core\Services\PermissionSyncer;
@@ -191,7 +192,7 @@ final class OwnerSelfApproval
             ->whereBetween('d.decided_at', [$from, $to])
             ->whereRaw('d.id = (SELECT MAX(d2.id) FROM approval_decisions d2 WHERE d2.approval_id = a.id AND d2.user_id = a.requested_by'
                 .' AND d2.decision = '.$approved.' AND d2.on_behalf_of IS NULL)')
-            ->select($this->select($class, $columns, 'd.decided_at', 'COALESCE(a.amount, '.$this->amountOf($columns).')', 'approved'));
+            ->select($this->select($class, $columns, 'd.decided_at', $this->approvedAmountOf($class, $columns), 'approved', $this->typeOfRequest($class, $columns, $company)));
     }
 
     /**
@@ -230,14 +231,14 @@ final class OwnerSelfApproval
      * @param  list<string>  $columns
      * @return list<\Illuminate\Contracts\Database\Query\Expression>
      */
-    private function select(string $class, array $columns, string $at, string $amount, string $how): array
+    private function select(string $class, array $columns, string $at, string $amount, string $how, ?string $type = null): array
     {
         $pdo = DB::getPdo();
         $date = $this->first($columns, ['trx_date', 'date', 'voucher_date', 'claimed_on', 'deliver_on']);
 
         return [
             DB::raw(($date !== null ? 'p.'.$date : 'DATE('.$at.')').' as paper_date'),
-            DB::raw($pdo->quote($this->typeLabel($class)).' as paper_type'),
+            DB::raw(($type ?? $pdo->quote($this->typeLabel($class))).' as paper_type'),
             DB::raw((in_array('document_no', $columns, true) ? "COALESCE(p.document_no, CONCAT('#', p.id))" : "CONCAT('#', p.id)").' as document_no'),
             DB::raw($this->partyKeyOf($columns).' as party_key'),
             DB::raw($amount.' as amount'),
@@ -246,7 +247,7 @@ final class OwnerSelfApproval
             DB::raw($at.' as approved_at'),
             DB::raw($pdo->quote(__('core.owner_self.how_'.$how)).' as how'),
             DB::raw($pdo->quote($this->sourceOf($class)).' as source_type'),
-            DB::raw('p.id as source_id'),
+            DB::raw($this->sourceIdOf($class).' as source_id'),
             DB::raw((in_array('branch_id', $columns, true) ? 'p.branch_id' : 'NULL').' as branch_id'),
         ];
     }
@@ -302,7 +303,48 @@ final class OwnerSelfApproval
 
     private function sourceOf(string $class): string
     {
+        if (is_subclass_of($class, ShownInOwnerSelfReport::class)) {
+            return $class::ownerSelfSource()[0];
+        }
+
         return is_subclass_of($class, Drillable::class) ? $class::drillSourceType() : '';
+    }
+
+    private function sourceIdOf(string $class): string
+    {
+        return 'p.'.(is_subclass_of($class, ShownInOwnerSelfReport::class) ? $class::ownerSelfSource()[1] : 'id');
+    }
+
+    /**
+     * অনুমোদনের অঙ্ক — খালি হলে কাগজের নিজের ঘর থেকে।
+     * ⛔ যার অঙ্ক চাবির পেছনে ([[ShownInOwnerSelfReport]]) তার কোনোটাই নয়।
+     *
+     * @param  list<string>  $columns
+     */
+    private function approvedAmountOf(string $class, array $columns): string
+    {
+        return is_subclass_of($class, ShownInOwnerSelfReport::class) ? 'NULL' : 'COALESCE(a.amount, '.$this->amountOf($columns).')';
+    }
+
+    /**
+     * নিজের নম্বর নেই এমন সারিতে (কর্মীর কাঠামো বদল, ব্যাংকের বদল) ধরনের নাম অনুরোধের কাজ থেকে — "কর্মী" লেখা থাকলে কী অনুমোদন
+     * হলো বোঝা যেত না।
+     *
+     * @param  list<string>  $columns
+     */
+    private function typeOfRequest(string $class, array $columns, int $company): ?string
+    {
+        if (in_array('document_no', $columns, true)) {
+            return null;
+        }
+
+        $pdo = DB::getPdo();
+        $cases = DB::table('approvals')->where('company_id', $company)->where('approvable_type', $class)
+            ->distinct()->get(['module', 'action'])
+            ->map(fn ($r) => 'WHEN a.module = '.$pdo->quote((string) $r->module).' AND a.action = '.$pdo->quote((string) $r->action)
+                .' THEN '.$pdo->quote(app(ApprovalLabel::class)->of((string) $r->module, (string) $r->action)))->all();
+
+        return $cases === [] ? null : 'CASE '.implode(' ', $cases).' ELSE '.$pdo->quote($this->typeLabel($class)).' END';
     }
 
     /**
@@ -312,7 +354,8 @@ final class OwnerSelfApproval
      */
     private function columnsOf(string $class): ?array
     {
-        if (! class_exists($class) || ! is_subclass_of($class, Model::class) || ! is_subclass_of($class, Drillable::class)
+        if (! class_exists($class) || ! is_subclass_of($class, Model::class)
+            || ! (is_subclass_of($class, Drillable::class) || is_subclass_of($class, ShownInOwnerSelfReport::class))
             || is_subclass_of($class, IsAMasterRecord::class)) {
             return null;
         }

@@ -51,6 +51,7 @@ use Tests\TestCase;
 final class ACancelledRunsBankLineIsNotReleasedByItselfTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\SeesTheOwnersOwnMark;
     use SignsTheSecondHand;
 
     private const NUMBER = '5555555555555';
@@ -218,7 +219,7 @@ final class ACancelledRunsBankLineIsNotReleasedByItselfTest extends TestCase
     }
 
     /** ⛔ মালিকও নিজের চাওয়ায় দ্বিতীয় সই নন (fe, ২১ অক্টোবর ২০২৬; [[ApprovalEngine::twoHands()]]) */
-    public function test_the_owner_cannot_sign_his_own_bank_did_not_pay(): void
+    public function test_the_owner_signs_his_own_bank_did_not_pay_with_the_mark(): void
     {
         $this->as($this->owner)->post(route('hr.payroll.cancel', $this->september->id), ['reason' => 'wrong month'])->assertSessionHasNoErrors();
         $this->as($this->owner)->post(route('hr.payroll.held.bank_unpaid', $this->payment()->id), ['reason' => 'Returned by the bank'])
@@ -226,14 +227,11 @@ final class ACancelledRunsBankLineIsNotReleasedByItselfTest extends TestCase
         $line = BankUnpaidLine::query()->sole();
         $approval = app(HeldWages::class)->unpaidApprovalOf($line);
 
-        $this->assertFalse(app(ApprovalEngine::class)->canDecide($approval->fresh(), $this->owner->fresh()), '⛔ মালিক নিজের চাওয়ায় নিজেই দ্বিতীয় সই।');
+        $this->assertNotNull($this->payment(), '⛔ অনুমোদনের আগেই মজুরি ছাড়া পেল।');
         $this->as($this->owner)->from(route('hr.payroll.held.index'))->post(route('hr.payroll.held.bank_unpaid_sign', $line->id))
-            ->assertSessionHasErrors('bank_unpaid');
-        $this->assertSame(BankUnpaidLine::PENDING, (string) $line->fresh()->status);
-        $this->assertNotNull($this->payment(), '⛔ মালিকের এক হাতে মজুরি ছাড়া পেল।');
-
-        $this->as($this->accountant)->post(route('hr.payroll.held.bank_unpaid_sign', $line->id))->assertSessionHasNoErrors();
-        $this->assertNull($this->payment(), '⛔ আরেকজনের সইয়েও মজুরি ছাড়া পেল না।');
+            ->assertSessionHasNoErrors();
+        $this->assertNull($this->payment(), '⛔ মালিকের নিজের অনুমোদনে মজুরি ছাড়া পেল না।');
+        $this->assertOwnerSelfMarked($approval);
     }
 
     /**
