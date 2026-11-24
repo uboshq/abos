@@ -301,7 +301,16 @@ class PartyMessageController extends Controller
             PartyMessageTemplate::WHATSAPP, PartyMessageTemplate::SMS => $t->channel === $tab,
             'off' => ! $t->is_active,
             default => true,
-        })->values();
+        });
+
+        // ⓘ খোঁজা আর ছাঁকনি — কেবল তালিকার সারিতে; ট্যাবের গোনা আর পাশের সম্পাদক আগের মতো
+        $find = mb_strtolower($request->string('q')->trim()->value());
+        $type = $request->string('type')->value();
+        $typeNames = self::templateTypes();
+        $typeNames = collect($typeNames)
+            ->mapWithKeys(fn ($key) => [(string) $key => (string) __('notification::party.types.'.$key)])->all();
+        $rows = $rows->filter(fn (PartyMessageTemplate $t): bool => ($find === '' || str_contains(mb_strtolower((string) $t->name), $find))
+            && ($type === '' || $t->document_type === $type))->values();
 
         $template ??= $rows->first() ?? new PartyMessageTemplate([
             'channel' => $tab === PartyMessageTemplate::SMS ? PartyMessageTemplate::SMS : PartyMessageTemplate::WHATSAPP,
@@ -320,6 +329,7 @@ class PartyMessageController extends Controller
             ],
             'template' => $template,
             'types' => self::templateTypes(),
+            'typeNames' => $typeNames,
             // ⓘ Meta-র অনুমোদনে পাঠানো — Cloud API-র কাজ যেদিন বসে (আলাদা সাহায্যকারীর রুট); না থাকলে বোতামই নেই
             'metaSubmit' => \Illuminate\Support\Facades\Route::has('notification.party_templates.meta_submit'),
         ]);
