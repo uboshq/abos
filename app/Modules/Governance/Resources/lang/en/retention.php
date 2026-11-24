@@ -11,6 +11,7 @@ return [
     'enforced_by' => 'Enforced by',
     'rows_now' => 'Rows now',
     'forever' => 'Forever',
+    'limited' => 'For a set time',
     'days' => '{1} 1 day|[2,*] :count days',
     'by_nobody' => 'Nothing deletes these — no job touches them',
     'by_schedule' => 'The nightly schedule',

@@ -12,16 +12,37 @@
     use App\Modules\Governance\Services\WhatIsKeptHowLong;
 
     $abosHead = \App\Core\Support\AbosHead::on();
+    $kind = fn ($row) => (string) __('governance::retention.kind.'.$row['key']);
+    $columns = [
+        ['key' => 'what', 'label' => __('governance::retention.what'), 'wrap' => true, 'render' => fn ($row) => view('governance::retention.partials.what', ['row' => $row])],
+        ['key' => 'kept', 'label' => __('governance::retention.how_long'), 'width' => '12rem', 'render' => fn ($row) => view('governance::retention.partials.kept', ['row' => $row])],
+        ['key' => 'by', 'label' => __('governance::retention.enforced_by'), 'wrap' => true, 'render' => fn ($row) => __('governance::retention.by_'.$row['by'])],
+        ['key' => 'rows', 'label' => __('governance::retention.rows_now'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($row) => (string) ($row['rows'] ?? '—')],
+    ];
+    $facetPanel = \App\Core\ListFilter\Facets::panel($abosHead ? [\App\Core\ListFilter\Facets::pick('kept', __('governance::retention.how_long'),
+        ['forever' => __('governance::retention.forever'), 'limited' => __('governance::retention.limited')])] : []);
+    // ⓘ সারি কোডে বাঁধা, তাই খোঁজা, ছাঁকনি আর সাজানো এখানেই — কেবল ABOS রূপে
+    $find = mb_strtolower(request()->string('q')->trim()->value());
+    $shown = collect($rows)
+        ->filter(fn ($row) => $find === '' || str_contains(mb_strtolower($kind($row)), $find))
+        ->filter(fn ($row) => match (request('kept')) {
+            'forever' => $row['kept'] === WhatIsKeptHowLong::FOREVER,
+            'limited' => $row['kept'] !== WhatIsKeptHowLong::FOREVER,
+            default => true,
+        });
+    $shown = (request('sort') === 'rows' ? $shown->sortByDesc(fn ($row) => (int) ($row['rows'] ?? 0)) : $shown)->values();
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('governance::retention.title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('governance::retention.title')"
                           :subtitle="__('governance::retention.note', ['years' => $lawYears])"
                           :info="$abosHead ? __('governance::retention.footer') : null" />
     </x-slot:header>
+    @endunless
 
     {{-- ⚠️ সবচেয়ে দুর্বল জায়গাটা উপরে, কারণ দুইটা জিনিস এক মনে হয়:
          খাতা চিরকাল থাকে, কিন্তু ব্যাকআপ ত্রিশ দিনের। ডাটাবেস হারালে
@@ -31,6 +52,18 @@
         {{ __('governance::retention.backup_gap', ['days' => $backupDays, 'years' => $lawYears]) }}
     </section>
 
+    @if ($abosHead)
+        <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+        <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :title="__('governance::retention.title')" :info="__('governance::retention.note', ['years' => $lawYears]).' '.__('governance::retention.footer')"
+                              :search-placeholder="__('governance::retention.what')" :share="false" :columns="$columns" :facets="$facetPanel"
+                              :sort="['plan' => __('governance::retention.what'), 'rows' => __('governance::retention.rows_now')]" />
+            </form>
+            <x-ui.table :rows="$shown" :columns="$columns" :row-attributes="fn ($row) => ['data-kept' => $row['key']]" :empty="__('core.empty.no_results')" />
+        </div>
+        </x-ui.filter-layout>
+    @else
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
         <table class="ui-list table-cards w-full border-collapse">
@@ -79,6 +112,7 @@
             </tbody>
         </table>
     </div>
+    @endif
 
     @unless ($abosHead)
         <p class="mt-3 text-2xs text-(--color-ink-muted)">{{ __('governance::retention.footer') }}</p>
