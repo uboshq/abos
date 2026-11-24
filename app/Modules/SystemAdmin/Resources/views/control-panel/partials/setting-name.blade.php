@@ -1,7 +1,7 @@
 {{-- নাম, ব্যাখ্যা আর স্তরের চিহ্ন --}}
-<span>{{ $setting['text'] }}</span>
+<span class="whitespace-normal">{{ $setting['text'] }}</span>
 @if (__($setting['label'].'_hint') !== $setting['label'].'_hint')
-    <span data-setting-hint class="mt-0.5 block text-xs font-normal text-(--color-ink-muted)">{{ __($setting['label'].'_hint') }}</span>
+    <span data-setting-hint tabindex="0" class="ms-1 inline-block cursor-help align-middle text-(--color-ink-muted)" title="{{ __($setting['label'].'_hint') }}" aria-label="{{ __($setting['label'].'_hint') }}"><x-ui.icon name="info" :size="15" /></span>
 @endif
 @foreach (['per_branch' => 'branch', 'signed' => 'signed', 'product' => 'product'] as $flag => $name)
     @if ($setting[$flag])

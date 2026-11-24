@@ -6,15 +6,17 @@
         <x-ui.page-header :title="$title" />
     </x-slot:header>
 
-    <form method="GET" action="{{ route('system_admin.module.why') }}" class="mb-4 grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-4" data-no-swap>
+    <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
+    <form method="GET" action="{{ route('system_admin.module.why') }}" class="grid items-end gap-4 sm:grid-cols-2 lg:grid-cols-4" data-no-swap>
         <x-ui.select name="person" :label="__('system_admin::module_board.why_person')" :options="$people->pluck('name', 'id')->all()" :selected="$person" required />
         <x-ui.select name="branch" :label="__('core.company.branch')" :options="$branches->mapWithKeys(fn ($b) => [$b->id => $b->name()])->all()" :selected="$branch" required />
         <x-ui.select name="screen" :label="__('system_admin::module_board.why_screen')" :options="$screens" :selected="$screen" required />
         <x-ui.button type="submit" tone="primary">{{ __('system_admin::module_board.why_check') }}</x-ui.button>
     </form>
+    </div>
 
     @if ($steps !== [])
-        <div data-boxed data-why class= + CARD + r>
+        <div data-boxed data-why class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
             <ul class="divide-y divide-(--color-border)">
                 @foreach ($steps as $step)
                     <li class="flex items-center gap-3 px-4 py-3 text-sm" data-why-step="{{ $step['ok'] ? 'ok' : 'stop' }}">

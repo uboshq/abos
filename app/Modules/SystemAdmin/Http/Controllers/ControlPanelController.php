@@ -59,9 +59,14 @@ class ControlPanelController extends Controller implements HasMiddleware
      * একশোর বেশি মেনু সারি — এক পাতায় দেড়শো সুইচ মানে কেউ কিছু
      * খুঁজে পায় না, তাই কেউ কিছু বদলায়ও না।
      */
-    public function edit(Request $request): View
+    public function edit(Request $request): View|RedirectResponse
     {
         $tab = is_string($request->query('tab')) ? $request->query('tab') : ControlSubjects::PREFIX.ControlSubjects::ALL[0];
+
+        // ⓘ মডিউল চালু/বন্ধের জায়গা এখন একটাই — কোম্পানির মডিউল (তালা সহ)
+        if ($tab === 'switches') {
+            return redirect()->route('system_admin.module.companies');
+        }
 
         // ⭐ বিষয় ধরে ([[ControlSubjects]]; মালিক, ২৪ নভেম্বর ২০২৬) — বাকি ঠিকানা (মডিউল, মোবাইল, সুইচ) আগের পাতাতেই খোলে
         if (ControlSubjects::fromTab($tab) !== null) {
@@ -707,7 +712,8 @@ class ControlPanelController extends Controller implements HasMiddleware
          * বার্তাটা সত্যি কথাই বলে।
          */
         foreach ($this->switches->tree() as $module) {
-            if (! ($module['essential'] ?? false)) {
+            // ⓘ তালাবন্ধ মডিউল (হিসাব ইত্যাদি) হাতে বানানো অনুরোধেও বন্ধ হয় না ([[ModuleBoard::LOCKED]]; মালিক, ২৪ নভেম্বর ২০২৬)
+            if (! ($module['essential'] ?? false) && ! app(\App\Modules\SystemAdmin\Support\ModuleBoard::class)->locked($module['code'])) {
                 $known[$module['key']] = true;
             }
 

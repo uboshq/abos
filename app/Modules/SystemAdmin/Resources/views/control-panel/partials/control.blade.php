@@ -8,8 +8,7 @@
     <input type="hidden" form="board-form" name="scope[]" value="{{ $setting['key'] }}">
 @endunless
 @if ($setting['type'] === 'boolean')
-    <input type="checkbox" role="switch" form="board-form" name="settings[{{ $setting['key'] }}]" value="1" class="size-4" aria-label="{{ $label }}"
-           @checked($setting['value']) @disabled($locked)>
+    @include('system_admin::partials.switch', ['name' => 'settings['.$setting['key'].']', 'form' => 'board-form', 'label' => $label, 'checked' => (bool) $setting['value'], 'disabled' => $locked])
     @if ($locked)
         <span class="block text-2xs text-(--color-ink-muted)">{{ __('system_admin::settings.super_admin_only') }}</span>
     @endif

@@ -54,6 +54,7 @@ return [
     'name_en' => 'English name',
     'used' => 'In use',
     'unused' => 'Not used',
+    'no_packages' => 'No package yet',
     'package' => 'Package',
     'package_new' => 'New package',
     'package_custom' => ':name · by hand',

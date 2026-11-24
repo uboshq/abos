@@ -7,8 +7,8 @@
         ['key' => 'group', 'label' => __('core.table.type'), 'render' => fn ($m) => $m['group']],
         ['key' => 'on', 'label' => __('core.table.status'), 'render' => fn ($m) => __('system_admin::module_board.'.($m['on'] ? 'on' : 'off'))],
         ['key' => 'pick', 'label' => __('system_admin::module_board.on'), 'width' => '5rem',
-            'render' => fn ($m) => new HtmlString('<input type="checkbox" role="switch" form="board-form" name="settings['.e($m['key']).']" value="1" class="size-4"'.($m['on'] ? ' checked' : '').' aria-label="'.e($m['label']).'">'
-                .'<input type="hidden" form="board-form" name="scope[]" value="'.e($m['key']).'">')],
+            'render' => fn ($m) => new HtmlString('<input type="hidden" form="board-form" name="scope[]" value="'.e($m['key']).'">'
+                .view('system_admin::partials.switch', ['name' => 'settings['.$m['key'].']', 'form' => 'board-form', 'label' => $m['label'], 'checked' => $m['on']])->render())],
     ];
 @endphp
 <x-layouts.app :menu="$menu">

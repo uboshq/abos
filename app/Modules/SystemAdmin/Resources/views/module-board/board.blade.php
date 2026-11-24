@@ -19,12 +19,12 @@
                 .(in_array((int) $r->id, $ids, true) ? ' checked' : '').' aria-label="'.e($r->name()).'">')],
         ['key' => 'name', 'label' => __('core.table.name'),
             'render' => fn ($r) => new HtmlString('<a href="'.e(route($here, [...$keep, ...$filters, 'pick' => [(int) $r->id]])).'" class="'
-                .(in_array((int) $r->id, $ids, true) ? 'font-semibold ' : '').'text-(--color-link) hover:underline">'.e($r->name()).'</a>')],
+                .(in_array((int) $r->id, $ids, true) ? 'font-semibold ' : '').'text-(--color-ink) hover:underline">'.e($r->name()).'</a>')],
         $isBranch ? ['key' => 'package', 'label' => __('system_admin::module_board.package'),
             'render' => fn ($r) => isset($packages[(int) $r->id])
                 ? ($packages[(int) $r->id]['custom'] ? __('system_admin::module_board.package_custom', ['name' => $packages[(int) $r->id]['name']]) : $packages[(int) $r->id]['name']) : '—'] : null,
         ['key' => 'off', 'label' => __('system_admin::module_board.off'), 'numeric' => true, 'width' => '4rem',
-            'render' => fn ($r) => (string) count($off[(int) $r->id] ?? [])],
+            'render' => fn ($r) => ($off[(int) $r->id] ?? []) === [] ? '' : (string) count($off[(int) $r->id])],
     ]));
     $who = count($ids) === 1 ? ($names[$ids[0]] ?? '') : __('system_admin::module_board.picked_many', ['n' => count($ids)]);
     $wasState = collect($was)->flatMap(fn ($g) => $g['rows'])->pluck('state', 'code');
@@ -64,13 +64,13 @@
             </form>
         </div>
 
-        <div class="grid items-start gap-4 xl:grid-cols-3">
+        <div class="grid items-start gap-4 lg:grid-cols-[16.25rem_minmax(0,1fr)]">
             <div data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                 <div class="flex flex-wrap items-center gap-3 border-b border-(--color-border) px-3 py-2 text-sm">
-                    <button type="submit" form="list-form" class="font-semibold text-(--color-link) hover:underline">{{ __('system_admin::module_board.show_picked') }}</button>
-                    <a href="{{ route($here, [...$keep, ...$filters, 'pick' => 'all']) }}" data-pick-all class="text-(--color-link) hover:underline">{{ __('system_admin::module_board.pick_all') }}</a>
+                    <button type="submit" form="list-form" class="font-semibold text-(--color-ink) hover:underline">{{ __('system_admin::module_board.show_picked') }}</button>
+                    <a href="{{ route($here, [...$keep, ...$filters, 'pick' => 'all']) }}" data-pick-all class="text-(--color-ink-muted) hover:underline">{{ __('system_admin::module_board.pick_all') }}</a>
                     @if ($ids !== [])
-                        <a href="{{ route($here, [...$keep, ...$filters, 'pick' => [$ids[0]]]) }}" data-pick-one class="text-(--color-link) hover:underline">{{ __('system_admin::module_board.pick_one') }}</a>
+                        <a href="{{ route($here, [...$keep, ...$filters, 'pick' => [$ids[0]]]) }}" data-pick-one class="text-(--color-ink-muted) hover:underline">{{ __('system_admin::module_board.pick_one') }}</a>
                     @endif
                 </div>
                 <x-ui.table :rows="$rows" :columns="$columns" :compact="true" :empty="__('core.empty.no_results')" />
@@ -78,7 +78,7 @@
                 <x-ui.list-totals :rows="$rows" />
             </div>
 
-            <div class="min-w-0 xl:col-span-2">
+            <div class="min-w-0">
                 @if ($ids === [])
                     <x-ui.empty-state :message="__('system_admin::branch_module.no_branches')" />
                 @else
@@ -92,13 +92,14 @@
                             @foreach ($ids as $id)
                                 <input type="hidden" name="pick[]" value="{{ $id }}">
                             @endforeach
-                            <select name="copy_from" aria-label="{{ __('system_admin::module_board.copy_from') }}"
+                            <select name="copy_from" data-action="submit-form" aria-label="{{ __('system_admin::module_board.copy_from') }}"
                                     class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                                <option value="">{{ __('system_admin::module_board.copy_from') }}</option>
                                 @foreach ($copyable as $id => $name)
+                                    @continue ($ids === [$id])
                                     <option value="{{ $id }}">{{ $name }}</option>
                                 @endforeach
                             </select>
-                            <x-ui.button type="submit" tone="secondary">{{ __('system_admin::module_board.copy_from') }}</x-ui.button>
                         </form>
                         @if ($isBranch)
                             <form method="POST" action="{{ route('system_admin.module.branches.preview') }}" data-reset-form>
@@ -111,6 +112,23 @@
                                 <x-ui.button type="submit" tone="secondary">{{ __('system_admin::module_board.reset') }}</x-ui.button>
                             </form>
                         @endif
+                        <details data-module-history class="relative">
+                            <summary class="cursor-pointer list-none rounded-(--radius-field) border border-(--color-border) px-3 py-1">{{ __('system_admin::module_board.history') }}</summary>
+                            <div class="absolute end-0 z-30 mt-1 w-96 overflow-y-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) shadow-lg" style="max-height: 60vh">
+                        <ul class="divide-y divide-(--color-border)">
+                            @forelse ($history as $h)
+                                <li class="flex flex-wrap gap-3 px-4 py-2 text-sm">
+                                    <span class="tabular text-(--color-ink-muted)">{{ $h['when'] ? \App\Core\Support\DateFormat::spoken($h['when']) : '—' }}</span>
+                                    <span>{{ $h['who'] ?? '—' }}</span>
+                                    <span>{{ $h['where'] }} · {{ $h['module'] }}</span>
+                                    <b>{{ __('system_admin::module_board.'.($h['on'] ? 'on' : 'off')) }}</b>
+                                </li>
+                            @empty
+                                <li class="px-4 py-2 text-sm text-(--color-ink-muted)">{{ __('system_admin::module_board.no_history') }}</li>
+                            @endforelse
+                        </ul>
+                            </div>
+                        </details>
                     </div>
 
                     <form id="board-form" method="POST" action="{{ route($here.'.preview') }}" class="space-y-4">
@@ -123,9 +141,9 @@
                         @endforeach
 
                         @foreach ($groups as $group)
-                            <section data-boxed class= + CARD + r data-module-group="{{ $group['key'] }}">
-                                <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold">{{ $group['label'] }}</h2>
-                                <div class="grid gap-x-4 px-4 py-2 sm:grid-cols-2">
+                            <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)" data-module-group="{{ $group['key'] }}">
+                                <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-2 text-sm font-semibold">{{ $group['label'] }}</h2>
+                                <div class="grid gap-x-4 px-4 py-2 sm:grid-cols-2 xl:grid-cols-3">
                                     @foreach ($group['rows'] as $row)
                                         @include('system_admin::module-board.partials.row', ['row' => $row, 'was' => $wasState[$row['code']] ?? $row['state'], 'copied' => $copied])
                                     @endforeach
@@ -133,22 +151,6 @@
                             </section>
                         @endforeach
                     </form>
-
-                    <details data-module-history class="mt-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-                        <summary class="cursor-pointer px-4 py-3 text-sm font-semibold">{{ __('system_admin::module_board.history') }}</summary>
-                        <ul class="divide-y divide-(--color-border) border-t border-(--color-border)">
-                            @forelse ($history as $h)
-                                <li class="flex flex-wrap gap-3 px-4 py-2 text-sm">
-                                    <span class="tabular text-(--color-ink-muted)">{{ $h['when'] ? \App\Core\Support\DateFormat::spoken($h['when']) : '—' }}</span>
-                                    <span>{{ $h['who'] ?? '—' }}</span>
-                                    <span>{{ $h['where'] }} · {{ $h['module'] }}</span>
-                                    <b>{{ __('system_admin::module_board.'.($h['on'] ? 'on' : 'off')) }}</b>
-                                </li>
-                            @empty
-                                <li class="px-4 py-2 text-sm text-(--color-ink-muted)">{{ __('system_admin::module_board.no_history') }}</li>
-                            @endforelse
-                        </ul>
-                    </details>
                 @endif
             </div>
         </div>

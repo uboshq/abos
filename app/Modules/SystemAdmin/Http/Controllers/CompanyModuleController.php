@@ -53,7 +53,9 @@ class CompanyModuleController extends Controller implements HasMiddleware
 
         $ids = ModuleBoard::picked($request->query('pick', []), $shown->pluck('id')->map(fn ($id) => (int) $id)->all());
         if ($ids === [] && $shown->isNotEmpty()) {
-            $ids = [(int) $shown->first()->id];
+            // ⓘ খোলা কোম্পানিটাই আগে — নামের প্রথমটা নয়
+            $here = (int) \App\Core\Support\CompanyContext::id();
+            $ids = [$shown->contains('id', $here) ? $here : (int) $shown->first()->id];
         }
         $names = $mine->mapWithKeys(fn (Company $c) => [(int) $c->id => $c->name()])->all();
 

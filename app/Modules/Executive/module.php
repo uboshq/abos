@@ -107,7 +107,7 @@ return [
             'key' => 'executive.daily_mail_enabled',
             'super_admin_only' => true,
             'label' => 'executive::settings.daily_mail_enabled',
-            'type' => 'bool',
+            'type' => 'boolean',
             'default' => true,
             'group' => 'general',
         ],

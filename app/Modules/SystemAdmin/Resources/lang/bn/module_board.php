@@ -54,6 +54,7 @@ return [
     'name_en' => 'ইংরেজি নাম',
     'used' => 'ব্যবহারে আছে',
     'unused' => 'কোথাও বসানো নেই',
+    'no_packages' => 'এখনো কোনো প্যাকেজ নেই',
     'package' => 'প্যাকেজ',
     'package_new' => 'নতুন প্যাকেজ',
     'package_custom' => ':name · নিজের মতো',

@@ -16,8 +16,7 @@
             <small class="block text-2xs text-(--color-ink-muted)">{{ __('system_admin::module_board.screens_count', ['n' => $row['screens']]) }}</small>
         @endif
     </span>
-    <input type="checkbox" role="switch" name="modules[{{ $row['code'] }}]" value="1" class="size-4" aria-label="{{ $row['label'] }}"
-           @checked($row['on'] && ! $row['wall']) @disabled($row['locked'] || $row['wall'])>
+    @include('system_admin::partials.switch', ['name' => 'modules['.$row['code'].']', 'label' => $row['label'], 'checked' => $row['on'] && ! $row['wall'], 'disabled' => $row['locked'] || $row['wall']])
     @unless ($row['locked'] || $row['wall'])
         <input type="hidden" name="scope[]" value="{{ $row['code'] }}">
         <input type="hidden" name="was[{{ $row['code'] }}]" value="{{ $mixed ? 'mixed' : $was }}">
