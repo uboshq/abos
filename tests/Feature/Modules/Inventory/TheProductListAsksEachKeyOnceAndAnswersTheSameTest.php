@@ -41,6 +41,9 @@ final class TheProductListAsksEachKeyOnceAndAnswersTheSameTest extends TestCase
 
         $answer = function () {
             $user = auth()->user();
+            // ⓘ চাবির তালিকা আর রোল আগে তোলা — আসল পাতায় মেনু তা আগেই করে
+            $user->can('claim.warm');
+            $user->can('claim.warm');
             $out = ['asked' => 0, 'same' => true, 'rows' => 0, 'may' => []];
             Gate::after(function ($u, string $ability, $result, array $arguments = []) use (&$out) {
                 if (($arguments[0] ?? null) instanceof Product && ($out['counting'] ?? false)) {
