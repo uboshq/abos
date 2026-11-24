@@ -44,12 +44,15 @@ final class DocumentWorkflowController extends Controller
         abort_unless($user instanceof User, 403);
 
         $mine = $request->boolean('mine');
+        $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
 
         $query = $mine
             ? Approval::query()->pending()->where('requested_by', $user->getKey())
             : $this->engine->pendingQueryFor($user);
 
         $rows = $query->where('approvals.module', DocumentWorkflow::MODULE)
+            ->when($f['from'] ?? null, fn ($q, $d) => $q->whereDate('approvals.due_at', '>=', $d))
+            ->when($f['to'] ?? null, fn ($q, $d) => $q->whereDate('approvals.due_at', '<=', $d))
             ->with(['requester'])
             ->orderBy('approvals.due_at')
             ->orderBy('approvals.id')

@@ -35,7 +35,10 @@ final class DocumentTemplateController extends Controller
     {
         return view('documents::templates.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'rows' => DocumentTemplate::query()->orderBy('title')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
+            'rows' => DocumentTemplate::query()
+                ->when($request->string('doc_type')->value(), fn ($q, $v) => $q->where('doc_type', $v))
+                ->when($request->string('folder')->value(), fn ($q, $v) => $q->where('folder', $v))
+                ->orderBy('title')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'choices' => $this->choices,
         ]);
     }
