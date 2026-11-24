@@ -21,6 +21,11 @@ use Carbon\Carbon;
  */
 final class SalesPartyOpenBills implements PartyOpenBills
 {
+    public function partyType(): string
+    {
+        return 'customer';
+    }
+
     public function openBills(string $partyType, int $partyId, int $limit = 50, bool $withNotes = false): array
     {
         if ($partyType !== 'customer' || $partyId <= 0) {
