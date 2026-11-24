@@ -120,7 +120,7 @@ final class ANoteLeavesTheStockTheBillAndTheBooksInAgreementTest extends TestCas
 
         // ⓘ খসড়ার পরে বিলের শেষ মালটাও অন্য পথে ফিরল — পাকা করতে গেলে সই চাওয়ার আগেই থামে
         $invoice->fresh()->noteReturnGoods([['line_id' => (int) $line->id, 'product_id' => (int) $line->product_id, 'qty' => '1']],
-            now()->toDateString(), 'কাউন্টারে ফেরত', 'TEST');
+            now()->toDateString(), 'কাউন্টারে ফেরত', 'TEST', true);
 
         $this->assertRefused(fn () => app(NoteService::class)->confirm($last->fresh()), 'পাকা করার সময় জায়গা আবার মাপা হয়নি');
         $this->assertTrue($last->fresh()->isDraft());

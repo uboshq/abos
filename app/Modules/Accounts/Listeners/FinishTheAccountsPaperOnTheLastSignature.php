@@ -121,6 +121,13 @@ final class FinishTheAccountsPaperOnTheLastSignature
             return;
         }
 
+        // ⭐ স্টক ছাড়া ভাউচারের উল্টানোর অনুমোদন — পোস্টের অনুমোদন নয়, `reverse` চিহ্ন দেখে
+        if ($paper instanceof \App\Modules\Accounts\Models\TradeVoucher && (((array) $approval->payload)['reverse'] ?? false) === true) {
+            app(\App\Modules\Accounts\Services\AccountsReversalService::class)->finishTradeVoucher($paper, $approval);
+
+            return;
+        }
+
         // ⭐ স্টক ছাড়া বিক্রয়/ক্রয় ভাউচার — শেষ সইয়ে খাতায় (নকশা v5); খসড়া থাকলেই
         if ($paper instanceof \App\Modules\Accounts\Models\TradeVoucher && $paper->isDraft()) {
             app(\App\Modules\Accounts\Services\TradeVoucherService::class)->confirm($paper);

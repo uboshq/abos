@@ -822,7 +822,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
      * ⓘ ফেরতের কারণ বিক্রয় ফেরতের প্রথম চালু কারণ (টীকা লাগে না এমনটা আগে), টীকায় নোটের নম্বর আর বিবরণ। নোটের সই এই ফেরতেরও সই।
      * ⛔ ফেরতই মাল তাকে তোলে আর টাকা খাতায় তোলে (Dr ৪১১০ · Dr ২১২০ / Cr ১১১০; মজুদ Dr ১১২০ / Cr ৫১০০) — নোট ঐ সারি আবার তোলে না।
      */
-    public function noteReturnGoods(array $lines, string $date, string $narration, string $noteNo): array
+    public function noteReturnGoods(array $lines, string $date, string $narration, string $noteNo, bool $approved = false): array
     {
         $service = app(\App\Modules\Sales\Services\SalesReturnService::class);
         $reason = \App\Modules\MasterData\Models\ReasonCode::query()
@@ -849,7 +849,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
             'reason_note' => $note,
         ], $lines));
 
-        $return = $service->confirm($return, approvedUpstream: true);
+        $return = $service->confirm($return, approvedUpstream: $approved);
 
         return [
             'type' => SalesReturn::drillSourceType(),
@@ -870,7 +870,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
             return;
         }
 
-        $return = SalesReturn::query()->withoutGlobalScopes()->whereKey($id)->first();
+        $return = SalesReturn::acrossBranches()->whereKey($id)->first();
 
         if ($return === null || $return->status === \App\Core\Support\DocumentStatus::CANCELLED) {
             return;

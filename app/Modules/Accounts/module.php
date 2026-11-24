@@ -660,8 +660,8 @@ return [
         'note' => Note::class,
         // ⭐ স্টক ছাড়া ভাউচার — খাতায় দুই নাম, একটাই কাগজ ([[TradeVoucher::sourceType()]])
         'trade_voucher' => \App\Modules\Accounts\Models\TradeVoucher::class,
-        'sales_voucher' => \App\Modules\Accounts\Models\TradeVoucher::class,
-        'purchase_voucher' => \App\Modules\Accounts\Models\TradeVoucher::class,
+        'sales_voucher' => \App\Modules\Accounts\Models\SalesVoucherPaper::class,
+        'purchase_voucher' => \App\Modules\Accounts\Models\PurchaseVoucherPaper::class,
         'cheque' => Cheque::class,
         'account' => Account::class,
         'cash_till' => CashTill::class,

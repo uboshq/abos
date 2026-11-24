@@ -218,10 +218,6 @@ export function tradeLines (config = {}) {
             }
         },
 
-        isProduct (line) {
-            return line.type === 'product'
-        },
-
         isService (line) {
             return line.type === 'service'
         },
@@ -668,12 +664,6 @@ export function tradeLines (config = {}) {
         },
 
         // ── খাতা ──────────────────────────────────────────────────────────
-
-        accountLabel (id) {
-            const found = accounts.find((a) => String(a.id) === String(id))
-
-            return found ? found.code + ' · ' + found.name : '—'
-        },
 
         accountCode (id) {
             const found = accounts.find((a) => String(a.id) === String(id))

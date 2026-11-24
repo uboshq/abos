@@ -506,12 +506,25 @@ final class NoteService
             throw ValidationException::withMessages(['lines' => __('accounts::note.return_needs_bill')]);
         }
 
-        $made = $target->noteReturnGoods(
-            $moved->map(fn (NoteLine $l) => ['line_id' => (int) $l->source_line_id, 'product_id' => (int) $l->product_id, 'qty' => (string) $l->qty])->values()->all(),
-            $note->trx_date->toDateString(),
-            (string) ($note->narration ?? ''),
-            (string) $note->document_no,
-        );
+        /*
+         * ⛔ নোটের অনুমোদন থাকলে তবেই সেটা ফেরতেরও অনুমোদন। নোটের ছক না থাকলে নোট বিনা অনুমোদনে পোস্ট হয় — তখন "উপরে অনুমোদিত"
+         * বললে ফেরতের নিজের ছক (ক্রয় ফেরত / বিক্রয় ফেরত) এড়িয়ে মাল বেরিয়ে যেত।
+         */
+        $action = $note->type() === Note::TYPE_CN ? self::DISCOUNT_ACTION : AccountsSignature::NOTE;
+        $approved = app(\App\Core\Engines\Approval\ApprovalEngine::class)->latestFor($note, $action)?->status === \App\Models\Approval::APPROVED;
+
+        try {
+            $made = $target->noteReturnGoods(
+                $moved->map(fn (NoteLine $l) => ['line_id' => (int) $l->source_line_id, 'product_id' => (int) $l->product_id, 'qty' => (string) $l->qty])->values()->all(),
+                $note->trx_date->toDateString(),
+                (string) ($note->narration ?? ''),
+                (string) $note->document_no,
+                $approved,
+            );
+        } catch (\App\Core\Engines\Approval\HeldForApproval) {
+            // ⓘ ফেরতের অনুরোধ এই লেনদেনেই মুছে যায় — "অপেক্ষায়" বললে কেউ কোনোদিন অনুমোদন দিতে পারত না
+            throw ValidationException::withMessages(['status' => __('accounts::note.return_needs_its_approval')]);
+        }
 
         // ⓘ ফেরতের সারি নোটের সারির একই ক্রমে বানানো — ক্রম ধরে মেলানো, যাতে একই বিলের সারি দুবার এলেও প্রতিটা নিজের অঙ্ক পায়
         $made['lines'] = array_values($made['lines']);

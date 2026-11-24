@@ -86,5 +86,7 @@ return [
     'return_needs_bill' => 'Goods-returned lines need the original bill — pick the bill.',
     'discount_no_signer' => 'A credit note is a discount — the owner\'s signature flow is not set, so it cannot post.',
     'bin_missing' => 'The company BIN is empty — Mushak-6.7/6.8 needs your own BIN',
+    'qty_must_be_positive' => 'The quantity must be more than zero.',
+    'return_needs_its_approval' => 'The goods return needs its own approval, but this note has no approval flow. Set a flow for debit/credit notes, or enter the return on its own paper.',
     'qty_over_room' => ':name — of the :billed billed, no more than :qty is left (after earlier returns and other notes\' returns).',
 ];

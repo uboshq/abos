@@ -70,7 +70,7 @@ class TradeVoucher extends Model implements Drillable
 
     public function lines(): HasMany
     {
-        return $this->hasMany(TradeVoucherLine::class)->orderBy('line_no');
+        return $this->hasMany(TradeVoucherLine::class, 'trade_voucher_id')->orderBy('line_no');
     }
 
     public function creator(): BelongsTo
@@ -99,8 +99,8 @@ class TradeVoucher extends Model implements Drillable
     }
 
     /**
-     * ⓘ খাতার নাম ধরন ধরে — "sales_voucher", "purchase_voucher"; লেজারের ঘর থেকে কাগজে ফেরার পথ দুটোই এই ক্লাস
-     * (module.php `drill_sources`)।
+     * ⓘ খাতার নাম ধরন ধরে — "sales_voucher", "purchase_voucher"; লেজারের ঘর থেকে কাগজে ফেরার পথ
+     * [[SalesVoucherPaper]] আর [[PurchaseVoucherPaper]] (module.php `drill_sources`)।
      */
     public static function drillSourceType(): string
     {

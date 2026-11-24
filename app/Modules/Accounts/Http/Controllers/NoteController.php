@@ -26,6 +26,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 /**
@@ -164,7 +165,15 @@ class NoteController extends Controller implements HasMiddleware
 
         // ⭐ "অনুমোদনে পাঠান" — খসড়া বানিয়েই পাকা করার চেষ্টা: সই লাগলে অনুরোধ যায়, না লাগলে খাতায় ওঠে
         if ($request->input('submit') === 'send') {
-            $note = $this->notes->confirm($note);
+            /*
+             * ⛔ থামলে ফর্মে নয়, খসড়ার পাতায় ফেরা — খসড়াটা লেখা হয়ে গেছে; ফর্মে ফিরলে আবার চাপায় দ্বিতীয় খসড়া, দ্বিতীয় নম্বর,
+             * আর মাল ফেরতের সারি দুবার জায়গা নিত ("জায়গা নেই" বলে আর পাঠানোই যেত না)।
+             */
+            try {
+                $note = $this->notes->confirm($note);
+            } catch (ValidationException $stopped) {
+                return redirect()->route('accounts.note.show', $note)->withErrors($stopped->errors());
+            }
 
             return redirect()->route('accounts.note.show', $note)
                 ->with('saved', $note->isDraft() ? __('accounts::note.awaiting_signature') : __('accounts::note.confirmed'));
@@ -208,6 +217,11 @@ class NoteController extends Controller implements HasMiddleware
 
         if ($found === null) {
             return response()->json(['message' => __('accounts::note.against_not_found', ['no' => (string) $request->query('no', '')])], 404);
+        }
+
+        // ⛔ ক্রয় বিলের দর কেনা দর — চাবি না থাকলে JSON-এও যায় না; সার্ভার মাল ফেরতের সারির দর নিজে বিল থেকে নেয়
+        if ($kind === Note::KIND_SUPPLIER && ! TradeCatalog::seesCost()) {
+            $found['lines'] = array_map(fn (array $l) => [...$l, 'rate' => '0.0000'], $found['lines']);
         }
 
         return response()->json($found);

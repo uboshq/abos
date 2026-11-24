@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Modules\Accounts\Services;
 
+use App\Core\Engines\Approval\ApprovalEngine;
+use App\Core\Engines\Approval\DocumentFingerprint;
 use App\Core\Engines\NumberSeries\NumberSeriesEngine;
 use App\Core\Services\OpenPeriod;
 use App\Models\User;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Accounts\Models\Reversal;
+use App\Modules\Accounts\Models\TradeVoucher;
 use App\Modules\Accounts\Models\Voucher;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +40,7 @@ final class AccountsReversalService
         private readonly VoucherService $vouchers,
         private readonly NoteService $notes,
         private readonly NumberSeriesEngine $numbers,
+        private readonly TradeVoucherService $trades,
     ) {}
 
     public function reverseVoucher(Voucher $voucher, User $by, string $reason): Reversal
@@ -88,7 +92,71 @@ final class AccountsReversalService
         });
     }
 
-    private function paper(string $type, int $id, string $no, int $branchId, string $amount, string $reason, User $by): Reversal
+    /**
+     * ⭐ স্টক ছাড়া বিক্রয়/ক্রয় ভাউচারের উল্টো কাগজ — ২৪ নভেম্বর ২০২৬: আগে কেবল লেখার চাবিতে, কোনো কাগজ আর অনুমোদন ছাড়া বাতিল হত।
+     *
+     * ⓘ ভাউচারের পোস্টের যে ছক (`sales_voucher`/`purchase_voucher`), উল্টানোরও সেটাই; ছক না থাকলে সাথে সাথে। ⛔ পোস্টের পুরনো অনুমোদন
+     * উল্টানোর অনুমোদন নয় — প্রতিবার নতুন অনুরোধ, `reverse` চিহ্নসহ; শেষ অনুমোদনে [[finishTradeVoucher()]]।
+     *
+     * @return Reversal|null  `null` — অনুমোদনের অপেক্ষায়; কিছুই উল্টায়নি
+     */
+    public function reverseTradeVoucher(TradeVoucher $voucher, User $by, string $reason): ?Reversal
+    {
+        $reason = $this->reason($reason);
+        $this->assertTradeReversible($voucher);
+
+        $waiting = app(ApprovalEngine::class)->request(
+            document: $voucher,
+            module: AccountsSignature::MODULE,
+            action: $voucher->isSale() ? AccountsSignature::SALES_VOUCHER : AccountsSignature::PURCHASE_VOUCHER,
+            amount: (string) $voucher->total,
+            payload: ['reverse' => true, 'reason' => $reason],
+            reason: mb_substr((string) __('accounts::reversal.asked', ['no' => $voucher->document_no, 'reason' => $reason]), 0, 250),
+            userId: (int) $by->id,
+            stateHash: app(DocumentFingerprint::class)->of($voucher),
+            matchOn: ApprovalEngine::fieldsOf($voucher),
+        );
+
+        return $waiting === null ? $this->writeTradeReversal($voucher, (int) $by->id, $reason) : null;
+    }
+
+    /** শেষ অনুমোদনে — যিনি চেয়েছিলেন তাঁর নামে, তাঁর লেখা কারণে; আগেই উল্টানো হলে কিছু নয় */
+    public function finishTradeVoucher(TradeVoucher $voucher, \App\Models\Approval $approval): ?Reversal
+    {
+        if (! $voucher->isConfirmed()) {
+            return null;
+        }
+
+        $by = $approval->requested_by;
+
+        return $this->writeTradeReversal($voucher, $by === null ? null : (int) $by, $this->reason((string) (((array) $approval->payload)['reason'] ?? '')));
+    }
+
+    private function writeTradeReversal(TradeVoucher $voucher, ?int $by, string $reason): Reversal
+    {
+        return DB::transaction(function () use ($voucher, $by, $reason) {
+            $locked = TradeVoucher::acrossBranches()->lockForUpdate()->findOrFail($voucher->id);
+            $this->assertTradeReversible($locked);
+
+            $paper = $this->paper(Reversal::TRADE_VOUCHER, (int) $locked->id, $locked->document_no, (int) $locked->branch_id, (string) $locked->total, $reason, $by);
+
+            $this->trades->cancel($locked, $this->narration($paper, $reason), $paper->document_no);
+            $locked->auditAction('reversed', $paper->document_no.' — '.$reason);
+
+            return $paper;
+        });
+    }
+
+    private function assertTradeReversible(TradeVoucher $voucher): void
+    {
+        if (! $voucher->isConfirmed()) {
+            throw ValidationException::withMessages(['cancel_reason' => __('accounts::reversal.not_posted', ['no' => $voucher->document_no])]);
+        }
+
+        $this->assertMonthOpen($voucher->document_no, $voucher->trx_date);
+    }
+
+    private function paper(string $type, int $id, string $no, int $branchId, string $amount, string $reason, User|int|null $by): Reversal
     {
         if (Reversal::of($type, $id) !== null) {
             throw ValidationException::withMessages(['cancel_reason' => __('accounts::reversal.already', ['no' => $no])]);
@@ -103,7 +171,7 @@ final class AccountsReversalService
             'trx_date' => Carbon::today()->toDateString(),
             'reason' => $reason,
             'amount' => $amount,
-            'created_by' => $by->id,
+            'created_by' => $by instanceof User ? $by->id : $by,
         ]);
     }
 

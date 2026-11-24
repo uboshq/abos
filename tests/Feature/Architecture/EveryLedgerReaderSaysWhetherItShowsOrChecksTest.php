@@ -100,6 +100,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
     private const CHECKS = [
+        'app/Modules/Accounts/Services/NoteService.php' => 'নোট বাতিলের আগে মেলায়: নোটের (source_type, source_id) ধরে খাতায় সারি আছে কি না ↔ নোটের অবস্থা "পোস্ট" — দুটোই হলে উল্টায়; কেবল মাল ফেরতের নোটে নিজের সারি থাকে না। গোটা কোম্পানি: শাখা ছাঁকলে দাখিলা না পেয়ে না উল্টেই বাতিল হত',
+        'app/Modules/Accounts/Services/TradeVoucherService.php' => 'ভাউচার উল্টানোর আগে মেলায়: ভাউচারের (source_type, source_id) ধরে খাতায় সারি আছে কি না ↔ ভাউচারের অবস্থা "পোস্ট" — দুটোই হলে উল্টায়। গোটা কোম্পানি, একই কারণ',
         'app/Modules/Accounts/Services/NetWorthStatement.php' => 'মালিকের নিট সম্পদ — প্রতিটা কোম্পানির গোটা খাতা, সব শাখা মিলিয়ে; মালিকের প্রশ্ন "সব বিক্রি-আদায় করে সব দেনা শোধ করলে কী থাকে", শাখার ভাগ নয় (ড্যা-৮, ২৫ অক্টোবর ২০২৬)',
         'app/Core/Services/SourceParties.php' => 'পর্দায় আগে থেকে থাকা কাগজের পক্ষ কে — খাতার সারি থেকে কেবল party_type/party_id, কোনো অঙ্ক নয়; কাগজটা তালিকার নিজের শাখা-ছাঁকনিতে আগেই বাছা, তাই খোঁজ গোটা কোম্পানি ধরে (নম্বরের পাশে পক্ষ, a5, ১৯ অক্টোবর ২০২৬)',
         'app/Modules/CreditControl/Services/ReceivableCreditLoss.php' => 'IFRS 9 ভাতার খাতের জের আর গ্রাহকের বকেয়া — গোটা কোম্পানি ধরে; ভাতা কোম্পানির, এক শাখার বকেয়া দেখে বসালে ভুল অঙ্ক পাকা হত (হিসাবের ফাঁক #১৮)',

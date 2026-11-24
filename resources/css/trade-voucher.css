@@ -152,6 +152,10 @@
 .tv-hdr-show { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
 .tv-hdr .tv-w2 { grid-column: span 2; }
 
+.tv-f {
+    min-width: 0;
+}
+
 .tv-hdr dd {
     margin: 0;
     font-weight: 600;

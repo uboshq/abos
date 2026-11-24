@@ -190,18 +190,28 @@ final class TradeVoucherService
         });
     }
 
-    /** বাতিল — বসে যাওয়া দাখিলা আজকের তারিখে ফেরে; কারণ বাধ্যতামূলক */
-    public function cancel(TradeVoucher $voucher, string $reason): TradeVoucher
+    /** বাতিল — খসড়া সরাসরি; পোস্ট হওয়াটা কেবল উল্টো কাগজের নম্বরে (`$paperNo`), দাখিলা আজকের তারিখে ফেরে */
+    public function cancel(TradeVoucher $voucher, string $reason, ?string $paperNo = null): TradeVoucher
     {
+        // ⛔ পোস্ট হওয়া ভাউচার কেবল উল্টো কাগজে ফেরে — তার নম্বর ছাড়া এই দরজা বন্ধ ([[AccountsReversalService::reverseTradeVoucher()]])
+        if ($voucher->isConfirmed() && $paperNo === null) {
+            throw ValidationException::withMessages(['cancel_reason' => __('accounts::reversal.needs_paper', ['no' => $voucher->document_no])]);
+        }
+
         if ($voucher->isCancelled()) {
             return $voucher;
         }
 
-        return DB::transaction(function () use ($voucher, $reason) {
+        return DB::transaction(function () use ($voucher, $reason, $paperNo) {
             $status = (string) TradeVoucher::query()->withoutGlobalScopes()->whereKey($voucher->id)->lockForUpdate()->value('status');
 
             if ($status === DocumentStatus::CANCELLED) {
                 return $voucher->refresh();
+            }
+
+            // ⛔ হাতের কপি খসড়া, সারি ততক্ষণে পোস্ট — তখনও উল্টো কাগজ ছাড়া নয়
+            if ($status === DocumentStatus::CONFIRMED && $paperNo === null) {
+                throw ValidationException::withMessages(['cancel_reason' => __('accounts::reversal.needs_paper', ['no' => $voucher->document_no])]);
             }
 
             if ($status === DocumentStatus::CONFIRMED
@@ -211,6 +221,7 @@ final class TradeVoucherService
                     sourceId: $voucher->id,
                     reversalDate: Carbon::today(),
                     reason: $reason,
+                    documentNo: $paperNo,
                 );
             }
 
@@ -366,6 +377,10 @@ final class TradeVoucherService
             $taxId = (int) ($row['tax_id'] ?? 0);
             $vatRate = $this->catalog->taxRate($taxId);
             $figures = LineMath::figures($qty, $rate, $amount === null ? null : (string) $amount, $vatRate ?? '0');
+
+            if (bccomp($figures['qty'], '0', 4) <= 0) {
+                throw ValidationException::withMessages([$field => __('accounts::note.qty_must_be_positive')]);
+            }
 
             if (bccomp($figures['amount'], '0', 4) <= 0) {
                 throw ValidationException::withMessages([$field => __('accounts::note.amount_must_be_positive')]);

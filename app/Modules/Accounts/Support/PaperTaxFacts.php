@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Accounts\Support;
 
 use App\Core\Contracts\PartyTaxIds;
+use App\Core\Security\FieldSecurity;
 use App\Core\Services\PartyRegistry;
 use App\Core\Support\DateFormat;
 use App\Core\Support\Money;
@@ -65,7 +66,7 @@ final class PaperTaxFacts
      *
      * @return array{name: string, qty: string, unit: string, rate: string, amount: string, vat_rate: string, vat: string, total: string, return_no: string}
      */
-    public static function line(Model $line): array
+    public static function line(Model $line, bool $showsPrice = true): array
     {
         $name = trim((string) $line->getAttribute('item_name'));
         $description = trim((string) $line->getAttribute('description'));
@@ -77,17 +78,20 @@ final class PaperTaxFacts
 
         $label = $name === '' ? $description : ($description === '' || $description === $name ? $name : $name.' — '.$description);
         $isAccount = $line->getAttribute('line_type') === 'account';
-        $vatRate = rtrim(rtrim(number_format((float) $line->getAttribute('vat_rate'), 2, '.', ''), '0'), '.');
+        $vatRate = TradeCatalog::rate(LineMath::round2(LineMath::money($line->getAttribute('vat_rate'))));
+        // ⛔ ক্রয়-দিকের কাগজে পণ্যের সারির দর-অঙ্ক কেনা দর — চাবি না থাকলে ঢাকা ([[TradeCatalog::seesCost()]])
+        $hidden = ! $showsPrice && $line->getAttribute('line_type') === 'product';
+        $figure = fn (string $field): string => $hidden ? FieldSecurity::mask() : Money::format($line->getAttribute($field));
 
         return [
             'name' => $label !== '' ? $label : '—',
             'qty' => $isAccount ? '' : Money::quantity($line->getAttribute('qty')),
             'unit' => $isAccount ? '' : (string) ($line->getAttribute('unit') ?? ''),
-            'rate' => $isAccount ? '' : Money::format($line->getAttribute('rate')),
-            'amount' => Money::format($line->getAttribute('amount')),
-            'vat_rate' => $vatRate === '' ? '0%' : $vatRate.'%',
-            'vat' => Money::format($line->getAttribute('vat_amount')),
-            'total' => Money::format($line->getAttribute('total')),
+            'rate' => $isAccount ? '' : $figure('rate'),
+            'amount' => $figure('amount'),
+            'vat_rate' => $vatRate.'%',
+            'vat' => $figure('vat_amount'),
+            'total' => $figure('total'),
             'return_no' => (string) ($line->getAttribute('return_no') ?? ''),
         ];
     }

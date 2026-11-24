@@ -21,9 +21,10 @@ interface ReturnsGoodsForNotes
      * ⓘ নোটের সই (মালিক বা অনুমোদনকারী) এই ফেরতের সই — একই সিদ্ধান্ত দুবার চাওয়া হয় না।
      *
      * @param  list<array{line_id: int, product_id: int, qty: string}>  $lines
+     * @param  bool  $approved  নোটটা সত্যিই অনুমোদিত কি না — না হলে ফেরতের নিজের অনুমোদনের ছক চলে
      * @return array{type: string, id: int, no: string, lines: list<array{line_id: int, amount: string, tax: string}>}
      */
-    public function noteReturnGoods(array $lines, string $date, string $narration, string $noteNo): array;
+    public function noteReturnGoods(array $lines, string $date, string $narration, string $noteNo, bool $approved = false): array;
 
     /** নোট বাতিল হলে তার ফেরতের কাগজও বাতিল — মাল আর খাতা দুটোই ফেরে */
     public static function noteCancelReturn(string $type, int $id, string $reason): void;

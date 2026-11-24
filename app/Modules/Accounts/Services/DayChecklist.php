@@ -143,10 +143,10 @@ final class DayChecklist
          */
         if (blank(\App\Models\Company::query()->whereKey(CompanyContext::id())->value('bin'))) {
             $vatPapers = DB::table('acc_notes')->where('company_id', CompanyContext::id())->whereNull('deleted_at')
-                ->whereIn('note_type', ['cn', 'cdn'])->where('trx_date', $d)->count()
+                ->whereIn('note_type', ['cn', 'cdn'])->whereIn('status', \App\Core\Support\DocumentStatus::POSTED)->where('trx_date', $d)->count()
                 + (DB::getSchemaBuilder()->hasTable('acc_trade_vouchers')
                     ? DB::table('acc_trade_vouchers')->where('company_id', CompanyContext::id())->whereNull('deleted_at')
-                        ->where('kind', 'sale')->where('trx_date', $d)->count()
+                        ->where('kind', 'sale')->whereIn('status', \App\Core\Support\DocumentStatus::POSTED)->where('trx_date', $d)->count()
                     : 0);
 
             if ($vatPapers > 0) {
