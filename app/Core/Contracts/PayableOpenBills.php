@@ -20,4 +20,7 @@ interface PayableOpenBills
      * @return list<array{against_type: string, id: int, no: string, date: string, age: int, outstanding: string, due_date: string, days_late: int, total: string, public_id: string}>
      */
     public function openBills(string $partyType, int $partyId, int $limit = 50): array;
+
+    /** যে ধরনের পক্ষকে আমরা দেনা থাকি ([[PartyRegistry]]-এর ধরন); কেউ না থাকলে খালি লেখা */
+    public function partyType(): string;
 }
