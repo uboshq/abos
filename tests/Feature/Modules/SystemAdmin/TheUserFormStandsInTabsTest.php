@@ -51,8 +51,12 @@ final class TheUserFormStandsInTabsTest extends TestCase
         $this->assertSame('identity', UserFormTabs::open(['password_confirmation', 'email']), '⛔ পরিচয়ের ভুল থাকতেও পরের ট্যাব খুলল।');
         $this->assertSame('access', UserFormTabs::open(['customer_scope.4']), '⛔ শাখা-গুদামের ভুল প্রবেশাধিকারে খোলে না।');
         $this->assertSame('identity', UserFormTabs::open([]), '⛔ ভুল না থাকলে পরিচয়ের ট্যাব খোলা নয়।');
+        // ⭐ the list's "পাসওয়ার্ড রিসেট" link asks for the security tab (owner, 24 Nov 2026) — an error still wins over it
+        $this->assertSame('security', UserFormTabs::open([], 'security'), '⛔ চাওয়া ট্যাব খুলল না।');
+        $this->assertSame('identity', UserFormTabs::open(['email'], 'security'), '⛔ ভুলের ট্যাবকে চাওয়া ট্যাব ঢেকে দিল।');
+        $this->assertSame('identity', UserFormTabs::open([], 'nonsense'), '⛔ অচেনা ট্যাবের নাম মানা হলো।');
 
         $view = (string) file_get_contents(base_path('app/Modules/SystemAdmin/Resources/views/user/form.blade.php'));
-        $this->assertStringContainsString('UserFormTabs::open(array_keys($errors->getMessages()))', $view, '⛔ পাতা ট্যাবের নিয়ম পড়ে না।');
+        $this->assertStringContainsString('UserFormTabs::open(array_keys($errors->getMessages()),', $view, '⛔ পাতা ট্যাবের নিয়ম পড়ে না।');
     }
 }
