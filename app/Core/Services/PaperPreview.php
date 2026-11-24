@@ -22,12 +22,23 @@ use Illuminate\Validation\ValidationException;
  */
 final class PaperPreview
 {
+    private static bool $looking = false;
+
     public function __construct(private readonly PhonePaperDoor $papers) {}
 
-    /** The paper's print type, or null when it has no printed paper, or may not be printed yet (a draft bill, owner's rule). */
+    /**
+     * Is a paper being looked at, not printed? ⭐ "Not printed before approval", the reprint limit and DUPLICATE are rules of
+     * printing; the signer looks exactly because it is not approved yet (owner, 24 Nov 2026: "আমি তো ছাপতে বলি নাই … ভিউটা দেখাইতে বলছি").
+     */
+    public static function looking(): bool
+    {
+        return self::$looking;
+    }
+
+    /** The paper's print type, or null when it has no printed paper. */
     public function typeOf(?object $document): ?string
     {
-        if (! $document instanceof Model || (method_exists($document, 'isNotFinalYet') && $document->isNotFinalYet())) {
+        if (! $document instanceof Model) {
             return null;
         }
 
@@ -52,6 +63,7 @@ final class PaperPreview
         $method = method_exists($controller, $route->getActionMethod()) ? $route->getActionMethod() : '__invoke';
 
         DB::beginTransaction();
+        self::$looking = true;
 
         try {
             /** @var Response $response */
@@ -59,9 +71,10 @@ final class PaperPreview
                 ? $controller->callAction($method, [$request, $document])
                 : $controller->{$method}($request, $document);
         } catch (ValidationException $e) {
-            // ⓘ the print itself refuses (e.g. the fare is not set yet) — the window says why
+            // ⓘ a refusal no look should meet — said in the window rather than a blank page
             $response = response((string) collect($e->errors())->flatten()->first(), 422, ['Content-Type' => 'text/plain; charset=UTF-8']);
         } finally {
+            self::$looking = false;
             DB::rollBack();
         }
 
