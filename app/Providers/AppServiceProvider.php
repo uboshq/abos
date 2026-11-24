@@ -39,9 +39,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // ⭐ অনুমতি-তালিকা — একই উত্তর, সস্তায় পড়া; spatie-র নিজের বাঁধনের পরে বসে ([[CheapPermissionRegistrar]])
-        $this->app->singleton(\Spatie\Permission\PermissionRegistrar::class, \App\Core\Security\CheapPermissionRegistrar::class);
-
         /*
          * ── কেন `register()`-এ, `boot()`-এ নয় ───────────────────────
          * প্রথমে এটা `boot()`-এ বসানো ছিল, আর **কেড়ে নেওয়াটা কাজ
@@ -309,6 +306,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ⭐ অনুমতি-তালিকা — একই উত্তর, সস্তায় পড়া। ⛔ boot-এই: spatie নিজেরটা boot-এ বাঁধে, register-এ বসালে হারত ([[CheapPermissionRegistrar]])
+        $this->app->singleton(\Spatie\Permission\PermissionRegistrar::class, \App\Core\Security\CheapPermissionRegistrar::class);
+
         /*
          * ⭐ প্রতিটা সারির কাজে কোম্পানির দাগ — `abos_company` (অডিট ⛔৯, ৬ অক্টোবর ২০২৬)।
          * ⓘ `failed_jobs`-এ কোম্পানির ঘর নেই; দাগ ছাড়া হিসাবের "পটভূমির কাজ" পাতা সব প্রতিষ্ঠানের ব্যর্থ কাজ, তাদের ভুলের
