@@ -75,7 +75,7 @@
                 @endif
                 <x-ui.toolbar :title="$offer ? __('promotion::coupon.title').' · '.$offer->code : __('promotion::coupon_screen.all_offers')"
                               :info="$offer ? null : __('promotion::coupon_screen.pick_offer')"
-                              :search-placeholder="__('promotion::coupon_screen.search')" :export="false" :share="false" :facets="$facetPanel" :quiet="['offer']">
+                              :search-placeholder="__('promotion::coupon_screen.search')" :export="false" :share="false" :columns="$columns" :facets="$facetPanel" :quiet="['offer']">
                     @if ($offer)
                         <x-slot:actions>
                             <x-ui.button :href="route('promotion.show', $offer)" tone="secondary">{{ __('promotion::coupon_screen.back_to_offer') }}</x-ui.button>
@@ -101,6 +101,11 @@
                 <p class="text-sm text-(--color-ink-muted)">{{ __('promotion::coupon_screen.none') }}</p>
             @endif
         @else
+            @if ($abosHead)
+                <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+                    <x-ui.table :rows="$rows" :columns="$columns" />
+                </div>
+            @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">
                     <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
@@ -159,6 +164,7 @@
                     </tbody>
                 </table>
             </div>
+            @endif
         @endif
 
         <x-ui.pager :rows="$rows" />

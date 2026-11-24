@@ -67,6 +67,31 @@ final class PromotionCouponController extends Controller implements HasMiddlewar
     }
 
     /**
+     * ABOS রূপের টেবিলের কলাম — পুরোনো টেবিলের একই ঘর, একই ক্রমে (পাতায় php ব্লক নেই, তাই এখানে)।
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function columns(?Promotion $offer): array
+    {
+        $badge = fn (string $tone, string $text) => view('promotion::partials.coupon-badge', ['tone' => $tone, 'text' => $text]);
+
+        return array_values(array_filter([
+            ['key' => 'code', 'label' => __('promotion::coupon.code'), 'width' => '10rem', 'render' => fn ($r) => (string) $r->code],
+            $offer === null ? ['key' => 'offer', 'label' => __('promotion::coupon_screen.offer'), 'render' => fn ($r) => $r->promotion
+                ? new \Illuminate\Support\HtmlString('<a class="underline" href="'.e(route('promotion.coupon.index', ['offer' => $r->promotion_id])).'">'.e($r->promotion->code).'</a>') : '—'] : null,
+            ['key' => 'used', 'label' => __('promotion::coupon.used_count'), 'numeric' => true, 'render' => fn ($r) => (string) $r->used_count],
+            ['key' => 'max', 'label' => __('promotion::coupon.max_uses'), 'numeric' => true, 'render' => fn ($r) => (string) $r->max_uses],
+            ['key' => 'left', 'label' => __('promotion::coupon.uses_left'), 'numeric' => true, 'render' => fn ($r) => $badge($r->usesLeft() > 0 ? 'info' : 'danger', (string) $r->usesLeft())],
+            ['key' => 'per_customer', 'label' => __('promotion::coupon.max_uses_per_customer'), 'numeric' => true, 'render' => fn ($r) => (string) ($r->max_uses_per_customer ?? __('promotion::coupon_screen.no_limit'))],
+            ['key' => 'customer', 'label' => __('promotion::coupon.customer'), 'wrap' => true, 'render' => fn ($r) => $r->customer?->nameWithPoint() ?? __('promotion::coupon_screen.any_customer')],
+            ['key' => 'valid', 'label' => __('promotion::coupon.valid_from').' — '.__('promotion::coupon.valid_to'), 'render' => fn ($r) => $r->valid_from || $r->valid_to
+                ? ($r->valid_from?->format('d/m/y') ?? '…').' — '.($r->valid_to?->format('d/m/y') ?? '…') : __('promotion::coupon_screen.whole_offer')],
+            ['key' => 'active', 'label' => __('promotion::coupon.is_active'), 'render' => fn ($r) => $r->is_active
+                ? $badge('success', __('promotion::coupon.is_active')) : $badge('draft', __('promotion::coupon_screen.off'))],
+        ]));
+    }
+
+    /**
      * ⭐ কুপনের তালিকা — একটা অফারের, নাহলে সবগুলোর।
      *
      * ⓘ `?offer=` দিলে সেই অফারের কোড আর তৈরির ফর্ম; না দিলে সব অফারের
@@ -97,6 +122,7 @@ final class PromotionCouponController extends Controller implements HasMiddlewar
 
         return view('promotion::coupons', [
             'abosHead' => $abosHead,
+            'columns' => self::columns($offer),
             // ⓘ ছাঁকনি কেবল ABOS রূপের বারে (মালিক, ২৪ নভেম্বর ২০২৬); পাতায় php ব্লক নেই, তাই এখানে
             'facetPanel' => \App\Core\ListFilter\Facets::panel($abosHead ? [\App\Core\ListFilter\Facets::pick('state', __('promotion::coupon.is_active'), ['on' => __('promotion::coupon.is_active'), 'off' => __('promotion::coupon_screen.off')])] : []),
             'menu' => $this->menu->forUser($request->user()),
