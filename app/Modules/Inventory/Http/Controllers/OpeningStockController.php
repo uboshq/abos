@@ -66,7 +66,7 @@ class OpeningStockController extends Controller implements HasMiddleware
             // ⭐ মালটা কার — সরবরাহকারী/প্রিন্সিপাল, ঐচ্ছিক (৬ অক্টোবর ২০২৬)
             'suppliers' => self::suppliers(),
 
-            'entered' => $this->entered(),
+            'entered' => $this->entered($request),
 
             /*
              * মোট মূল্য নিজের কোয়েরিতে, তালিকা থেকে নয়।
@@ -78,6 +78,9 @@ class OpeningStockController extends Controller implements HasMiddleware
              * মুনাফায় বসে — ভুল হলে সেটা খাতার ভুল, পর্দার নয়।
              */
             'total' => $this->enteredTotal(),
+
+            // ⭐ ছাঁকা সারির মোট — নিচের পট্টিতে; উপরের মোট সবটার, আগের মতো
+            'shownTotal' => $this->enteredTotal($request),
         ]);
     }
 
@@ -329,9 +332,9 @@ class OpeningStockController extends Controller implements HasMiddleware
      * খোলা মজুদ তুললে এই তালিকাটাই পনেরো হাজার সারি — আর তখন ঠিক
      * সেদিনই পর্দাটা মরত, যেদিন ব্যবহারকারী সিস্টেমটা প্রথম চালু করছেন।
      */
-    private function entered()
+    private function entered(Request $request)
     {
-        return $this->enteredQuery()
+        $query = $this->narrowed($request)
             ->select([
                 'inv_stock_movements.id',
                 'inv_stock_movements.trx_date',
@@ -344,8 +347,11 @@ class OpeningStockController extends Controller implements HasMiddleware
                 DB::raw('COALESCE(inv_cost_layers.qty_in * inv_cost_layers.unit_cost, 0) as value'),
                 'inv_cost_layers.unit_cost',
             ])
-            ->orderByDesc('inv_stock_movements.id')
-            ->paginate(\App\Core\Support\PerPage::of())
+            ->when($request->query('sort') === 'oldest', fn ($q) => $q->orderBy('inv_stock_movements.id'))
+            ->when($request->query('sort') === 'name', fn ($q) => $q->orderBy('inv_products.name_en'))
+            ->orderByDesc('inv_stock_movements.id');
+
+        return $query->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
     }
 
@@ -360,13 +366,29 @@ class OpeningStockController extends Controller implements HasMiddleware
      * ⓘ ঘরগুলো DECIMAL, তাই SUM নির্ভুল — float-এর গোলমাল ঢোকে না,
      * আর `bcadd`-এর সাথে ফলটা চার দশমিকেই মেলে।
      */
-    private function enteredTotal(): string
+    private function enteredTotal(?Request $request = null): string
     {
-        $sum = $this->enteredQuery()
+        $sum = ($request === null ? $this->enteredQuery() : $this->narrowed($request))
             ->selectRaw('COALESCE(SUM(COALESCE(inv_cost_layers.qty_in * inv_cost_layers.unit_cost, 0)), 0) as total')
             ->value('total');
 
         return bcadd((string) ($sum ?? '0'), '0', 4);
+    }
+
+    /** তালিকার ছাঁকনি — খোঁজা (পণ্যের কোড/নাম), গুদাম, তারিখ; তালিকা আর তার যোগফল দুজনেই এটাই */
+    private function narrowed(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
+        $term = is_string($request->query('q')) ? trim($request->query('q')) : '';
+        $like = '%'.addcslashes($term, '%_\\').'%';
+        $warehouse = $request->query('warehouse');
+        $day = fn (string $key): ?string => is_string($request->query($key)) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $request->query($key)) === 1 ? $request->query($key) : null;
+
+        return $this->enteredQuery()
+            ->when($term !== '', fn ($q) => $q->where(fn ($w) => $w->where('inv_products.code', 'like', $like)
+                ->orWhere('inv_products.name_en', 'like', $like)->orWhere('inv_products.name_bn', 'like', $like)))
+            ->when(is_string($warehouse) && ctype_digit($warehouse), fn ($q) => $q->where('inv_stock_movements.warehouse_id', (int) $warehouse))
+            ->when($day('from'), fn ($q, $d) => $q->where('inv_stock_movements.trx_date', '>=', $d))
+            ->when($day('to'), fn ($q, $d) => $q->where('inv_stock_movements.trx_date', '<=', $d));
     }
 
     /**

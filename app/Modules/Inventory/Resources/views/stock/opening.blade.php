@@ -222,17 +222,8 @@
             );
         @endphp
 
-        <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-            <div class="flex items-baseline justify-between border-b border-(--color-border) px-4 py-3">
-                <h2 class="font-semibold">{{ __('inventory::message.opening_total') }}</h2>
-                <span class="num font-semibold">{{ $showCost ? \App\Core\Support\Money::format($total) : \App\Core\Security\FieldSecurity::mask() }}</span>
-            </div>
-
-            <x-ui.table
-                :empty="__('inventory::message.opening_none')"
-                :rows="$entered"
-                compact
-                :columns="[
+        @php
+            $columns = [
                     ['key' => 'trx_date', 'label' => __('inventory::field.date'), 'width' => '7rem',
                      'render' => fn ($r) => \App\Core\Support\DateFormat::format($r->trx_date)],
                     ['key' => 'product', 'label' => __('inventory::field.product'),
@@ -262,13 +253,22 @@
                          : \App\Core\Security\FieldSecurity::mask()],
                     /* ⭐ সংশোধন — মালিক, ৬ অক্টোবর ২০২৬ ([[OpeningCorrectionController]]); শর্ত না মিললে সেই পাতাই বলে কেন */
                     ['key' => 'edit', 'label' => '', 'width' => '6rem', 'render' => $editLink],
-                ]" />
+                ];
 
-            {{-- ⓘ উপরের "মোট" এই পাতার নয়, সবটার — পেজারের সীমা আর
-                 ওই সংখ্যাটা তাই ইচ্ছাকৃতভাবে দুইটা আলাদা কথা বলে। --}}
-            <x-ui.pager :rows="$entered" />
-            {{-- ⓘ মোট মূল্য উপরের মতোই সবটার, আর দর লুকানো থাকলে ঢাকা --}}
-            <x-ui.list-totals :rows="$entered" :totals="[['label' => __('inventory::message.opening_total'), 'value' => $showCost ? \App\Core\Support\Money::format($total) : \App\Core\Security\FieldSecurity::mask()]]" />
-        </section>
+            // ⛔ মাথা আর প্যানেল কেবল ABOS Smart, Navy, Blue-এ — বাকি রূপ হুবহু আগের মতো ([[AbosHead]])
+            $abosHead = \App\Core\Support\AbosHead::on();
+            $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+                \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
+                \App\Core\ListFilter\Facets::pick('warehouse', __('inventory::field.warehouse'), $warehouses->mapWithKeys(fn ($w) => [$w->id => $w->name()])->all()),
+            ]);
+        @endphp
+
+        @if ($facetPanel)
+            <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+                @include('inventory::stock.partials.opening-list')
+            </x-ui.filter-layout>
+        @else
+            @include('inventory::stock.partials.opening-list')
+        @endif
     </div>
 </x-layouts.app>
