@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Core\Services;
 
 use App\Core\Engines\Approval\OwnerSelfApproval;
+use App\Core\Engines\Audit\AuditEngine;
 use App\Core\Support\CompanyContext;
+use App\Models\AuditTrail;
+use App\Models\Setting;
 use App\Models\SettingChange;
 use App\Models\User;
 use Illuminate\Support\Collection;
@@ -29,6 +32,11 @@ final class SignedSettings
     public const KEY = 'system_admin.settings.manage';
 
     public const WAITING = 'system_admin.setting_change_waiting';
+
+    /** মালিক নিজের বদলে নিজে অনুমোদন দিলেন — এই কাজের অডিট-সারি, আর তার ঘরে সেটিংয়ের নিজের অডিট-সারির নম্বর */
+    public const OWN = 'owner_self_signed';
+
+    public const ROW = 'setting_trail_id';
 
     /** @var list<string> */
     private const PREFIXES = ['approval.', 'credit_control.'];
@@ -105,11 +113,16 @@ final class SignedSettings
             $locked = $this->lockPending($change);
             $this->assertSecondHand($locked, $by);
 
+            $last = (int) AuditTrail::query()->max('id');
             $this->settings->set($locked->key, $this->decoded($locked->key, (string) $locked->new_value));
             $locked->forceFill(['status' => SettingChange::SIGNED, 'decided_by' => $by->id, 'decided_at' => now()])->save();
 
             if ((int) $locked->requested_by === (int) $by->id) {
-                $locked->auditAction('owner_self_signed', __('core.owner_self.mark').' — '.$this->summaryOf($locked));
+                // ⓘ সেটিংয়ের নিজের বদলের অডিট-সারির নম্বর এই সারির মানে — ইতিহাসের দাগ ঠিক ওই সারিতে বসে, সময় আন্দাজ করে নয়
+                $row = AuditTrail::query()->where('auditable_type', Setting::class)->where('id', '>', $last)
+                    ->whereIn('auditable_id', Setting::query()->where('key', $locked->key)->select('id'))->latest('id')->value('id');
+
+                app(AuditEngine::class)->record($locked, self::OWN, [self::ROW => [null, $row]], __('core.owner_self.mark').' — '.$this->summaryOf($locked));
             }
         });
     }
