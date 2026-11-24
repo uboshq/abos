@@ -23,9 +23,11 @@
     $bottomLabel = $kind === $mainKind ? __('accounts::note_form.bottom_'.$type) : __('accounts::note_form.bottom_other');
 
     // ⓘ কেবল এই কাগজের দামের দিক — বিক্রয়ের নোটে কেনা দাম পাতায় যায় না
+    // ⛔ কেনা দর কেবল `inventory.cost.view`-এ — চাবি না থাকলে পাতায়ই যায় না, দর হাতে লেখা
+    $seesCost = auth()->user()?->can('inventory.cost.view') === true;
     $pickProducts = array_map(fn (array $p) => [
         'id' => $p['id'], 'name' => $p['name'], 'unit' => $p['unit'],
-        'sale_price' => $sells ? $p['sale_price'] : '0', 'purchase_price' => $sells ? '0' : $p['purchase_price'],
+        'sale_price' => $sells ? $p['sale_price'] : '0', 'purchase_price' => ! $sells && $seesCost ? $p['purchase_price'] : '0',
         'tax_id' => $p['tax_id'], 'vat_rate' => $p['vat_rate'],
     ], $products);
 
