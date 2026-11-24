@@ -6,18 +6,53 @@
     একবার ফিরিয়ে এনে দেখা হয়েছে, আর হুবহু কমান্ডটা। কমান্ডটা ফেরানোর
     আগে নিজেই একটা নিরাপত্তা-ডাম্প নেয় (`abos:restore`, `--no-safety` ছাড়া)।
 --}}
+@php
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $columns = [
+        ['key' => 'file', 'label' => __('backup::screen.col_file'), 'wrap' => true, 'render' => fn ($f) => new \Illuminate\Support\HtmlString('<span class="font-mono text-2xs">'.e($f['name']).'</span>')],
+        ['key' => 'when', 'label' => __('backup::screen.col_when'), 'width' => '11rem', 'render' => fn ($f) => \App\Core\Support\DateFormat::formatWithTime($f['at'])],
+        ['key' => 'check', 'label' => __('backup::screen.col_check'), 'render' => fn ($f) => view('backup::partials.file-check', ['file' => $f])],
+        ['key' => 'command', 'label' => __('backup::screen.command'), 'wrap' => true, 'render' => fn ($f) => new \Illuminate\Support\HtmlString('<code class="font-mono text-2xs break-all">php artisan abos:restore '.e($f['name']).'</code>')],
+    ];
+    $facetPanel = \App\Core\ListFilter\Facets::panel($abosHead ? [\App\Core\ListFilter\Facets::pick('check', __('backup::screen.col_check'),
+        ['ok' => __('backup::screen.checked'), 'none' => __('backup::screen.unchecked'), 'bad' => __('backup::screen.check_broke')])] : []);
+    $find = mb_strtolower(request()->string('q')->trim()->value());
+    $shown = $files
+        ->filter(fn ($f) => $find === '' || str_contains(mb_strtolower($f['name']), $find))
+        ->filter(fn ($f) => match (request('check')) {
+            'ok' => $f['check'] !== null && $f['check']->sawSomething(),
+            'none' => $f['check'] === null,
+            'bad' => $f['check'] !== null && ! $f['check']->sawSomething(),
+            default => true,
+        });
+    $shown = (request('sort') === 'oldest' ? $shown->reverse() : $shown)->values();
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('backup::screen.restore_title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('backup::screen.restore_title')"
                           :subtitle="__('backup::screen.restore_subtitle')" />
     </x-slot:header>
+    @endunless
 
     <p class="mb-3 max-w-(--spacing-prose-max) rounded-(--radius-field) bg-(--color-badge-warning-bg) px-3 py-2 text-sm text-(--color-badge-warning-ink)">
         {{ __('backup::screen.restore_why_no_button') }}
     </p>
 
+    @if ($abosHead)
+        <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+        <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :title="__('backup::screen.restore_title')" :info="__('backup::screen.restore_subtitle').' '.__('backup::screen.prefer_checked')"
+                              :search-placeholder="__('backup::screen.col_file')" :export="false" :print="false" :share="false" :columns="$columns" :facets="$facetPanel"
+                              :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]" />
+            </form>
+            <x-ui.table :rows="$shown" :columns="$columns" :empty="$files->isEmpty() ? __('backup::screen.no_files') : __('core.empty.no_results')" />
+        </div>
+        </x-ui.filter-layout>
+    @else
     <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
         @if ($files->isEmpty())
             <p class="text-sm text-(--color-badge-danger-ink)">{{ __('backup::screen.no_files') }}</p>
@@ -60,4 +95,5 @@
             </div>
         @endif
     </section>
+    @endif
 </x-layouts.app>
