@@ -161,7 +161,7 @@ async function poll () {
     if (res.ok && res.data) {
         setBadge(res.data.unread_total)
         showRinging(res.data.ringing || null)
-        window.dispatchEvent(new CustomEvent('messenger:unread', { detail: { unread_total: res.data.unread_total } }))
+        window.dispatchEvent(new CustomEvent('messenger:unread', { detail: { unread_total: res.data.unread_total, meeting: res.data.meeting || null } }))
     }
     schedule()
 }

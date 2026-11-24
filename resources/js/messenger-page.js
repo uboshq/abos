@@ -1762,6 +1762,11 @@ export function start(root) {
     /* ── calls: only announce; the call screen (another part) listens on document/window ── */
     function call(video) {
         if (!S.cur) return
+        // ⭐ a group call is a meeting hung on this thread (messenger-meeting.js listens)
+        if (S.cur.kind === 'group' && root.dataset.meetings === '1') {
+            window.dispatchEvent(new CustomEvent('messenger:meeting', { detail: { thread: String(S.cur.id), video: !!video } }))
+            return
+        }
         if (S.cur.kind === 'group' || !S.cur.person) {
             toast(w('group_calls_soon'))
             return
@@ -1926,6 +1931,9 @@ export function start(root) {
                 patchVoice(m.id)
                 break
             }
+            case 'new-meeting':
+                window.dispatchEvent(new CustomEvent('messenger:meeting', { detail: {} }))
+                break
             case 'dlg-x':
                 closeDialog()
                 break

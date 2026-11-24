@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/messenger-page.js'],
+            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/messenger-page.js', 'resources/js/meeting-page.js'],
             refresh: true,
             // ফন্ট প্লাগিন সরানো হয়েছে: এটা Bunny থেকে Instrument Sans নামাত,
             // যা আমাদের ব্র্যান্ড ফন্ট নয় এবং বাংলা অক্ষরও নেই। Poppins ও

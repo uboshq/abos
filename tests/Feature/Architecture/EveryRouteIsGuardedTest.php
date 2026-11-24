@@ -39,6 +39,9 @@ class EveryRouteIsGuardedTest extends TestCase
      * সিদ্ধান্তের কারণ পাশেই লেখা থাকে।
      */
     private const OPEN_TO_THE_WORLD = [
+        // ⭐ অফিসের LiveKit নিজে জানায় কে এল-গেল (মিটিং, ২৪ নভেম্বর ২০২৬) — মানুষের লগইন নয়
+        'api.messaging.livekit.webhook' => 'অফিসের কল-সার্ভারের খবর — আমাদের নিজের গোপন চাবির সই, ইস্যুকারী, সময় আর হুবহু বডির ছাপ মেলালে তবেই পড়া হয় '
+            .'(LiveKitToken::webhookIsOurs); না মিললে 401, কিছু পড়া হয় না',
         // ⭐ অফিসের SMS ফোন (মালিকের "ঠিক আছে", নমুনা U1X687u5MkwVfEL7ci7MGv) — মানুষের লগইন নয়, ফোনের নিজের চাবি
         'api.sms-gateway.take' => 'অফিসের SMS ফোন বার্তা নেয় — মানুষের লগইন নয়, ফোনের নিজের চাবি (Bearer smsgw_…, ডাটাবেজে কেবল sha256); '
             .'চাবি না মিললে বা ফোন বন্ধ থাকলে 401, কেবল সেই ফোনের কোম্পানির সারি (AnSmsHadNoWayOutOfTheOfficeTest)',

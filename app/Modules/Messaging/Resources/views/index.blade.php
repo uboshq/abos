@@ -50,6 +50,7 @@
          data-me="{{ json_encode($msgrMe, JSON_UNESCAPED_UNICODE) }}"
          data-open="{{ $open ?? '' }}"
          data-calls="{{ ($callsOn ?? false) ? '1' : '0' }}"
+         data-meetings="{{ ($meetingsOn ?? false) ? '1' : '0' }}"
          data-locale="{{ app()->getLocale() }}"
          data-csrf="{{ csrf_token() }}">
         @include('messaging::partials.sprite')
@@ -63,6 +64,9 @@
                 </button>
                 @if ($callsOn ?? false)
                     <button type="button" class="newb" data-act="new-call" hidden>＋ {{ __('messaging::web.calls.new') }}</button>
+                @endif
+                @if ($meetingsOn ?? false)
+                    <button type="button" class="newb" data-act="new-meeting">{{ __('messaging::meeting.new') }}</button>
                 @endif
             </div>
             <label class="msrch">
@@ -105,7 +109,7 @@
                 {{-- ⓘ calls only when the office LiveKit is set up (LIVEKIT_URL/KEY/SECRET in .env) — otherwise no call button
                      and no group-call badge at all (calls_off, [[LiveKitToken::configured()]]) --}}
                 @if ($callsOn ?? false)
-                    <span class="soon2" data-group-only hidden><svg aria-hidden="true"><use href="#mg-clock"/></svg>{{ __('messaging::web.group_calls_soon') }}</span>
+                    @unless ($meetingsOn ?? false)<span class="soon2" data-group-only hidden><svg aria-hidden="true"><use href="#mg-clock"/></svg>{{ __('messaging::web.group_calls_soon') }}</span>@endunless
                     <button type="button" class="hb" data-act="call-video" aria-label="{{ __('messaging::web.video_call') }}" title="{{ __('messaging::web.video_call') }}"><svg><use href="#mg-video"/></svg></button>
                     <button type="button" class="hb" data-act="call-voice" aria-label="{{ __('messaging::web.voice_call') }}" title="{{ __('messaging::web.voice_call') }}"><svg><use href="#mg-phone"/></svg></button>
                 @endif

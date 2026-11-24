@@ -5,9 +5,15 @@ declare(strict_types=1);
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Middleware\RefuseModulesOffOnThePhone;
 use App\Http\Middleware\ResolveCompanyContext;
+use App\Modules\Messaging\Http\Controllers\LiveKitWebhookController;
 use App\Modules\Messaging\Http\Controllers\MessengerApiController;
 use App\Modules\Messaging\Http\Controllers\MessengerCallApiController;
 use Illuminate\Support\Facades\Route;
+
+/*
+ * ⭐ LiveKit's webhook — no login, proven by our own secret's signature ([[LiveKitWebhookController]]).
+ */
+Route::post('v1/messenger/livekit/webhook', LiveKitWebhookController::class)->middleware('throttle:600,1,livekit')->name('livekit.webhook');
 
 /*
  * The messenger's phone doors — `/api/v1/messenger/…` (contract: docs/Contract — বার্তা ও কল API (প্রথম ধাপ).md).

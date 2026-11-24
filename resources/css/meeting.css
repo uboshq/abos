@@ -1,0 +1,65 @@
+/* ⭐ মিটিং — নমুনা VxwPoxm77whS6ToNqsyZPU ট্যাব ৩। ⛔ প্রতিটা নিয়ম `.mmeet`-এর ভিতরে (আর `.msgr-meet` পপআপ)। */
+.msgr-meet { --msgr-inc-top: 112px; }
+
+.mmeet { position: relative; height: calc(100dvh - 150px); min-height: 460px; }
+
+.mmeet-door { height: 100%; display: grid; place-content: center; justify-items: center; gap: 14px; text-align: center; }
+.mmeet-door h1 { font-size: 24px; font-weight: 700; }
+.mmeet-go { border: 0; border-radius: 10px; padding: 10px 28px; background: #0f9d6b; color: #fff; font-weight: 700; }
+.mmeet-go[hidden], .mmeet-door[hidden], .mmeet-stage[hidden], .mmeet-slide[hidden], .mmeet-side[hidden], .mmeet-toast[hidden], .mmeet-mini[hidden], .mmeet-pill[hidden] { display: none; }
+
+.mmeet-stage { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; border-radius: 18px; background: #101b2b; color: #eaf1f5; }
+.mmeet-head { display: flex; align-items: center; gap: 14px; padding: 12px 18px; }
+.mmeet-head b { font-size: 17px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mmeet-sp { flex: 1; }
+.mmeet-pill { border: 0; border-radius: 16px; padding: 4px 12px; background: #1c2b40; color: inherit; font-size: 13px; white-space: nowrap; }
+
+.mmeet-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 0 18px; min-height: 0; }
+.mmeet-body.has-slide { grid-template-columns: minmax(0, 1fr) 250px; }
+.mmeet-body.has-side { grid-template-columns: minmax(0, 1fr) 300px; }
+.mmeet-body.has-slide.has-side { grid-template-columns: minmax(0, 1fr) 250px 300px; }
+
+.mmeet-slide { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; min-height: 0; overflow: hidden; border-radius: 12px; background: #fff; color: #14213d; }
+.mmeet-slide header { display: flex; align-items: center; gap: 8px; padding: 7px 14px; background: #e8f0fe; color: #1747c9; font-size: 14px; font-weight: 600; }
+.mmeet-slide header span { flex: 1; min-width: 0; }
+.mmeet-slide video { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+
+.mmeet-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: 10px; min-height: 0; overflow: auto; }
+.has-slide .mmeet-tiles { grid-template-columns: 1fr; grid-auto-rows: 128px; }
+.mmeet-tile { position: relative; display: grid; place-items: center; min-height: 104px; overflow: hidden; border-radius: 12px; background: #1c2b40; }
+.mmeet-tile.is-talking { box-shadow: inset 0 0 0 3px #22c58b; }
+.mmeet-tile video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mmeet-tile video[hidden], .mmeet-av[hidden] { display: none; }
+.mmeet-tile small { position: absolute; inset: auto 8px 6px 8px; font-size: 12px; text-shadow: 0 1px 3px #000; }
+.mmeet-av { display: grid; place-items: center; width: 54px; height: 54px; border-radius: 50%; background: #1f55e0; color: #fff; font-size: 20px; font-weight: 700; }
+
+.mmeet-side { min-width: 0; overflow: auto; border-radius: 12px; padding: 14px; background: var(--color-surface-card); color: var(--color-ink); }
+.mmeet-side h2 { margin: 0 0 10px; font-size: 16px; font-weight: 700; }
+.mmeet-side h3 { margin: 12px 0 2px; color: var(--color-ink-muted); font-size: 14px; font-weight: 600; }
+.mmeet-side p { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0; padding: 8px 0; border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere; }
+.mmeet-side p > span:last-child { display: flex; gap: 6px; flex: none; }
+.mmeet-mini { border: 1px solid var(--color-border); border-radius: 8px; padding: 2px 10px; background: var(--color-surface-sunken); color: var(--color-ink); font-size: 13px; font-weight: 600; cursor: pointer; }
+.mmeet-slide .mmeet-mini { border-color: #bcd0fb; background: #fff; color: #1747c9; }
+.mmeet-all { width: 100%; margin-top: 10px; padding: 7px; }
+.mmeet-tick { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-size: 14px; }
+.mmeet-more summary { list-style: none; }
+.mmeet-more[open] { display: grid; gap: 4px; }
+.mmeet-q { width: 100%; min-width: 0; padding: 7px 10px; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface-card); color: var(--color-ink); }
+.mmeet-log { max-height: calc(100% - 50px); overflow: auto; }
+.mmeet-write { display: flex; gap: 6px; margin-top: 10px; }
+
+.mmeet-foot { display: flex; justify-content: center; gap: 16px; padding: 14px; flex-wrap: wrap; }
+.mmeet-cc { display: grid; justify-items: center; gap: 5px; border: 0; background: none; color: #eaf1f5; font-size: 13px; }
+.mmeet-cc i { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; background: #1c2b40; }
+.mmeet-cc.is-on i { background: #22c58b; color: #06281b; }
+.mmeet-cc.is-end i { background: #e11d48; }
+.mmeet-cc svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.mmeet :is(button, summary):focus-visible { outline: 2px solid #facc15; outline-offset: 2px; }
+.mmeet-toast { position: absolute; inset: auto 0 96px 0; margin: auto; width: fit-content; max-width: 90%; border-radius: 10px; padding: 8px 16px; background: #000c; color: #fff; }
+
+@media (max-width: 900px) {
+    .mmeet { height: auto; }
+    .mmeet-body, .mmeet-body.has-slide, .mmeet-body.has-side, .mmeet-body.has-slide.has-side { grid-template-columns: 1fr; }
+    .mmeet-slide { min-height: 260px; }
+    .mmeet-head { flex-wrap: wrap; }
+}

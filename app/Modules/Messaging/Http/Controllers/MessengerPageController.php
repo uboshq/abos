@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Messaging\Models\Call;
 use App\Modules\Messaging\Services\LiveKitToken;
+use App\Modules\Messaging\Services\MeetingService;
 use App\Modules\Messaging\Services\MessengerPresenter;
 use App\Modules\Messaging\Services\MessengerService;
 use App\Modules\Messaging\Services\Presence;
@@ -30,6 +31,7 @@ final class MessengerPageController extends Controller implements HasMiddleware
         private readonly MessengerService $messenger,
         private readonly MessengerPresenter $present,
         private readonly Presence $presence,
+        private readonly MeetingService $meetings,
     ) {}
 
     public static function middleware(): array
@@ -44,6 +46,7 @@ final class MessengerPageController extends Controller implements HasMiddleware
             'open' => is_string($request->query('t')) ? $request->query('t') : null,
             // ⓘ calls_off: LIVEKIT_URL / KEY / SECRET empty → the page draws no call button
             'callsOn' => app(LiveKitToken::class)->configured(),
+            'meetingsOn' => $this->meetings->isOn(),
         ]);
     }
 
@@ -66,6 +69,8 @@ final class MessengerPageController extends Controller implements HasMiddleware
                 'video' => (bool) $ringing->video,
                 'peer' => $this->present->person($ringing->caller),
             ] : null,
+            // ⭐ a meeting or a group call that is calling me
+            'meeting' => $this->meetings->ringing($me),
         ]);
     }
 }
