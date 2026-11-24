@@ -92,6 +92,9 @@ final class CallsTest extends TestCase
         $this->assertSame((string) $this->callee->id, $data['peer']['id']);
         $this->assertNotSame('', (string) $data['token']);
 
+        // ⛔ the ring push goes out at once, never via the once-a-minute queue (owner, 24 Nov 2026: a ring took ~30 s)
+        Queue::assertPushedOn('sync', SendPushToUser::class);
+
         Queue::assertPushed(SendPushToUser::class, fn (SendPushToUser $job): bool => $job->userId === (int) $this->callee->id
             && $job->title === 'Caller One'
             && $job->data['type'] === 'call'
