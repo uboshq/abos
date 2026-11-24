@@ -87,13 +87,8 @@
             @csrf
             @method('PUT')
 
-            {{-- মেনুর সুইচ — প্রথম ট্যাবে মডিউলগুলো, মডিউলের ট্যাবে তার
-                 নিজের গ্রুপ ও সারি। কোনটা কতটুকু সেটা কন্ট্রোলার ঠিক করে
-                 ([[ControlPanelController::treeFor()]]); ব্লেড যা পেয়েছে
-                 তা-ই আঁকে। --}}
-            @include($tab === 'switches'
-                ? 'system_admin::control-panel.partials.modules'
-                : 'system_admin::control-panel.partials.tree')
+            {{-- মেনুর সুইচ — মডিউলের ট্যাবে তার নিজের গ্রুপ ও সারি ([[ControlPanelController::treeFor()]]) --}}
+            @include('system_admin::control-panel.partials.tree')
 
             {{-- ⛔ মডিউল-পেরোনো ট্যাবে (মোবাইল, ...) প্রতিটা মডিউলের কোড ট্যাবের নাম নয় — আগে নিচের শর্ত সবগুলোকেই বাদ দিত, আর
                  ট্যাবটা ফাঁকা আঁকা হত (ফোনে "সিস্টেম প্রশাসন" বন্ধ করলে ফেরার সুইচটাই পর্দায় ছিল না —
@@ -297,13 +292,4 @@
          ⓘ ভাঁজ করা, তাই সুইচের পাতা লম্বা হয় না; চাইলেই খোলে। --}}
     @include('system_admin::control-panel.partials.history')
     @endcomponent
-    {{-- ⭐ মডিউলের সেটিংস — এক জায়গায়, সুইচের ঠিক নিচে (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ২ — "মডিউলের সেটিংস দুই পাতায় → \"মডিউল ও সেটিংস\"-এ একটাই পাতা"; নমুনার পাতা ৩) --}}
-    @if ($tab === 'switches')
-        <section id="settings" class="mt-6" data-control-settings>
-            <h2 class="mb-3 text-lg font-semibold">{{ __('system_admin::settings.one_place') }}</h2>
-        {{-- ⭐ জরুরি সেটিংয়ের বদল — অপেক্ষায়, আটকানো, অনুমোদন (দফা ৭) --}}
-    @include('system_admin::settings.partials.changes')
-            @include('system_admin::settings.partials.board', ['modules' => $settingsModules, 'onePage' => true])
-        </section>
-    @endif
 </x-layouts.app>

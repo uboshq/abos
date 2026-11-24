@@ -77,8 +77,6 @@ class ControlPanelController extends Controller implements HasMiddleware
         return view('system_admin::control-panel.edit', [
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
-            // ⭐ সুইচের নিচে সব সেটিং এক জায়গায় (কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ২ — "মডিউলের সেটিংস দুই পাতায় → \"মডিউল ও সেটিংস\"-এ একটাই পাতা")
-            'settingsModules' => app(SettingsController::class)->board(),
             'tabs' => $this->tabs->all(),
 
             /*
@@ -257,10 +255,7 @@ class ControlPanelController extends Controller implements HasMiddleware
     }
 
     /**
-     * এই ট্যাবে যতটুকু গাছ দেখানো হবে।
-     *
-     * প্রথম ট্যাবে মডিউলগুলোই — ভেতরের গ্রুপ ও সারি ছাড়া, কারণ ওখানে
-     * প্রশ্নটা একটাই: *কোন মডিউলগুলো এই ব্যবসায় লাগে?*
+     * এই ট্যাবে যতটুকু গাছ দেখানো হবে — মডিউলের নিজেরটুকু।
      *
      * @return list<array<string, mixed>>
      */
@@ -268,23 +263,7 @@ class ControlPanelController extends Controller implements HasMiddleware
     {
         $tree = $this->switches->tree();
 
-        if ($tab !== 'switches') {
-            return array_values(array_filter($tree, fn (array $m) => $m['code'] === $tab));
-        }
-
-        /*
-         * গ্রুপগুলো ফেলে দেওয়া হয়, কিন্তু **গুনতিটা রাখা হয়**।
-         *
-         * "হিসাব" বন্ধ করলে ঠিক কতটা বন্ধ হচ্ছে — চারটা ভাগ,
-         * তেত্রিশটা পর্দা — সেটা না জানিয়ে সুইচটা দিলে সিদ্ধান্তটা
-         * অন্ধ হত।
-         */
-        return array_map(fn (array $m) => [
-            ...$m,
-            'groups' => [],
-            'group_count' => count($m['groups']),
-            'row_count' => array_sum(array_map(fn (array $g) => count($g['items']), $m['groups'])),
-        ], $tree);
+        return array_values(array_filter($tree, fn (array $m) => $m['code'] === $tab));
     }
 
     /**
