@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Core\Services\SignedSettings;
+use App\Core\Contracts\Drillable;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
@@ -13,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * ⭐ জরুরি সেটিংয়ের একটা চাওয়া বদল, দ্বিতীয় হাতের অপেক্ষায় — কন্ট্রোল প্যানেলের পরিকল্পনা, দফা ৭ ([[SignedSettings]])।
  */
-class SettingChange extends Model
+class SettingChange extends Model implements Drillable
 {
     use BelongsToCompany;
     use HasPublicId;
@@ -51,5 +53,27 @@ class SettingChange extends Model
     public function isPending(): bool
     {
         return $this->status === self::PENDING;
+    }
+
+    // ── Drillable — মালিকের নিজে-অনুমোদিত তালিকা থেকে (মালিক, ২৩ নভেম্বর ২০২৬) ───────────
+
+    public static function drillSourceType(): string
+    {
+        return 'setting_change';
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return '#'.$this->id;
+    }
+
+    public function drillLabel(): string
+    {
+        return app(SignedSettings::class)->labelOf((string) $this->key);
+    }
+
+    public function drillRoute(): array
+    {
+        return ['system_admin.control-panel', []];
     }
 }

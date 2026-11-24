@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\Services;
 
+use App\Core\Engines\Approval\OwnerSelfApproval;
 use App\Core\Support\CompanyContext;
 use App\Models\SettingChange;
 use App\Models\User;
@@ -16,7 +17,8 @@ use Illuminate\Validation\ValidationException;
  * সই লাগে (আপনার আগের সিদ্ধান্ত)"; মালিক, ৭ নভেম্বর ২০২৬: "baki kaj gulo kore rako"।
  *
  * ⓘ পর্দা বদলটা সরাসরি বসায় না — এখানে একটা চাওয়া বদল লেখে ([[SettingChange]]); এই কোম্পানির অন্য কেউ, যাঁর সেটিংসের চাবি আছে,
- * অনুমোদন দিলে তবেই সেটিংয়ে বসে। ⛔ যিনি চাইলেন তিনি কখনো নন — মালিকও নন। ⛔ অনুমোদন দেওয়ার মতো আর কেউ না থাকলে বদলটা আটকে
+ * অনুমোদন দিলে তবেই সেটিংয়ে বসে। ⛔ যিনি চাইলেন তিনি নন; কেবল মালিক নিজের বদলে নিজে
+ * অনুমোদন দেন, স্থায়ী দাগ আর মাসের রিপোর্টসহ (মালিক, ২০ নভেম্বর ২০২৬; [[OwnerSelfApproval]])। ⛔ অনুমোদন দেওয়ার মতো আর কেউ না থাকলে বদলটা আটকে
  * যায়, কারণসহ ("fail-closed" — মালিকের ২৪ অক্টোবরের নিয়ম: দ্বিতীয় জন বসানো না থাকলে কাজ হয় না, নীরবে এক হাতে হয় না)।
  *
  * ⓘ কোন সেটিং: অনুমোদনের সব (`approval.*`, প্রচারের অনুমোদন, নোটিশের লেখক নিজে অনুমোদন নয়, বাজেটের বেশি খরচে সই), বাকির সীমার সব
@@ -60,7 +62,8 @@ final class SignedSettings
      */
     public function propose(string $key, mixed $value, User $by): bool
     {
-        if ($this->signersExcept($by)->isEmpty()) {
+        // ⓘ মালিক নিজেই অনুমোদন দিতে পারেন — তাঁর উপরে কেউ নেই (২০ নভেম্বর ২০২৬)
+        if (! $this->isOwner($by) && $this->signersExcept($by)->isEmpty()) {
             return false;
         }
 
@@ -104,6 +107,10 @@ final class SignedSettings
 
             $this->settings->set($locked->key, $this->decoded($locked->key, (string) $locked->new_value));
             $locked->forceFill(['status' => SettingChange::SIGNED, 'decided_by' => $by->id, 'decided_at' => now()])->save();
+
+            if ((int) $locked->requested_by === (int) $by->id) {
+                $locked->auditAction('owner_self_signed', __('core.owner_self.mark').' — '.$this->summaryOf($locked));
+            }
         });
     }
 
@@ -127,7 +134,7 @@ final class SignedSettings
 
     public function canSign(SettingChange $change, User $by): bool
     {
-        return $change->isPending() && (int) $change->requested_by !== (int) $by->id && $by->can(self::KEY);
+        return $change->isPending() && $by->can(self::KEY) && ((int) $change->requested_by !== (int) $by->id || $this->isOwner($by));
     }
 
     /** সেটিংয়ের নাম: আগে → পরে */
@@ -173,6 +180,11 @@ final class SignedSettings
             ->values();
     }
 
+    private function isOwner(User $user): bool
+    {
+        return in_array((int) $user->id, app(OwnerSelfApproval::class)->ownersOf((int) CompanyContext::id()), true);
+    }
+
     private function decoded(string $key, string $stored): mixed
     {
         return match ($this->settings->definitions()[$key]['type'] ?? null) {
@@ -195,8 +207,8 @@ final class SignedSettings
 
     private function assertSecondHand(SettingChange $change, User $by): void
     {
-        // ⛔ যিনি চেয়েছেন তিনি কখনো নন — মালিকও নন
-        if ((int) $change->requested_by === (int) $by->id) {
+        // ⛔ যিনি চেয়েছেন তিনি নন — মালিক ছাড়া, দাগ আর রিপোর্টসহ ([[OwnerSelfApproval]])
+        if ((int) $change->requested_by === (int) $by->id && ! $this->isOwner($by)) {
             throw ValidationException::withMessages(['change' => __('system_admin::settings.change_maker_cannot_sign')]);
         }
 

@@ -148,6 +148,11 @@ final class ALeaverIsSettledOnOnePaperTest extends TestCase
         $this->assertSame(0, bccomp($at(StandardChart::EMPLOYEE_ADVANCE, 'credit'), '5000', 2), '⛔ অগ্রিম কাটা খাতায় নেই');
         $this->assertSame(0, bccomp($at(StandardChart::SALARY_PAYABLE, 'credit'), (string) $settlement->net, 2), '⛔ নিট প্রদেয় নয়');
 
+        // ⭐ খাতার সারি কাগজটা খোলে (মালিকের লিংকের নিয়ম, ২৩ নভেম্বর ২০২৬)
+        $target = app(\App\Core\Engines\Drill\DrillResolver::class)->describe(FinalSettlements::SOURCE_TYPE, $settlement->id);
+        $this->assertTrue($target['resolved'], '⛔ খাতার সারি থেকে চূড়ান্ত পাওনার কাগজ মেলে না');
+        $this->get(route($target['route'][0], $target['route'][1]))->assertOk()->assertSee('data-settlement-head', false);
+
         $payable = $lines->firstWhere('account_id', $this->id(StandardChart::SALARY_PAYABLE));
         $this->assertSame(Employee::drillSourceType(), $payable->party_type, '⛔ প্রদেয় কর্মীর নামে নয়');
         $this->assertSame((int) $this->employee->id, (int) $payable->party_id);

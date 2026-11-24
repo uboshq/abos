@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Models;
 
+use App\Core\Contracts\Drillable;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * ⓘ `draft` — হিসাব বসেছে, "সই দিন" এখনো পড়েনি (বা কোম্পানির ছকে সইয়ের অপেক্ষায়); `posted` — জাবেদা খাতায়, আর বদলায় না।
  */
-class WppfProvision extends Model
+class WppfProvision extends Model implements Drillable
 {
     use BelongsToCompany;
     use HasPublicId;
@@ -62,5 +63,27 @@ class WppfProvision extends Model
     public function isPosted(): bool
     {
         return $this->status === self::POSTED;
+    }
+
+    // ── Drillable — খাতার সারি থেকে কাগজে (মালিক, ২৩ নভেম্বর ২০২৬) ───────────
+
+    public static function drillSourceType(): string
+    {
+        return self::SOURCE_TYPE;
+    }
+
+    public function drillDocumentNo(): string
+    {
+        return 'WPPF-'.$this->id;
+    }
+
+    public function drillLabel(): string
+    {
+        return (string) $this->financialYear?->name;
+    }
+
+    public function drillRoute(): array
+    {
+        return ['hr.wppf.show', ['year' => $this->financial_year_id]];
     }
 }
