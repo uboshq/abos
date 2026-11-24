@@ -88,21 +88,22 @@ final class ReportChart
     private static function donut(array $base, array $rows, array $names, ReportColumn $column, ReportResult $result): array
     {
         $total = (string) ($result->totals[$column->key] ?? '0');
-        $sum = max(self::value($total), 0.0) ?: 1.0;
+        $sum = self::value($total);
+        $share = fn (string $value): string => bccomp($sum, '0', 4) > 0 ? Money::round(bcdiv(bcmul($value, '100', 6), $sum, 6), 1).'%' : '0.0%';
         $parts = [];
-        $shown = 0.0;
+        $shown = '0.0000';
 
         foreach (array_slice($rows, 0, self::SLICES) as $i => $row) {
             $value = self::value($row[$column->key] ?? 0);
-            $shown += $value;
-            $parts[] = ['label' => $names[$i], 'value' => max($value, 0.0), 'colour' => self::colour($i),
-                'text' => ReportResult::number((string) ($row[$column->key] ?? '0'), $column), 'share' => round($value / $sum * 100, 1).'%'];
+            $shown = bcadd($shown, $value, 4);
+            $parts[] = ['label' => $names[$i], 'value' => bccomp($value, '0', 4) > 0 ? $value : '0.0000', 'colour' => self::colour($i),
+                'text' => ReportResult::number((string) ($row[$column->key] ?? '0'), $column), 'share' => $share($value)];
         }
 
-        $rest = self::value($total) - $shown;
-        if ($rest > 0.004) {
+        $rest = bcsub($sum, $shown, 4);
+        if (bccomp($rest, '0.004', 4) > 0) {
             $parts[] = ['label' => (string) __('core.report.others'), 'value' => $rest, 'colour' => self::colour(self::SLICES),
-                'text' => Money::format((string) $rest), 'share' => round($rest / $sum * 100, 1).'%'];
+                'text' => Money::format($rest), 'share' => $share($rest)];
         }
 
         return [...$base, 'parts' => $parts, 'centre' => ReportResult::number($total, $column), 'centre_label' => (string) __('core.print.total')];
@@ -124,9 +125,10 @@ final class ReportChart
         return mb_strlen($text) > 22 ? mb_substr($text, 0, 21).'…' : $text;
     }
 
-    private static function value(mixed $value): float
+    /** ⛔ লেখা দশমিক, float নয় — আঁকার মাপ ছাঁচ নিজে কষে; এখানকার অঙ্ক (অন্যান্য, ভাগ) bcmath-এ */
+    private static function value(mixed $value): string
     {
-        return is_numeric($value) ? (float) $value : 0.0;
+        return is_numeric($value) ? bcadd((string) $value, '0', 4) : '0.0000';
     }
 
     /** গ্রাফের রং — রূপের নিজের টোকেন (`--color-chart-1…8`), পাতায় কোনো রং লেখা নেই */

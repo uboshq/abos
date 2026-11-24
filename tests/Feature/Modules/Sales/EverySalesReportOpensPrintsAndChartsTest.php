@@ -121,7 +121,7 @@ final class EverySalesReportOpensPrintsAndChartsTest extends TestCase
         $this->assertSame('pair', $chart['type']);
         $this->assertCount(min(12, count($result->rows)), $chart['labels']);
         $this->assertSame(
-            array_map(fn (array $r) => (float) $r['net_sales'], array_slice($result->rows, 0, 12)),
+            array_map(fn (array $r) => bcadd((string) $r['net_sales'], '0', 4), array_slice($result->rows, 0, 12)),
             $chart['series'][0]['values'], '⛔ গ্রাফের নিট বিক্রি টেবিলের সারির অঙ্ক নয়।');
 
         // ⭐ প্যানেলের বাছাই — টাকার মাধ্যম, ঘোষণা থেকে
