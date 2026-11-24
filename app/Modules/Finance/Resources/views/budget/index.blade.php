@@ -41,10 +41,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::budget.title') }}</x-slot:title>
 
-    <x-slot:header>
-        @include('finance::budget.partials.header')
-    </x-slot:header>
-
     @if (session('saved'))
         <p role="alert" class="mb-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2
                                text-sm text-(--color-badge-success-ink)">{{ session('saved') }}</p>
@@ -52,16 +48,16 @@
 
     @include('finance::budget.partials.tabs')
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
-        <form id="list-form" method="GET" class="contents">
-            <x-ui.filter-bar :facets="$facetPanel" />
-        </form>
-    </x-ui.filter-layout>
-
     <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-        <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-3 font-semibold">
-            {{ __('finance::budget.plan_for', ['year' => $year]) }}
-        </h2>
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :title="__('finance::budget.title')" :info="__('finance::budget.note')" :count="__('finance::budget.plan_for', ['year' => $year])"
+                          :search="false" :columns="$columns" :facets="$facetPanel">
+                <x-slot:actions>
+                    @include('finance::budget.partials.actions')
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
 
         <div class="overflow-x-auto">
             <x-ui.table :compact="true" :empty="__('finance::budget.no_plan')" :rows="$plan" :columns="$columns"
@@ -72,4 +68,5 @@
         <x-ui.pager :rows="$plan" />
         <x-ui.list-totals :rows="$plan" :grand="$planGrand ?? []" :columns="$columns" />
     </section>
+    </x-ui.filter-layout>
 </x-layouts.app>
