@@ -97,6 +97,11 @@
                             $partyName = $fact['party_name'] ?? null;
                             $partyShown = $partyName ?? ($fact['party'] ?? ($fact['about'] ?? null));
                             $deadline = $deadlines[$approval->id] ?? null;
+                            // ⭐ nothing the cards showed is lost (owner): the step "ধাপ 1 / 2" beside the number, and a passed or
+                            //   near deadline ("শেষ সময় পেরিয়েছে 3 ঘণ্টা") in place of the plain wait
+                            $step = $steps[$approval->id] ?? null;
+                            $dueShown = $approval->status === \App\Models\Approval::PENDING
+                                && in_array($deadline['tone'] ?? null, ['danger', 'warning'], true);
                         @endphp
                         <tr @class(['inbox-board-row', 'is-even' => $loop->even, 'is-open' => $isOpen]) data-inbox-card="{{ $approval->id }}"
                             data-board-open="{{ $openUrl }}" @if ($isOpen) aria-current="true" @endif>
@@ -116,6 +121,9 @@
                                 @endif
                                 @if ($approval->payload['supersedes'] ?? null)
                                     <span class="inbox-board-changed">{{ __('approval::message.changed_short') }}</span>
+                                @endif
+                                @if ($step !== null)
+                                    <span class="inbox-board-step" data-card-step>{{ __('approval::field.step_at', ['at' => $step['at'], 'of' => $step['of']]) }}</span>
                                 @endif
                             </td>
                             <td class="inbox-board-cut">
@@ -144,7 +152,14 @@
                                     {{ \App\Core\Support\Money::format($approval->amount) }}
                                 @endif
                             </td>
-                            <td @class(['num', 'inbox-board-late' => ($deadline['tone'] ?? null) === 'danger'])>{{ $waited($approval->requested_at) }}</td>
+                            <td @class(['num', 'inbox-board-late' => ($deadline['tone'] ?? null) === 'danger', 'inbox-board-near' => $dueShown && ($deadline['tone'] ?? null) === 'warning'])
+                                title="{{ $dueShown ? $waited($approval->requested_at) : ($deadline['text'] ?? '') }}">
+                                @if ($dueShown)
+                                    <span data-card-deadline>{{ $deadline['text'] }}</span>
+                                @else
+                                    {{ $waited($approval->requested_at) }}
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
 
