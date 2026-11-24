@@ -34,7 +34,11 @@
         @endif
 
         @if ($roots->isEmpty())
-            <p class="p-4 text-sm text-(--color-ink-muted)">{{ $q ? __('core.empty.no_results') : __('sales::quotation.revisions.empty') }}</p>
+            @if ($abosHead)
+                <x-ui.empty-state :message="$q ? __('core.empty.no_results') : __('sales::quotation.revisions.empty')" />
+            @else
+                <p class="p-4 text-sm text-(--color-ink-muted)">{{ $q ? __('core.empty.no_results') : __('sales::quotation.revisions.empty') }}</p>
+            @endif
         @else
             <ul class="divide-y divide-(--color-border)">
                 @foreach ($roots as $root)
