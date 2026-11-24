@@ -56,22 +56,9 @@
         </div>
     @endif
 
-    @if ($canInstallDefaults)
-        <div data-boxed class="mb-4 rounded-(--radius-card) border border-(--color-border)
-                    bg-(--color-surface-card) p-8 text-center">
-            {{-- ⓘ খালি তালিকা, বা কিছু প্রমিত ধরন বাকি (যেমন নতুন মাতৃত্বকালীন) — [[LeaveTypeDefaults::anyMissing()]] --}}
-            <h2 class="text-lg font-semibold">{{ __($types->isEmpty() && ! request()->filled('q') && ! request()->filled('paid') ? 'hr::message.empty_leave_types' : 'hr::message.leave_types_missing') }}</h2>
-
-            @can('hr.leave.manage')
-                <form method="POST" action="{{ route('hr.leave_type.install') }}" class="mt-4">
-                    @csrf
-                    <x-ui.button type="submit" tone="primary">
-                        {{ __('hr::action.install_leave_types') }}
-                    </x-ui.button>
-                </form>
-            @endcan
-        </div>
-    @endif
+    @unless ($abosHead)
+        @include('hr::leave.partials.install')
+    @endunless
 
     {{-- ⭐ অর্জিত ছুটির পাওনা হাজিরা থেকে, বাঁধা দিন নয় — "বছরে দিন" ঘরে হার লেখা (শ্রম আইন ধারা ১১৭; [[EarnedLeave]]; a6, ২১ অক্টোবর ২০২৬) --}}
     <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
@@ -87,6 +74,10 @@
                         </x-slot:actions>
                     </x-ui.toolbar>
                 </form>
+                {{-- ⭐ আগে মাথা, বাক্স তার নিচে (মালিকের নিয়ম; তিন ABOS রূপে) --}}
+                @if ($canInstallDefaults)
+                    <div class="px-3 pt-3">@include('hr::leave.partials.install')</div>
+                @endif
             @endif
             <x-ui.table
                 :empty="__('hr::message.no_leave_types')"
