@@ -83,7 +83,7 @@ final class MeetingsTest extends TestCase
         $claims = json_decode(base64_decode(strtr(explode('.', $in['token'])[1], '-_', '+/')), true);
         $this->assertSame(LiveKitToken::MEETING_TTL, $claims['exp'] - $claims['nbf'], '⛔ the meeting token is not short');
         $this->assertSame('meet-'.$meeting->public_id, $claims['video']['room']);
-        $this->assertContains('screen_share', $claims['video']['canPublishSources']);
+        $this->assertSame(['microphone', 'camera'], $claims['video']['canPublishSources'], '⛔ a screen without the lock');
         $this->assertArrayNotHasKey('roomAdmin', $claims['video']);
 
         $out = $this->door($this->outsider, $meeting, 'join')->assertOk()->json('data');
@@ -183,17 +183,90 @@ final class MeetingsTest extends TestCase
         $this->assertTrue(MeetingEvent::query()->where('meeting_id', $meeting->id)->where('what', 'muted_all')->where('actor_id', $this->host->id)->exists());
     }
 
-    public function test_sharing_can_be_switched_off_and_the_next_token_says_so(): void
+    public function test_one_screen_at_a_time_is_held_by_the_server(): void
     {
         $meeting = $this->started([$this->guest]);
         $this->door($this->guest, $meeting, 'join');
+        $share = fn (User $u, bool $on) => $this->door($u, $meeting, 'share', ['on' => $on]);
+
+        $this->door($this->outsider, $meeting, 'share', ['on' => true])->assertForbidden();
+        $share($this->guest, true)->assertNoContent();
+        $this->assertContains('screen_share', $this->sources($this->guest, $meeting));
+        $this->assertNotContains('screen_share', $this->sources($this->host, $meeting));
+        Http::assertSent(fn ($r) => str_ends_with($r->url(), 'UpdateParticipant') && $r['identity'] === (string) $this->guest->id
+            && in_array('SCREEN_SHARE', $r['permission']['can_publish_sources'], true));
+
+        $share($this->host, true)->assertStatus(409)->assertJsonPath('message', __('messaging::meeting.refused.meeting_share_taken', ['name' => 'Guest Two']));
+        // ⓘ someone else's "off" does not take it
+        $share($this->host, false);
+        $this->assertSame((int) $this->guest->id, $meeting->fresh()->share_by);
+
+        $share($this->guest, false)->assertNoContent();
+        $this->assertNotContains('screen_share', $this->sources($this->guest, $meeting));
+        $share($this->host, true)->assertNoContent();
+    }
+
+    public function test_the_screen_is_given_back_by_leaving_by_the_webhook_by_a_host_and_by_silence(): void
+    {
+        $meeting = $this->started([$this->guest]);
+        $take = function () use ($meeting): void {
+            $this->door($this->guest, $meeting, 'join');
+            $this->door($this->guest, $meeting, 'share', ['on' => true])->assertNoContent();
+            $this->assertSame((int) $this->guest->id, $meeting->fresh()->share_by);
+        };
+        $free = fn (string $how) => $this->assertNull($meeting->fresh()->share_by, "⛔ the screen stayed held after: {$how}");
+
+        $take();
+        $this->door($this->guest, $meeting, 'leave');
+        $free('leave');
+
+        $take();
+        $who = ['room' => ['name' => $meeting->room()], 'participant' => ['identity' => (string) $this->guest->id, 'sid' => 'PA_1']];
+        $this->hook(['event' => 'participant_joined'] + $who);
+        $this->hook(['event' => 'track_unpublished', 'track' => ['source' => 'CAMERA']] + $who);
+        $this->assertNotNull($meeting->fresh()->share_by, '⛔ a camera going off gave the screen away');
+        $this->hook(['event' => 'track_unpublished', 'track' => ['source' => 'SCREEN_SHARE']] + $who);
+        $free('webhook');
+
+        $take();
+        $this->door($this->host, $meeting, 'stop-share', ['person' => $this->guest->id])->assertNoContent();
+        $free('host');
+
+        $take();
+        $this->travel(MeetingService::SEEN_SECONDS - 10)->seconds();
+        $this->door($this->host, $meeting, '');
+        $this->web($this->guest, 'GET', route('messaging.x.meetings.state', ['meeting' => $meeting->public_id]).'?sharing=1')->assertOk();
+        $this->travel(MeetingService::SEEN_SECONDS - 10)->seconds();
+        $this->door($this->host, $meeting, '');
+        $this->assertNotNull($meeting->fresh()->share_by, '⛔ a living share was taken away');
+        $this->door($this->guest, $meeting, '');
+        $this->travel(20)->seconds();
+        $this->door($this->host, $meeting, '');
+        $free('silence (still inside, not sharing)');
+        $this->assertSame(MeetingPerson::IN, $this->row($meeting, $this->guest)->state);
+    }
+
+    public function test_a_lock_the_call_server_did_not_open_is_not_left_behind(): void
+    {
+        $meeting = $this->started([$this->guest]);
+        $this->door($this->guest, $meeting, 'join');
+        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::fake(['rtc.example.test/*' => Http::response([], 500)]);
+
+        $this->door($this->guest, $meeting, 'share', ['on' => true])->assertStatus(502);
+        $this->assertNull($meeting->fresh()->share_by);
+    }
+
+    public function test_sharing_switched_off_takes_the_screen_from_a_member_and_refuses_the_next(): void
+    {
+        $meeting = $this->started([$this->guest]);
+        $this->door($this->guest, $meeting, 'join');
+        $this->door($this->guest, $meeting, 'share', ['on' => true])->assertNoContent();
         $this->door($this->host, $meeting, 'set', ['allow_share' => 'hosts'])->assertNoContent();
 
-        $sources = fn (User $u): array => json_decode(base64_decode(strtr(explode('.', $this->door($u, $meeting, 'renew')->json('data.token'))[1], '-_', '+/')), true)['video']['canPublishSources'];
-        $this->assertSame(['microphone', 'camera'], $sources($this->guest));
-        $this->assertContains('screen_share', $sources($this->host));
-        Http::assertSent(fn ($r) => str_ends_with($r->url(), 'UpdateParticipant') && $r['identity'] === (string) $this->guest->id
-            && $r['permission']['can_publish_sources'] === ['MICROPHONE', 'CAMERA']);
+        $this->assertNull($meeting->fresh()->share_by);
+        $this->door($this->guest, $meeting, 'share', ['on' => true])->assertForbidden()->assertJsonPath('error', 'meeting_share_off');
+        $this->door($this->host, $meeting, 'share', ['on' => true])->assertNoContent();
     }
 
     public function test_a_locked_meeting_takes_nobody_new(): void
@@ -318,6 +391,12 @@ final class MeetingsTest extends TestCase
         $this->assertSame('in', $this->door($this->host, $meeting, 'join')->assertOk()->json('data.state'));
 
         return $meeting;
+    }
+
+    /** @return list<string> */
+    private function sources(User $user, Meeting $meeting): array
+    {
+        return json_decode(base64_decode(strtr(explode('.', $this->door($user, $meeting, 'renew')->json('data.token'))[1], '-_', '+/')), true)['video']['canPublishSources'];
     }
 
     private function row(Meeting $meeting, User $user): MeetingPerson

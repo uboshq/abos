@@ -31,6 +31,9 @@ return new class extends Migration
             $table->boolean('lobby')->default(true);
             // everyone | hosts
             $table->string('allow_share', 10)->default('everyone');
+            // ⓘ the share lock — one screen at a time, held by the server; `seen` is the holder's own heartbeat
+            $table->foreignId('share_by')->nullable()->constrained('users', 'id', 'msg_meet_share_fk')->restrictOnDelete();
+            $table->timestamp('share_seen_at')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('empty_since')->nullable();
             $table->timestamp('ended_at')->nullable();

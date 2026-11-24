@@ -63,6 +63,7 @@ Route::middleware('auth')->prefix('messages')->group(function (): void {
         Route::post('/meetings/{meeting}/role', [MeetingController::class, 'role'])->whereUuid('meeting')->name('meetings.role');
         Route::post('/meetings/{meeting}/set', [MeetingController::class, 'set'])->whereUuid('meeting')->name('meetings.set');
         Route::post('/meetings/{meeting}/mute', [MeetingController::class, 'mute'])->whereUuid('meeting')->name('meetings.mute');
+        Route::post('/meetings/{meeting}/share', [MeetingController::class, 'share'])->whereUuid('meeting')->name('meetings.share');
         Route::post('/meetings/{meeting}/stop-share', [MeetingController::class, 'stopShare'])->whereUuid('meeting')->name('meetings.stop_share');
     });
 

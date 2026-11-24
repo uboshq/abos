@@ -34,6 +34,9 @@ final class MeetingService
 
     public const RING_SECONDS = 45;
 
+    /** what everyone may send; a screen only with the lock */
+    private const TALK = ['microphone', 'camera'];
+
     public function __construct(
         private readonly MessengerAccess $access,
         private readonly MessengerService $messenger,
@@ -231,9 +234,14 @@ final class MeetingService
      *
      * @return array<string, mixed>
      */
-    public function state(Meeting $meeting, User $user): array
+    public function state(Meeting $meeting, User $user, bool $sharing = false): array
     {
         $me = $this->personOf($meeting, $user);
+
+        if ($sharing && $meeting->share_by === (int) $user->id && $me?->state === MeetingPerson::IN) {
+            Meeting::query()->whereKey($meeting->id)->where('share_by', $user->id)->toBase()->update(['share_seen_at' => now()]);
+            $meeting->share_seen_at = now();
+        }
 
         if ($me !== null && in_array($me->state, [MeetingPerson::IN, MeetingPerson::WAITING], true)
             && ($me->seen_at === null || $me->seen_at->lt(now()->subSeconds(10)))) {
@@ -261,6 +269,7 @@ final class MeetingService
             'lobby' => (bool) $meeting->lobby,
             'allow_share' => (string) $meeting->allow_share,
             'may_share' => $insider && $this->mayShare($meeting, $me),
+            'share_by' => $insider && $meeting->share_by !== null ? (string) $meeting->share_by : null,
             'started_at' => $meeting->started_at?->toIso8601String(),
             'max' => Meeting::MAX_PEOPLE,
             // ⛔ the thread only to its members — a colleague let in from the lobby does not get the group's chat
@@ -294,6 +303,54 @@ final class MeetingService
 
         return ['id' => (string) $person->meeting->public_id, 'title' => (string) $person->meeting->title,
             'video' => (bool) $person->meeting->video, 'peer' => $this->presenter->person($person->meeting->host)];
+    }
+
+    /**
+     * ⭐ One screen at a time: the lock on the meeting row first, only then LiveKit (and the next token) may carry a screen.
+     * A holder silent for [[SEEN_SECONDS]] has lost it.
+     */
+    public function share(Meeting $meeting, User $user, bool $on): void
+    {
+        $person = $this->insider($meeting, $user);
+        $this->sweepOne($meeting);
+
+        $mine = DB::transaction(function () use ($meeting, $user, $on): bool {
+            $row = $this->locked($meeting);
+            $me = $this->personOf($row, $user);
+
+            if ($me === null || $me->state !== MeetingPerson::IN) {
+                throw $this->refused('meeting_not_in');
+            }
+
+            if (! $on) {
+                return $this->dropShare($row, (int) $user->id) === null;
+            }
+
+            if (! $this->mayShare($row, $me)) {
+                throw $this->refused('meeting_share_off');
+            }
+
+            if ($row->share_by !== null && $row->share_by !== (int) $user->id) {
+                throw $this->refused('meeting_share_taken', 409, ['name' => (string) User::query()->whereHas('companies')->whereKey($row->share_by)->value('name')]);
+            }
+
+            $row->forceFill(['share_by' => $user->id, 'share_seen_at' => now()])->save();
+
+            return true;
+        });
+
+        if (! $on && $mine) {
+            return;
+        }
+
+        $done = $this->rooms->maySend($meeting->room(), (int) $user->id, $this->sources($meeting->refresh(), $person));
+
+        if ($on && ! $done) {
+            // ⓘ the call server did not open it — the lock must not stay behind
+            DB::transaction(fn () => $this->dropShare($this->locked($meeting, over: true), (int) $user->id));
+        }
+
+        $this->done($done);
     }
 
     // ── host powers ──────────────────────────────────────────────────────
@@ -358,29 +415,36 @@ final class MeetingService
             $this->note($row, $person->role, $by, $userId);
         });
 
-        $this->sendRights($meeting->refresh(), $userId);
+        // ⓘ made a member while only hosts may share, with the screen in hand: it goes
+        $lost = DB::transaction(function () use ($meeting, $userId): ?int {
+            $row = $this->locked($meeting);
+
+            return $row->share_by === $userId && ! $this->mayShare($row, $this->target($row, $userId)) ? $this->dropShare($row, $userId) : null;
+        });
+
+        if ($lost !== null) {
+            $this->done($this->rooms->maySend($meeting->room(), $lost, self::TALK));
+        }
     }
 
     /** @param  array{locked?: bool, lobby?: bool, allow_share?: string}  $to */
     public function set(Meeting $meeting, User $by, array $to): void
     {
-        $this->asHost($meeting, $by, function (Meeting $row) use ($by, $to): void {
+        $lost = $this->asHost($meeting, $by, function (Meeting $row) use ($by, $to): ?int {
             $row->forceFill(array_intersect_key($to, ['locked' => 1, 'lobby' => 1, 'allow_share' => 1]))->save();
 
             foreach ($to as $what => $value) {
                 $this->note($row, $what.':'.(is_bool($value) ? ($value ? 'on' : 'off') : $value), $by);
             }
+
+            // ⭐ sharing switched off: a member who holds the screen loses it now
+            $holder = $row->share_by === null ? null : $this->target($row, $row->share_by);
+
+            return $holder !== null && ! $this->mayShare($row, $holder) ? $this->dropShare($row, $row->share_by) : null;
         });
 
-        if (isset($to['allow_share'])) {
-            $meeting->refresh();
-            $done = true;
-
-            foreach ($this->inside($meeting)->get() as $person) {
-                $done = $this->rooms->maySend($meeting->room(), (int) $person->user_id, $this->sources($meeting, $person)) && $done;
-            }
-
-            $this->done($done);
+        if ($lost !== null) {
+            $this->done($this->rooms->maySend($meeting->room(), $lost, self::TALK));
         }
     }
 
@@ -398,19 +462,16 @@ final class MeetingService
         $this->done($this->rooms->mute($meeting->room(), $userId, $userId === null ? (int) $by->id : null));
     }
 
-    /** Stop someone's share: take the right away (LiveKit drops the share), then give back what the meeting allows. */
+    /** Stop someone's share: the lock and the right go; LiveKit drops a screen that may no longer be sent. */
     public function stopShare(Meeting $meeting, User $by, int $userId): void
     {
-        $person = $this->asHost($meeting, $by, function (Meeting $row) use ($by, $userId): MeetingPerson {
-            $person = $this->target($row, $userId);
+        $this->asHost($meeting, $by, function (Meeting $row) use ($by, $userId): void {
+            $this->target($row, $userId);
+            $this->dropShare($row, $userId);
             $this->note($row, 'share_stopped', $by, $userId);
-
-            return $person;
         });
 
-        $room = $meeting->room();
-        $done = $this->rooms->maySend($room, $userId, ['microphone', 'camera']);
-        $this->done($this->rooms->maySend($room, $userId, $this->sources($meeting->refresh(), $person)) && $done);
+        $this->done($this->rooms->maySend($meeting->room(), $userId, self::TALK));
     }
 
     public function end(Meeting $meeting, User $by): void
@@ -440,16 +501,16 @@ final class MeetingService
             return;
         }
 
-        CompanyContext::forCompany((int) $meeting->company_id, fn () => $this->take($meeting, (string) ($event['event'] ?? ''), (array) ($event['participant'] ?? [])));
+        CompanyContext::forCompany((int) $meeting->company_id, fn () => $this->take($meeting, (string) ($event['event'] ?? ''), (array) ($event['participant'] ?? []), (string) ($event['track']['source'] ?? '')));
     }
 
     /** @param  array<string, mixed>  $who */
-    private function take(Meeting $meeting, string $what, array $who): void
+    private function take(Meeting $meeting, string $what, array $who, string $source): void
     {
         $userId = (int) ($who['identity'] ?? 0);
         $session = mb_substr((string) ($who['sid'] ?? ''), 0, 64);
 
-        $putOut = DB::transaction(function () use ($meeting, $what, $userId, $session): bool {
+        $putOut = DB::transaction(function () use ($meeting, $what, $userId, $session, $source): bool {
             $row = $this->locked($meeting, over: true);
 
             if ($what === 'room_finished') {
@@ -476,6 +537,11 @@ final class MeetingService
                 }
 
                 $person->forceFill(['session' => $session, 'seen_at' => now()])->save();
+            }
+
+            // ⭐ the screen stopped, whoever stopped it
+            if ($what === 'track_unpublished' && $source === 'SCREEN_SHARE' && $person?->session === $session) {
+                $this->dropShare($row, $userId);
             }
 
             // ⓘ only the session we know: a second tab's old session must not put the person out
@@ -507,16 +573,20 @@ final class MeetingService
         $late = fn () => MeetingPerson::query()->where('meeting_id', $meeting->id)
             ->whereIn('state', [MeetingPerson::IN, MeetingPerson::WAITING])->where('seen_at', '<', $stale);
 
-        if ($meeting->isOver() || (! $late()->exists() && ($meeting->empty_since === null || $meeting->empty_since->gt(now()->subSeconds(Meeting::EMPTY_SECONDS))))) {
+        $held = fn (Meeting $m): bool => $m->share_by !== null && ($m->share_seen_at === null || $m->share_seen_at->lt($stale));
+
+        if ($meeting->isOver() || (! $held($meeting) && ! $late()->exists() && ($meeting->empty_since === null || $meeting->empty_since->gt(now()->subSeconds(Meeting::EMPTY_SECONDS))))) {
             return;
         }
 
-        DB::transaction(function () use ($meeting, $late): void {
+        $lost = DB::transaction(function () use ($meeting, $late, $held): ?int {
             $row = $this->locked($meeting, over: true);
 
             if ($row->isOver()) {
-                return;
+                return null;
             }
+
+            $lost = $held($row) ? $this->dropShare($row, $row->share_by) : null;
 
             foreach ($late()->get() as $person) {
                 $this->goneOut($row, $person, MeetingPerson::LEFT);
@@ -525,7 +595,14 @@ final class MeetingService
             if ($row->empty_since !== null && $row->empty_since->lte(now()->subSeconds(Meeting::EMPTY_SECONDS))) {
                 $this->close($row);
             }
+
+            return $lost;
         });
+
+        // ⛔ the silent holder's right goes before anyone else may take the screen
+        if ($lost !== null) {
+            $this->rooms->maySend($meeting->room(), $lost, self::TALK);
+        }
     }
 
     private function goneOut(Meeting $row, MeetingPerson $person, string $state): void
@@ -533,6 +610,8 @@ final class MeetingService
         $wasIn = $person->state === MeetingPerson::IN;
         $seconds = $wasIn && $person->joined_at !== null ? max(0, now()->getTimestamp() - $person->joined_at->getTimestamp()) : 0;
         $person->forceFill(['state' => $state, 'left_at' => now(), 'session' => null, 'seconds' => (int) $person->seconds + $seconds])->save();
+
+        $this->dropShare($row, (int) $person->user_id);
 
         if (! $wasIn) {
             return;
@@ -558,7 +637,7 @@ final class MeetingService
             $person->forceFill(['state' => MeetingPerson::LEFT, 'left_at' => now(), 'session' => null, 'seconds' => (int) $person->seconds + $seconds])->save();
         }
 
-        $row->forceFill(['ended_at' => now(), 'empty_since' => $row->empty_since ?? now()])->save();
+        $row->forceFill(['share_by' => null, 'share_seen_at' => null, 'ended_at' => now(), 'empty_since' => $row->empty_since ?? now()])->save();
     }
 
     /**
@@ -649,16 +728,19 @@ final class MeetingService
     /** @return list<string> */
     private function sources(Meeting $meeting, MeetingPerson $person): array
     {
-        return ['microphone', 'camera', ...($this->mayShare($meeting, $person) ? ['screen_share', 'screen_share_audio'] : [])];
+        return [...self::TALK, ...($meeting->share_by === (int) $person->user_id && $this->mayShare($meeting, $person) ? ['screen_share', 'screen_share_audio'] : [])];
     }
 
-    private function sendRights(Meeting $meeting, int $userId): void
+    /** Gives the screen back if `$userId` holds it → that id; otherwise null. */
+    private function dropShare(Meeting $row, int $userId): ?int
     {
-        $person = $this->target($meeting, $userId);
-
-        if ($person->state === MeetingPerson::IN && $meeting->allow_share === Meeting::HOSTS) {
-            $this->done($this->rooms->maySend($meeting->room(), $userId, $this->sources($meeting, $person)));
+        if ($row->share_by !== $userId) {
+            return null;
         }
+
+        $row->forceFill(['share_by' => null, 'share_seen_at' => null])->save();
+
+        return $userId;
     }
 
     /** @return array<string, mixed> */

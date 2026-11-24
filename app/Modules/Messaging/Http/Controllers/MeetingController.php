@@ -69,7 +69,7 @@ final class MeetingController extends Controller implements HasMiddleware
     {
         $me = $this->me($request);
 
-        return response()->json(['data' => $this->meetings->state($this->meetings->forUser($me, $meeting), $me)]);
+        return response()->json(['data' => $this->meetings->state($this->meetings->forUser($me, $meeting), $me, $request->boolean('sharing'))]);
     }
 
     public function join(Request $request, string $meeting): JsonResponse
@@ -155,6 +155,14 @@ final class MeetingController extends Controller implements HasMiddleware
         $person = isset($data['person']) ? (int) $data['person'] : null;
 
         return $this->run($request, $meeting, fn (Meeting $m, User $me) => $this->meetings->mute($m, $me, $person));
+    }
+
+    /** POST …/{meeting}/share {on} — take the one screen, or give it back */
+    public function share(Request $request, string $meeting): Response
+    {
+        $on = (bool) $request->validate(['on' => ['required', 'boolean']])['on'];
+
+        return $this->run($request, $meeting, fn (Meeting $m, User $me) => $this->meetings->share($m, $me, $on));
     }
 
     public function stopShare(Request $request, string $meeting): Response

@@ -64,6 +64,8 @@ return [
     'not_now' => 'Not now',
     'new' => 'New meeting',
     'refused' => [
+        'meeting_share_taken' => ':name is sharing now — let that end first.',
+        'meeting_share_off' => 'Only a host may share now.',
         'meetings_off' => 'Meetings are not switched on yet.',
         'meeting_full' => 'There are :max people in the meeting — no one more can enter.',
         'meeting_locked' => 'The meeting is locked — a host must open it.',

@@ -35,12 +35,22 @@ class Meeting extends Model
 
     protected $table = 'messenger_meetings';
 
-    protected $fillable = ['thread_id', 'host_id', 'client_key', 'title', 'video', 'locked', 'lobby', 'allow_share', 'started_at', 'empty_since', 'ended_at'];
+    protected $fillable = ['thread_id', 'host_id', 'client_key', 'title', 'video', 'locked', 'lobby', 'allow_share', 'share_by', 'share_seen_at', 'started_at', 'empty_since', 'ended_at'];
 
     protected function casts(): array
     {
         return ['video' => 'boolean', 'locked' => 'boolean', 'lobby' => 'boolean',
-            'started_at' => 'datetime', 'empty_since' => 'datetime', 'ended_at' => 'datetime'];
+            'share_by' => 'integer', 'share_seen_at' => 'datetime', 'started_at' => 'datetime', 'empty_since' => 'datetime', 'ended_at' => 'datetime'];
+    }
+
+    /**
+     * ⓘ the sharer's heartbeat moves by itself
+     *
+     * @return list<string>
+     */
+    public function auditIgnores(): array
+    {
+        return ['share_seen_at'];
     }
 
     public function room(): string

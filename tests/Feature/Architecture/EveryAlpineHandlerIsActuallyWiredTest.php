@@ -40,19 +40,6 @@ final class EveryAlpineHandlerIsActuallyWiredTest extends TestCase
     private const NOT_WIRED_ON_PURPOSE = [
         'init' => 'Alpine নিজে ডাকে, ব্লেডে লেখা হয় না',
         'destroy' => 'Alpine নিজে ডাকে',
-
-        /*
-         * ⛔ এটা "ইচ্ছাকৃত" নয় — এটা **মৃত কোড**, আর সেটা এখানে লিখে
-         * রাখাই সৎ পথ।
-         *
-         * ⓘ `forms.js:792` — এককের নাম id থেকে ফেরায়, আর সেটা কোথাও
-         * ডাকা হয় না: ব্লেডে নয়, JS-এও নয়। ২১ সেপ্টেম্বর ২০২৬-এ এই
-         * পাহারাটা বসানোর দিনেই ধরা পড়ল।
-         *
-         * ⚠️ মোছা হয়নি কারণ ঐ ফাইলে তখন অন্য সেশনের অকমিটেড কাজ ছিল।
-         * যিনি প্যাক-এককের কাজ ধরবেন, তিনি মুছে এই সারিটাও তুলে দেবেন।
-         */
-        'nameOf' => 'মৃত — কেউ ডাকে না; প্যাক-এককের কাজের সাথে মুছতে হবে',
     ];
 
     public function test_no_handler_is_written_without_anyone_calling_it(): void

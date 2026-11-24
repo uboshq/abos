@@ -162,6 +162,8 @@ export function bootMeeting (root) {
         for (const e of ['ParticipantConnected', 'ParticipantDisconnected', 'TrackMuted', 'TrackUnmuted', 'LocalTrackPublished', 'LocalTrackUnpublished', 'ActiveSpeakersChanged', 'ParticipantAttributesChanged', 'ParticipantPermissionsChanged']) {
             room.on(RoomEvent[e], draw)
         }
+        // ⭐ নিজের পর্দা থামল (বোতামে বা ব্রাউজারের বারে) — সার্ভারের তালাও ছাড়া
+        room.on(RoomEvent.LocalTrackUnpublished, (pub) => { if (pub.source === Track.Source.ScreenShare && S.room === room) ask(urls.share, { on: false }) })
         // ⓘ কারো বেরোনোয় মিটিং শেষ নয়; নিজের ঘর বন্ধ হলে সার্ভারকে জিজ্ঞাসা — শেষ, বের করা, না কি নেট গেছে
         room.on(RoomEvent.Disconnected, () => { if (S.room === room) dropped() })
 
@@ -240,7 +242,8 @@ export function bootMeeting (root) {
 
     async function refresh () {
         clearTimeout(S.poll)
-        const res = await ask(urls.state)
+        const mineShared = S.joined && S.lk && everyone().some((p) => p.me && p.screen)
+        const res = await ask(urls.state + (mineShared ? '?sharing=1' : ''))
         if (res.ok && res.data?.data) {
             S.state = res.data.data
             if (S.state.over) {
@@ -519,10 +522,40 @@ export function bootMeeting (root) {
         const mine = all.find((p) => p.me)
         const other = all.find((p) => p.screen && !p.me)
         if (!mine.screen && other) { toast(w('someone_shares', { name: other.name })); return }
+        if (mine.screen) {
+            try { await lp.setScreenShareEnabled(false) } catch { /* ⓘ আগেই বন্ধ */ }
+            paint()
+            return
+        }
+        // ⓘ আগে জানালা বাছা (ব্রাউজার চাপের মুহূর্তেই চায়), তারপর সার্ভারের তালা, তারপর পাঠানো
+        let tracks
         try {
-            await lp.setScreenShareEnabled(!mine.screen, ...shareOptions())
-        } catch { /* ⓘ জানালা না বেছে ফেরা */ }
+            tracks = await lp.createScreenTracks(shareOptions()[0])
+        } catch { return }
+        const res = await ask(urls.share, { on: true })
+        if (!res.ok) {
+            tracks.forEach((t) => t.stop())
+            toast(res.data?.message || w('failed'))
+            return
+        }
+        if (!(await publishShare(lp, tracks))) {
+            tracks.forEach((t) => t.stop())
+            await ask(urls.share, { on: false })
+            toast(w('failed'))
+        }
         paint()
+    }
+
+    /** ⓘ অনুমতিটা LiveKit থেকে ফিরতে একটু লাগে — কয়েকবার চেষ্টা */
+    async function publishShare (lp, tracks) {
+        for (const t of tracks) {
+            let sent = false
+            for (let i = 0; i < 6 && !sent; i++) {
+                try { await lp.publishTrack(t, shareOptions()[1]); sent = true } catch { await new Promise((r) => setTimeout(r, 400)) }
+            }
+            if (!sent && t.source === S.lk.Track.Source.ScreenShare) return false
+        }
+        return true
     }
 
     /** অন্য জানালা — নতুনটা হাতে এলে তবেই পুরনোটা ছাড়া, তাই মাঝে কালো পর্দা নেই */

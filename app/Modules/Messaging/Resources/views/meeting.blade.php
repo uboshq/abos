@@ -7,7 +7,7 @@
     $meetUrls = ['state' => route('messaging.x.meetings.state', $meetBase), 'people' => route('messaging.x.people'),
         'messages' => route('messaging.x.messages', ['thread' => '__T__']), 'send' => route('messaging.x.send', ['thread' => '__T__']),
         'page' => route('messaging.meeting', $meetBase), 'back' => route('messaging.index')];
-    foreach (['join', 'renew', 'leave', 'end', 'invite', 'lobby', 'remove', 'role', 'set', 'mute', 'stop_share'] as $meetDoor) {
+    foreach (['join', 'renew', 'leave', 'end', 'invite', 'lobby', 'remove', 'role', 'set', 'mute', 'share', 'stop_share'] as $meetDoor) {
         $meetUrls[$meetDoor] = route('messaging.x.meetings.'.$meetDoor, $meetBase);
     }
     $meetWords = trans('messaging::meeting');
