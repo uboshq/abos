@@ -30,7 +30,7 @@ final class EachModuleIsACardWithASwitchTest extends TestCase
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
 
-        $response = $this->actingAs($owner)->get(route('system_admin.control-panel'))->assertOk();
+        $response = $this->actingAs($owner)->get(route('system_admin.control-panel', ['tab' => 'switches']))->assertOk();
         $dom = new DOMDocument;
         @$dom->loadHTML('<?xml encoding="utf-8"?>'.$response->getContent());
         $x = new DOMXPath($dom);

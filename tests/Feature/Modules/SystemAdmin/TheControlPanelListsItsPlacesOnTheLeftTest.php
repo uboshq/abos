@@ -37,19 +37,23 @@ final class TheControlPanelListsItsPlacesOnTheLeftTest extends TestCase
         $this->actingAs($this->owner);
     }
 
-    public function test_every_old_tab_is_on_the_left_list_in_three_groups(): void
+    public function test_the_left_list_is_the_subjects_then_printing_and_the_phone(): void
     {
-        $html = (string) $this->get(route('system_admin.control-panel', ['tab' => 'accounts']))->assertOk()->getContent();
+        $html = (string) $this->get(route('system_admin.control-panel'))->assertOk()->getContent();
         $aside = $this->part($html, 'data-control-frame', '</aside>');
 
-        foreach (app(ControlPanelTabs::class)->all() as $tab) {
-            $this->assertStringContainsString('href="'.e($tab['url']).'" data-control-tab="'.$tab['key'].'"', $aside, "⛔ \"{$tab['label']}\" বাঁয়ের তালিকায় নেই।");
+        foreach (\App\Modules\SystemAdmin\Support\ControlSubjects::ALL as $subject) {
+            $this->assertStringContainsString('data-control-tab="subject-'.$subject.'"', $aside, "⛔ বিষয় \"{$subject}\" বাঁয়ের তালিকায় নেই।");
+            $this->assertStringNotContainsString('::', __('system_admin::control.subject.'.$subject));
         }
-
-        $first = strpos($aside, e(__('system_admin::control.group_switches')));
-        $this->assertNotFalse($first, '⛔ "মডিউল চালু/বন্ধ" দল নেই।');
-        $this->assertLessThan(strpos($aside, e(__('system_admin::control.group_modules'))), $first, '⛔ মডিউল চালু/বন্ধ প্রথম দল নয়।');
-        $this->assertMatchesRegularExpression('/data-control-tab="accounts"[^>]*aria-current="page"/', $aside, '⛔ চলতি জায়গা চিহ্নিত নয়।');
+        foreach (['print', 'mobile'] as $key) {
+            $this->assertStringContainsString('data-control-tab="'.$key.'"', $aside);
+        }
+        // ⓘ মডিউলের আর সুইচের ট্যাব তালিকায় নেই
+        foreach (['switches', 'accounts', 'sales'] as $key) {
+            $this->assertStringNotContainsString('data-control-tab="'.$key.'"', $aside, "⛔ \"{$key}\" এখনো তালিকায়।");
+        }
+        $this->assertMatchesRegularExpression('/data-control-tab="subject-general"[^>]*aria-current="page"/', $aside, '⛔ চলতি জায়গা চিহ্নিত নয়।');
     }
 
     public function test_finding_a_switch_says_where_it_lives(): void
@@ -58,7 +62,7 @@ final class TheControlPanelListsItsPlacesOnTheLeftTest extends TestCase
         $html = (string) $this->get(route('system_admin.control-panel', ['find' => mb_substr($label, 0, 4)]))->assertOk()->getContent();
         $found = $this->part($html, 'data-control-found', '</section>');
 
-        $accounts = collect(app(ControlPanelTabs::class)->all())->firstWhere('key', 'accounts');
+        $accounts = ['url' => route('system_admin.module.screens', ['module' => 'accounts']), 'label' => __('system_admin::module_board.screens')];
         $this->assertStringContainsString(e($label), $found, '⛔ খোঁজায় মেনুর সারিটা মেলেনি।');
         $this->assertStringContainsString('href="'.e($accounts['url']).'"', $found, '⛔ মেলা সারির জায়গায় যাওয়ার লিংক নেই।');
         $this->assertStringContainsString(e($accounts['label']), $found, '⛔ কোথায় আছে বলে না।');
@@ -79,7 +83,7 @@ final class TheControlPanelListsItsPlacesOnTheLeftTest extends TestCase
         $this->assertNotNull($essential, 'প্রস্তুতিটাই ভুল — কোনো ভিত্তির মডিউল নেই।');
         $this->assertNotNull($business);
 
-        $html = (string) $this->get(route('system_admin.control-panel'))->assertOk()->getContent();
+        $html = (string) $this->get(route('system_admin.control-panel', ['tab' => 'switches']))->assertOk()->getContent();
 
         $this->assertStringNotContainsString('name="settings['.$essential['key'].']"', $html, "⛔ ভিত্তির মডিউল ({$essential['label']}) বন্ধ করার টিক আছে।");
         $this->assertStringContainsString('data-foundation-module="'.$essential['code'].'"', $this->part($html, 'data-foundation', '</section>'),

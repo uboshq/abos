@@ -48,11 +48,15 @@ final class ControlPanelTabs
      */
     public function all(): array
     {
-        $tabs = [[
-            'key' => 'switches',
-            'label' => __('system_admin::control.tab_switches'),
-            'url' => route('system_admin.control-panel', ['tab' => 'switches']),
-        ]];
+        // ⭐ বিষয় ধরে তেরোটা জায়গা ([[ControlSubjects]]; মালিক, ২৪ নভেম্বর ২০২৬) — মডিউলের সুইচ এখন "কোম্পানির মডিউল"-এ; `?tab=switches` ঠিকানা তবু খোলে
+        $tabs = [];
+        foreach (ControlSubjects::ALL as $subject) {
+            $tabs[] = [
+                'key' => ControlSubjects::PREFIX.$subject,
+                'label' => __('system_admin::control.subject.'.$subject),
+                'url' => route('system_admin.control-panel', ['tab' => ControlSubjects::PREFIX.$subject]),
+            ];
+        }
 
         /*
          * ⭐ ছাপার ট্যাব দ্বিতীয়, শেষে নয়।
@@ -124,14 +128,18 @@ final class ControlPanelTabs
     public function groups(): array
     {
         $cross = array_merge(['print'], $this->crossTabs());
-        $groups = ['switches' => [], 'general' => [], 'modules' => []];
+        $groups = ['subjects' => [], 'general' => []];
+        $counts = $this->counts();
 
         foreach ($this->all() as $tab) {
-            $groups[match (true) {
-                $tab['key'] === 'switches' => 'switches',
-                in_array($tab['key'], $cross, true) => 'general',
-                default => 'modules',
-            }][] = $tab;
+            $subject = ControlSubjects::fromTab($tab['key']);
+
+            // ⓘ মডিউলের ট্যাব তালিকায় নেই (একই ঘর দুই জায়গায় দেখাত) — পুরনো ঠিকানা খোলে
+            if ($subject !== null) {
+                $groups['subjects'][] = [...$tab, 'count' => $counts[$subject] ?? 0];
+            } elseif (in_array($tab['key'], $cross, true)) {
+                $groups['general'][] = $tab;
+            }
         }
 
         return array_values(array_filter(array_map(
@@ -139,6 +147,21 @@ final class ControlPanelTabs
             array_keys($groups),
             $groups,
         ), fn (array $g) => $g['tabs'] !== []));
+    }
+
+    /** @return array<string, int> বিষয় → কয়টা নিয়ন্ত্রণ */
+    public function counts(): array
+    {
+        $counts = [];
+        foreach ($this->settings->definitions() as $key => $definition) {
+            // ⛔ ছাপার পর্দার ঘর (json) এখানে নয়
+            if (($definition['type'] ?? null) === 'json' || ($subject = ControlSubjects::of($key, $definition)) === null) {
+                continue;
+            }
+            $counts[$subject] = ($counts[$subject] ?? 0) + 1;
+        }
+
+        return $counts;
     }
 
     /**
@@ -170,7 +193,7 @@ final class ControlPanelTabs
             }
 
             if ($hit($module['label'])) {
-                $found[] = ['label' => $module['label'], 'place' => $places['switches']['label'], 'url' => $places['switches']['url']];
+                $found[] = ['label' => $module['label'], 'place' => __('system_admin::module_board.companies'), 'url' => route('system_admin.module.companies')];
             }
 
             foreach ($module['groups'] as $group) {
@@ -178,18 +201,20 @@ final class ControlPanelTabs
                     $label = __($item['label']);
 
                     if ($hit($label)) {
-                        $found[] = ['label' => $label, 'place' => $place['label'], 'url' => $place['url']];
+                        $found[] = ['label' => $label, 'place' => __('system_admin::module_board.screens').' › '.$module['label'],
+                            'url' => route('system_admin.module.screens', ['module' => $module['code']])];
                     }
                 }
             }
         }
 
-        foreach ($this->settings->definitions() as $definition) {
+        foreach ($this->settings->definitions() as $key => $definition) {
             if ($definition['menu'] ?? false) {
                 continue;
             }
 
-            $place = $places[(string) ($definition['tab'] ?? $definition['module'] ?? '')] ?? null;
+            $subject = ($definition['type'] ?? null) === 'json' ? null : ControlSubjects::of($key, $definition);
+            $place = $places[$subject !== null ? ControlSubjects::PREFIX.$subject : (string) ($definition['tab'] ?? $definition['module'] ?? '')] ?? null;
             $label = __((string) ($definition['label'] ?? ''));
 
             if ($place !== null && $hit($label)) {

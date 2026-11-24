@@ -282,7 +282,7 @@ class EveryMenuRowHasItsOwnSwitchTest extends TestCase
      */
     public function test_the_control_panel_opens_by_tab(): void
     {
-        $first = $this->get(route('system_admin.control-panel'))->assertOk();
+        $first = $this->get(route('system_admin.control-panel', ['tab' => 'switches']))->assertOk();
 
         $this->assertSame('switches', $first->viewData('tab'));
         $this->assertNotEmpty($first->viewData('tree'));

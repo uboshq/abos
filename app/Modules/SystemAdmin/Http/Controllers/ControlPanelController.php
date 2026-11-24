@@ -13,6 +13,7 @@ use App\Core\Services\SettingsService;
 use App\Core\Support\PlainNumber;
 use App\Http\Controllers\Controller;
 use App\Modules\SystemAdmin\Support\ControlPanelTabs;
+use App\Modules\SystemAdmin\Support\ControlSubjects;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -60,7 +61,13 @@ class ControlPanelController extends Controller implements HasMiddleware
      */
     public function edit(Request $request): View
     {
-        $tab = (string) $request->query('tab', 'switches');
+        $tab = is_string($request->query('tab')) ? $request->query('tab') : ControlSubjects::PREFIX.ControlSubjects::ALL[0];
+
+        // ⭐ বিষয় ধরে ([[ControlSubjects]]; মালিক, ২৪ নভেম্বর ২০২৬) — বাকি ঠিকানা (মডিউল, মোবাইল, সুইচ) আগের পাতাতেই খোলে
+        if (ControlSubjects::fromTab($tab) !== null) {
+            return $this->subjects($request, $tab);
+        }
+
 
         return view('system_admin::control-panel.edit', [
             'menu' => $this->menu->forUser($request->user()),
@@ -114,6 +121,97 @@ class ControlPanelController extends Controller implements HasMiddleware
             // ⭐ কে কবে কোন সুইচ বদলালেন — সিস্টেম পর্দার নকশা §১, ১০ অক্টোবর ২০২৬ ([[history()]])
             'history' => $this->history(),
         ]);
+    }
+
+    /**
+     * ⭐ এক বিষয়ের সেটিং, মডিউল ধরে বাক্সে; খোঁজা বা ছাঁকনি দিলে সব বিষয় জুড়ে। ⓘ ফর্মে কেবল যা আঁকা হয়েছে তাই যায় (`scope[]`) — সংরক্ষণের
+     * দরজা, তালা, দ্বিতীয় অনুমোদন আর সংখ্যার নিয়ম [[update()]]-এই, একটুও বদলায়নি।
+     */
+    private function subjects(Request $request, string $tab): View
+    {
+        $text = fn (string $key): string => is_string($request->query($key)) ? trim($request->query($key)) : '';
+        [$q, $module, $level, $sort] = [mb_strtolower($text('q')), $text('module'), $text('level'), $text('sort')];
+        $everywhere = $q !== '' || $module !== '' || $level !== '';
+        $signed = app(\App\Core\Services\SignedSettings::class);
+        $changed = \App\Models\Setting::query()->where(fn ($w) => $w->where('company_id', \App\Core\Support\CompanyContext::id())->orWhereNull('company_id'))
+            ->get(['key', 'updated_at'])->groupBy('key')->map(fn ($rows) => $rows->max('updated_at'));
+
+        $rows = [];
+        foreach ($this->settings->definitions() as $key => $definition) {
+            $subject = ControlSubjects::of($key, $definition);
+
+            if ($subject === null || self::ownedByThePrintScreen($definition) || (! $everywhere && ControlSubjects::PREFIX.$subject !== $tab)) {
+                continue;
+            }
+
+            $label = __((string) $definition['label']);
+            $row = [...$definition, 'key' => $key, 'text' => $label, 'subject' => $subject,
+                'per_branch' => (bool) ($definition['per_branch'] ?? false), 'signed' => $signed->guards($key),
+                'product' => $this->settings->isProductWide($key), 'changed' => $changed[$key] ?? null];
+
+            if (($q !== '' && ! str_contains(mb_strtolower($label.' '.$key), $q))
+                || ($module !== '' && $definition['module'] !== $module)
+                || ($level !== '' && ! ($row[$level] ?? false))) {
+                continue;
+            }
+
+            $rows[] = [...$row, 'value' => $this->settings->get($key)];
+        }
+
+        $rows = collect($rows);
+        $rows = match ($sort) {
+            'name' => $rows->sortBy('text', SORT_NATURAL | SORT_FLAG_CASE)->values(),
+            'changed' => $rows->sortByDesc(fn (array $r) => $r['changed']?->getTimestamp() ?? 0)->values(),
+            default => $rows->sortBy(fn (array $r) => array_search($r['subject'], ControlSubjects::ALL, true))->values(),
+        };
+
+        $this->offerAsAFile($rows);
+
+        $labels = collect($this->registry->all())->mapWithKeys(fn ($m) => [$m->code => $m->label()])->all();
+        $used = collect($this->settings->definitions())->filter(fn (array $d, string $k) => ControlSubjects::of($k, $d) !== null)->pluck('module')->unique()->all();
+
+        return view('system_admin::control-panel.subjects', [
+            'menu' => $this->menu->forUser($request->user()),
+            'tab' => $tab,
+            'tabs' => $this->tabs->all(),
+            'everywhere' => $everywhere,
+            'boxes' => $rows->groupBy('module'),
+            'total' => $rows->count(),
+            'moduleLabels' => $labels,
+            'settings' => $this->settings,
+            'history' => $this->history(),
+            'facets' => \App\Core\ListFilter\Facets::panel([
+                \App\Core\ListFilter\Facets::pick('module', __('system_admin::module_board.module'), array_intersect_key($labels, array_flip($used))),
+                \App\Core\ListFilter\Facets::pick('level', __('system_admin::control.level'), [
+                    'per_branch' => __('system_admin::control.level_branch'),
+                    'signed' => __('system_admin::control.level_signed'),
+                    'product' => __('system_admin::control.level_product'),
+                ]),
+            ]),
+        ]);
+    }
+
+    /** নামানো ফাইলে এখন যা দেখা যাচ্ছে — বিষয়, মডিউল, নিয়ন্ত্রণ, মান, শেষ বদল */
+    private function offerAsAFile(\Illuminate\Support\Collection $rows): void
+    {
+        $export = app(\App\Core\Services\ListExport::class);
+
+        if (! $export->wanted()) {
+            return;
+        }
+
+        $columns = array_map(fn (string $key) => ['key' => $key, 'label' => __('system_admin::control.col_'.$key), 'render' => null],
+            ['subject', 'module', 'setting', 'level', 'value', 'changed']);
+        $export->describe(['title' => __('system_admin::menu.control_panel')]);
+        $export->capture($columns, $rows, fn (array $r, array $col) => match ($col['key']) {
+            'subject' => __('system_admin::control.subject.'.$r['subject']),
+            'module' => $this->registry->get($r['module'])?->label() ?? $r['module'],
+            'setting' => $r['text'],
+            'level' => implode(', ', array_filter([$r['per_branch'] ? __('system_admin::control.level_branch') : null,
+                $r['signed'] ? __('system_admin::control.level_signed') : null, $r['product'] ? __('system_admin::control.level_product') : null])),
+            'value' => is_bool($r['value']) ? __('system_admin::control.value_'.($r['value'] ? 'on' : 'off')) : (is_scalar($r['value']) ? (string) $r['value'] : ''),
+            default => $r['changed'] !== null ? \App\Core\Support\DateFormat::spoken($r['changed']) : '',
+        });
     }
 
     /**

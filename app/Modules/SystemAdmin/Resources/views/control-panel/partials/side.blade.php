@@ -20,12 +20,14 @@
     <aside class="print-hide">
         {{-- ⓘ action নেই — খোঁজা সবসময় কন্ট্রোল প্যানেলেই যায় (ছাপার পর্দা থেকেও), কিন্তু একই ঠিকানা লিখলে সংরক্ষণের
              ফর্মটা আর "একটাই" থাকত না (TheSalesTabSavedZeroIntoEveryChoiceTest সংরক্ষণের ফর্ম ঠিকানা ধরে খোঁজে) --}}
+        @if ($ownSearch ?? true)
         <form method="GET" role="search" class="mb-3" data-control-search
               @if (! request()->routeIs('system_admin.control-panel')) action="{{ route('system_admin.control-panel') }}" @endif>
             <input type="search" name="find" value="{{ $find }}" placeholder="{{ __('system_admin::control.find') }}"
                    aria-label="{{ __('system_admin::control.find') }}" data-control-find
                    class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 text-sm">
         </form>
+        @endif
 
         <nav aria-label="{{ __('system_admin::menu.control_panel') }}" class="space-y-3">
             @foreach ($panel->groups() as $group)
@@ -40,6 +42,9 @@
                            ])
                            @if ($tab === $one['key']) aria-current="page" @endif>
                             {{ $one['label'] }}
+                            @isset($one['count'])
+                                <span class="num ms-auto ps-2 text-2xs text-(--color-ink-muted)">{{ $one['count'] }}</span>
+                            @endisset
                         </a>
                     @endforeach
                 </div>

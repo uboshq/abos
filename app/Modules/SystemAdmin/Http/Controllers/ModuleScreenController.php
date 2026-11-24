@@ -84,7 +84,15 @@ class ModuleScreenController extends Controller implements HasMiddleware
             'open' => $open,
             'settings' => $this->settings,
             // ⓘ ঘোষিত সুইচ (নিজের নিয়ম আছে) এখানে কেবল দেখা — বদল কন্ট্রোল প্যানেলে
-            'mine' => fn (string $key): bool => (bool) ($definitions[$key]['menu'] ?? false),
+            'mine' => fn (string $key): bool => (bool) ($definitions[$key]['menu'] ?? false)
+                || (($definitions[$key]['group'] ?? '') === 'screens' && ($definitions[$key]['type'] ?? '') === 'boolean'
+                    && ! isset($definitions[$key]['owned_by']) && $this->settings->mayChange($key, $request->user())),
+            // ⭐ `screens` দলের যে সুইচের নিজের মেনু-সারি নেই — কন্ট্রোল প্যানেলের বিষয়ে নেই, তাই এখানে
+            'extra' => $open === null ? [] : array_diff_key(
+                array_filter($definitions, fn (array $d) => ($d['module'] ?? '') === $open['code'] && ($d['group'] ?? '') === 'screens' && ($d['type'] ?? '') === 'boolean'
+                    && ! ($d['menu'] ?? false) && ! isset($d['owned_by'])),
+                array_flip(collect($open['groups'])->flatMap(fn ($g) => array_column($g['items'], 'key'))->all()),
+            ),
             'facets' => Facets::panel([
                 Facets::pick('state', __('core.table.status'), ['diff' => __('system_admin::module_board.off'), 'same' => __('system_admin::module_board.all_on')]),
             ]),

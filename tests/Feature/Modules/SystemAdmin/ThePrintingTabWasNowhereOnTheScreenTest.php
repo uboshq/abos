@@ -85,7 +85,7 @@ final class ThePrintingTabWasNowhereOnTheScreenTest extends TestCase
 
         /* সারিটা এসেছে — পাশের ট্যাবগুলোর একটা ধরে দেখা */
         $this->assertStringContainsString(
-            route('system_admin.control-panel', ['tab' => 'switches']),
+            route('system_admin.control-panel', ['tab' => 'subject-general']),
             $html,
             'ছাপার পর্দায় কন্ট্রোল প্যানেলের সারিটা নেই, তাই ওখান থেকে '
             .'আর কোনো ট্যাবে ফেরা যায় না — ট্যাবটা তখন এক-মুখো দরজা।',

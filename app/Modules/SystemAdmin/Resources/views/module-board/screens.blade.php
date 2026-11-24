@@ -74,6 +74,22 @@
                                 </div>
                             </section>
                         @endforeach
+                        @if ($extra !== [])
+                            <section data-boxed data-extra-screens class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+                                <h2 class="border-b border-(--color-border) px-4 py-2 text-sm font-semibold">{{ __('system_admin::settings_group.screens') }}</h2>
+                                <div class="grid gap-x-4 px-4 py-2 sm:grid-cols-2">
+                                    @foreach ($extra as $key => $definition)
+                                        <label class="flex items-center gap-3 py-2 text-sm">
+                                            <span class="min-w-0 flex-1">{{ __($definition['label']) }}</span>
+                                            <input type="checkbox" role="switch" name="settings[{{ $key }}]" value="1" class="size-4" @checked($settings->get($key)) @disabled(! $mine($key))>
+                                            @if ($mine($key))
+                                                <input type="hidden" name="scope[]" value="{{ $key }}">
+                                            @endif
+                                        </label>
+                                    @endforeach
+                                </div>
+                            </section>
+                        @endif
                     </form>
                 @endif
             </div>
