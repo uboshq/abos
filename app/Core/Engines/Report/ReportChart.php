@@ -96,7 +96,7 @@ final class ReportChart
         foreach (array_slice($rows, 0, self::SLICES) as $i => $row) {
             $value = self::value($row[$column->key] ?? 0);
             $shown = bcadd($shown, $value, 4);
-            $parts[] = ['label' => $names[$i], 'value' => bccomp($value, '0', 4) > 0 ? $value : '0.0000', 'colour' => self::colour($i),
+            $parts[] = ['label' => $names[$i], 'value' => bccomp($value, '0', 4) > 0 ? $value : '0', 'colour' => self::colour($i),
                 'text' => ReportResult::number((string) ($row[$column->key] ?? '0'), $column), 'share' => $share($value)];
         }
 
@@ -128,7 +128,16 @@ final class ReportChart
     /** ⛔ লেখা দশমিক, float নয় — আঁকার মাপ ছাঁচ নিজে কষে; এখানকার অঙ্ক (অন্যান্য, ভাগ) bcmath-এ */
     private static function value(mixed $value): string
     {
-        return is_numeric($value) ? bcadd((string) $value, '0', 4) : '0.0000';
+        if (! is_numeric($value)) {
+            return '0';
+        }
+
+        // ⓘ "1.0E-5" — is_numeric মানে, bcmath মানে না (ValueError); তাই সূচক-লেখা আগে সাধারণ দশমিকে
+        $plain = preg_match('/^-?\d+(\.\d+)?$/', (string) $value) === 1 ? (string) $value : sprintf('%.4F', $value);
+        $out = bcadd($plain, '0', 4);
+
+        // ⛔ শূন্য মানে '0' — "0.0000" PHP-তে সত্য, তাই সব বার শূন্য হলে ছাঁচের `?: 1.0` খাটত না, শূন্যে ভাগ
+        return bccomp($out, '0', 4) === 0 ? '0' : $out;
     }
 
     /** গ্রাফের রং — রূপের নিজের টোকেন (`--color-chart-1…8`), পাতায় কোনো রং লেখা নেই */
