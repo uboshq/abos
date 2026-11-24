@@ -22,7 +22,7 @@ class MeetingEvent extends Model
 
     protected $table = 'messenger_meeting_events';
 
-    protected $fillable = ['meeting_id', 'actor_id', 'person_id', 'what'];
+    protected $fillable = ['company_id', 'meeting_id', 'actor_id', 'person_id', 'what'];
 
     protected function casts(): array
     {

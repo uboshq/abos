@@ -41,7 +41,7 @@ class MeetingPerson extends Model
 
     protected $table = 'messenger_meeting_people';
 
-    protected $fillable = ['meeting_id', 'user_id', 'role', 'state', 'invited_at', 'joined_at', 'left_at', 'seen_at', 'session', 'seconds'];
+    protected $fillable = ['company_id', 'meeting_id', 'user_id', 'role', 'state', 'invited_at', 'joined_at', 'left_at', 'seen_at', 'session', 'seconds'];
 
     protected function casts(): array
     {
