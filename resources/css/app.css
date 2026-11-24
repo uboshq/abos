@@ -2861,6 +2861,23 @@ a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; te
     max-width: 320px;
 }
 
+/* ⓘ তালিকার বারে খোঁজার ঘর `label`, সেটাই ফাঁকা জায়গা ভরে — ভিতরের ইনপুট তার সমান চওড়া */
+:root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view:has([data-head-tabs]) label:has(> [data-quick-find]) {
+    min-width: 140px;
+}
+
+:root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view:has([data-head-tabs]) label > [data-quick-find] {
+    width: 100% !important;
+    min-width: 0;
+    max-width: none;
+}
+
+/* ⓘ বন্ধ অবস্থায় ছোট — খুললে পুরো নাম; ব্রাউজার ঘরটা সবচেয়ে লম্বা নামের মাপে নিত, তাতে ট্যাব গুটিয়ে যেত */
+:root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view:has([data-head-tabs]) [data-sort] select {
+    max-width: 150px;
+    text-overflow: ellipsis;
+}
+
 :root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view:has([data-head-tabs]) [data-record-count] {
     max-width: 260px;
     overflow: hidden;

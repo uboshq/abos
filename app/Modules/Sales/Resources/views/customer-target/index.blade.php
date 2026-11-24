@@ -7,6 +7,8 @@
 @php
     use App\Core\Support\Money;
 
+    // ⓘ সংরক্ষণ থামলে যা লেখা হয়েছিল তাই ফেরে — খালি করা ঘরও
+    $typed = is_array(old('target')) ? old('target') : null;
     $canManage = auth()->user()?->can('sales.customer_target.manage') ?? false;
     $input = 'h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2';
 @endphp
@@ -66,7 +68,7 @@
             </x-ui.toolbar>
         </form>
     @endif
-    <form id="target-form" @if ($abosHead) x-on:submit="saved()" @endif method="POST" action="{{ route('sales.customer_target.store') }}">
+    <form id="target-form" @if ($errors->any()) data-unsaved @endif @if ($abosHead) x-on:submit="saved()" @endif method="POST" action="{{ route('sales.customer_target.store') }}">
         @csrf
         <input type="hidden" name="month" value="{{ $month->toDateString() }}">
 
@@ -92,7 +94,7 @@
                             <td class="text-end">
                                 @if ($canManage)
                                     <input type="number" step="0.01" min="0" inputmode="decimal" name="target[{{ $c->id }}][amount]"
-                                           value="{{ $row['target'] !== null ? rtrim(rtrim($row['target'], '0'), '.') : '' }}"
+                                           value="{{ $typed !== null ? ($typed[$c->id]['amount'] ?? '') : ($row['target'] !== null ? rtrim(rtrim($row['target'], '0'), '.') : '') }}"
                                            aria-label="{{ __('sales::customer_target.target') }} — {{ $c->name() }}"
                                            class="num w-32 text-end {{ $input }}">
                                 @else
@@ -101,7 +103,7 @@
                             </td>
                             <td>
                                 @if ($canManage)
-                                    <x-ui.date dense :name="'target['.$c->id.'][closes_on]'" :id="'closes-on-'.$c->id" :value="$row['closes_on']"
+                                    <x-ui.date dense :name="'target['.$c->id.'][closes_on]'" :id="'closes-on-'.$c->id" :value="$typed !== null ? ($typed[$c->id]['closes_on'] ?? null) : $row['closes_on']"
                                                :min="$month->toDateString()" :max="$month->copy()->endOfMonth()->toDateString()"
                                                aria-label="{{ __('sales::customer_target.closes_on') }} — {{ $c->name() }}" />
                                 @else

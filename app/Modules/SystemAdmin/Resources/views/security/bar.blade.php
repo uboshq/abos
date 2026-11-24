@@ -36,7 +36,7 @@
         ['key' => 'when', 'label' => __('system_admin::security.when'), 'width' => '16rem', 'render' => fn ($try) => $when($try->created_at)],
     ];
     $rows = $tab === 'people' ? $people : $failed;
-    $mayAll = \Illuminate\Support\Facades\Route::has('governance.login.index') && auth()->user()->can('governance.view');
+    $mayAll = \Illuminate\Support\Facades\Route::has('governance.login.index') && auth()->user()->can('governance.login.view');
 @endphp
 
 <x-layouts.app :menu="$menu">

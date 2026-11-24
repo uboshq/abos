@@ -4,7 +4,7 @@
 @if ($canManage)
     <input type="number" step="0.01" min="0" inputmode="decimal"
            name="amount[{{ $row['user']->id }}]"
-           value="{{ $row['target'] !== null ? rtrim(rtrim($row['target'], '0'), '.') : '' }}"
+           value="{{ is_array(old('amount')) ? (old('amount')[$row['user']->id] ?? '') : ($row['target'] !== null ? rtrim(rtrim($row['target'], '0'), '.') : '') }}"
            class="num h-(--spacing-field-compact) w-32 rounded-(--radius-field) border
                   border-(--color-border) bg-(--color-surface-card) px-2 text-end">
 @else

@@ -8,6 +8,8 @@
 @php
     use App\Core\Support\Money;
 
+    // ⓘ সংরক্ষণ থামলে যা লেখা হয়েছিল তাই ফেরে — খালি করা ঘরও
+    $typed = is_array(old('target')) ? old('target') : null;
     $canManage = auth()->user()?->can('sales.target.manage') ?? false;
     $input = 'h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2';
     $rate = fn (string $got, ?string $aim): ?string => $aim !== null && bccomp($aim, '0', 4) > 0 ? bcdiv(bcmul($got, '100', 6), $aim, 1) : null;
@@ -73,7 +75,7 @@
             </x-ui.toolbar>
         </form>
     @endif
-    <form id="target-form" @if ($abosHead) x-on:submit="saved()" @endif method="POST" action="{{ route('sales.product_target.store') }}">
+    <form id="target-form" @if ($errors->any()) data-unsaved @endif @if ($abosHead) x-on:submit="saved()" @endif method="POST" action="{{ route('sales.product_target.store') }}">
         @csrf
         <input type="hidden" name="month" value="{{ $month->toDateString() }}">
         <input type="hidden" name="q" value="{{ $q }}">
@@ -105,7 +107,7 @@
                             <td class="text-end">
                                 @if ($canManage)
                                     <input type="number" step="0.0001" min="0" inputmode="decimal" name="target[{{ $p->id }}][qty]"
-                                           value="{{ $shown($row['qty']) }}"
+                                           value="{{ $typed !== null ? ($typed[$p->id]['qty'] ?? '') : $shown($row['qty']) }}"
                                            aria-label="{{ __('sales::product_target.target_qty') }} — {{ $p->name() }}"
                                            class="num w-28 text-end {{ $input }}">
                                 @else
@@ -117,7 +119,7 @@
                             <td class="text-end">
                                 @if ($canManage)
                                     <input type="number" step="0.01" min="0" inputmode="decimal" name="target[{{ $p->id }}][amount]"
-                                           value="{{ $shown($row['amount']) }}"
+                                           value="{{ $typed !== null ? ($typed[$p->id]['amount'] ?? '') : $shown($row['amount']) }}"
                                            aria-label="{{ __('sales::product_target.target_amount') }} — {{ $p->name() }}"
                                            class="num w-32 text-end {{ $input }}">
                                 @else

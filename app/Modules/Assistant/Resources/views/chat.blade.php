@@ -12,12 +12,8 @@
 --}}
 @php
     $aiMark = \App\Core\Support\AiMark::shows();
-    // ⓘ the messenger's paper door: its route + key + an ABOS look — the same three tests as the messenger's own chrome,
-    //   asked through the core only (Copilot does not depend on the messenger module; BoundariesTest)
-    $msgrUser = auth()->user();
-    $msgr = $msgrUser !== null && \Illuminate\Support\Facades\Route::has('messaging.x.papers.find')
-        && $msgrUser->can('messaging.use')
-        && in_array(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen($msgrUser->ui)), \App\Core\Support\Ui::FOLD_MENU_LOOKS, true);
+    // ⓘ the messenger's own rule, plus its paper door's route ([[MessengerDoor]]; Copilot does not depend on the messenger module)
+    $msgr = \App\Core\Support\MessengerDoor::open(auth()->user()) && \Illuminate\Support\Facades\Route::has('messaging.x.papers.find');
     $state = [
         'name' => $name,
         'askUrl' => route('assistant.chat.ask'),
@@ -53,7 +49,7 @@
                 @endif
                 <span>{{ $name }}</span>
             </h1>
-            <a href="{{ route('assistant.chat') }}" class="cpp-wb cpp-wb-pri" @click.prevent="newTalk()" data-cpp-new><x-ui.icon name="plus" :size="17" />{{ __('assistant::chat.new') }}</a>
+            <a href="{{ route('assistant.chat') }}" class="cpp-wb cpp-wb-pri" data-cpp-new><x-ui.icon name="plus" :size="17" />{{ __('assistant::chat.new') }}</a>
             <button type="button" class="cpp-wb" @click="toggleHistory()" :aria-pressed="histOpen ? 'true' : 'false'" data-cpp-history-toggle><x-ui.icon name="clock" :size="17" />{{ __('assistant::chat.history') }}</button>
         </div>
 
@@ -203,7 +199,7 @@
                 <div class="cpp-foot" :class="started() ? '' : 'cpp-foot-hero'">
                     <form class="cpp-ask" @submit.prevent="submit()" data-cpp-ask>
                         @if ($msgr)
-                            <button type="button" class="cpp-cb" x-show="attachOn()" @click="toggleAttach()" :aria-expanded="attachOpen ? 'true' : 'false'" title="{{ __('assistant::chat.attach') }}" aria-label="{{ __('assistant::chat.attach') }}" data-cpp-attach>
+                            <button type="button" class="cpp-cb" @click="toggleAttach()" :aria-expanded="attachOpen ? 'true' : 'false'" title="{{ __('assistant::chat.attach') }}" aria-label="{{ __('assistant::chat.attach') }}" data-cpp-attach>
                                 <x-ui.icon name="attachment" :size="23" />
                             </button>
                         @endif
