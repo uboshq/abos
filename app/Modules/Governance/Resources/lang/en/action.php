@@ -146,6 +146,10 @@ return [
     'salary_change_late' => 'Approved salary change not applied',
     // ⭐ salary change signed · login closed on leaving (a6)
     'salary_change_signed' => 'Salary change approved',
+    'pf_rate_applied' => 'Provident fund rate applied',
+    'pf_rate_asked' => 'Provident fund rate asked',
+    'pf_enrolled' => 'Joined the provident fund',
+    'pf_enrol_asked' => 'Joining the provident fund asked',
     'leaver_login_closed' => 'Login closed on leaving',
     // ⭐ the payroll signer role, for one company's Managers ([[GrantPayrollSigners]], owner, 21 Oct 2026)
     'payroll_signer_made' => 'Payroll approver role made',

@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Models\FinancialYear;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,6 +23,7 @@ class WppfProvision extends Model
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    use SharedAcrossCompaniesWhenAsked;
 
     public const DRAFT = 'draft';
 

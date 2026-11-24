@@ -213,9 +213,12 @@ final class HrReports
                 ['key' => 'department', 'label' => 'hr::field.department', 'width' => '9rem'],
                 ['key' => 'designation', 'label' => 'hr::field.designation', 'width' => '9rem'],
                 // ⛔ টাকার তিনটা ঘর — বেতনের চাবি ছাড়া নেই, মোটও নয়
-                ['key' => 'gross', 'label' => 'hr::field.gross', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view'],
-                ['key' => 'deductions', 'label' => 'hr::field.deductions', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view'],
-                ['key' => 'net', 'label' => 'hr::field.net', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view'],
+                ['key' => 'gross', 'label' => 'hr::field.gross', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view',
+                    'drill' => ['source' => ['type' => 'run_source', 'id' => 'run_id']]],
+                ['key' => 'deductions', 'label' => 'hr::field.deductions', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view',
+                    'drill' => ['source' => ['type' => 'run_source', 'id' => 'run_id']]],
+                ['key' => 'net', 'label' => 'hr::field.net', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view',
+                    'drill' => ['source' => ['type' => 'run_source', 'id' => 'run_id']]],
                 ['key' => 'paid_by', 'label' => 'hr::field.payment_method', 'width' => '8rem'],
             ],
         );

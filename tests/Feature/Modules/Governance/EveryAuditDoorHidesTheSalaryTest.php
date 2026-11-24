@@ -63,6 +63,10 @@ final class EveryAuditDoorHidesTheSalaryTest extends TestCase
         'app/Modules/Sales/Services/PriceBookService.php' => 'price book rows only',
         'app/Modules/Sales/Services/SalePriceBook.php' => 'Product sale price only',
         'app/Modules/SystemAdmin/Http/Controllers/ControlPanelController.php' => 'Setting rows only',
+        // ⓘ ২৫ নভেম্বর ২০২৬ — পড়ে দেখা তিনটা নতুন পাঠক
+        'app/Core/Services/SignedSettings.php' => 'setting_changes (the waiting change of a setting), not the audit tables',
+        'app/Modules/SystemAdmin/Resources/views/role/partials/history.blade.php' => 'masks through FieldSecurity::show(); rows of the role itself',
+        'app/Modules/SystemAdmin/Support/ModuleBoard.php' => 'one named on/off field of a module or branch switch, shown as yes/no',
     ];
 
     /** যে পাঠকরা নিজেরাই ছাপে — এদের ঢাকনা FieldSecurity দিয়েই হতে হবে */
@@ -70,6 +74,7 @@ final class EveryAuditDoorHidesTheSalaryTest extends TestCase
         'app/Core/Engines/Audit/TimeMachine.php',
         'app/Modules/Governance/Resources/views/audit/partials/summary.blade.php',
         'app/Modules/Governance/Resources/views/audit/show.blade.php',
+        'app/Modules/SystemAdmin/Resources/views/role/partials/history.blade.php',
     ];
 
     private Company $company;

@@ -143,6 +143,8 @@ return [
         'hr.claim' => 'Expense claims and advances',
         // ⭐ One's own payslip, on the phone (13 Oct 2026)
         'hr.payslip' => 'Payslips',
+        'hr.wppf' => 'Workers\' profit participation fund',
+        'hr.final_settlement' => 'Final settlements',
         'promotion' => 'Whole promotions module',
         'system_admin.notice' => 'Notices',
     ],

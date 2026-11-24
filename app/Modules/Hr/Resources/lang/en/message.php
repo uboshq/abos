@@ -132,6 +132,8 @@ return [
     'pf_no_candidates' => 'No non-member with a year of service.',
     'pf_enrol_done' => ':name has joined the fund.',
     'pf_enrol_waiting' => ':name joining the fund is pending approval.',
+    'pf_rate_asked' => 'Provident fund rate :from% to :to% — from :date, awaiting approval.',
+    'pf_enrol_asked' => 'Joining the provident fund — at :rate%, from :date, awaiting approval.',
     'pf_enrolled' => 'Joined the provident fund — at :rate%, from :date.',
     // ⭐ গ্র্যাচুইটি — BLA ধারা 2(10), IAS 19 (fe, ২১ অক্টোবর ২০২৬, দফা ৮; [[Gratuity]])
     'gratuity_on_note' => 'Monthly provision is on — confirming a month\'s salary trues the books up to that month\'s obligation.',

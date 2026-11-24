@@ -7,6 +7,7 @@ namespace App\Modules\Hr\Models;
 use App\Core\Concerns\BelongsToCompany;
 use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
+use App\Core\Concerns\SharedAcrossCompaniesWhenAsked;
 use App\Core\Contracts\ShownInOwnerSelfReport;
 use App\Models\Branch;
 use App\Models\User;
@@ -25,6 +26,7 @@ class FinalSettlement extends Model implements ShownInOwnerSelfReport
     use BelongsToCompany;
     use HasPublicId;
     use IsAudited;
+    use SharedAcrossCompaniesWhenAsked;
 
     public const PENDING = 'pending';
 

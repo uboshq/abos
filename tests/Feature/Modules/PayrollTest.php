@@ -353,7 +353,11 @@ class PayrollTest extends TestCase
 
         $run = PayrollRun::query()->latest('id')->firstOrFail();
 
+        // ⓘ প্রথম চাপ থামে, আরেকজন অনুমোদন দেন, দ্বিতীয় চাপে বসে
         $this->post(route('hr.payroll.confirm', $run))->assertRedirect();
+        $this->assertSame(DocumentStatus::DRAFT, $run->fresh()->status);
+        $this->signPayrollWithoutConfirming($run);
+        $this->post(route('hr.payroll.confirm', $run))->assertRedirect()->assertSessionHasNoErrors();
 
         $this->assertSame(DocumentStatus::CONFIRMED, $run->fresh()->status);
 

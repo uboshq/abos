@@ -293,7 +293,7 @@ final class FinalSettlements
     /** ⓘ অনুমোদিত কাগজগুলোয় মেটানো গ্র্যাচুইটি — শাখা ধরে ([[Gratuity::accrue()]] বাদ দেয়) */
     public static function gratuitySettled(?int $branchId): string
     {
-        return bcadd((string) FinalSettlement::query()->where('status', FinalSettlement::APPROVED)
+        return bcadd((string) FinalSettlement::query()->where('company_id', CompanyContext::id())->where('status', FinalSettlement::APPROVED)
             ->when($branchId === null, fn ($q) => $q->whereNull('branch_id'), fn ($q) => $q->where('branch_id', $branchId))
             ->sum('gratuity'), '0', 4);
     }

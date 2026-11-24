@@ -97,7 +97,8 @@ final class GratuityIsBookedToTheObligationTest extends TestCase
 
         $c->forceFill(['leaving_date' => '2026-09-15'])->save();
         $g->accrue(Carbon::parse('2026-09-01'));
-        $this->assertSame(0, bccomp($this->liability(), '527222.04', 4), '⛔ চলে যাওয়ার পরে দায় কমেনি।');
+        // ⓘ ক 422222.04 + খ (3 বছর 6 মাস 15 দিন → 4 বছর) 35000×120÷30 = 140000 + ঘ (6 মাস 29 দিন → 1 বছর) 18000×30÷30 = 18000; গ চলে গেছেন
+        $this->assertSame(0, bccomp($this->liability(), '580222.04', 4), '⛔ চলে যাওয়ার পরে দায় কমেনি।');
         $this->assertSame(0, bccomp($this->liability(), $this->obligationOn('2026-09-30'), 4));
 
         $rows = GratuityProvision::query()->count();

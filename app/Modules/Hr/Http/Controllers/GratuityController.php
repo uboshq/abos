@@ -6,6 +6,7 @@ namespace App\Modules\Hr\Http\Controllers;
 
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
+use App\Modules\Hr\Models\FinalSettlement;
 use App\Modules\Hr\Models\GratuityProvision;
 use App\Modules\Hr\Services\Gratuity;
 use Illuminate\Http\RedirectResponse;
@@ -48,8 +49,13 @@ class GratuityController extends Controller implements HasMiddleware
             'on' => $on,
             'rows' => $rows,
             'total' => $rows->reduce(fn ($c, $r) => bcadd($c, (string) $r['obligation'], 4), '0'),
-            // ⓘ এ পর্যন্ত বসা সঞ্চিতি — খাতার ২১৩৪-এর জের (চূড়ান্ত নিষ্পত্তি না আসা পর্যন্ত ২১৩৪ কেবল এই পথে নড়ে)
-            'booked' => bcadd((string) GratuityProvision::query()->whereDate('month', '<=', $on->toDateString())->sum('amount'), '0', 4),
+            // ⓘ খাতার ২১৩৪-এর জের — সঞ্চিতির যোগ − চূড়ান্ত পাওনায় মেটানো গ্র্যাচুইটি ([[FinalSettlements]]), এই কোম্পানির
+            'booked' => bcsub(
+                (string) GratuityProvision::query()->where('company_id', CompanyContext::id())->whereDate('month', '<=', $on->toDateString())->sum('amount'),
+                (string) FinalSettlement::query()->where('company_id', CompanyContext::id())->where('status', FinalSettlement::APPROVED)
+                    ->whereDate('last_day', '<=', $on->toDateString())->sum('gratuity'),
+                4,
+            ),
             'enabled' => $this->gratuity->enabled(),
         ]);
     }

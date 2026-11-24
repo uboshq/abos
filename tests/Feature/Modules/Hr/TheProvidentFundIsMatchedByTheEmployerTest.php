@@ -162,7 +162,9 @@ final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
         $outsider = $this->employee('PF-N', '15000', null);
 
         $result = app(ProvidentFund::class)->apply(Carbon::parse('2026-08-01'), $this->owner);
-        $this->assertSame(1, $result['applied']);
+        // ⓘ কাঠামো বদল আরেকজনের অনুমোদনে বসে
+        $this->assertSame([0, 1], [$result['applied'], $result['waiting']]);
+        $this->signTheSalaryChange(app(SalaryStructureService::class)->waitingChange($member));
 
         $july = $this->payroll()->build('2026-07-01');
         $this->assertSame(0, bccomp((string) $july->payslips()->where('employee_id', $member->id)->value('deductions'), '2000', 4),
@@ -175,7 +177,11 @@ final class TheProvidentFundIsMatchedByTheEmployerTest extends TestCase
         $this->assertSame(0, SalaryStructure::query()->where('employee_id', $outsider->id)->where('salary_head_id', $this->salaryHead('PF')->id)->count());
 
         $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $member->id)
-            ->where('action', ProvidentFund::RATE_APPLIED)->exists(), '⛔ হার বসল, অথচ অডিটে নেই।');
+            ->where('action', ProvidentFund::RATE_ASKED)->exists(), '⛔ হার চাওয়া হলো, অথচ অডিটে নেই।');
+        $this->assertFalse(AuditTrail::query()->forRecord(Employee::class, (int) $member->id)
+            ->where('action', ProvidentFund::RATE_APPLIED)->exists(), '⛔ চাওয়াকেই "বসেছে" লেখা হলো।');
+        $this->assertTrue(AuditTrail::query()->forRecord(Employee::class, (int) $member->id)
+            ->where('action', 'salary_change_signed')->exists(), '⛔ হার বসল, অথচ অডিটে নেই।');
     }
 
     public function test_applying_needs_the_salary_change_key(): void
