@@ -49,6 +49,7 @@ Route::prefix('v1/messenger')
         Route::get('/files/{file}', [MessengerApiController::class, 'file'])->whereNumber('file')->name('file');
 
         Route::get('/calls', [MessengerCallApiController::class, 'log'])->name('calls');
+        Route::get('/calls/people', [MessengerCallApiController::class, 'people'])->name('calls.people');
         Route::post('/calls', [MessengerCallApiController::class, 'start'])->name('calls.start');
         Route::post('/calls/{call}/answer', [MessengerCallApiController::class, 'answer'])->name('calls.answer');
         Route::post('/calls/{call}/decline', [MessengerCallApiController::class, 'decline'])->name('calls.decline');

@@ -41,6 +41,7 @@ Route::middleware('auth')->prefix('messages')->group(function (): void {
         Route::get('/messages/{message}/info', [MessengerApiController::class, 'info'])->whereNumber('message')->name('message.info');
 
         Route::get('/calls', [MessengerCallApiController::class, 'log'])->name('calls');
+        Route::get('/calls/people', [MessengerCallApiController::class, 'people'])->name('calls.people');
         Route::post('/calls', [MessengerCallApiController::class, 'start'])->name('calls.start');
         Route::post('/calls/{call}/answer', [MessengerCallApiController::class, 'answer'])->name('calls.answer');
         Route::post('/calls/{call}/decline', [MessengerCallApiController::class, 'decline'])->name('calls.decline');
