@@ -62,8 +62,15 @@ class RecoveryController extends Controller
      */
     public function verifications(Request $request): View
     {
+        $f = $request->validate([
+            'status' => ['nullable', 'string', 'max:20'], 'from' => ['nullable', 'date'], 'to' => ['nullable', 'date'],
+        ]);
+
         $runs = BackupRun::query()
             ->with('verifications')
+            ->when($f['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
+            ->when($f['from'] ?? null, fn ($q, $d) => $q->whereDate('started_at', '>=', $d))
+            ->when($f['to'] ?? null, fn ($q, $d) => $q->whereDate('started_at', '<=', $d))
             ->latest('started_at')
             ->latest('id')
             ->paginate(\App\Core\Support\PerPage::of())
