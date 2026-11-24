@@ -14,6 +14,8 @@
              . e($b->code) . '</a>')],
         ['key' => 'name', 'label' => __('master_data::field.name'),
          'render' => fn ($b) => $b->name()],
+        ['key' => 'type', 'label' => __('core.branch_type.label'), 'width' => '8rem',
+         'render' => fn ($b) => $b->typeLabel() ?: '—'],
         ['key' => 'company', 'label' => __('system_admin::menu.companies'), 'width' => '14rem',
          'render' => fn ($b) => $b->company?->name() ?? '—'],
         ['key' => 'default', 'label' => __('system_admin::field.main_branch'), 'width' => '8rem',
@@ -29,6 +31,7 @@
         \App\Core\ListFilter\Facets::pick('company', __('system_admin::menu.companies'),
             $companies->mapWithKeys(fn ($c) => [$c->id => $c->name()])->all(),
             __('system_admin::message.all_companies')),
+        \App\Core\ListFilter\Facets::many('type', __('core.branch_type.label'), \App\Models\Branch::typeOptions(withNone: true)),
     ]);
 @endphp
 
@@ -71,7 +74,7 @@
         </form>
 
         <x-ui.table
-            :empty="request('q') ? __('core.empty.no_results') : __('system_admin::message.no_branches')"
+            :empty="request('q') || request('type') || request('company') ? __('core.empty.no_results') : __('system_admin::message.no_branches')"
             :rows="$rows"
             :compact="\App\Core\Support\Ui::compact()"
             :columns="$columns" />

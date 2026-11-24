@@ -2044,4 +2044,14 @@ return [
         'apps_count' => ':count apps',
         'back' => 'Back',
     ],
+
+    // ⭐ শাখার ধরন (মালিক, ২৪ নভেম্বর ২০২৬; [[Branch::TYPES]])
+    'branch_type' => [
+        'shop' => 'Shop',
+        'depot' => 'Depot',
+        'warehouse' => 'Warehouse',
+        'office' => 'Office',
+        'none' => 'No type',
+        'label' => 'Type',
+    ],
 ];

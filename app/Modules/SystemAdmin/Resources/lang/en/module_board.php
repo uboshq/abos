@@ -57,6 +57,7 @@ return [
     'no_packages' => 'No package yet',
     'package' => 'Package',
     'package_new' => 'New package',
+    'package_by_type' => 'Every branch of this type',
     'package_custom' => ':name · by hand',
     'package_branches' => 'Branches',
     'package_custom_count' => 'Changed by hand',

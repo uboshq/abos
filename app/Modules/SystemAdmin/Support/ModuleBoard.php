@@ -357,12 +357,14 @@ final class ModuleBoard
     }
 
     /** এই কোম্পানির সচল শাখা, ছাঁকনি আর খোঁজাসহ — চলতি কোম্পানির দেয়ালের ভিতরে */
-    public function branches(string $q = '', string $state = ''): \Illuminate\Database\Eloquent\Builder
+    /** @param  list<string>  $types */
+    public function branches(string $q = '', string $state = '', array $types = []): \Illuminate\Database\Eloquent\Builder
     {
         $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $q).'%';
         $off = fn () => BranchModule::query()->select('branch_id')->where('is_enabled', false);
 
         return Branch::query()->where('is_active', true)
+            ->ofTypes($types)
             ->when($q !== '', fn ($query) => $query->where(fn ($w) => $w->where('name_en', 'like', $like)->orWhere('name_bn', 'like', $like)->orWhere('code', 'like', $like)))
             ->when($state === 'diff', fn ($query) => $query->whereIn('id', $off()))
             ->when($state === 'same', fn ($query) => $query->whereNotIn('id', $off()))

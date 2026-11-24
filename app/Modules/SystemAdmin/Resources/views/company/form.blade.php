@@ -269,12 +269,14 @@
             </ul>
 
             <form method="POST" action="{{ route('system_admin.company.branch.store', $company->id) }}"
-                  class="grid gap-3 sm:grid-cols-4">
+                  class="grid gap-3 sm:grid-cols-5">
                 @csrf
 
                 <x-ui.field name="code" :label="__('master_data::field.code')" required />
                 <x-ui.field name="name_en" :label="__('system_admin::field.branch_name_en')" required />
                 <x-ui.field name="name_bn" :label="__('system_admin::field.branch_name_bn')" />
+                <x-ui.select name="type" :label="__('core.branch_type.label')" :options="\App\Models\Branch::typeOptions()"
+                             :placeholder="__('core.branch_type.none')" :selected="old('type')" />
 
                 <div class="flex items-end">
                     <x-ui.button type="submit" tone="secondary">

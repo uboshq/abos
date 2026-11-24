@@ -62,6 +62,7 @@ final class BranchController extends Controller implements HasMiddleware
             ->with(['company' => fn ($c) => $c->withoutGlobalScopes()])
             ->whereIn('company_id', $mine)
             ->when($companyId > 0, fn ($b) => $b->where('company_id', $companyId))
+            ->ofTypes(Branch::typesFrom($request->query('type')))
             ->when($q !== '', function ($b) use ($q) {
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $q).'%';
                 $b->where(fn ($w) => $w->where('code', 'like', $like)

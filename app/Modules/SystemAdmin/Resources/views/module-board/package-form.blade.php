@@ -4,6 +4,7 @@
     $branchColumns = [
                         ['key' => 'pick', 'label' => __('system_admin::module_board.pick'), 'width' => '3rem', 'render' => fn ($b) => new \Illuminate\Support\HtmlString('<input type="checkbox" name="branches[]" value="'.(int) $b->id.'" class="size-4" aria-label="'.e($b->name()).'">')],
                         ['key' => 'name', 'label' => __('core.company.branch'), 'render' => fn ($b) => $b->name()],
+                        ['key' => 'type', 'label' => __('core.branch_type.label'), 'render' => fn ($b) => $b->typeLabel() ?: '—'],
                         ['key' => 'package', 'label' => __('system_admin::module_board.package'), 'render' => fn ($b) => isset($given[(int) $b->id]) ? ($given[(int) $b->id]['custom'] ? __('system_admin::module_board.package_custom', ['name' => $given[(int) $b->id]['name']]) : $given[(int) $b->id]['name']) : '—'],
                     ];
 @endphp
@@ -52,6 +53,12 @@
                     <x-ui.table :rows="$branches" :compact="true" :empty="__('core.empty.no_results')" :columns="$branchColumns" />
                     <x-ui.pager :rows="$branches" />
                 </div>
+                <fieldset class="mb-3 flex flex-wrap items-center gap-4 text-sm" data-package-types>
+                    <legend class="float-start me-3 font-semibold">{{ __('system_admin::module_board.package_by_type') }}</legend>
+                    @foreach (\App\Models\Branch::typeOptions() as $type => $name)
+                        <label class="flex items-center gap-2"><input type="checkbox" name="types[]" value="{{ $type }}" class="size-4"> {{ $name }}</label>
+                    @endforeach
+                </fieldset>
                 <p class="mb-3 text-2xs text-(--color-badge-pending-ink)">{{ __('system_admin::module_board.package_assign_warns') }}</p>
                 <x-ui.button type="submit" tone="primary">{{ __('system_admin::module_board.package_assign') }}</x-ui.button>
             </form>

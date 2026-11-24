@@ -92,8 +92,17 @@ class ModulePackageController extends Controller implements HasMiddleware
 
     public function assign(Request $request, ModulePackage $package): View|RedirectResponse
     {
-        $data = $request->validate(['branches' => ['required', 'array', 'min:1'], 'branches.*' => ['integer']]);
-        $asked = array_values(array_unique(array_map('intval', $data['branches'])));
+        $data = $request->validate([
+            'branches' => ['required_without:types', 'array'], 'branches.*' => ['integer'],
+            'types' => ['array'], 'types.*' => ['string', Rule::in(Branch::TYPES)],
+        ]);
+        // ⭐ ধরন ধরে — সেই ধরনের সব সচল শাখা, হাতে বাছাগুলোর সাথে; তালিকায় সবার নাম দেখিয়ে তবেই লেখা
+        $types = Branch::typesFrom($data['types'] ?? []);
+        $ofType = $types === [] ? [] : $this->board->branches('', '', $types)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $asked = array_values(array_unique([...array_map('intval', $data['branches'] ?? []), ...$ofType]));
+        if ($asked === []) {
+            return redirect()->route('system_admin.module.packages.edit', $package)->with('saved', __('system_admin::module_board.nothing'));
+        }
         $names = $this->board->branches()->whereIn('id', $asked)->get()->mapWithKeys(fn (Branch $b) => [(int) $b->id => $b->name()])->all();
         $mine = array_keys($names);
         // ⛔ অন্য কোম্পানির বা বন্ধ শাখা মিশলে কিছুই নয়

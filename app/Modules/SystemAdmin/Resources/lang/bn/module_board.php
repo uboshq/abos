@@ -57,6 +57,7 @@ return [
     'no_packages' => 'এখনো কোনো প্যাকেজ নেই',
     'package' => 'প্যাকেজ',
     'package_new' => 'নতুন প্যাকেজ',
+    'package_by_type' => 'এই ধরনের সব শাখা',
     'package_custom' => ':name · নিজের মতো',
     'package_branches' => 'শাখা',
     'package_custom_count' => 'নিজের মতো বদলানো',
