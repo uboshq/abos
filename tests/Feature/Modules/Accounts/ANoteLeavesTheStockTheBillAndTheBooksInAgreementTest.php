@@ -152,7 +152,13 @@ final class ANoteLeavesTheStockTheBillAndTheBooksInAgreementTest extends TestCas
         $return = SalesReturn::query()->withoutGlobalScopes()->findOrFail($note->lines->firstWhere('goods_moved', true)->return_id);
         $this->assertSame(0, bccomp(bcadd($stockBefore, '1', 4), $onHand(), 4), 'দৃশ্যটাই ভুল — ফেরতের মাল গুদামে ওঠেনি।');
 
-        $paper = app(AccountsReversalService::class)->reverseNote($note, $this->owner, 'ভুল নোট');
+        // ⓘ ক্রেডিট নোট উল্টাতেও মালিকের ছাড়ের ছকের অনুমোদন — তার আগে কিছু নড়ে না
+        $this->assertNull(app(AccountsReversalService::class)->reverseNote($note, $this->owner, 'ভুল নোট'));
+        $this->assertTrue($note->fresh()->isConfirmed(), '⛔ অনুমোদনের আগেই নোট উল্টে গেল।');
+        $this->assertNull(Reversal::of(Reversal::NOTE, (int) $note->id), '⛔ অনুমোদনের আগেই উল্টো কাগজ।');
+        $this->ownerSignsTheDiscounts();
+        $paper = Reversal::of(Reversal::NOTE, (int) $note->id);
+        $this->assertNotNull($paper, '⛔ অনুমোদনের পরেও উল্টো কাগজ নেই।');
 
         $this->assertTrue($note->fresh()->isCancelled(), '⛔ নোট বাতিল হয়নি।');
         $this->assertSame(DocumentStatus::CANCELLED, $return->fresh()->status, '⛔ নোটের বিক্রয় ফেরত বাতিল হয়নি।');

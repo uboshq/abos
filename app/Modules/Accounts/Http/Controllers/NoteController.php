@@ -271,7 +271,8 @@ class NoteController extends Controller implements HasMiddleware
             $paper = app(\App\Modules\Accounts\Services\AccountsReversalService::class)
                 ->reverseNote($note, $request->user(), $data['cancel_reason']);
 
-            return back()->with('saved', __('accounts::reversal.saved', ['no' => $note->document_no, 'rev' => $paper->document_no]));
+            return back()->with('saved', $paper === null ? __('accounts::reversal.awaiting', ['no' => $note->document_no])
+                : __('accounts::reversal.saved', ['no' => $note->document_no, 'rev' => $paper->document_no]));
         }
 
         $this->notes->cancel($note, $data['cancel_reason']);
