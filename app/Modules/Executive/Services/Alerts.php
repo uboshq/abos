@@ -67,13 +67,18 @@ final class Alerts
     public function all(User $user, array $companies): array
     {
         $out = [];
+        $counted = [];
+
+        foreach ($companies as $i => $company) {
+            $counted[$i] = $this->counts($user, $company);
+        }
 
         foreach (self::KINDS as $kind) {
             $parts = [];
             $total = 0;
 
-            foreach ($companies as $company) {
-                $count = $this->count($user, $company, $kind);
+            foreach ($companies as $i => $company) {
+                $count = $counted[$i][$kind];
                 [$route, $params] = self::target($kind);
 
                 // ⛔ যে শাখায় গোনা, সেই শাখাতেই খোলে — আগে শাখা বাদ যেত, খুলত সব শাখার তালিকা আর হেডারের বাছাই হারাত
@@ -154,17 +159,45 @@ final class Alerts
     }
 
     /**
-     * এক কোম্পানির এক সতর্কতা — `null` = দেখার চাবি নেই।
+     * এক কোম্পানির সব সতর্কতা — একবার ঢুকে, আটবার নয় (২৪ নভেম্বর ২০২৬: প্রতিবার ঢোকায় চাবির তালিকা নতুন করে পড়া হত)।
+     * ⓘ ক্যাশের চাবি আগেরগুলোই, সতর্কতা ধরে; `null` (দেখার চাবি নেই) আগের মতোই জমা হয় না।
      *
      * @param  array{id: int, name: string, only?: ?int}  $company
+     * @return array<string, ?int>
      */
-    private function count(User $user, array $company, string $kind): ?int
+    private function counts(User $user, array $company): array
     {
-        $key = implode(':', ['executive-alert', 'v'.Board::version($user), 'u'.$user->id, 'c'.$company['id'], 'b'.($company['only'] ?? 'all'), $kind, Carbon::today()->toDateString()]);
+        $keys = [];
+        $out = [];
 
-        return Cache::remember($key, Board::CACHE_SECONDS, fn () => $this->lens->within(
-            $user, $company['id'], $company['only'] ?? null, fn (): ?int => $this->countHere($user, $kind),
-        ));
+        foreach (self::KINDS as $kind) {
+            $keys[$kind] = implode(':', ['executive-alert', 'v'.Board::version($user), 'u'.$user->id, 'c'.$company['id'], 'b'.($company['only'] ?? 'all'), $kind, Carbon::today()->toDateString()]);
+            $out[$kind] = Cache::get($keys[$kind]);
+        }
+
+        $missing = array_keys(array_filter($out, fn ($count) => $count === null));
+
+        if ($missing === []) {
+            return $out;
+        }
+
+        $fresh = $this->lens->within($user, $company['id'], $company['only'] ?? null, function () use ($user, $missing): array {
+            $counted = [];
+
+            foreach ($missing as $kind) {
+                $counted[$kind] = $this->countHere($user, $kind);
+            }
+
+            return $counted;
+        });
+
+        foreach ($fresh as $kind => $count) {
+            if ($count !== null) {
+                Cache::put($keys[$kind], $count, Board::CACHE_SECONDS);
+            }
+        }
+
+        return [...$out, ...$fresh];
     }
 
     private function countHere(User $user, string $kind): ?int
