@@ -70,14 +70,14 @@
         <div x-data="daySheet">
             <x-ui.filter-layout :filters="$facetPanel" form="list-form">
                 <form id="list-form" method="GET" class="contents">
-                    <x-ui.toolbar :title="__('hr::menu.attendance')" :info="__('hr::message.attendance_note')" :subtitle="$date->translatedFormat('d M Y, l')"
+                    <x-ui.toolbar :title="__('hr::menu.attendance')" :info="__('hr::message.attendance_note')" :count="$date->translatedFormat('d M Y, l')"
                                   :search="false" :density="false" :export="false" :share="false" :print="false" :refresh="false"
                                   :quiet="['date']" :facets="$facetPanel">
-                        <x-slot:actions>
+                        <x-slot:find>
                             {{-- ⓘ নাম ছাড়া ঘর — ঠিকানায় যায় না, পাতা আবার খোলে না; কেবল সারি লুকায় ([[day-sheet.js]]) --}}
                             <input type="search" x-model="term" x-on:input="narrow()" x-on:keydown.enter.prevent="narrow()" autocomplete="off"
                                    placeholder="{{ __('hr::field.name') }}" aria-label="{{ __('hr::field.name') }}" data-day-find
-                                   class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                                   class="h-(--spacing-field-compact) min-w-48 flex-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
                             @if (count($departments) > 1)
                                 <select x-model="department" x-on:change="narrow()" aria-label="{{ __('hr::field.department') }}" data-day-department
                                         class="h-(--spacing-field) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
@@ -88,6 +88,8 @@
                                 </select>
                             @endif
                             <span class="num text-sm text-(--color-ink-muted)" aria-live="polite"><span x-text="shown">{{ $employees->count() }}</span> / {{ $employees->count() }}</span>
+                        </x-slot:find>
+                        <x-slot:actions>
                             <x-ui.button tone="secondary" :href="route('hr.attendance.sheet', ['month' => $date->format('Y-m')])">{{ __('hr::action.monthly_sheet') }}</x-ui.button>
                             @can('hr.attendance.manage')
                                 @if ($employees->isNotEmpty())
