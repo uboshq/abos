@@ -206,6 +206,47 @@ function asHeadTabs (nav, root, collapse = false) {
 }
 
 /*
+ * ⭐ Pills first: the search shrinks (CSS, down to 140px) and the tabs fold only if the row still breaks. ⓘ Measured again when the
+ *   fonts are in, when Alpine is up and when the window changes — the first measure runs in the fallback font, which is wider, and
+ *   a fold made there used to stay for good.
+ */
+function keepPills (nav, row, root) {
+    let menu = null
+
+    const fit = () => {
+        if (menu !== null && nav.parentElement === menu) {
+            menu.replaceWith(nav)
+            nav.hidden = false
+        }
+
+        if (! wraps(row)) {
+            return
+        }
+
+        if (menu === null) {
+            menu = asHeadTabs(nav, root, true)
+
+            return
+        }
+
+        nav.replaceWith(menu)
+        menu.append(nav)
+        nav.hidden = true
+        menu.querySelector(':scope > button').setAttribute('aria-expanded', 'false')
+    }
+
+    fit()
+    root.fonts?.ready?.then(fit)
+    root.addEventListener?.('alpine:initialized', fit, { once: true })
+
+    let waiting = 0
+    root.defaultView?.addEventListener('resize', () => {
+        root.defaultView.cancelAnimationFrame(waiting)
+        waiting = root.defaultView.requestAnimationFrame(fit)
+    })
+}
+
+/*
  * ⭐ ছাঁকনির সরু বারওয়ালা পাতা ([[x-ui.filter-bar]]: ডে বুক, দিন শেষ, স্থিতিপত্র, বাজেট …) — নাম, ⓘ আর পাতার বোতাম বারের সারিতে ওঠে,
  *   খালি মাথা লুকায় (মালিক, ২৪ নভেম্বর ২০২৬: "Filter line r module r create egulo sob ek line thakbe")। ট্যাব তোলে [[compactPageHead]]।
  * ⓘ বার নয়, মাথা সরে — ছাঁকনির বোতামের Alpine আর ফর্ম যেখানে ছিল সেখানেই থাকে।
@@ -312,8 +353,8 @@ export function compactPageHead (root = document) {
         // ⓘ ছাঁকনির বারে জিনিসগুলো ভিতরের সারিতে; চালু ছাঁকনির চিপ ইচ্ছে করেই নিজের লাইনে, তাই ভাঙা বলে গোনা নয়
         const barRow = toolbar.closest('[data-bar-head]') ? title.parentElement : null
 
-        if (placed === tabs && wraps(barRow ?? toolbar)) {
-            asHeadTabs(tabs, root, true)
+        if (placed === tabs) {
+            keepPills(tabs, barRow ?? toolbar, root)
         }
 
         return { tabs: true, filter: false }
@@ -395,8 +436,8 @@ export function compactPageHead (root = document) {
 
         const pills = head.querySelector(':scope > nav[data-head-tabs]')
 
-        if (pills && wraps(head)) {
-            asHeadTabs(pills, root, true)
+        if (pills) {
+            keepPills(pills, head, root)
         }
     }
 

@@ -122,6 +122,30 @@ describe('compactPageHead', () => {
         expect(menu.querySelector('[data-head-tabs]').hidden).toBe(false)
     })
 
+    it('folds the pills only while the row breaks, and gives them back when it fits again', () => {
+        let second = 60
+        const rect = Element.prototype.getBoundingClientRect
+        const tall = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight')
+        Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, get: () => 30 })
+        Element.prototype.getBoundingClientRect = function () {
+            return { top: this.matches('[data-page-actions]') ? second : 10 }
+        }
+
+        try {
+            budget('rose')
+            compactPageHead(document)
+            expect(document.querySelector('[data-head-tabs-menu]')).not.toBeNull()
+
+            second = 10
+            document.dispatchEvent(new Event('alpine:initialized'))
+            expect(document.querySelector('[data-head-tabs-menu]')).toBeNull()
+            expect(document.querySelector('[data-head-compact] > [data-head-tabs]').hidden).toBe(false)
+        } finally {
+            Element.prototype.getBoundingClientRect = rect
+            Object.defineProperty(HTMLElement.prototype, 'offsetHeight', tall)
+        }
+    })
+
     it('runs once, and leaves every other look untouched', () => {
         budget('rose')
         compactPageHead(document)

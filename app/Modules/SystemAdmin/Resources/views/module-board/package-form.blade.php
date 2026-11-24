@@ -52,6 +52,7 @@
                 <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                     <x-ui.table :rows="$branches" :compact="true" :empty="__('core.empty.no_results')" :columns="$branchColumns" />
                     <x-ui.pager :rows="$branches" />
+                    <x-ui.list-totals :rows="$branches" />
                 </div>
                 <fieldset class="mb-3 flex flex-wrap items-center gap-4 text-sm" data-package-types>
                     <legend class="float-start me-3 font-semibold">{{ __('system_admin::module_board.package_by_type') }}</legend>
