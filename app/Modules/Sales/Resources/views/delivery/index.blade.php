@@ -74,6 +74,10 @@
                 : '',
         ];
     }
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]), এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = \App\Core\ListFilter\Facets::panel([\App\Core\ListFilter\Facets::dates(__('core.list_filter.date'))]);
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -105,13 +109,16 @@
         @endforeach
     </nav>
 
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="stage" value="{{ $tab }}">
 
             <x-ui.toolbar :title="$tab === 'open' ? __('sales::delivery.tab.open') : DeliveryStage::label($tab)"
                 :quiet="['stage']"
-                :count="__('sales::delivery.subtitle')"
+                :count="$abosHead ? null : __('sales::delivery.subtitle')"
+                :info="$abosHead ? __('sales::delivery.subtitle') : null"
+                :facets="$facetPanel"
                 :columns="$columns"
                 :search-placeholder="__('sales::delivery.column.challan')" />
         </form>
@@ -127,4 +134,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

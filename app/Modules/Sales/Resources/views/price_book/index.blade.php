@@ -26,11 +26,15 @@
         ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '7.5rem',
             'render' => fn ($l) => view('sales::price_book.partials.row-actions', ['list' => $l])],
     ];
+
+    // ⭐ ছাঁকনি ডান পাশের প্যানেলে ([[Facets]]), এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]; মালিক, ২৪ নভেম্বর ২০২৬)
+    $abosHead = \App\Core\Support\AbosHead::on();
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::price_book.title_'.$target) }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('sales::price_book.title_'.$target)" :subtitle="__('sales::price_book.subtitle')">
             <x-slot:actions>
@@ -52,6 +56,7 @@
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <p role="status" class="mb-3 rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2 text-sm text-(--color-badge-success-ink)">{{ session('saved') }}</p>
@@ -61,7 +66,21 @@
 
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <x-ui.toolbar :title="__('sales::price_book.title_'.$target)" :search="false" :filter="false" :columns="$columns" />
+        @if ($abosHead)
+            <form id="list-form" method="GET" class="contents">
+                <input type="hidden" name="target" value="{{ $target }}">
+                <x-ui.toolbar :title="__('sales::price_book.title_'.$target)" :info="__('sales::price_book.subtitle')"
+                              :search-placeholder="__('sales::price_book.search')" :filter="false" :columns="$columns" :quiet="['target']">
+                    @if ($canManage)
+                        <x-slot:actions>
+                            <x-ui.button :href="route('sales.price_book.create', ['target' => $target])" tone="primary" icon="plus" data-new-price-list>{{ __('sales::price_book.new') }}</x-ui.button>
+                        </x-slot:actions>
+                    @endif
+                </x-ui.toolbar>
+            </form>
+        @else
+            <x-ui.toolbar :title="__('sales::price_book.title_'.$target)" :search="false" :filter="false" :columns="$columns" />
+        @endif
 
         <x-ui.table :rows="$lists" :columns="$columns" :empty="__('sales::price_book.no_lists')" />
     </div>

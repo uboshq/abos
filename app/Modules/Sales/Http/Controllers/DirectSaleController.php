@@ -965,6 +965,7 @@ class DirectSaleController extends Controller implements HasMiddleware
     public function drafts(Request $request): View
     {
         $q = trim((string) $request->query('q', ''));
+        $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
 
         /* ⭐ দুই ট্যাব — খসড়া আর অনুমোদনের অপেক্ষায় (মালিক, ২৮ সেপ্টেম্বর ২০২৬); ⭐ তৃতীয় — সই হয়েছে, শেষ হয়নি
            (লাইভ DRF-0008, fe, ৭ অক্টোবর ২০২৬; [[HeldCounterSaleFinisher::signedNotFinished()]]) */
@@ -979,6 +980,8 @@ class DirectSaleController extends Controller implements HasMiddleware
         $query = $query
             ->with(['customer.location.parent', 'customer.branch', 'lines.challanLine.challan', 'lines.product'])
             ->when($q !== '', fn ($query) => $query->search($q))
+            ->when($f['from'] ?? null, fn ($query, $d) => $query->whereDate('trx_date', '>=', $d))
+            ->when($f['to'] ?? null, fn ($query, $d) => $query->whereDate('trx_date', '<=', $d))
             ->orderByDesc('id');
 
         $drafts = (clone $query)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
