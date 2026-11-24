@@ -163,7 +163,8 @@ class TheSwitchesWereDeclaredAndNeverReachableTest extends TestCase
         $payload = [];
 
         foreach (app(SettingsService::class)->definitions() as $key => $definition) {
-            if (($definition['menu'] ?? false) || ($definition['group'] ?? '') === 'screens') {
+            // ⓘ নিজের পর্দার সেটিং (`owned_by`) এই পর্দা আঁকে না, আর পাঠালে পুরো অনুরোধ ফেরে ([[OwnedSettings]])
+            if (($definition['menu'] ?? false) || isset($definition['owned_by']) || ($definition['group'] ?? '') === 'screens') {
                 continue;
             }
 

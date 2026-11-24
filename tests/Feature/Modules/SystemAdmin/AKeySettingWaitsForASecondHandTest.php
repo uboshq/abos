@@ -120,7 +120,8 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
            আর জরুরিগুলো (বাকির সীমা, অনুমোদন) অপেক্ষায় উঠত; দাবিটা তখন ভুল জিনিস মাপত (Mac, ৭ নভেম্বর ২০২৬) */
         $payload = [];
         foreach (app(SettingsService::class)->definitions() as $each => $definition) {
-            if (($definition['menu'] ?? false) || ($definition['group'] ?? '') === 'screens') {
+            // ⓘ নিজের পর্দার সেটিং (`owned_by`) এই পর্দা আঁকে না, আর পাঠালে পুরো অনুরোধ ফেরে ([[OwnedSettings]])
+            if (($definition['menu'] ?? false) || isset($definition['owned_by']) || ($definition['group'] ?? '') === 'screens') {
                 continue;
             }
             $value = app(SettingsService::class)->get($each);
