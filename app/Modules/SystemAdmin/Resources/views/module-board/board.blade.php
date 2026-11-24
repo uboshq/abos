@@ -64,7 +64,7 @@
             </form>
         </div>
 
-        <div class="grid items-start gap-4 lg:grid-cols-[16.25rem_minmax(0,1fr)]">
+        <div data-split class="grid items-start gap-4 lg:grid-cols-[16.25rem_minmax(0,1fr)]">
             <div data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                 <div class="flex flex-wrap items-center gap-3 border-b border-(--color-border) px-3 py-2 text-sm">
                     <button type="submit" form="list-form" class="font-semibold text-(--color-ink) hover:underline">{{ __('system_admin::module_board.show_picked') }}</button>

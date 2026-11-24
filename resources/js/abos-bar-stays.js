@@ -84,6 +84,14 @@ export function barStays (root = document, win = window) {
         if (room >= 320) {
             split.style.setProperty('--split-h', Math.round(room) + 'px')
             split.setAttribute('data-split-on', '')
+
+            // ⓘ whatever the shell keeps under the page (padding, strip) is measured, not guessed: the page itself must not scroll
+            const page = scrollerOf(split, win) ?? root.scrollingElement
+            const over = page ? page.scrollHeight - page.clientHeight : 0
+
+            if (over > 0 && room - over >= 320) {
+                split.style.setProperty('--split-h', Math.round(room - over) + 'px')
+            }
         }
     }
 
