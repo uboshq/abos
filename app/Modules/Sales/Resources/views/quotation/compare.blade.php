@@ -11,16 +11,47 @@
 --}}
 @php
     $changedClass = 'rounded-(--radius-field) bg-(--color-badge-warning-bg) px-1 text-(--color-badge-warning-ink)';
+
+    $abosPick = \App\Core\Support\AbosHead::on() && $comparison === null;
+    $facetPanel = \App\Core\ListFilter\Facets::panel($abosPick ? [\App\Core\ListFilter\Facets::dates(__('core.list_filter.date'))] : []);
+    $pickColumns = [
+        ['key' => 'tick', 'label' => __('sales::quotation.compare.pick'), 'width' => '6rem', 'render' => fn ($o) => new \Illuminate\Support\HtmlString('<input type="checkbox" form="compare-form" name="ids[]" value="'.(int) $o->id.'" class="size-4" aria-label="'.e($o->document_no).'"'.(in_array($o->id, $chosen, true) ? ' checked' : '').'>')],
+        ['key' => 'document_no', 'label' => __('sales::field.document_no'), 'width' => '12rem', 'render' => fn ($o) => (string) $o->document_no],
+        ['key' => 'customer', 'label' => __('sales::field.customer'), 'wrap' => true, 'render' => fn ($o) => (string) $o->customer?->nameWithPoint()],
+        ['key' => 'trx_date', 'label' => __('sales::field.date'), 'width' => '8rem', 'render' => fn ($o) => \App\Core\Support\DateFormat::format($o->trx_date)],
+        ['key' => 'total', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem', 'render' => fn ($o) => \App\Core\Support\Money::format($o->total)],
+        ['key' => 'status', 'label' => __('sales::field.state'), 'width' => '9rem', 'render' => fn ($o) => view('sales::quotation.partials.status', ['quotation' => $o])],
+    ];
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::quotation.compare.title') }}</x-slot:title>
 
+    @unless ($abosPick)
     <x-slot:header>
         <x-ui.page-header :title="__('sales::quotation.compare.title')" :subtitle="__('sales::quotation.compare.note')" />
     </x-slot:header>
+    @endunless
 
     @if ($comparison === null)
+        @if ($abosPick)
+            <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+            <div data-boxed data-compare-picker class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+                <form id="list-form" method="GET" action="{{ route('sales.quotation.compare') }}" class="contents">
+                    <x-ui.toolbar :title="__('sales::quotation.compare.title')" :info="__('sales::quotation.compare.note')"
+                                  :search-placeholder="__('sales::quotation.search')" :export="false" :print="false" :share="false"
+                                  :columns="$pickColumns" :facets="$facetPanel" :quiet="['ids']">
+                        <x-slot:actions>
+                            <x-ui.button type="submit" form="compare-form" tone="primary">{{ __('sales::quotation.compare.go') }}</x-ui.button>
+                        </x-slot:actions>
+                    </x-ui.toolbar>
+                </form>
+                <form id="compare-form" method="GET" action="{{ route('sales.quotation.compare') }}"></form>
+                <x-ui.table :rows="$picker" :columns="$pickColumns" :empty="__('sales::quotation.compare.pick_empty')" />
+                <x-ui.list-totals :rows="$picker" />
+            </div>
+            </x-ui.filter-layout>
+        @else
         {{-- ⓘ বাছার পাতা — খুঁজে টিক দিন, তারপর তুলনা --}}
         <section data-boxed data-compare-picker
                  class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
@@ -62,6 +93,7 @@
                 @endif
             </form>
         </section>
+        @endif
     @else
         <section data-boxed data-comparison
                  class="overflow-x-auto rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">

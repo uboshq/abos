@@ -155,8 +155,11 @@ class SalesQuotationController extends Controller implements HasMiddleware
         $picker = null;
 
         if ($quotations->count() < 2) {
+            $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
             $picker = SalesQuotation::query()
                 ->search($request->query('q'))
+                ->when($f['from'] ?? null, fn ($w, $d) => $w->whereDate('trx_date', '>=', $d))
+                ->when($f['to'] ?? null, fn ($w, $d) => $w->whereDate('trx_date', '<=', $d))
                 ->with(['customer.location.parent', 'customer.branch'])
                 ->latest('id')
                 ->limit(50)
