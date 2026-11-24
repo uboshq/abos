@@ -1,5 +1,5 @@
 /*
- * দিনের হাজিরার খাতা — খোঁজা আর বিভাগ পাতার ভিতরেই সারি লুকায়, পাতা আবার খোলে না; লুকানো সারিও জমা হয়, তাই একটা লেখাও হারায় না।
+ * লেখার খাতা (দিনের হাজিরা, মাসের লক্ষ্য) — খোঁজা আর বিভাগ পাতার ভিতরেই সারি লুকায়, পাতা আবার খোলে না; লুকানো সারিও জমা হয়, তাই একটা লেখাও হারায় না।
  * ⓘ না-সংরক্ষিত লেখা থাকতে তারিখ বদলালে বা পাতা ছাড়লে ব্রাউজার জিজ্ঞেস করে।
  */
 export function daySheet () {
@@ -10,9 +10,14 @@ export function daySheet () {
         was: '',
         saving: false,
 
+        /** কোন ফর্ম, আর তার কোন ঘরগুলো সারির — বাইরের বাক্সের data-sheet-form / data-sheet-rows; না দিলে হাজিরার */
+        sheet () {
+            return document.getElementById(this.$root?.dataset?.sheetForm || 'attendance-form')
+        },
+
         init () {
             // ⓘ থামা সংরক্ষণ থেকে ফেরা পাতা — ঘরে যা আছে তা এখনো জমা হয়নি
-            this.was = document.getElementById('attendance-form')?.hasAttribute('data-unsaved') ? '-' : this.written()
+            this.was = this.sheet()?.hasAttribute('data-unsaved') ? '-' : this.written()
             this.narrow()
             this.guard = (event) => {
                 if (this.saving || this.written() === this.was) return
@@ -29,8 +34,9 @@ export function daySheet () {
         /** এখন ফর্মে যা লেখা */
         written () {
             // ⓘ id ধরে, $refs নয় — মাঝে প্যানেলের নিজের x-data আছে
-            const form = document.getElementById('attendance-form')
-            return form ? JSON.stringify(Array.from(new FormData(form).entries()).filter(([k]) => k.startsWith('rows['))) : ''
+            const form = this.sheet()
+            const rows = this.$root?.dataset?.sheetRows || 'rows['
+            return form ? JSON.stringify(Array.from(new FormData(form).entries()).filter(([k]) => k.startsWith(rows))) : ''
         },
 
         narrow () {

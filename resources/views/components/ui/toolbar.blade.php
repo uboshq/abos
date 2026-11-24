@@ -540,6 +540,11 @@
             </button>
         @endif
 
+        {{-- ⭐ পাতার নিজের খোঁজা (সারি লুকায়, পাতা খোলে না — [[day-sheet.js]]) খোঁজার ঘরের জায়গাতেই: ছাঁকনির ঠিক পরে, চওড়া। না দিলে কিছুই নয় --}}
+        @isset($find)
+            <div class="relative order-3 flex min-w-48 flex-1 items-center gap-2" data-bar-find>{{ $find }}</div>
+        @endisset
+
         @if ($search)
             {{-- min-w-48 না দিলে ছোট পর্দায় ঘরটা শূন্যে মিলিয়ে যায়।
 
