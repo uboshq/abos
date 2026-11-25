@@ -2,12 +2,9 @@
 
 ## 1.3.12 — 25-11-2026
 
-- This page covers 1.3.11 too, which never went live on its own.
-- The approval inbox is a board (in the three ABOS looks): papers in coloured boxes by kind on the left, the picked paper on the right; "View" shows the paper exactly as it prints, and looking is never counted as printing. Other looks keep the cards.
 - Credit notes, debit notes and stock-free vouchers with a lines grid, plus the Mushak-6.7/6.8/6.3 papers; a posted stock-free voucher goes back only by a reversal with its own number; purchase prices show only to those who hold the cost key.
 - HR and payroll law (the owner's plan of 21 Oct): a leaver's final settlement, expected credit loss (ECL) on customer dues, "approve" wording everywhere.
 - Meetings and group calls on the web (up to ten people, one screen shown at a time), off until a setting turns them on; a call history with missed, incoming and outgoing calls.
-- Messages: calls ring at once, a person's designation stands beside the name, and everyone of the group can talk to everyone.
 - System pages: the control panel by subject with the whole list bar, module pages and packages, a page that says why a module is hidden, and a type for each branch.
 - Sales reports: target vs sales, trend, product and customer ABC, new/sleeping/lost customers, collection efficiency, scheme and discount cost, sales and dues by area; branches side by side, charts above the tables.
 - Lists (ABOS looks): title, filter, search and buttons on one row; filters in the right-hand panel; bulk actions on sales orders, challans, invoices, returns, purchase bills and orders, customers, suppliers and products.
@@ -17,6 +14,17 @@
 - The day-close checklist warns about today's credit bills, supplier bills due today and a cash-count gap.
 - Looks: ABOS Blue without the outer frame, a white ABOS Navy rail, three frame colours.
 - Long lists open with fewer questions to the database.
+- A call stays open on a PC with no microphone; and every page draws its menu in less time.
+
+## 1.3.11 — 25-11-2026
+
+- Call and message alerts reach the phone at once: Google used to refuse them, so calls did not ring in the app.
+- A call no longer turns "missed" after two seconds; calls also ring within seconds on the web, with clearer video.
+- Messages and calls are open to everyone in every company of the group: find anyone by name or mobile; a call from another company rings too.
+- A person's own designation in Bengali and English, set only by the owner; shown beside the name in messages.
+- The approval inbox is a board in the three ABOS looks: papers in coloured groups on the left, the chosen paper on the right; "View" shows it exactly as it prints, and viewing is not counted as printing.
+- The users list has the filter, the name opens the person, and password reset has its own column.
+- Web top bar on phones: the ☰ menu opens properly, and the logo and search icon no longer overlap.
 
 ## 1.3.10 — 23-11-2026
 
