@@ -104,3 +104,27 @@ describe('switchBoard.confirmOff', () => {
         expect(yes.preventDefault).not.toHaveBeenCalled()
     })
 })
+
+/* ⭐ "সব বাছাই" — শাখার মডিউলের পাতা: চাবিওয়ালা খোলা ঘরগুলো নড়ে; তালাবদ্ধ আর চাবিহীন ঘর নড়ে না, আর বদলগুলো গোনা হয় */
+describe('switchBoard.setAll', () => {
+    it('moves every open keyed box and leaves the locked and the keyless alone', () => {
+        const el = document.createElement('form')
+        el.innerHTML = `<input type="checkbox" name="modules[a]" data-key="a" data-was="">
+            <input type="checkbox" name="modules[b]" data-key="b" data-was="1" checked>
+            <input type="checkbox" name="modules[c]" data-key="c" data-was="" disabled>
+            <input type="checkbox" name="types[]"><input type="checkbox" id="all">`
+        const board = switchBoard()
+        const all = el.querySelector('#all')
+        const on = () => [...el.querySelectorAll('[name]')].map(b => b.checked)
+
+        all.checked = true
+        board.setAll(all)
+        expect(on()).toEqual([true, true, false, false])
+        expect(board.count).toBe(1)
+
+        all.checked = false
+        board.setAll(all)
+        expect(on()).toEqual([false, false, false, false])
+        expect(Object.keys(board.changed)).toEqual(['modules[b]'])
+    })
+})

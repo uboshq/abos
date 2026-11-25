@@ -64,6 +64,17 @@ final class AHundredBranchesOnOneModulePageTest extends TestCase
         $this->assertLessThanOrEqual($few + 5, $many, "⛔ শাখা ধরে আলাদা প্রশ্ন: {$few} → {$many}");
     }
 
+    /** ⭐ "সব বাছাই" — আগের শাখার পাতায় ছিল (মালিকের দেখানো পর্দা); নতুন পাতায় হারিয়েছিল (1.3.12-এর রান) */
+    public function test_the_branch_page_keeps_its_select_all(): void
+    {
+        $branch = Branch::query()->where('is_active', true)->firstOrFail();
+        $html = (string) $this->get(route('system_admin.module.branches', ['pick' => [$branch->id]]))->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<form id="board-form"[^>]*x-data="switchBoard\(/s', $html);
+        $this->assertMatchesRegularExpression('/data-module-all>\s*<input type="checkbox" x-on:change="setAll\(\$event\.target\)"/s', $html);
+        $this->assertMatchesRegularExpression('/name="modules\[hr\]"[^>]*data-key="hr"/s', $html, '⛔ মডিউলের সুইচে চাবি নেই — "সব বাছাই" কিছুই নাড়াবে না।');
+    }
+
     public function test_the_pages_stand_behind_the_settings_key(): void
     {
         $stranger = User::query()->where('email', '!=', 'owner@abos.test')
