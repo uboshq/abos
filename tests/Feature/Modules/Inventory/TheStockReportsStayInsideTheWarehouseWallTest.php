@@ -45,7 +45,7 @@ final class TheStockReportsStayInsideTheWarehouseWallTest extends TestCase
         app(StockService::class)->move(product: $product, warehouse: $other, sourceType: 'test.in', sourceId: 2, floor: '7');
 
         $pairs = fn () => collect(app(ReportEngine::class)->run('inventory.stock_by_warehouse', ['to' => now()->toDateString()], perPage: 1000)->rows)
-            ->map(fn ($r) => (string) $r['pair_key'])->filter(fn ($k) => str_starts_with($k, $product->id.'-'))->sort()->values()->all();
+            ->map(fn ($r) => (string) $r['pair_key'])->filter(fn ($k) => str_starts_with($k, $product->id.'-'))->sort(SORT_NATURAL)->values()->all();
         $ledger = fn () => collect(app(ReportEngine::class)->run('inventory.stock_ledger', ['from' => now()->subDay()->toDateString(), 'to' => now()->toDateString()],
             perPage: 1000)->rows)->filter(fn ($r) => $r['source_type'] === 'test.in' && in_array((int) $r['source_id'], [1, 2], true))->count();
 
