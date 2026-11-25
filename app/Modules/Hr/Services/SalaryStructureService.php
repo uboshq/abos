@@ -155,8 +155,8 @@ final class SalaryStructureService
 
         $approval = $engine->request(
             $employee,
-            self::MODULE,
-            self::ACTION_CHANGE,
+            module: 'hr',
+            action: self::ACTION_CHANGE,
             amount: null,
             payload: ['proposal' => Crypt::encryptString(json_encode(['effective_from' => $date, 'lines' => $lines], JSON_THROW_ON_ERROR))],
             // ⓘ কারণের লেখায় কেবল তারিখ — অনুরোধের কারণ নিরীক্ষকও পড়েন

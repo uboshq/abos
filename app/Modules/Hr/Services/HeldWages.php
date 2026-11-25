@@ -297,8 +297,8 @@ final class HeldWages
 
             $approval = app(ApprovalEngine::class)->request(
                 $line,
-                self::UNPAID_MODULE,
-                self::UNPAID_ACTION,
+                module: 'hr',
+                action: self::UNPAID_ACTION,
                 amount: null,
                 reason: __('hr::payroll.bank_unpaid_asked_reason', ['employee' => (string) $slip->employee?->name(), 'no' => $carrier]),
                 userId: (int) $by->id,

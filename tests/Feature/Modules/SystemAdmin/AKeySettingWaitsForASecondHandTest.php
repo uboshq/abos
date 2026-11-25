@@ -74,9 +74,10 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
         // ⓘ পাতায় অন্যজনের জন্য বোতাম, নিজের জন্য নয়
         $mine = (string) $this->actingAs($maker)->get(route('system_admin.control-panel'))->assertOk()->getContent();
         $this->assertStringContainsString('data-setting-change="'.self::KEY.'"', $mine, '⛔ অপেক্ষার বদল কন্ট্রোল প্যানেলে দেখা যায় না।');
-        $this->assertStringNotContainsString('data-setting-change-sign', $mine, '⛔ যিনি চাইলেন তাঁর সামনেই "অনুমোদন দিন" বোতাম।');
+        $signs = route('system_admin.setting-change.sign', $change->public_id);
+        $this->assertStringNotContainsString($signs, $mine, '⛔ যিনি চাইলেন তাঁর সামনেই "অনুমোদন দিন" বোতাম।');
         $theirs = (string) $this->actingAs($second)->get(route('system_admin.control-panel'))->assertOk()->getContent();
-        $this->assertStringContainsString('data-setting-change-sign', $theirs, '⛔ দ্বিতীয়জনের সামনে "অনুমোদন দিন" বোতাম নেই।');
+        $this->assertStringContainsString($signs, $theirs, '⛔ দ্বিতীয়জনের সামনে "অনুমোদন দিন" বোতাম নেই।');
 
         $this->actingAs($second)->post(route('system_admin.setting-change.sign', $change->public_id))->assertRedirect();
         $this->assertSame($wanted, (string) SignedSettings::stored(app(SettingsService::class)->get(self::KEY)), '⛔ দ্বিতীয় হাতের অনুমোদনেও সেটিং বসেনি।');

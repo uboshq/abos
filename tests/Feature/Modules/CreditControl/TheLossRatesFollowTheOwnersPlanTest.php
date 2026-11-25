@@ -37,6 +37,7 @@ use Tests\TestCase;
  */
 final class TheLossRatesFollowTheOwnersPlanTest extends TestCase
 {
+    use \Tests\Concerns\OpensTheYears;
     use RefreshDatabase;
 
     private Company $company;
@@ -110,6 +111,8 @@ final class TheLossRatesFollowTheOwnersPlanTest extends TestCase
 
         // ⓘ এক বছর আগে: 0–30-এ 10,000 আর 90+-এ 2,000 (যে দিনের হিসাব, তার 10 আর 120 দিন আগে)
         $yearAgo = now()->subMonthsNoOverflow(ReceivableCreditLoss::HISTORY_MONTHS);
+        // ⓘ গত বছরের পাওনা — দাবি নিজের অর্থবছর নিজে খোলে ([[OpensTheYears]])
+        $this->openTheYearsOf($yearAgo->copy()->subDays(10)->toDateString(), $yearAgo->copy()->subDays(120)->toDateString());
         $this->owe($yearAgo->copy()->subDays(10)->toDateString(), '10000');
         $this->owe($yearAgo->copy()->subDays(120)->toDateString(), '2000');
 
