@@ -68,7 +68,7 @@
 
     {{-- দুইটা সংখ্যাই ক্লিকযোগ্য — চাপলে ঠিক ওই চেকগুলোর তালিকা (মালিকের
          নিয়ম: প্রতিটা সংখ্যা থেকে উৎসে যাওয়া যাবে)। --}}
-    <div class="mb-4 grid gap-3 sm:grid-cols-2">
+    <div class="mb-4 grid gap-3 sm:grid-cols-2" data-under-head>
         <a href="{{ route('accounts.cheque.index', ['filter' => 'open']) }}"
            data-boxed class="block rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card) px-4 py-3 transition hover:border-(--color-brand-600)">

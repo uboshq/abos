@@ -106,7 +106,7 @@
     <x-slot:title>{{ __('sales::menu.challans') }}</x-slot:title>
 
     {{-- ⭐ চালানের ধাপের ট্যাব — আগে আলাদা "DO" পাতায় ছিল; আসল DO-র এখন নিজের ডেস্ক (৩ অক্টোবর ২০২৬, [[DeliveryOrderTabs]]) --}}
-    @include('sales::do.partials.tabs', ['active' => $tab ?? ''])
+    @include('sales::do.partials.tabs', ['active' => ($tab ?? '') ?: 'all'])
 
     @if (session('saved'))
         <div role="status"

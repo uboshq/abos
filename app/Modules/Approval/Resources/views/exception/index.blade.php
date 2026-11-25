@@ -14,7 +14,7 @@
 
     @include('approval::partials.rule-tabs')
 
-    <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2 text-sm">
+    <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2 text-sm text-(--color-ink-muted)">
         {{ __('approval::exception.note') }}
     </p>
 

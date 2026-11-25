@@ -7,10 +7,11 @@
     <x-slot:title>{{ $group->exists ? $group->name : __('notification::group.new') }}</x-slot:title>
 
     <div class="space-y-4">
-        <div class="flex items-center justify-between gap-2">
-            <h1 class="text-lg font-semibold">{{ $group->exists ? $group->name : __('notification::group.new') }}</h1>
-            <a href="{{ route('notification.groups.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::group.back') }}</a>
-        </div>
+        <x-ui.page-header :title="$group->exists ? $group->name : __('notification::group.new')">
+            <x-slot:actions>
+                <x-ui.button tone="secondary" :href="route('notification.groups.index')">{{ __('notification::group.back') }}</x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
         @include('notification::partials.flash')
 

@@ -620,8 +620,10 @@
 }
 
 /* টাকার পাতার পট্টি — জাভাস্ক্রিপ্ট ছাড়াও রঙহীন সাদা */
-:root[data-ui='rose'] [data-page-kind] [data-money-hero] {
-    background: var(--color-surface-card);
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-page-kind] [data-money-hero] {
+    padding-inline: 2px;
+    box-shadow: none;
+    background: transparent;
     color: var(--color-ink);
 }
 
@@ -1199,4 +1201,13 @@
 /* ⭐ মাথা সবার আগে — কার্ডের সারি তালিকার বারের নিচে ([[cardsUnderHead]]; মালিক, ২৪ নভেম্বর ২০২৬) */
 :root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-filter-layout] > * .list-cards {
     margin: 8px 12px;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-filter-layout] [data-under-head] {
+    margin: 8px 12px;
+}
+
+/* ⓘ টুলবারে না ওঠা পাতার মাথা (সীমা, নিয়মের বাইরে, মাসবন্ধ …) — বাকি পাতার মতো নাম, রঙিন পট্টি আর বড় চিহ্ন নয় (অডিট, ২৫ নভেম্বর ২০২৬) */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-page-kind] [data-money-hero] [data-hero-icon] {
+    display: none;
 }

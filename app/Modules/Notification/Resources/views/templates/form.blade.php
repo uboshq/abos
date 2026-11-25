@@ -14,10 +14,11 @@
     <x-slot:title>{{ $template->exists ? $template->name : __('notification::template.new') }}</x-slot:title>
 
     <div class="space-y-4">
-        <div class="flex items-center justify-between gap-2">
-            <h1 class="text-lg font-semibold">{{ $template->exists ? $template->name : __('notification::template.new') }}</h1>
-            <a href="{{ route('notification.templates.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::template.back') }}</a>
-        </div>
+        <x-ui.page-header :title="$template->exists ? $template->name : __('notification::template.new')">
+            <x-slot:actions>
+                <x-ui.button tone="secondary" :href="route('notification.templates.index')">{{ __('notification::template.back') }}</x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
         @include('notification::partials.flash')
 

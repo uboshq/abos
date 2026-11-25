@@ -7,11 +7,12 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::channel.names.'.$channel) }}</x-slot:title>
 
-    <div class="mx-auto max-w-2xl space-y-4">
-        <div class="flex items-center justify-between gap-2">
-            <h1 class="text-lg font-semibold">{{ __('notification::channel.names.'.$channel) }}</h1>
-            <a href="{{ route('notification.channels.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::channel.back') }}</a>
-        </div>
+    <div class="space-y-4">
+        <x-ui.page-header :title="__('notification::channel.names.'.$channel)">
+            <x-slot:actions>
+                <x-ui.button tone="secondary" :href="route('notification.channels.index')">{{ __('notification::channel.back') }}</x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
         @if (session('saved'))
             <p role="status" class="rounded-(--radius-field) bg-(--color-badge-success-bg) px-3 py-2

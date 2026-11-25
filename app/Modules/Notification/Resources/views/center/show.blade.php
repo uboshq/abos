@@ -7,10 +7,13 @@
     <x-ui.errors />
 
     <div class="space-y-4" data-center-detail>
-        <a href="{{ route('notification.center.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::center.back') }}</a>
+        <x-ui.page-header :title="$event->title">
+            <x-slot:actions>
+                <x-ui.button tone="secondary" :href="route('notification.center.index')">{{ __('notification::center.back') }}</x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
         <section class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
-            <h1 class="text-lg font-semibold">{{ $event->title }}</h1>
             @if ($event->body)
                 <p class="mt-1 text-sm text-(--color-ink-muted)">{{ $event->body }}</p>
             @endif

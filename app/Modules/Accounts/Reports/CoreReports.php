@@ -932,7 +932,7 @@ final class CoreReports
                 ->orderBy('accounts.code')
                 ->select([
                     'ledger_entries.account_id',
-                    'accounts.type',
+                    self::typeWord(),
                     self::accountName(),
                     DB::raw('SUM(ledger_entries.debit) as debit'),
                     DB::raw('SUM(ledger_entries.credit) as credit'),
@@ -1367,6 +1367,18 @@ final class CoreReports
             ." AND pk.company_id = {$table}.company_id AND pk.party_type IS NOT NULL AND pk.party_id IS NOT NULL"
             .')) as party_key'
         );
+    }
+
+    /** খাতের ধরন পড়ার ভাষায় — আগে পাতায় কাঁচা "income" / "expense" (অডিট, ২৫ নভেম্বর ২০২৬) */
+    private static function typeWord(): Expression
+    {
+        $pdo = DB::getPdo();
+        $cases = implode(' ', array_map(
+            fn (string $type): string => 'WHEN '.$pdo->quote($type).' THEN '.$pdo->quote((string) __('accounts::type.'.$type)),
+            ['asset', 'liability', 'equity', 'income', 'expense'],
+        ));
+
+        return DB::raw("CASE accounts.type {$cases} ELSE accounts.type END as type");
     }
 
     private static function accountName(): Expression

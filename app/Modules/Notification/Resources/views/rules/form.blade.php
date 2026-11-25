@@ -15,10 +15,11 @@
     <x-slot:title>{{ $rule->exists ? $rule->name : __('notification::rule.new') }}</x-slot:title>
 
     <div class="space-y-4">
-        <div class="flex items-center justify-between gap-2">
-            <h1 class="text-lg font-semibold">{{ $rule->exists ? $rule->name.' · v'.$rule->version : __('notification::rule.new') }}</h1>
-            <a href="{{ route('notification.rules.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::rule.back') }}</a>
-        </div>
+        <x-ui.page-header :title="$rule->exists ? $rule->name.' · v'.$rule->version : __('notification::rule.new')">
+            <x-slot:actions>
+                <x-ui.button tone="secondary" :href="route('notification.rules.index')">{{ __('notification::rule.back') }}</x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
         @include('notification::partials.flash')
 

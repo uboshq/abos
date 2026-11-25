@@ -7,10 +7,11 @@
     <x-slot:title>{{ $schedule->exists ? $schedule->name : __('notification::schedule.new') }}</x-slot:title>
 
     <div class="space-y-4">
-        <div class="flex items-center justify-between gap-2">
-            <h1 class="text-lg font-semibold">{{ $schedule->exists ? $schedule->name : __('notification::schedule.new') }}</h1>
-            <a href="{{ route('notification.schedules.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::schedule.back') }}</a>
-        </div>
+        <x-ui.page-header :title="$schedule->exists ? $schedule->name : __('notification::schedule.new')">
+            <x-slot:actions>
+                <x-ui.button tone="secondary" :href="route('notification.schedules.index')">{{ __('notification::schedule.back') }}</x-ui.button>
+            </x-slot:actions>
+        </x-ui.page-header>
 
         @include('notification::partials.flash')
 

@@ -84,7 +84,7 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::delivery_performance.title') }}</x-slot:title>
 
-    <section data-performance-cards class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <section data-performance-cards data-under-head class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         @foreach ($cards as [$key, $label, $value, $hint])
             <div data-card="{{ $key }}" data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <p class="text-sm text-(--color-ink-muted)">{{ $label }}</p>

@@ -474,5 +474,16 @@ export function cardsUnderHead (root = document) {
         moved++
     }
 
+    // ⓘ তালিকার নিজের সংখ্যার বাক্স (চেক, কমিশন, ডেলিভারির হিসাব) — পাতা `data-under-head` বলে দেয়
+    for (const box of root.querySelectorAll('main [data-under-head]')) {
+        const bar = root.querySelector('main [data-filter-layout] .toolbar-view') ?? root.querySelector('main .toolbar-view')
+        const after = bar?.closest('form') ?? bar
+
+        if (after && (box.compareDocumentPosition(after) & 4)) {
+            after.after(box)
+            moved++
+        }
+    }
+
     return moved
 }
