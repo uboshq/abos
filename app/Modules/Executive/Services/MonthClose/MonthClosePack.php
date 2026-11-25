@@ -972,7 +972,7 @@ final class MonthClosePack
     /** @return array<string, mixed>|null মাসের পাকা বেতন না থাকলে null */
     private function payroll(MonthPeriods $p): ?array
     {
-        $runs = PayrollRun::query()->where('month', $p->month->toDateString())->whereIn('status', DocumentStatus::POSTED)->get();
+        $runs = PayrollRun::query()->where('company_id', CompanyContext::id())->where('month', $p->month->toDateString())->whereIn('status', DocumentStatus::POSTED)->get();
 
         if ($runs->isEmpty()) {
             return null;

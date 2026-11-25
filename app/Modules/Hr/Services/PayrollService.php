@@ -1331,6 +1331,8 @@ final class PayrollService
          * বেতন-খরচ ও বেতন-দেনা দ্বিগুণ বসত। তালার পরের দ্বিতীয় যাচাইও এটাই ডাকে।
          */
         $exists = PayrollRun::acrossBranches()
+            // ⛔ এই কোম্পানির রান — এক কর্মী-খাতার সুইচে অন্য কোম্পানির রান এই কোম্পানির মাসের বেতন আটকাত (২৫ নভেম্বর ২০২৬)
+            ->where('company_id', CompanyContext::id())
             ->forMonth($monthStart->toDateString())
             ->ofType($type)
             ->where('status', '<>', DocumentStatus::CANCELLED)
@@ -1349,6 +1351,7 @@ final class PayrollService
     private function assertBonusRoom(Carbon $on): void
     {
         $taken = PayrollRun::acrossBranches()
+            ->where('company_id', CompanyContext::id())
             ->ofType(PayrollRun::BONUS)
             ->where('status', '<>', DocumentStatus::CANCELLED)
             ->whereYear('month', $on->year)

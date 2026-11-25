@@ -197,13 +197,20 @@ final class TheHrListsPageAndTotalOnlyFinalPapersTest extends TestCase
             $this->assertSame([__('hr::payroll.held_pay_none')], $e->errors()['payslips'] ?? null);
         }
 
-        try {
-            $theirs = app(PayrollService::class)->build(now()->startOfMonth()->toDateString());
-            $this->assertNotContains((int) $ours->id, $theirs->payslips()->pluck('employee_id')->map(fn ($id) => (int) $id)->all(), '⛔ রানে অন্য কোম্পানির কর্মী।');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // ⓘ অন্য কোম্পানিতে নিজের কেউ না থাকলে রানই হয় না — সেটাও ঠিক উত্তর; অন্য কোনো কারণে থামলে দাবি লাল
-            $this->assertSame([__('hr::validation.nobody_on_payroll')], $e->errors()['month'] ?? null);
-        }
+        $theirs = $this->employee('HW-T', 'Their Own');
+        $this->assertSame((int) $other->id, (int) $theirs->company_id, 'প্রস্তুতিটাই ভুল।');
+        app(SalaryStructureService::class)->set($theirs, $basic, now()->subYear()->startOfMonth()->toDateString(), '9000');
+
+        // ⭐ অন্য কোম্পানির রান হয়ে গেছে, তবু এই কোম্পানির মাসের বেতন হয় — আর কেবল নিজের কর্মীর
+        $on = app(PayrollService::class)->build(now()->startOfMonth()->toDateString());
+        $this->assertSame((int) $other->id, (int) $on->company_id);
+        $this->assertContains((int) $theirs->id, $on->payslips()->pluck('employee_id')->map(fn ($id) => (int) $id)->all());
+        $this->assertNotContains((int) $ours->id, $on->payslips()->pluck('employee_id')->map(fn ($id) => (int) $id)->all(), '⛔ রানে অন্য কোম্পানির কর্মী।');
+
+        // ⛔ নিজের কোম্পানিতে দ্বিতীয় রান আগের মতোই থামে
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectExceptionMessage(__('hr::validation.month_already_run', ['month' => now()->startOfMonth()->format('M Y')]));
+        app(PayrollService::class)->build(now()->startOfMonth()->toDateString());
     }
 
     public function test_the_owners_own_report_never_shows_the_workers_profit_fund_amount(): void
