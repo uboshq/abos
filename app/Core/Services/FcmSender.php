@@ -49,7 +49,7 @@ final class FcmSender
         return $this->post([
             'token' => $token,
             'notification' => array_filter(['title' => $title, 'body' => $body]),
-            'data' => array_map('strval', $data),
+            'data' => $this->safe($data),
             /*
              * ⭐ অ্যাপের "জরুরি বার্তা" চ্যানেল — উঁচু গুরুত্ব, তাই বন্ধ বা তালা দেওয়া অ্যাপেও পর্দার উপরে ভেসে ওঠে (মালিক, ২০ নভেম্বর ২০২৬:
              * "নোটিফিকেশন সবসময় আসে")। ⓘ চ্যানেলটা না থাকা পুরনো অ্যাপে Android নিজের সাধারণ চ্যানেলে দেখায় — কিছুই হারায় না।
@@ -72,9 +72,22 @@ final class FcmSender
     {
         return $this->post([
             'token' => $token,
-            'data' => array_map('strval', $data),
+            'data' => $this->safe($data),
             'android' => ['priority' => 'HIGH'],
         ]);
+    }
+
+    /**
+     * ⛔ Firebase-এর সংরক্ষিত নাম (`from`, `message_type`, google… বা gcm… দিয়ে শুরু) একটাও থাকলে সে পুরো বার্তা ফেরায় — কলের আর
+     *   বার্তার কোনো পুশ ফোনে যেত না (মালিক, ২৫ নভেম্বর ২০২৬: "অ্যাপে কল আসে না")। তাই নামটা বাদ, বাকিটা যায়।
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, string>
+     */
+    private function safe(array $data): array
+    {
+        return array_map('strval', array_filter($data,
+            fn (string $key): bool => preg_match('/^(from$|message_type$|google|gcm)/i', $key) !== 1, ARRAY_FILTER_USE_KEY));
     }
 
     /** @param  array<string, mixed>  $message */
@@ -96,6 +109,11 @@ final class FcmSender
         }
 
         $status = (string) data_get($response->json(), 'error.details.0.errorCode', '');
+
+        if ($response->status() === 400 && Cache::add('fcm.refused_logged', true, now()->addDay())) {
+            // ⓘ চুপচাপ ব্যর্থ নয় — দিনে একবার ভুলের খাতায়; ⛔ টোকেন বা বার্তার লেখা নয়
+            report(new RuntimeException('FCM refused a push: '.(string) data_get($response->json(), 'error.message', 'HTTP 400')));
+        }
 
         return $response->status() === 404 || $status === 'UNREGISTERED' ? self::GONE : self::FAILED;
     }

@@ -100,7 +100,7 @@ final class CallsTest extends TestCase
             && $job->data['type'] === 'call'
             && $job->data['call_id'] === $call->public_id
             && $job->data['video'] === '1'
-            && $job->data['from'] === (string) $this->caller->id
+            && $job->data['sender'] === (string) $this->caller->id && ! array_key_exists('from', $job->data)
             && $job->data['thread_id'] !== '');
     }
 

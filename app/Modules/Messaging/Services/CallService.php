@@ -317,7 +317,8 @@ final class CallService
             'type' => 'call',
             'call_id' => (string) $call->public_id,
             'video' => $call->video ? '1' : '0',
-            'from' => (string) $caller->id,
+            // ⛔ 'from' নয় — Firebase-এর সংরক্ষিত নাম, পুরো বার্তা 400 হয় (২৫ নভেম্বর ২০২৬)
+            'sender' => (string) $caller->id,
             'thread_id' => $threadId,
         ];
     }
