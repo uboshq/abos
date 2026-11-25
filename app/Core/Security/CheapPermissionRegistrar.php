@@ -20,6 +20,44 @@ use Spatie\Permission\PermissionRegistrar;
  */
 final class CheapPermissionRegistrar extends PermissionRegistrar
 {
+    private ?Collection $built = null;
+
+    private ?string $builtFrom = null;
+
+    /**
+     * ⭐ একই প্রসেসে কোম্পানি বদলালে (মালিকের কেন্দ্র এক পাতায় বহুবার) তালিকার বস্তু আবার বানানো নয়, যদি টেবিল তিনটা হুবহু একই থাকে
+     *   (২৫ নভেম্বর ২০২৬; `/owner`-এর সময়ের ৬০% এখানে যেত)। ⛔ প্রতিবারই ডাটাবেসকে জিজ্ঞেস — তিন টেবিলের ছাপ (গোনা, যোগ আর XOR);
+     *   একটা চাবি বা রোল বদলালেই ছাপ আলাদা, তালিকা নতুন। ক্যাশ ছাড়ার নিয়ম ([[CompanyContext::set()]]) অটুট।
+     */
+    private function asTheDatabaseIsNow(): Collection
+    {
+        $now = $this->fingerprint();
+
+        if ($this->built === null || $now !== $this->builtFrom) {
+            $this->built = $this->getPermissionsWithRoles();
+            $this->builtFrom = $now;
+        }
+
+        return $this->built;
+    }
+
+    private function fingerprint(): string
+    {
+        $of = function (string $table, array $columns): string {
+            $row = "CONCAT_WS('|', ".implode(', ', array_map(fn (string $c): string => "IFNULL({$c}, '~')", $columns)).')';
+            $mark = DB::table($table)->selectRaw("COUNT(*) as n, COALESCE(SUM(CRC32({$row})), 0) as s, COALESCE(BIT_XOR(CRC32(REVERSE({$row}))), 0) as x")->first();
+
+            return "{$mark->n}:{$mark->s}:{$mark->x}";
+        };
+
+        return implode(' ', [
+            $of('role_has_permissions', ['permission_id', 'role_id']),
+            $of((new ($this->getPermissionClass())())->getTable(), ['id', 'name', 'guard_name', 'updated_at']),
+            $of((new ($this->getRoleClass())())->getTable(), ['id', 'name', 'guard_name', 'company_id', 'updated_at']),
+            DB::connection()->getDatabaseName(),
+        ]);
+    }
+
     private ?object $indexOf = null;
 
     /** @var array<string, array<string, object>> গার্ড => নাম => অনুমতি */
@@ -36,7 +74,7 @@ final class CheapPermissionRegistrar extends PermissionRegistrar
         // ⭐ তালিকা সরাসরি ডাটাবেস থেকে, ক্যাশে লিখে আবার পড়ে নয় (২৫ নভেম্বর ২০২৬): [[CompanyContext::set()]] প্রতি অনুরোধে ক্যাশ
         //   ছাড়ে, তাই ক্যাশ কখনো কাজে লাগত না — কেবল ৩০১৩ জোড়া ভাঁজ করা, লেখা আর খোলা, প্রতি পাতায়। ⓘ পুরনো উত্তর থাকার পথ আরও কম।
         if (! $this->permissions) {
-            $this->permissions = $this->getPermissionsWithRoles();
+            $this->permissions = $this->asTheDatabaseIsNow();
         }
 
         $name = $params['name'] ?? null;
