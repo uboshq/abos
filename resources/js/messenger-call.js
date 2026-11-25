@@ -521,13 +521,21 @@ async function join (payload, { outgoing }) {
 
     try { await room.startAudio() } catch { /* ⓘ ব্রাউজার নিজে চালাবে প্রথম চাপে */ }
 
+    // ⛔ মাইক বা ক্যামেরা না পেলেও কল কাটে না (মালিক, ২৫ নভেম্বর ২০২৬: অ্যাপের কল ধরলেই 2 সেকেন্ডে কেটে যেত — অফিসের পিসিতে
+    //   মাইক নেই); শুনতে পান, মাইক "বন্ধ" দেখায়, বোতামে আবার চেষ্টা করা যায়
     try {
         await room.localParticipant.setMicrophoneEnabled(true)
-        if (call.cameraOn) await room.localParticipant.setCameraEnabled(true)
     } catch {
-        await hangUp({ note: 'toast.no_media' })
-        return
+        call.muted = true
+        toast(word('toast.no_media'))
     }
+    if (call.cameraOn) {
+        try { await room.localParticipant.setCameraEnabled(true) } catch {
+            call.cameraOn = false
+            toast(word('toast.no_media'))
+        }
+    }
+    if (call.room !== room) return
     selfVideo()
 
     const there = remoteOf(room)
@@ -583,7 +591,7 @@ export async function startCall (personId, video) {
 async function toggleMute () {
     if (!call.room) return
     call.muted = !call.muted
-    try { await call.room.localParticipant.setMicrophoneEnabled(!call.muted) } catch { call.muted = !call.muted }
+    try { await call.room.localParticipant.setMicrophoneEnabled(!call.muted) } catch { call.muted = !call.muted; toast(word('toast.no_media')) }
     paintControls()
 }
 
