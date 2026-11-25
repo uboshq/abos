@@ -118,7 +118,8 @@ final class MoneyInReports
             ->tap(ReportEngine::dealerWall($f, 'cu.id'))
             ->when(! empty($f['location_id']), fn (Builder $q) => SalesPlace::under($q, (int) $f['location_id']))
             ->when(! empty($f['customer_id']), fn (Builder $q) => $q->where('cu.id', (int) $f['customer_id']))
-            ->selectRaw('mo.*, cu.id as customer_id, '.SalesPlace::named('cu').' as customer, '
+            ->leftJoin('branches as cb', 'cb.id', '=', 'cu.branch_id')
+            ->selectRaw('mo.*, cu.id as customer_id, '.SalesPlace::named('cb').' as customer_branch, '.SalesPlace::named('cu').' as customer, '
                 .SalesPlace::first(Location::AREA, 'id').' as area_id, '.SalesPlace::first(Location::AREA, 'name').' as area, '
                 .SalesPlace::first(Location::AREA, 'branch_id').' as area_branch_id, '
                 .SalesPlace::first(Location::TERRITORY, 'id').' as territory_id, '.SalesPlace::first(Location::TERRITORY, 'name').' as territory, '
@@ -301,21 +302,22 @@ final class MoneyInReports
                     Location::AREA => null,
                     Location::TERRITORY => $q->groupBy('m.territory_id', 'm.territory'),
                     Location::POINT => $q->groupBy('m.point_id', 'm.point', 'm.territory'),
-                    default => $q->groupBy('m.customer_id', 'm.customer', 'm.point', 'm.territory'),
+                    default => $q->groupBy('m.customer_id', 'm.customer', 'm.point', 'm.territory', 'm.customer_branch'),
                 };
 
                 // ⓘ টেরিটরি বসানো নেই এমন সারিতে চাপলে তার এরিয়ার পয়েন্টগুলো — নিচে নামার জায়গা এরিয়াই
                 $drill = $level === Location::TERRITORY ? 'COALESCE(m.territory_id, m.area_id)' : $id;
 
                 return $q->selectRaw("{$drill} as place_id, COALESCE({$name}, ".$pdo->quote((string) __('sales::money_in.'.$none)).') as place, '
-                    ."{$parent} as parent, ".($level === SalesPlace::CUSTOMER ? 'COALESCE(m.territory, '.$pdo->quote((string) __('sales::money_in.no_territory')).') as territory, ' : '').self::sums())
+                    ."{$parent} as parent, ".($level === SalesPlace::CUSTOMER ? 'COALESCE(m.territory, '.$pdo->quote((string) __('sales::money_in.no_territory')).') as territory, m.customer_branch as customer_branch, ' : '').self::sums())
                     ->orderByRaw('SUM(m.amount) DESC')->orderByRaw("{$id}");
             },
             [
                 ['key' => 'place', 'label' => 'sales::money_in.level_'.$level],
                 ...($level === Location::AREA ? [] : [['key' => 'parent', 'label' => 'sales::money_in.parent_'.$level]]),
                 // ⭐ গ্রাহক ধরে: টেরিটরির কলাম, আর তার সাব টোটাল ([[territories()]]; মালিক, ২৫ নভেম্বর ২০২৬)
-                ...($level === SalesPlace::CUSTOMER ? [['key' => 'territory', 'label' => 'sales::money_in.level_territory', 'width' => '11rem']] : []),
+                ...($level === SalesPlace::CUSTOMER ? [['key' => 'territory', 'label' => 'sales::money_in.level_territory', 'width' => '9rem'],
+                    ['key' => 'customer_branch', 'label' => 'sales::money_in.branch', 'width' => '8rem']] : []),
                 ...self::figures($row, $below === null ? null : ['slug' => self::levelSlug($below), 'params' => $row]),
             ], 'place_id', $level === SalesPlace::CUSTOMER ? fn (array $f): array => self::territories($f) : null, self::totalChart('place'));
     }
