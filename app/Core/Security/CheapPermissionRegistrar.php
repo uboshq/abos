@@ -33,16 +33,17 @@ final class CheapPermissionRegistrar extends PermissionRegistrar
      */
     public function getPermissions(array $params = [], bool $onlyOne = false): Collection
     {
+        // ⭐ তালিকা সরাসরি ডাটাবেস থেকে, ক্যাশে লিখে আবার পড়ে নয় (২৫ নভেম্বর ২০২৬): [[CompanyContext::set()]] প্রতি অনুরোধে ক্যাশ
+        //   ছাড়ে, তাই ক্যাশ কখনো কাজে লাগত না — কেবল ৩০১৩ জোড়া ভাঁজ করা, লেখা আর খোলা, প্রতি পাতায়। ⓘ পুরনো উত্তর থাকার পথ আরও কম।
+        if (! $this->permissions) {
+            $this->permissions = $this->getPermissionsWithRoles();
+        }
+
         $name = $params['name'] ?? null;
         $guard = $params['guard_name'] ?? null;
 
         if (! $onlyOne || count($params) !== 2 || ! is_string($name) || ! is_string($guard) || is_numeric($name)) {
             return parent::getPermissions($params, $onlyOne);
-        }
-
-        // ⓘ মূলের `loadPermissions()` private — তালিকা না থাকলে মূলের পথেই তোলা
-        if (! is_object($this->permissions)) {
-            return parent::getPermissions($params, true);
         }
 
         if ($this->indexOf !== $this->permissions) {
