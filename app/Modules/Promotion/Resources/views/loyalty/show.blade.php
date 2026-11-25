@@ -53,13 +53,13 @@
                     <tbody>
                         @foreach ($entries as $entry)
                             <tr class="border-t border-(--color-border)">
-                                <td>{{ $entry->occurred_at?->format('d/m/Y H:i') }}</td>
+                                <td>{{ \App\Core\Support\DateFormat::formatWithTime($entry->occurred_at) }}</td>
                                 <td>{{ $entry->kind?->label() ?? '—' }}</td>
                                 <td class="num tabular-nums">{{ $points[$entry->id] ?? '0' }}</td>
                                 {{-- ⓘ মেয়াদ কেবল পয়েন্ট-আনা সারির; খরচ বা মেয়াদ-শেষের সারিতে ঘরটা ফাঁকা --}}
                                 <td>
                                     @if ($entry->expires_on)
-                                        {{ $entry->expires_on->format('d/m/Y') }}
+                                        {{ \App\Core\Support\DateFormat::format($entry->expires_on) }}
                                     @elseif (str_starts_with($points[$entry->id] ?? '0', '-') || ($points[$entry->id] ?? '0') === '0')
                                         —
                                     @else

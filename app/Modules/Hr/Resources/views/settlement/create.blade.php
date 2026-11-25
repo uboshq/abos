@@ -18,7 +18,7 @@
         </div>
     @endif
 
-    <p class="mb-3 text-sm">{{ __('hr::settlement.last_day') }}: <strong>{{ $employee->leaving_date->format('d M Y') }}</strong></p>
+    <p class="mb-3 text-sm">{{ __('hr::settlement.last_day') }}: <strong>{{ \App\Core\Support\DateFormat::format($employee->leaving_date) }}</strong></p>
 
     @include('hr::settlement.partials.figures', ['f' => $figures])
 

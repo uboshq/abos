@@ -35,8 +35,8 @@
                 ['key' => 'priority', 'label' => __('core.notify.col.priority'), 'width' => '6rem', 'render' => fn ($e) => __('core.notify.priority.'.$e->priority)],
                 ['key' => 'branch', 'label' => __('notification::archive.branch'), 'width' => '9rem', 'render' => fn ($e) => $e->branch?->name_bn ?? '—'],
                 ['key' => 'recipients', 'label' => __('notification::archive.recipients'), 'numeric' => true, 'width' => '6rem', 'render' => fn ($e) => (string) $e->recipients],
-                ['key' => 'created_at', 'label' => __('core.notify.col.when'), 'width' => '8rem', 'render' => fn ($e) => $e->created_at?->format('d/m/Y H:i')],
-                ['key' => 'archived_at', 'label' => __('notification::archive.archived_at'), 'width' => '8rem', 'render' => fn ($e) => $e->archived_at?->format('d/m/Y H:i')],
+                ['key' => 'created_at', 'label' => __('core.notify.col.when'), 'width' => '8rem', 'render' => fn ($e) => \App\Core\Support\DateFormat::formatWithTime($e->created_at)],
+                ['key' => 'archived_at', 'label' => __('notification::archive.archived_at'), 'width' => '8rem', 'render' => fn ($e) => \App\Core\Support\DateFormat::formatWithTime($e->archived_at)],
             ];
         @endphp
         <div data-archive-table>

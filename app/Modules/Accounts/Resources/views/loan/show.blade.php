@@ -27,7 +27,7 @@
     $movementColumns = [
         ['key' => 'document_no', 'label' => __('core.print.document_no')],
         ['key' => 'trx_date', 'label' => __('accounts::field.date'), 'width' => '8rem',
-         'render' => fn ($m) => $m->trx_date?->format('d/m/Y')],
+         'render' => fn ($m) => \App\Core\Support\DateFormat::format($m->trx_date)],
         ['key' => 'type', 'label' => __('accounts::field.type'), 'width' => '9rem',
          // ⓘ সইয়ের অপেক্ষায় বা ফেরত সারি — খাতায় ওঠেনি, তাই আলাদা করে বলা (অডিট, ১০ অক্টোবর ২০২৬)
          'render' => fn ($m) => $m->label().(in_array($m->status, [\App\Modules\Accounts\Models\LoanMovement::AWAITING, \App\Modules\Accounts\Models\LoanMovement::REJECTED], true)
@@ -138,7 +138,7 @@
 
             <div>
                 <dt class="text-2xs text-(--color-ink-muted)">{{ __('accounts::field.starts_on') }}</dt>
-                <dd class="text-sm">{{ $loan->start_date?->format('d/m/Y') }}</dd>
+                <dd class="text-sm">{{ \App\Core\Support\DateFormat::format($loan->start_date) }}</dd>
             </div>
 
             @if ($loan->isTerm())
@@ -205,7 +205,7 @@
                                class="border-t border-(--color-border)">
                             <tr @class(['bg-(--color-badge-danger-bg)' => $row->isOverdue()])>
                                 <td class="num">{{ $row->no }}</td>
-                                <td>{{ $row->due_date?->format('d/m/Y') }}</td>
+                                <td>{{ \App\Core\Support\DateFormat::format($row->due_date) }}</td>
                                 <td class="num">{{ \App\Core\Support\Money::format($row->principal) }}</td>
                                 <td class="num">{{ \App\Core\Support\Money::format($row->interest) }}</td>
                                 <td class="num font-medium">
@@ -216,7 +216,7 @@
                                         <x-ui.badge tone="success">{{ __('accounts::state.paid') }}</x-ui.badge>
                                         @if ($row->paid_on)
                                             <span class="block text-2xs text-(--color-ink-muted)">
-                                                {{ $row->paid_on->format('d/m/Y') }}
+                                                {{ \App\Core\Support\DateFormat::format($row->paid_on) }}
                                             </span>
                                         @endif
                                     @elseif ($row->isOverdue())

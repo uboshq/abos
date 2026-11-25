@@ -58,7 +58,7 @@
                         <td class="text-2xs">{{ __('notification::channel.names.'.$job->channel) }}</td>
                         <td class="text-2xs">{{ __('notification::delivery.statuses.'.$job->status) }}</td>
                         <td class="text-end text-2xs tabular-nums">{{ $job->attempts }} / {{ $job->max_attempts }}</td>
-                        <td class="whitespace-nowrap text-2xs">{{ $job->next_attempt_at?->format('d/m/Y H:i') ?? __('notification::delivery.none') }}</td>
+                        <td class="whitespace-nowrap text-2xs">{{ \App\Core\Support\DateFormat::formatWithTime($job->next_attempt_at) ?? __('notification::delivery.none') }}</td>
                         <td class="text-2xs">
                             @if ($job->error_kind)
                                 <span class="text-(--color-ink-muted)">{{ __('notification::delivery.outcomes.'.$job->error_kind) }}:</span>

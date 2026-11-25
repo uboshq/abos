@@ -169,7 +169,7 @@
                 {{-- ⭐ ব্যক্তিগত তথ্য — পরিচয়ের চাবি ছাড়া ঢাকা ([[Employee::GUARDED]]; ঘাটতির তালিকা #১৯) --}}
                 'hr::field.father_name' => \App\Core\Security\FieldSecurity::show($employee, 'father_name', $employee->father_name),
                 'hr::field.mother_name' => \App\Core\Security\FieldSecurity::show($employee, 'mother_name', $employee->mother_name),
-                'hr::field.date_of_birth' => \App\Core\Security\FieldSecurity::show($employee, 'date_of_birth', $employee->date_of_birth?->format('d M Y')),
+                'hr::field.date_of_birth' => \App\Core\Security\FieldSecurity::show($employee, 'date_of_birth', \App\Core\Support\DateFormat::format($employee->date_of_birth)),
                 'hr::field.blood_group' => \App\Core\Security\FieldSecurity::show($employee, 'blood_group', $employee->blood_group),
                 'hr::field.surviving_children' => \App\Core\Security\FieldSecurity::show($employee, 'surviving_children', $employee->surviving_children === null ? __('hr::message.no_information') : (string) $employee->surviving_children),
                 'hr::field.gender' => \App\Core\Security\FieldSecurity::show($employee, 'gender', $employee->gender === null ? null : __('hr::kind.gender_'.$employee->gender)),
@@ -190,8 +190,8 @@
                 'hr::field.designation' => $title,
                 'hr::field.employment_type' => $employee->employmentType?->name(),
                 'hr::field.branch' => $employee->branch?->name(),
-                'hr::field.joining_date' => $employee->joining_date?->format('d M Y'),
-                'hr::field.leaving_date' => $employee->leaving_date?->format('d M Y'),
+                'hr::field.joining_date' => \App\Core\Support\DateFormat::format($employee->joining_date),
+                'hr::field.leaving_date' => \App\Core\Support\DateFormat::format($employee->leaving_date),
                 'hr::profile.tenure' => $tenure,
                 'hr::field.payment_method' => __('hr::kind.' . $employee->payment_method),
                 'hr::field.bank_account_no' => \App\Core\Security\FieldSecurity::show(
@@ -289,7 +289,7 @@
                     <li class="relative">
                         <span @class(['absolute top-1 size-3 rounded-full', 'bg-(--color-brand-500)' => $loop->first, 'bg-(--color-border)' => ! $loop->first])
                               style="left: -1.6rem" aria-hidden="true"></span>
-                        <p class="text-2xs text-(--color-ink-muted)">{{ $event['date']->format('d M Y') }}</p>
+                        <p class="text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($event['date']) }}</p>
                         <p class="text-sm font-semibold">{{ __('hr::profile.event_'.$event['field']) }}</p>
                         @if ($event['from'] !== null || $event['to'] !== null)
                             <p class="text-sm text-(--color-ink-body)">

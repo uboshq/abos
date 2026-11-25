@@ -31,7 +31,7 @@
             'key' => 'date',
             'label' => __('accounts::recon.date'),
             'width' => '9rem',
-            'render' => fn ($l) => $l->voucher?->trx_date?->format('d M Y'),
+            'render' => fn ($l) => \App\Core\Support\DateFormat::format($l->voucher?->trx_date),
         ],
         [
             'key' => 'document',
@@ -75,7 +75,7 @@
             'key' => 'trx_date',
             'label' => __('accounts::recon.date'),
             'width' => '7rem',
-            'render' => fn ($b) => $b->trx_date?->format('d M Y'),
+            'render' => fn ($b) => \App\Core\Support\DateFormat::format($b->trx_date),
         ],
         [
             'key' => 'description',
@@ -155,7 +155,7 @@
 
     <x-slot:header>
         <x-ui.page-header :title="$recon->bankAccount?->label() ?? __('accounts::recon.title')"
-                          :subtitle="$recon->statement_date?->format('d M Y')" />
+                          :subtitle="\App\Core\Support\DateFormat::format($recon->statement_date)" />
     </x-slot:header>
 
     @if (session('status'))

@@ -13,7 +13,7 @@
 @php
     $columns = [
         ['key' => 'last_seen_at', 'label' => __('governance::field.when'), 'width' => '11rem',
-         'render' => fn ($r) => $r->last_seen_at?->format('d M Y, H:i')],
+         'render' => fn ($r) => \App\Core\Support\DateFormat::formatWithTime($r->last_seen_at)],
 
         /*
          * ⭐ উপরে এক লাইনের বাংলা — কোন পাতায় ভাঙল; প্রোগ্রামের ইংরেজি "কারিগরি তথ্য" ভাঁজে, শুরুতে বন্ধ (পাতা-ঝাড়ু

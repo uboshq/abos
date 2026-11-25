@@ -10,7 +10,7 @@
         ['key' => 'kind', 'label' => __('messaging::audit.kind'), 'width' => '8rem',
             'render' => fn ($t) => __('messaging::audit.kind_'.$t->kind)],
         ['key' => 'last_at', 'label' => __('messaging::audit.last_at'), 'width' => '10rem',
-            'render' => fn ($t) => $t->last_at?->format('d-m-Y H:i')],
+            'render' => fn ($t) => \App\Core\Support\DateFormat::formatWithTime($t->last_at)],
         ['key' => 'reason', 'label' => __('messaging::audit.reason'),
             'render' => fn ($t) => view('messaging::audit.partials.open', ['thread' => $t])],
     ];

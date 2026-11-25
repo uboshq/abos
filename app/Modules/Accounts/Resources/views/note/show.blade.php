@@ -118,7 +118,7 @@
                 </div>
                 <div class="tv-f">
                     <dt class="tv-label">{{ __('accounts::trade_form.date_time') }}</dt>
-                    <dd class="num">{{ $note->trx_date?->format('d M Y') }}@if ($note->created_at) · {{ $note->created_at->format('H:i') }}@endif</dd>
+                    <dd class="num">{{ \App\Core\Support\DateFormat::format($note->trx_date) }}@if ($note->created_at) · {{ $note->created_at->format('H:i') }}@endif</dd>
                 </div>
                 <div class="tv-f">
                     <dt class="tv-label">{{ __('accounts::note.reason') }}</dt>
@@ -135,7 +135,7 @@
                         <dt class="tv-label">{{ __('accounts::note_form.supplier_note') }}</dt>
                         <dd class="num">
                             @if (filled($note->supplier_note_no))
-                                {{ $note->supplier_note_no }}@if ($note->supplier_note_date) · {{ $note->supplier_note_date->format('d M Y') }}@endif
+                                {{ $note->supplier_note_no }}@if ($note->supplier_note_date) · {{ \App\Core\Support\DateFormat::format($note->supplier_note_date) }}@endif
                             @else
                                 <span class="tv-novat">{{ __('accounts::note_form.not_adjusted') }}</span>
                             @endif

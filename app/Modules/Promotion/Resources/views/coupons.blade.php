@@ -127,7 +127,7 @@
                                 <td>{{ $row->customer?->nameWithPoint() ?? __('promotion::coupon_screen.any_customer') }}</td>
                                 <td>
                                     @if ($row->valid_from || $row->valid_to)
-                                        {{ $row->valid_from?->format('d/m/y') ?? '…' }} — {{ $row->valid_to?->format('d/m/y') ?? '…' }}
+                                        {{ (\App\Core\Support\DateFormat::format($row->valid_from) ?: '…') }} — {{ (\App\Core\Support\DateFormat::format($row->valid_to) ?: '…') }}
                                     @else
                                         {{ __('promotion::coupon_screen.whole_offer') }}
                                     @endif

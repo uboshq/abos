@@ -82,7 +82,7 @@
                                     <td class="text-2xs">{{ $event->branch?->name() ?? __('notification::center.no_branch') }}</td>
                                     <td class="num text-end tabular-nums">{{ $event->recipients }}</td>
                                     <td class="num text-end tabular-nums">{{ $event->read_count }}</td>
-                                    <td class="whitespace-nowrap text-2xs text-(--color-ink-muted)">{{ $event->created_at?->format('d/m/Y H:i') }}</td>
+                                    <td class="whitespace-nowrap text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::formatWithTime($event->created_at) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

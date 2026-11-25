@@ -54,7 +54,7 @@
 
     $historyColumns = [
         ['key' => 'trx_date', 'label' => __('core.print.date'),
-         'render' => fn ($r) => $r->trx_date?->format('d-m-Y')],
+         'render' => fn ($r) => \App\Core\Support\DateFormat::format($r->trx_date)],
         ['key' => 'document_no', 'label' => __('core.table.document')],
         ['key' => 'person', 'label' => __('finance::field.who'),
          'render' => fn ($r) => $r->person?->name() ?? '—'],

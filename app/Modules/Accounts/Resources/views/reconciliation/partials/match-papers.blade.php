@@ -19,7 +19,7 @@
                 <label class="flex items-center gap-2 text-sm">
                     <input type="checkbox" name="lines[]" value="{{ $paper->id }}" data-share="{{ $size }}">
                     <span>{{ $paper->voucher?->document_no }}</span>
-                    <span class="text-2xs text-(--color-ink-muted)">{{ $paper->voucher?->trx_date?->format('d M Y') }}@if ($paper->voucher?->instrument_no) · {{ $paper->voucher->instrument_no }}@endif</span>
+                    <span class="text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($paper->voucher?->trx_date) }}@if ($paper->voucher?->instrument_no) · {{ $paper->voucher->instrument_no }}@endif</span>
                     <span class="num ms-auto">{{ \App\Core\Support\Money::format($size) }}</span>
                 </label>
             @endforeach

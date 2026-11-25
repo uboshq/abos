@@ -51,7 +51,7 @@
             @else
                 @forelse ($openBills as $n => $bill)
                     <div class="mb-1 flex items-center gap-2 text-sm">
-                        <span class="flex-1">{{ $bill->document_no }} <span class="text-2xs text-(--color-ink-muted)">{{ $bill->trx_date?->format('d M Y') }}</span></span>
+                        <span class="flex-1">{{ $bill->document_no }} <span class="text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($bill->trx_date) }}</span></span>
                         <span class="num text-2xs text-(--color-ink-muted)">{{ __('sales::slip.bill_due') }} {{ \App\Core\Support\Money::format($bill->dueAmount()) }}</span>
                         <input type="hidden" name="bills[{{ $n }}][invoice]" value="{{ $bill->public_id }}">
                         <input type="number" step="0.01" min="0" max="{{ bcadd($bill->dueAmount(), '0', 2) }}"

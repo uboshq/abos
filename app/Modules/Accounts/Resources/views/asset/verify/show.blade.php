@@ -12,7 +12,7 @@
 
     <x-slot:header>
         <x-ui.page-header :title="__('accounts::asset.verify_heading', ['branch' => $campaign->branch?->name()])"
-                          :subtitle="$campaign->document_no.' · '.$campaign->started_on?->format('d M Y').($campaign->title ? ' · '.$campaign->title : '')" />
+                          :subtitle="$campaign->document_no.' · '.\App\Core\Support\DateFormat::format($campaign->started_on).($campaign->title ? ' · '.$campaign->title : '')" />
     </x-slot:header>
 
     @if (session('status'))
@@ -69,7 +69,7 @@
                         <p class="mt-1 text-2xs text-(--color-ink-muted)">
                             @if ($line->found_location) {{ __('accounts::asset.verify_found_at') }}: {{ $line->found_location }} · @endif
                             @if ($line->note) {{ $line->note }} · @endif
-                            {{ $line->checker?->name }} · {{ $line->checked_at?->format('d M Y H:i') }}
+                            {{ $line->checker?->name }} · {{ \App\Core\Support\DateFormat::formatWithTime($line->checked_at) }}
                             @foreach ($photos[$line->id] ?? [] as $photo)
                                 · <a href="{{ route('attachment.download', $photo) }}" class="text-(--color-brand-500) hover:underline" target="_blank">{{ __('accounts::asset.verify_photo') }}</a>
                             @endforeach

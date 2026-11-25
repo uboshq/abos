@@ -18,7 +18,7 @@
         <ol class="space-y-2 text-sm">
             @foreach ($messages as $m)
                 <li class="flex gap-3">
-                    <span class="w-36 shrink-0 whitespace-nowrap">{{ $m->created_at?->format('d-m-Y H:i') }}</span>
+                    <span class="w-36 shrink-0 whitespace-nowrap">{{ \App\Core\Support\DateFormat::formatWithTime($m->created_at) }}</span>
                     <span class="w-40 shrink-0 font-semibold">{{ $m->sender?->name ?? '—' }}</span>
                     <span class="min-w-0 flex-1 break-words">
                         @if ($m->kind === 'paper')

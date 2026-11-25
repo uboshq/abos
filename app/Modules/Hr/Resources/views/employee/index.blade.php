@@ -17,7 +17,7 @@
         ['key' => 'mobile', 'label' => __('hr::field.mobile'), 'width' => '10rem',
          'render' => fn ($e) => $e->mobile ?? '—'],
         ['key' => 'joining_date', 'label' => __('hr::field.joining_date'), 'width' => '10rem',
-         'render' => fn ($e) => $e->joining_date?->format('d M Y') ?? '—'],
+         'render' => fn ($e) => (\App\Core\Support\DateFormat::format($e->joining_date) ?: '—')],
     ];
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])

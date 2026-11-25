@@ -67,7 +67,7 @@
                     @foreach ($asset->estimateChanges as $change)
                         <li class="px-4 py-2">
                             <div class="flex flex-wrap gap-x-3">
-                                <span class="tabular-nums text-(--color-ink-muted)">{{ $change->changed_on?->format('d M Y') }}</span>
+                                <span class="tabular-nums text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($change->changed_on) }}</span>
                                 <span>{{ $change->reason }}</span>
                                 <span class="ms-auto text-2xs text-(--color-ink-muted)">{{ $change->creator?->name }}</span>
                             </div>

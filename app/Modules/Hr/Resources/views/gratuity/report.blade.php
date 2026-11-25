@@ -7,7 +7,7 @@
     $columns = [
         ['key' => 'employee', 'label' => __('hr::field.employee'), 'render' => fn ($r) => $r['employee']->label()],
         ['key' => 'joining', 'label' => __('hr::field.joining_date'), 'width' => '8rem',
-         'render' => fn ($r) => $r['employee']->joining_date?->format('d M Y') ?? '—'],
+         'render' => fn ($r) => (\App\Core\Support\DateFormat::format($r['employee']->joining_date) ?: '—')],
         ['key' => 'years', 'label' => __('hr::field.gratuity_years'), 'numeric' => true, 'width' => '7rem', 'render' => fn ($r) => (string) $r['years']],
         ['key' => 'days', 'label' => __('hr::field.gratuity_days'), 'numeric' => true, 'width' => '7rem', 'render' => fn ($r) => (string) $r['days']],
         ['key' => 'basic', 'label' => __('hr::field.gratuity_basic'), 'numeric' => true, 'width' => '9rem', 'render' => fn ($r) => $money($r['basic'])],

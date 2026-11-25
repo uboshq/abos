@@ -155,7 +155,7 @@
                     <li data-left-out="{{ $row['code'] }}" @if ($row['late']) data-held-late class="font-semibold text-(--color-badge-danger-ink)" @endif>
                         {{ $row['code'] }} · {{ $row['name'] }} — {{ $row['reason'] }}
                         @unless ($row['paid'])
-                            · {{ __('hr::payroll.held_deadline', ['date' => \Illuminate\Support\Carbon::parse($row['deadline'])->format('d M Y')]) }}
+                            · {{ __('hr::payroll.held_deadline', ['date' => \App\Core\Support\DateFormat::format(\Illuminate\Support\Carbon::parse($row['deadline']))]) }}
                             @if ($row['late']) · {{ __('hr::payroll.held_late') }} @endif
                         @endunless
                     </li>

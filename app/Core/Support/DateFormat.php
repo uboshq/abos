@@ -105,7 +105,7 @@ final class DateFormat
      * "শূন্য" বলে পড়া যেত, অথচ মানে "জানা নেই"। যেখানে ড্যাশ দরকার
      * সেখানে ডাকা পক্ষই বসায়, কারণ সে জানে ফাঁকা মানে কী।
      */
-    public static function format(Carbon|string|null $value): string
+    public static function format(DateTimeInterface|string|null $value): string
     {
         if ($value === null || $value === '') {
             return '';
@@ -115,7 +115,7 @@ final class DateFormat
     }
 
     /** তারিখ ও সময়, দুইটাই কোম্পানির ছকে। */
-    public static function formatWithTime(Carbon|string|null $value): string
+    public static function formatWithTime(DateTimeInterface|string|null $value): string
     {
         if ($value === null || $value === '') {
             return '';
@@ -172,7 +172,7 @@ final class DateFormat
         return strtr($text, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
     }
 
-    private static function carbon(Carbon|string $value): Carbon
+    private static function carbon(DateTimeInterface|string $value): Carbon
     {
         return $value instanceof Carbon ? $value : Carbon::parse($value);
     }

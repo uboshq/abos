@@ -34,7 +34,7 @@
                             <td class="text-2xs">{{ __('notification::channel.'.($row['connected'] ? 'connected' : 'not_connected')) }}</td>
                             <td class="whitespace-nowrap text-2xs">
                                 @if ($row['config']?->last_checked_at)
-                                    {{ $row['config']->last_checked_at->format('d/m/Y H:i') }} · {{ $row['config']->last_check_ok ? '✓' : '✗' }}
+                                    {{ \App\Core\Support\DateFormat::formatWithTime($row['config']->last_checked_at) }} · {{ $row['config']->last_check_ok ? '✓' : '✗' }}
                                 @else
                                     {{ __('notification::channel.never') }}
                                 @endif

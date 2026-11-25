@@ -102,7 +102,7 @@
                         <summary class="cursor-pointer text-(--color-ink-muted)">{{ __('assistant::page.dismissed_list', ['n' => $dismissed->count()]) }}</summary>
                         <ul class="mt-2 grid gap-1">
                             @foreach ($dismissed as $d)
-                                <li class="text-2xs text-(--color-ink-muted)">{{ $d->finding }} · {{ $d->reason }} · {{ $d->user?->name ?? '—' }} · {{ __('assistant::page.until', ['date' => $d->until->format('d/m/Y')]) }}</li>
+                                <li class="text-2xs text-(--color-ink-muted)">{{ $d->finding }} · {{ $d->reason }} · {{ $d->user?->name ?? '—' }} · {{ __('assistant::page.until', ['date' => \App\Core\Support\DateFormat::format($d->until)]) }}</li>
                             @endforeach
                         </ul>
                     </details>

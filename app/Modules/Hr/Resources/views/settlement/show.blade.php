@@ -33,7 +33,7 @@
     @endif
 
     <dl class="mb-4 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-4" data-settlement-head>
-        <div><dt class="text-(--color-ink-muted)">{{ __('hr::settlement.last_day') }}</dt><dd>{{ $settlement->last_day->format('d M Y') }}</dd></div>
+        <div><dt class="text-(--color-ink-muted)">{{ __('hr::settlement.last_day') }}</dt><dd>{{ \App\Core\Support\DateFormat::format($settlement->last_day) }}</dd></div>
         <div><dt class="text-(--color-ink-muted)">{{ __('hr::settlement.separation') }}</dt><dd>{{ __('hr::settlement.separations.'.$settlement->separation) }}</dd></div>
         <div><dt class="text-(--color-ink-muted)">{{ __('hr::settlement.requested_by') }}</dt><dd>{{ $settlement->requester?->name ?? '—' }}</dd></div>
         <div><dt class="text-(--color-ink-muted)">{{ __('hr::settlement.status') }}</dt><dd data-settlement-status="{{ $settlement->status }}">{{ __('hr::settlement.statuses.'.$settlement->status) }}</dd></div>

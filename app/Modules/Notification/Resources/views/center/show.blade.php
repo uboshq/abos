@@ -24,7 +24,7 @@
                 <div><dt class="text-2xs text-(--color-ink-muted)">{{ __('notification::center.col_priority') }}</dt><dd>{{ __('core.notify.priority.'.$event->priority) }} · {{ __('core.notify.category.'.$event->category) }}</dd></div>
                 <div><dt class="text-2xs text-(--color-ink-muted)">{{ __('notification::center.col_branch') }}</dt><dd>{{ $event->branch?->name() ?? __('notification::center.no_branch') }}</dd></div>
                 <div><dt class="text-2xs text-(--color-ink-muted)">{{ __('notification::center.by') }}</dt><dd>{{ $event->actor?->name ?? __('notification::center.nobody') }}</dd></div>
-                <div><dt class="text-2xs text-(--color-ink-muted)">{{ __('notification::center.col_when') }}</dt><dd>{{ $event->created_at?->format('d/m/Y H:i') }}</dd></div>
+                <div><dt class="text-2xs text-(--color-ink-muted)">{{ __('notification::center.col_when') }}</dt><dd>{{ \App\Core\Support\DateFormat::formatWithTime($event->created_at) }}</dd></div>
                 @if ($event->idempotency_key)
                     <div class="sm:col-span-3"><dt class="text-2xs text-(--color-ink-muted)">{{ __('notification::center.key') }}</dt><dd class="font-mono text-2xs">{{ $event->idempotency_key }}</dd></div>
                 @endif
@@ -46,9 +46,9 @@
                     @foreach ($deliveries as $delivery)
                         <tr class="border-t border-(--color-border)" data-center-recipient="{{ $delivery->user_id }}">
                             <td>{{ $delivery->user?->name }}</td>
-                            <td class="text-2xs">{{ $delivery->seen_at?->format('d/m/Y H:i') ?? __('notification::center.not_yet') }}</td>
-                            <td class="text-2xs">{{ $delivery->read_at?->format('d/m/Y H:i') ?? __('notification::center.not_yet') }}</td>
-                            <td class="text-2xs">{{ $delivery->archived_at?->format('d/m/Y H:i') ?? '—' }}</td>
+                            <td class="text-2xs">{{ \App\Core\Support\DateFormat::formatWithTime($delivery->seen_at) ?? __('notification::center.not_yet') }}</td>
+                            <td class="text-2xs">{{ \App\Core\Support\DateFormat::formatWithTime($delivery->read_at) ?? __('notification::center.not_yet') }}</td>
+                            <td class="text-2xs">{{ (\App\Core\Support\DateFormat::formatWithTime($delivery->archived_at) ?: '—') }}</td>
                         </tr>
                     @endforeach
                 </tbody>

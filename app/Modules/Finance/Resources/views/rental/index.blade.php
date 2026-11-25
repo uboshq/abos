@@ -40,7 +40,7 @@
          'render' => fn ($c) => new \Illuminate\Support\HtmlString(
              '<span class=\'font-semibold\'>' . e(\App\Core\Support\Money::format($c->depositLeft())) . '</span>')],
         ['key' => 'ends_on', 'label' => __('finance::field.rental_ends_on'), 'width' => '8rem',
-         'render' => fn ($c) => $c->ends_on->format('d/m/Y')],
+         'render' => fn ($c) => \App\Core\Support\DateFormat::format($c->ends_on)],
         /* ⓘ নিজের পাতায় — মাসের ভাড়া, শর্ত বদল, জামানত, চুক্তি শেষ সব ওখানে */
         ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
          'render' => fn ($c) => view('finance::rental.partials.row-actions', ['contract' => $c])],
@@ -185,7 +185,7 @@
                                 {{ $soon->counterparty }}@if ($soon->subject) — {{ $soon->subject }}@endif
                             </a>
                             ·
-                            {{ __('finance::message.rental_ends_on', ['date' => $soon->ends_on->format('d/m/Y')]) }}
+                            {{ __('finance::message.rental_ends_on', ['date' => \App\Core\Support\DateFormat::format($soon->ends_on)]) }}
                             ·
                             {{-- ⭐ ফেরতযোগ্য টাকাটা এখানেই লেখা — নাহলে কেউ
                                  ক্লিক করে দেখতে যেতেন না --}}

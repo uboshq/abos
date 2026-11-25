@@ -99,11 +99,11 @@
                 </div>
                 <div class="tv-f">
                     <dt class="tv-label">{{ __('accounts::trade_form.date_time') }}</dt>
-                    <dd class="num">{{ $voucher->trx_date?->format('d M Y') }}@if ($voucher->created_at) · {{ $voucher->created_at->format('H:i') }}@endif</dd>
+                    <dd class="num">{{ \App\Core\Support\DateFormat::format($voucher->trx_date) }}@if ($voucher->created_at) · {{ $voucher->created_at->format('H:i') }}@endif</dd>
                 </div>
                 <div class="tv-f">
                     <dt class="tv-label">{{ __('accounts::trade_form.due_date') }}</dt>
-                    <dd class="num">{{ $voucher->due_on?->format('d M Y') ?? '—' }}@if ($days !== null) · {{ $days }} {{ __('accounts::trade_form.days') }}@endif</dd>
+                    <dd class="num">{{ (\App\Core\Support\DateFormat::format($voucher->due_on) ?: '—') }}@if ($days !== null) · {{ $days }} {{ __('accounts::trade_form.days') }}@endif</dd>
                 </div>
                 <div class="tv-f">
                     <dt class="tv-label">{{ $sale ? __('accounts::trade_form.ref_sale') : __('accounts::trade_form.ref_purchase') }}</dt>
@@ -112,7 +112,7 @@
                 @unless ($sale)
                     <div class="tv-f">
                         <dt class="tv-label">{{ __('accounts::trade_form.mushak_no') }}</dt>
-                        <dd class="num">{{ $voucher->mushak_no ?: '—' }}@if ($voucher->mushak_date) · {{ $voucher->mushak_date->format('d M Y') }}@endif</dd>
+                        <dd class="num">{{ $voucher->mushak_no ?: '—' }}@if ($voucher->mushak_date) · {{ \App\Core\Support\DateFormat::format($voucher->mushak_date) }}@endif</dd>
                     </div>
                 @endunless
                 <div class="tv-f">

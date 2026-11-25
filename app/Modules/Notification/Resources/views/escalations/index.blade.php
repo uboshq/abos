@@ -55,7 +55,7 @@
                                 <td class="text-2xs"><a href="{{ route('approval.inbox.show', $approval) }}" class="hover:underline">{{ $approval->drillLabel() }}</a></td>
                                 <td class="text-end text-2xs tabular-nums">{{ $approval->current_level }}</td>
                                 <td class="text-2xs">{{ $approval->assignee?->name ?? '—' }}</td>
-                                <td class="whitespace-nowrap text-2xs">{{ $approval->due_at?->format('d/m/Y H:i') }}</td>
+                                <td class="whitespace-nowrap text-2xs">{{ \App\Core\Support\DateFormat::formatWithTime($approval->due_at) }}</td>
                                 <td class="text-2xs">
                                     <span @class([
                                         'rounded-full px-1.5 py-0.5',
@@ -64,9 +64,9 @@
                                         'text-(--color-ink-muted)' => in_array($state, ['fine', 'none'], true),
                                     ])>{{ __('notification::escalation.states.'.$state) }}</span>
                                 </td>
-                                <td class="whitespace-nowrap text-2xs">{{ $approval->reminded_at?->format('d/m/Y H:i') ?? '—' }}</td>
+                                <td class="whitespace-nowrap text-2xs">{{ (\App\Core\Support\DateFormat::formatWithTime($approval->reminded_at) ?: '—') }}</td>
                                 <td class="text-2xs">{{ $approval->escalated_to ? ($escalatedTo[$approval->escalated_to] ?? '—') : '—' }}
-                                    @if ($approval->escalated_at)<span class="block text-(--color-ink-muted)">{{ $approval->escalated_at->format('d/m/Y H:i') }}</span>@endif
+                                    @if ($approval->escalated_at)<span class="block text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::formatWithTime($approval->escalated_at) }}</span>@endif
                                 </td>
                             </tr>
                         @endforeach

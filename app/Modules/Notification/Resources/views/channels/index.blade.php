@@ -44,7 +44,7 @@
                             <td class="text-2xs">{{ $row['config']?->sender_id ?: __('notification::delivery.none') }}</td>
                             <td class="whitespace-nowrap text-2xs">
                                 @if ($row['config']?->last_checked_at)
-                                    {{ $row['config']->last_checked_at->format('d/m/Y H:i') }}
+                                    {{ \App\Core\Support\DateFormat::formatWithTime($row['config']->last_checked_at) }}
                                     · {{ $row['config']->last_check_ok ? __('notification::channel.test_ok') : __('notification::channel.test_failed', ['error' => $row['config']->last_error]) }}
                                 @else
                                     {{ __('notification::channel.never') }}

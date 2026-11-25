@@ -19,7 +19,7 @@
                 <div class="w-full">
                     <p class="text-sm font-semibold">{{ __('accounts::asset_report.tax_run') }}</p>
                     <p class="text-2xs text-(--color-ink-muted)">
-                        {{ __('accounts::asset_report.tax_year', ['start' => $start->format('d M Y'), 'end' => $end->format('d M Y')]) }}
+                        {{ __('accounts::asset_report.tax_year', ['start' => \App\Core\Support\DateFormat::format($start), 'end' => \App\Core\Support\DateFormat::format($end)]) }}
                     </p>
                 </div>
                 <label class="flex flex-col gap-1">

@@ -46,7 +46,7 @@
     {{-- ⛔ মাথায় বাক্স নয়, এক লাইনের তথ্য (মালিক, ১৬ নভেম্বর ২০২৬) --}}
     <p class="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm" data-info-line>
         <span><span class="text-(--color-ink-muted)">{{ __('accounts::daybook.date') }}:</span>
-            <b>{{ $day->format('d/m/Y') }} ({{ $day->locale(app()->getLocale())->translatedFormat('l') }})</b></span>
+            <b>{{ \App\Core\Support\DateFormat::format($day) }} ({{ $day->locale(app()->getLocale())->translatedFormat('l') }})</b></span>
         <span><span class="text-(--color-ink-muted)">{{ __('accounts::daybook.journals') }}:</span>
             <b>{{ __('accounts::daybook.journals_value', ['count' => count($book['journals'])]) }}</b></span>
         <span><span class="text-(--color-ink-muted)">{{ __('accounts::daybook.status') }}:</span> <b>{{ __('accounts::daybook.status_value') }}</b></span>

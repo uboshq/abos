@@ -131,7 +131,7 @@
         <x-ui.table :rows="$claims ?? collect()" :empty="__('finance::insurance_claim.none_yet')"
                     :view-url="fn ($c) => route('finance.insurance.claim.show', $c)" :columns="[
             ['key' => 'claimed_on', 'label' => __('finance::insurance_claim.claimed_on'), 'width' => '8rem',
-             'render' => fn ($c) => $c->claimed_on->format('d/m/Y')],
+             'render' => fn ($c) => \App\Core\Support\DateFormat::format($c->claimed_on)],
             ['key' => 'incident', 'label' => __('finance::insurance_claim.incident'),
              'render' => fn ($c) => $c->incident],
             ['key' => 'claimed_amount', 'label' => __('finance::insurance_claim.claimed_amount'), 'numeric' => true, 'width' => '9rem',

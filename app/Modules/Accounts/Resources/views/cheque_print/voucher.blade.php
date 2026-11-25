@@ -27,7 +27,7 @@
         <section data-cheque-print-form class="flex flex-col gap-4 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 lg:col-span-2">
             <dl class="grid gap-3 text-sm sm:grid-cols-3">
                 <div><dt class="text-(--color-ink-muted)">{{ __('accounts::cheque_print.cheque_date') }}</dt>
-                    <dd class="font-semibold">{{ $paper['date']?->format('d/m/Y') }}</dd></div>
+                    <dd class="font-semibold">{{ \App\Core\Support\DateFormat::format($paper['date']) }}</dd></div>
                 <div><dt class="text-(--color-ink-muted)">{{ __('accounts::cheque_print.amount') }}</dt>
                     <dd data-cheque-amount class="num text-lg font-bold">{{ $paper['amount'] === null ? '—' : '৳'.\App\Core\Support\Money::format($paper['amount']) }}</dd></div>
                 <div><dt class="text-(--color-ink-muted)">{{ __('accounts::cheque_print.words') }}</dt>

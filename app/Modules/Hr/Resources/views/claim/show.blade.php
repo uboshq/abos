@@ -47,12 +47,12 @@
         <dl class="grid gap-2 sm:grid-cols-2">
             @foreach (array_filter([
                 __('hr::claim.head') => $claim->expenseAccount?->name(),
-                __('hr::claim.spent_on') => $claim->spent_on?->format('d/m/Y'),
+                __('hr::claim.spent_on') => \App\Core\Support\DateFormat::format($claim->spent_on),
                 __('hr::claim.reason') => $claim->reason,
                 __('hr::claim.requested_by') => $claim->requester?->name,
-                __('hr::claim.submitted_at') => $claim->created_at?->format('d/m/Y H:i'),
-                __('hr::claim.decided_at') => $claim->decided_at?->format('d/m/Y H:i'),
-                __('hr::claim.paid_at') => $claim->paid_at?->format('d/m/Y H:i'),
+                __('hr::claim.submitted_at') => \App\Core\Support\DateFormat::formatWithTime($claim->created_at),
+                __('hr::claim.decided_at') => \App\Core\Support\DateFormat::formatWithTime($claim->decided_at),
+                __('hr::claim.paid_at') => \App\Core\Support\DateFormat::formatWithTime($claim->paid_at),
             ], fn ($v) => filled($v)) as $label => $value)
                 <div>
                     <dt class="text-2xs text-(--color-ink-muted)">{{ $label }}</dt>

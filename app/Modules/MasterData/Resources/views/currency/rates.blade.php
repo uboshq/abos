@@ -126,7 +126,7 @@
             :rows="$rates"
             :columns="[
                 ['key' => 'effective_from', 'label' => __('master_data::field.effective_from'), 'width' => '12rem',
-                 'render' => fn ($r) => $r->effective_from->format('d M Y')],
+                 'render' => fn ($r) => \App\Core\Support\DateFormat::format($r->effective_from)],
                 ['key' => 'rate', 'label' => __('master_data::field.exchange_rate'), 'numeric' => true, 'width' => '12rem',
                  'render' => fn ($r) => $r->rate],
                 ['key' => 'source', 'label' => __('master_data::field.rate_source'),

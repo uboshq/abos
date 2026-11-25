@@ -224,7 +224,7 @@
                             <tr class="border-t border-(--color-border)" data-rule-version="{{ $v->version }}">
                                 <td class="text-2xs">v{{ $v->version }}</td>
                                 <td class="text-2xs">{{ $v->changer?->name ?? '—' }}</td>
-                                <td class="text-2xs">{{ $v->created_at?->format('d/m/Y H:i') }}</td>
+                                <td class="text-2xs">{{ \App\Core\Support\DateFormat::formatWithTime($v->created_at) }}</td>
                             </tr>
                         @endforeach
                     </tbody>

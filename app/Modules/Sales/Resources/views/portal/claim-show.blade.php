@@ -23,7 +23,7 @@
         <dl class="grid gap-2 text-sm">
             <div class="flex justify-between gap-3">
                 <dt class="text-(--color-ink-muted)">{{ __('sales::portal.claimed_on') }}</dt>
-                <dd>{{ $claim->claimed_on?->format('d M Y') }}</dd>
+                <dd>{{ \App\Core\Support\DateFormat::format($claim->claimed_on) }}</dd>
             </div>
             <div class="flex justify-between gap-3">
                 <dt class="text-(--color-ink-muted)">{{ __('sales::portal.method') }}</dt>

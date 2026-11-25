@@ -25,7 +25,7 @@
             'key' => 'claimed_on',
             'label' => __('sales::portal.claimed_on'),
             'width' => '9rem',
-            'render' => fn ($c) => $c->claimed_on?->format('d M Y'),
+            'render' => fn ($c) => \App\Core\Support\DateFormat::format($c->claimed_on),
         ],
         [
             'key' => 'amount',

@@ -25,7 +25,7 @@
             'key' => 'statement_date',
             'label' => __('accounts::recon.statement_date'),
             'width' => '9rem',
-            'render' => fn ($r) => $r->statement_date?->format('d M Y'),
+            'render' => fn ($r) => \App\Core\Support\DateFormat::format($r->statement_date),
         ],
         [
             'key' => 'statement_balance',

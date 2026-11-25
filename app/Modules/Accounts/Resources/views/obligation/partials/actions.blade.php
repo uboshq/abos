@@ -14,7 +14,7 @@
     @endcan
 @elseif ($o->done_at !== null)
     <span class="text-xs text-(--color-ink-muted)" data-obligation-done>
-        {{ __('accounts::obligation.done_line', ['who' => $o->doneBy?->name ?? '—', 'when' => $o->done_at->format('d-m-Y'), 'ref' => $o->ref_no]) }}
+        {{ __('accounts::obligation.done_line', ['who' => $o->doneBy?->name ?? '—', 'when' => \App\Core\Support\DateFormat::format($o->done_at), 'ref' => $o->ref_no]) }}
     </span>
 @else
     <span class="text-xs text-(--color-ink-muted)" data-obligation-cancelled>{{ __('accounts::obligation.cancelled_line', ['reason' => $o->cancel_reason ?? '—']) }}</span>

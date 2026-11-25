@@ -4,7 +4,7 @@
     $days = (int) $today->copy()->startOfDay()->diffInDays($due, false);
 @endphp
 <span class="inline-flex flex-col">
-    <span>{{ $due->format('d M Y') }}</span>
+    <span>{{ \App\Core\Support\DateFormat::format($due) }}</span>
     <x-ui.badge :tone="$days < 0 ? 'danger' : ($days <= 7 ? 'pending' : 'info')" class="mt-0.5 self-start">
         {{ $days < 0
             ? __('purchase::schedule.days_late', ['days' => -$days])

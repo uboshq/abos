@@ -41,5 +41,5 @@
         </div>
     @endcan
 @else
-    <span class="text-2xs text-(--color-ink-muted)">{{ $claim->decided_on?->format('d M Y') }}</span>
+    <span class="text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($claim->decided_on) }}</span>
 @endif

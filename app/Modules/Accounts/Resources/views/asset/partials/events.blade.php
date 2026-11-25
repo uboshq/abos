@@ -79,7 +79,7 @@
         <ul class="divide-y divide-(--color-border) text-sm">
             @foreach ($asset->events as $event)
                 <li class="flex flex-wrap items-center gap-x-3 px-4 py-2">
-                    <span class="tabular-nums text-(--color-ink-muted)">{{ $event->happened_on?->format('d M Y') }}</span>
+                    <span class="tabular-nums text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($event->happened_on) }}</span>
                     <x-ui.drill source="asset_event" :id="$event->id">{{ $event->document_no }}</x-ui.drill>
                     <span>{{ $event->kindLabel() }}</span>
                     @if ($event->isAwaiting())

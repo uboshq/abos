@@ -36,7 +36,7 @@
             'key' => 'acquired_on',
             'label' => __('accounts::asset.acquired_on'),
             'width' => '9rem',
-            'render' => fn ($a) => $a->acquired_on?->format('d M Y'),
+            'render' => fn ($a) => \App\Core\Support\DateFormat::format($a->acquired_on),
         ],
         [
             'key' => 'cost',

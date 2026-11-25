@@ -22,7 +22,7 @@
     <x-slot:header>
         <x-ui.page-header
             :title="$trail->title()"
-            :subtitle="__('governance::label.as_it_stood_on', ['on' => $on->format('d M Y')])">
+            :subtitle="__('governance::label.as_it_stood_on', ['on' => \App\Core\Support\DateFormat::format($on)])">
             <x-slot:actions>
                 <x-ui.button :href="route('governance.audit.record', $trail->id)">
                     {{ __('governance::label.full_history') }}
@@ -52,11 +52,11 @@
 
     @if (! $state['existed'] && ! $state['deleted'])
         <p class="rounded-(--radius-field) bg-(--color-surface-hover) px-3 py-2 text-2xs text-(--color-ink-muted)">
-            {{ __('governance::message.did_not_exist_yet', ['on' => $on->format('d M Y')]) }}
+            {{ __('governance::message.did_not_exist_yet', ['on' => \App\Core\Support\DateFormat::format($on)]) }}
         </p>
     @elseif ($state['deleted'])
         <p class="rounded-(--radius-field) bg-(--color-surface-hover) px-3 py-2 text-2xs text-(--color-ink-muted)">
-            {{ __('governance::message.was_already_deleted', ['on' => $on->format('d M Y')]) }}
+            {{ __('governance::message.was_already_deleted', ['on' => \App\Core\Support\DateFormat::format($on)]) }}
         </p>
     @else
         @unless ($state['complete'])
@@ -69,7 +69,7 @@
             <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-hover) px-3 py-2 text-2xs
                       text-(--color-ink-muted)">
                 {{ __('governance::message.history_starts_late', [
-                    'on' => $state['history_begins']?->format('d M Y') ?? '—',
+                    'on' => (\App\Core\Support\DateFormat::format($state['history_begins']) ?: '—'),
                 ]) }}
             </p>
         @endunless

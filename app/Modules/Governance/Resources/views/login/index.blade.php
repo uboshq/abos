@@ -9,7 +9,7 @@
 @php
     $columns = [
         ['key' => 'created_at', 'label' => __('governance::field.when'), 'width' => '12rem',
-         'render' => fn ($r) => $r->created_at?->format('d M Y, H:i')],
+         'render' => fn ($r) => \App\Core\Support\DateFormat::formatWithTime($r->created_at)],
 
         ['key' => 'who', 'label' => __('governance::field.who'), 'width' => '12rem',
          'render' => fn ($r) => view('governance::partials.user-link', [

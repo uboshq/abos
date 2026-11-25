@@ -50,7 +50,7 @@
     </x-ui.filter-layout>
 
     <p class="mb-3 flex flex-wrap gap-x-6 gap-y-1 text-sm" data-info-line>
-        <span><span class="text-(--color-ink-muted)">{{ __('accounts::dayclose.date') }}:</span> <b>{{ $day->format('d/m/Y') }} ({{ $day->copy()->locale(app()->getLocale())->translatedFormat('l') }})</b></span>
+        <span><span class="text-(--color-ink-muted)">{{ __('accounts::dayclose.date') }}:</span> <b>{{ \App\Core\Support\DateFormat::format($day) }} ({{ $day->copy()->locale(app()->getLocale())->translatedFormat('l') }})</b></span>
         <span><span class="text-(--color-ink-muted)">{{ __('accounts::dayclose.month') }}:</span>
             <b>{{ __('accounts::dayclose.month_value', ['month' => $day->copy()->locale(app()->getLocale())->translatedFormat('F Y'), 'day' => $r['calendar']['day_of_month'], 'done' => $r['calendar']['done']]) }}</b></span>
         <span><span class="text-(--color-ink-muted)">{{ __('accounts::dayclose.branch') }}:</span> <b>{{ $branch }}</b></span>
@@ -310,7 +310,7 @@
                         <tr><td>{{ __('accounts::dayclose.vat_63') }}</td><td class="num">{{ $v['challans_63'] }} · {{ $m($v['vat_today']) }}</td></tr>
                         <tr><td>{{ __('accounts::dayclose.vat_67') }}</td><td class="num">{{ $v['notes_67'] }}</td></tr>
                         <tr class="font-semibold"><td>{{ __('accounts::dayclose.vat_month', ['month' => $day->copy()->locale(app()->getLocale())->translatedFormat('F')]) }}</td><td class="num">{{ $m($v['vat_month']) }}</td></tr>
-                        <tr><td colspan="2" class="text-(--color-ink-muted)">{{ __('accounts::dayclose.vat_due', ['date' => \Illuminate\Support\Carbon::parse($v['vat_due_on'])->format('d/m/Y')]) }}</td></tr>
+                        <tr><td colspan="2" class="text-(--color-ink-muted)">{{ __('accounts::dayclose.vat_due', ['date' => \App\Core\Support\DateFormat::format(\Illuminate\Support\Carbon::parse($v['vat_due_on']))]) }}</td></tr>
                         @if ($v['target'] === null)
                             <tr><td colspan="2" class="text-(--color-ink-muted)">{{ __('accounts::dayclose.target_none') }}</td></tr>
                         @else
@@ -349,7 +349,7 @@
             <b>{{ __('accounts::dayclose.close_line', [
                 'count' => $c->cash_counted === null ? __('accounts::dayclose.close_line_uncounted')
                     : (bccomp((string) $c->cash_gap, '0', 2) === 0 ? __('accounts::dayclose.close_line_count_ok') : __('accounts::dayclose.close_line_count_gap', ['gap' => $m(ltrim((string) $c->cash_gap, '-'))])),
-                'date' => $day->format('d/m/Y'),
+                'date' => \App\Core\Support\DateFormat::format($day),
                 'who' => $c->closer?->name ?? '—',
                 'time' => $c->closed_at?->format('h:i A') ?? '',
             ]) }}</b>

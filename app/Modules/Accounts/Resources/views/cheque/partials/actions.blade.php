@@ -71,5 +71,5 @@
         </div>
     @endcan
 @else
-    <span class="text-2xs text-(--color-ink-muted)">{{ $cheque->cleared_on?->format('d M Y') }}</span>
+    <span class="text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($cheque->cleared_on) }}</span>
 @endif

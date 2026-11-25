@@ -144,7 +144,7 @@
                             <tr class="border-t border-(--color-border)" data-template-version="{{ $v->version }}">
                                 <td class="text-2xs"><a href="{{ route('notification.templates.edit', [$template, 'version' => $v->version]) }}" class="hover:underline">v{{ $v->version }}</a></td>
                                 <td class="text-2xs">{{ $v->author?->name ?? '—' }}</td>
-                                <td class="text-2xs">{{ $v->created_at?->format('d/m/Y H:i') }}</td>
+                                <td class="text-2xs">{{ \App\Core\Support\DateFormat::formatWithTime($v->created_at) }}</td>
                                 <td class="text-2xs">{{ $v->note ?? '—' }}</td>
                                 <td class="text-2xs">{{ (int) $template->published_version_id === (int) $v->id ? __('notification::template.live') : ($v->published_at ? __('notification::template.was_live') : __('notification::template.draft')) }}</td>
                             </tr>

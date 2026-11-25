@@ -60,7 +60,7 @@
             <x-ui.no-second-signer :approval="$waiting['approval']" />
             <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <h2 class="font-semibold">
-                    {{ __('hr::message.salary_waiting_title', ['date' => \Illuminate\Support\Carbon::parse($waiting['effective_from'])->format('d M Y')]) }}
+                    {{ __('hr::message.salary_waiting_title', ['date' => \App\Core\Support\DateFormat::format(\Illuminate\Support\Carbon::parse($waiting['effective_from']))]) }}
                 </h2>
                 {{-- ⓘ অনুমোদনের মডিউল বন্ধ থাকলে বোতাম নেই, লেখাটা থাকে --}}
                 @if (\Illuminate\Support\Facades\Route::has('approval.inbox.show'))
@@ -127,7 +127,7 @@
             <aside class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <h2 class="mb-1 font-semibold">{{ __('hr::field.net') }}</h2>
                 <p class="mb-3 text-2xs text-(--color-ink-muted)">
-                    {{ __('hr::message.as_of', ['date' => $on->format('d M Y')]) }}
+                    {{ __('hr::message.as_of', ['date' => \App\Core\Support\DateFormat::format($on)]) }}
                 </p>
 
                 @if ($components === [])
@@ -171,7 +171,7 @@
                 :rows="$history"
                 :columns="[
                     ['key' => 'effective_from', 'label' => __('hr::field.effective_from'), 'width' => '12rem',
-                     'render' => fn ($r) => $r->effective_from->format('d M Y')],
+                     'render' => fn ($r) => \App\Core\Support\DateFormat::format($r->effective_from)],
                     ['key' => 'head', 'label' => __('hr::field.name'),
                      'render' => fn ($r) => $r->salaryHead?->name() ?? '—'],
                     ['key' => 'amount', 'label' => __('hr::field.amount'), 'numeric' => true, 'width' => '10rem',

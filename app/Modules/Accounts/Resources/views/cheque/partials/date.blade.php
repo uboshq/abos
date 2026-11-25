@@ -4,5 +4,5 @@
     $overdue = $cheque->isOpen() && $cheque->cheque_date?->isBefore(now()->startOfDay());
 @endphp
 <span @class(['font-semibold text-(--color-danger)' => $overdue])>
-    {{ $cheque->cheque_date?->format('d M Y') }}
+    {{ \App\Core\Support\DateFormat::format($cheque->cheque_date) }}
 </span>

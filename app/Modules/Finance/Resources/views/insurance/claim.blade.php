@@ -58,8 +58,8 @@
 
         <dl class="grid gap-3 text-sm sm:grid-cols-3 xl:grid-cols-6">
             @foreach ([
-                'incident_on' => $claim->incident_on->format('d/m/Y'),
-                'claimed_on' => $claim->claimed_on->format('d/m/Y'),
+                'incident_on' => \App\Core\Support\DateFormat::format($claim->incident_on),
+                'claimed_on' => \App\Core\Support\DateFormat::format($claim->claimed_on),
                 'claimed_amount' => Money::format($claim->claimed_amount),
                 'approved_amount' => $claim->approved_amount === null ? '—' : Money::format($claim->approved_amount),
                 'received_amount' => Money::format($claim->received_amount),
@@ -74,13 +74,13 @@
 
         <p class="mt-3 text-2xs text-(--color-ink-muted)">
             @if ($claim->approval_ref)
-                {{ __('finance::insurance_claim.approved_by_letter', ['ref' => $claim->approval_ref, 'date' => $claim->approved_on?->format('d/m/Y')]) }}
+                {{ __('finance::insurance_claim.approved_by_letter', ['ref' => $claim->approval_ref, 'date' => \App\Core\Support\DateFormat::format($claim->approved_on)]) }}
                 @if ($claim->approvalVoucher) · {{ $claim->approvalVoucher->document_no }} @endif
             @else
                 {{ __('finance::insurance_claim.not_in_books_yet') }}
             @endif
             @if ($claim->closed_on)
-                · {{ __('finance::insurance_claim.closed_note', ['date' => $claim->closed_on->format('d/m/Y'), 'note' => $claim->close_note]) }}
+                · {{ __('finance::insurance_claim.closed_note', ['date' => \App\Core\Support\DateFormat::format($claim->closed_on), 'note' => $claim->close_note]) }}
                 @if ($claim->closeVoucher) · {{ $claim->closeVoucher->document_no }} @endif
             @endif
         </p>
@@ -92,7 +92,7 @@
             <h2 class="border-b border-(--color-border) px-3 py-2 text-sm font-semibold">{{ __('finance::insurance_claim.receipts') }}</h2>
             <x-ui.table :rows="$receipts" :empty="'—'" :columns="[
                 ['key' => 'trx_date', 'label' => __('finance::insurance_claim.received_on'), 'width' => '8rem',
-                 'render' => fn ($v) => $v->trx_date->format('d/m/Y')],
+                 'render' => fn ($v) => \App\Core\Support\DateFormat::format($v->trx_date)],
                 ['key' => 'document_no', 'label' => __('finance::insurance_claim.voucher'),
                  'render' => fn ($v) => $v->document_no],
                 ['key' => 'status', 'label' => __('finance::insurance_claim.voucher_state'), 'width' => '8rem',

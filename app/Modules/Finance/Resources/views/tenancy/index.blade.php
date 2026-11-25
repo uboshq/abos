@@ -22,7 +22,7 @@
         ['key' => 'deposit_held', 'label' => __('finance::tenancy.deposit_held'), 'numeric' => true,
          'render' => fn ($t) => \App\Core\Support\Money::format($t->depositHeld())],
         ['key' => 'ends_on', 'label' => __('finance::tenancy.ends_on'), 'width' => '8rem',
-         'render' => fn ($t) => $t->ends_on->format('d/m/Y')],
+         'render' => fn ($t) => \App\Core\Support\DateFormat::format($t->ends_on)],
     ];
 @endphp
 <x-layouts.app :menu="$menu">

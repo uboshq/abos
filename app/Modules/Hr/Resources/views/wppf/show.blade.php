@@ -13,7 +13,7 @@
     $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::pick('year', __('hr::wppf.year'), $years->pluck('name', 'id')->all()),
     ]);
-    $source = __('hr::wppf.source', ['from' => $year->starts_on->format('d M Y'), 'to' => $year->ends_on->format('d M Y')]);
+    $source = __('hr::wppf.source', ['from' => \App\Core\Support\DateFormat::format($year->starts_on), 'to' => \App\Core\Support\DateFormat::format($year->ends_on)]);
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('hr::wppf.title') }}</x-slot:title>
@@ -73,7 +73,7 @@
             </p>
             <p class="num mt-1 text-xl font-semibold" data-wppf-net>{{ $money($profit ? $figures['pl_net'] : bcmul((string) $figures['pl_net'], '-1', 4)) }}</p>
 @unless (\App\Core\Support\AbosHead::on())
-            <p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('hr::wppf.source', ['from' => $year->starts_on->format('d M Y'), 'to' => $year->ends_on->format('d M Y')]) }}</p>
+            <p class="mt-1 text-xs text-(--color-ink-muted)">{{ __('hr::wppf.source', ['from' => \App\Core\Support\DateFormat::format($year->starts_on), 'to' => \App\Core\Support\DateFormat::format($year->ends_on)]) }}</p>
 @endunless
             {{-- ⓘ জাবেদা বসার পরে — তহবিলের নিজের খরচ ফিরিয়ে যোগ, ভিত্তি তহবিলের আগের মুনাফা ([[WppfService::figuresFor()]]) --}}
             @if ($charged)

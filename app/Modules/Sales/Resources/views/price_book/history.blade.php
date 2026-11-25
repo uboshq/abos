@@ -3,11 +3,11 @@
     use App\Core\Support\Money;
 
     $value = fn ($r, ?string $v) => $v === null || $v === '' ? '—'
-        : ($r->field === 'price' ? Money::format($v) : \Illuminate\Support\Carbon::parse($v)->format('d-m-Y'));
+        : ($r->field === 'price' ? Money::format($v) : \App\Core\Support\DateFormat::format(\Illuminate\Support\Carbon::parse($v)));
 
     $columns = [
         ['key' => 'when', 'label' => __('sales::price_book.when'), 'width' => '12rem',
-            'render' => fn ($r) => $r->when ? \Illuminate\Support\Carbon::parse($r->when)->format('d-m-Y H:i') : '—'],
+            'render' => fn ($r) => $r->when ? \App\Core\Support\DateFormat::formatWithTime(\Illuminate\Support\Carbon::parse($r->when)) : '—'],
         ['key' => 'who', 'label' => __('sales::price_book.who'), 'render' => fn ($r) => $r->user ?? '—'],
         ['key' => 'what', 'label' => __('sales::price_book.what'),
             'render' => fn ($r) => __('sales::price_book.field_'.$r->field).($r->from ? ' · '.__('sales::price_book.valid_from').' '.$r->from : '')],

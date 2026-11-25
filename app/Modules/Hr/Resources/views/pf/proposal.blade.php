@@ -96,7 +96,7 @@
                       class="mt-3 flex flex-wrap items-center justify-end gap-2">
                     @csrf
                     <input type="hidden" name="effective_from" value="{{ $on->toDateString() }}">
-                    <span class="text-2xs text-(--color-ink-muted)">{{ __('hr::message.pf_apply_note', ['date' => $on->format('d M Y')]) }}</span>
+                    <span class="text-2xs text-(--color-ink-muted)">{{ __('hr::message.pf_apply_note', ['date' => \App\Core\Support\DateFormat::format($on)]) }}</span>
                     <x-ui.button type="submit" tone="primary">{{ __('hr::action.pf_apply') }}</x-ui.button>
                 </form>
             @endif

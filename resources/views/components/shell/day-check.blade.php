@@ -146,7 +146,7 @@
                         <p class="flex flex-wrap gap-2" data-open-days>
                             @foreach ($days as $d)
                                 <a href="{{ route('executive.dayclose', ['date' => $d->toDateString()]) }}"
-                                   class="rounded-(--radius-pill) border border-(--color-border) px-2 py-0.5 font-medium text-(--color-link) hover:bg-(--color-surface-muted)">{{ $d->format('d/m/Y') }}</a>
+                                   class="rounded-(--radius-pill) border border-(--color-border) px-2 py-0.5 font-medium text-(--color-link) hover:bg-(--color-surface-muted)">{{ \App\Core\Support\DateFormat::format($d) }}</a>
                             @endforeach
                         </p>
                     </div>
@@ -187,7 +187,7 @@
 
                 @if ($latest !== null)
                     <div class="rounded border border-(--color-border) px-3 py-2">
-                        <p class="mb-1 font-semibold">{{ __('accounts::dayclose.popup.latest', ['date' => $latest->format('d/m/Y')]) }}</p>
+                        <p class="mb-1 font-semibold">{{ __('accounts::dayclose.popup.latest', ['date' => \App\Core\Support\DateFormat::format($latest)]) }}</p>
                         @include('accounts::partials.day-checklist', ['items' => $items])
                     </div>
                 @endif

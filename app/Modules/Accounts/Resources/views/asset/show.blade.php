@@ -73,7 +73,7 @@
         @if ($asset->custodian_id === null)
             <span>—</span>
         @elseif ($ack = $asset->acknowledgedByCustodian())
-            <x-ui.badge tone="success">{{ __('accounts::asset.ack_done', ['date' => $ack->acknowledged_at?->format('d M Y')]) }} · {{ __('accounts::asset.ack_'.$ack->condition) }}</x-ui.badge>
+            <x-ui.badge tone="success">{{ __('accounts::asset.ack_done', ['date' => \App\Core\Support\DateFormat::format($ack->acknowledged_at)]) }} · {{ __('accounts::asset.ack_'.$ack->condition) }}</x-ui.badge>
         @else
             <x-ui.badge tone="pending">{{ __('accounts::asset.custodian_ack_none') }}</x-ui.badge>
         @endif
@@ -148,7 +148,7 @@
             <ul class="divide-y divide-(--color-border) text-sm">
                 @foreach ($moves as $move)
                     <li class="flex flex-wrap items-center gap-x-3 px-4 py-2">
-                        <span class="tabular-nums text-(--color-ink-muted)">{{ $move->moved_on?->format('d M Y') }}</span>
+                        <span class="tabular-nums text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($move->moved_on) }}</span>
                         @if ($move->movedBranch())
                             <span>{{ $move->fromBranch?->name() ?? '—' }} → {{ $move->toBranch?->name() ?? '—' }}</span>
                         @endif

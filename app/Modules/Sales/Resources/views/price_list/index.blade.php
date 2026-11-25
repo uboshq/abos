@@ -33,7 +33,7 @@
 
     $columns[] = ['key' => 'changed', 'label' => __('sales::price_list.changed'),
         'render' => fn ($p) => isset($last[$p->id])
-            ? \Illuminate\Support\Carbon::parse($last[$p->id]->when)->format('d-m-Y').($last[$p->id]->user ? ' · '.$last[$p->id]->user : '')
+            ? \App\Core\Support\DateFormat::format(\Illuminate\Support\Carbon::parse($last[$p->id]->when)).($last[$p->id]->user ? ' · '.$last[$p->id]->user : '')
             : __('sales::price_list.never')];
 
     $columns[] = ['key' => 'actions', 'label' => '', 'width' => '16rem',

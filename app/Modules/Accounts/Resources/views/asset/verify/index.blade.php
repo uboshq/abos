@@ -9,7 +9,7 @@
         ['key' => 'branch', 'label' => __('accounts::asset.branch'), 'render' => fn ($c) => $c->branch?->name()],
         ['key' => 'title', 'label' => __('accounts::asset.verify_title_field'), 'render' => fn ($c) => $c->title ?? '—'],
         ['key' => 'started_on', 'label' => __('accounts::asset.verify_started'), 'width' => '8rem',
-            'render' => fn ($c) => $c->started_on?->format('d M Y')],
+            'render' => fn ($c) => \App\Core\Support\DateFormat::format($c->started_on)],
         ['key' => 'lines_count', 'label' => __('accounts::asset.verify_total'), 'numeric' => true, 'width' => '6rem',
             'render' => fn ($c) => $c->lines_count],
         ['key' => 'checked_count', 'label' => __('accounts::asset.verify_checked'), 'numeric' => true, 'width' => '6rem',

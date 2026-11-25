@@ -14,13 +14,13 @@
         ['accounts::asset.department', $asset->department],
         ['accounts::asset.custodian', $custodian],
         ['accounts::asset.supplier', $supplier],
-        ['accounts::asset.acquired_on', $asset->acquired_on?->format('d M Y')],
-        ['accounts::asset.put_in_use_on', $asset->put_in_use_on?->format('d M Y')],
+        ['accounts::asset.acquired_on', \App\Core\Support\DateFormat::format($asset->acquired_on)],
+        ['accounts::asset.put_in_use_on', \App\Core\Support\DateFormat::format($asset->put_in_use_on)],
         ['accounts::asset.serial_no', $asset->serial_no],
         ['accounts::asset.model_no', $asset->model_no],
-        ['accounts::asset.warranty_ends_on', $asset->warranty_ends_on?->format('d M Y')],
+        ['accounts::asset.warranty_ends_on', \App\Core\Support\DateFormat::format($asset->warranty_ends_on)],
         ['accounts::asset.insurance_policy_no', $asset->insurance_policy_no],
-        ['accounts::asset.insured_until', $asset->insured_until?->format('d M Y')],
+        ['accounts::asset.insured_until', \App\Core\Support\DateFormat::format($asset->insured_until)],
     ];
 @endphp
 

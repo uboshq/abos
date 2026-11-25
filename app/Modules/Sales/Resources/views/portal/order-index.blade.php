@@ -17,7 +17,7 @@
             <a href="{{ route('sales.portal.order.show', $order->public_id) }}" data-portal-order-row
                class="block rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
                 <div class="font-semibold">{{ $order->document_no }}</div>
-                <div class="text-sm text-(--color-ink-muted)">{{ $order->trx_date?->format('d/m/Y') }}</div>
+                <div class="text-sm text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($order->trx_date) }}</div>
                 <div class="num text-sm">{{ \App\Core\Support\Money::format($order->total) }}</div>
                 <div class="text-sm font-medium">{{ \App\Modules\Sales\Support\SalesOrderStatus::label((string) $order->status) }}</div>
             </a>

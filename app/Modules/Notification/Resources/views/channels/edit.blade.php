@@ -123,7 +123,7 @@
             <p class="text-2xs text-(--color-ink-muted)">
                 {{ __('notification::channel.last_check') }}:
                 @if ($config?->last_checked_at)
-                    {{ $config->last_checked_at->format('d/m/Y H:i') }} ·
+                    {{ \App\Core\Support\DateFormat::formatWithTime($config->last_checked_at) }} ·
                     {{ $config->last_check_ok ? __('notification::channel.test_ok') : __('notification::channel.test_failed', ['error' => $config->last_error]) }}
                 @else
                     {{ __('notification::channel.never') }}

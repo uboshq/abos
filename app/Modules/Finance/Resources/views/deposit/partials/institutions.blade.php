@@ -47,6 +47,6 @@
             'key' => 'next',
             'label' => __('finance::field.dep_next_maturity'),
             'width' => '10rem',
-            'render' => fn ($r) => $r['next'] === null ? '—' : $r['next']->format('d/m/Y'),
+            'render' => fn ($r) => $r['next'] === null ? '—' : \App\Core\Support\DateFormat::format($r['next']),
         ],
     ]" />

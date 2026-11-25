@@ -55,7 +55,7 @@
             'key' => 'starts_on',
             'label' => __('promotion::field.period'),
             'width' => '12rem',
-            'render' => fn ($p) => $p->starts_on->format('d/m/y').' — '.$p->ends_on->format('d/m/y'),
+            'render' => fn ($p) => \App\Core\Support\DateFormat::format($p->starts_on).' — '.\App\Core\Support\DateFormat::format($p->ends_on),
         ],
         [
             'key' => 'status',

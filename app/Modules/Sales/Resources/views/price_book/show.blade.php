@@ -16,9 +16,9 @@
         ['key' => 'price', 'label' => __('sales::price_book.price'), 'numeric' => true, 'width' => '8rem',
             'render' => fn ($i) => Money::format((string) $i->price)],
         ['key' => 'from', 'label' => __('sales::price_book.valid_from'), 'width' => '7rem',
-            'render' => fn ($i) => $i->valid_from?->format('d-m-Y')],
+            'render' => fn ($i) => \App\Core\Support\DateFormat::format($i->valid_from)],
         ['key' => 'to', 'label' => __('sales::price_book.valid_to'), 'width' => '7rem',
-            'render' => fn ($i) => $i->valid_to?->format('d-m-Y') ?? __('sales::price_book.open_ended')],
+            'render' => fn ($i) => \App\Core\Support\DateFormat::format($i->valid_to) ?? __('sales::price_book.open_ended')],
         ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '8rem',
             'render' => fn ($i) => view('sales::price_book.partials.item-actions', ['list' => $list, 'item' => $i, 'canManage' => $canManage])],
     ];

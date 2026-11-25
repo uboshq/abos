@@ -36,7 +36,7 @@
             [__('finance::tenancy.monthly_rent'), \App\Core\Support\Money::format($tenancy->monthly_rent)],
             [__('finance::tenancy.outstanding'), \App\Core\Support\Money::format($outstanding)],
             [__('finance::tenancy.deposit_held'), \App\Core\Support\Money::format($held)],
-            [__('finance::tenancy.ends_on'), $tenancy->ends_on->format('d/m/Y')],
+            [__('finance::tenancy.ends_on'), \App\Core\Support\DateFormat::format($tenancy->ends_on)],
         ] as [$label, $value])
             <div class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
                 <span class="block text-2xs text-(--color-ink-muted)">{{ $label }}</span>
@@ -162,7 +162,7 @@
             <tbody>
                 @forelse ($moves as $move)
                     <tr class="border-t border-(--color-border)">
-                        <td>{{ $move->moved_on->format('d/m/Y') }}</td>
+                        <td>{{ \App\Core\Support\DateFormat::format($move->moved_on) }}</td>
                         <td>{{ __('finance::tenancy.kind_'.$move->kind) }}</td>
                         <td class="num text-end">{{ \App\Core\Support\Money::format($move->amount) }}</td>
                         <td>

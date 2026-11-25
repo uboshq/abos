@@ -7,7 +7,7 @@
 @php
     $columns = [
         ['key' => 'holiday_date', 'label' => __('hr::field.holiday_date'), 'width' => '10rem',
-         'render' => fn ($h) => $h->holiday_date->format('d M Y, D')],
+         'render' => fn ($h) => \App\Core\Support\DateFormat::format($h->holiday_date).', '.$h->holiday_date->locale(app()->getLocale())->translatedFormat('l')],
         ['key' => 'name', 'label' => __('hr::field.holiday_name'),
          'render' => fn ($h) => $h->name],
         ['key' => 'branch', 'label' => __('hr::field.branch'), 'width' => '10rem',

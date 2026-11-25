@@ -75,7 +75,7 @@
             'rental_deposit' => \App\Core\Support\Money::format($contract->deposit_amount),
             'rental_adjusted' => \App\Core\Support\Money::format($contract->adjustedSoFar()),
             'rental_deposit_left' => \App\Core\Support\Money::format($contract->depositLeft()),
-            'rental_ends_on' => $contract->ends_on->format('d/m/Y'),
+            'rental_ends_on' => \App\Core\Support\DateFormat::format($contract->ends_on),
         ] as $label => $value)
             <div>
                 <div class="text-2xs text-(--color-ink-muted)">{{ __('finance::field.'.$label) }}</div>

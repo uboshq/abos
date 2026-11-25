@@ -61,7 +61,7 @@
                                 {{ \App\Core\Support\Money::format($claim->amount) }}
                             </span>
                             <span class="block text-2xs text-(--color-ink-muted)">
-                                {{ $claim->claimed_on?->format('d M Y') }}
+                                {{ \App\Core\Support\DateFormat::format($claim->claimed_on) }}
                                 @if ($claim->reference) · {{ $claim->reference }} @endif
                             </span>
                         </span>
@@ -92,7 +92,7 @@
                     <span class="min-w-0">
                         <span class="block font-medium">{{ $invoice->document_no }}</span>
                         <span class="block text-2xs text-(--color-ink-muted)">
-                            {{ $invoice->trx_date?->format('d M Y') }}
+                            {{ \App\Core\Support\DateFormat::format($invoice->trx_date) }}
                         </span>
                     </span>
                     <span class="num font-medium">

@@ -34,9 +34,9 @@
                 <div>
                     <dt class="text-2xs uppercase text-(--color-ink-muted)">{{ __('promotion::field.period') }}</dt>
                     <dd>
-                        {{ $offer->starts_on->format('d/m/y') }}{{ $offer->starts_at ? ' '.substr($offer->starts_at, 0, 5) : '' }}
+                        {{ \App\Core\Support\DateFormat::format($offer->starts_on) }}{{ $offer->starts_at ? ' '.substr($offer->starts_at, 0, 5) : '' }}
                         —
-                        {{ $offer->ends_on->format('d/m/y') }}{{ $offer->ends_at ? ' '.substr($offer->ends_at, 0, 5) : '' }}
+                        {{ \App\Core\Support\DateFormat::format($offer->ends_on) }}{{ $offer->ends_at ? ' '.substr($offer->ends_at, 0, 5) : '' }}
                     </dd>
                 </div>
                 <div>
@@ -99,7 +99,7 @@
                         <span>{{ $step['level'] }} · {{ $step['name'] }}</span>
                         <span>
                             @if ($step['decision'])
-                                {{ $step['by'] ?? '—' }} · {{ $step['at']?->format('d/m/y H:i') }}
+                                {{ $step['by'] ?? '—' }} · {{ \App\Core\Support\DateFormat::formatWithTime($step['at']) }}
                             @elseif ($step['current'])
                                 <x-ui.badge tone="pending">{{ __('promotion::approval.waiting') }}</x-ui.badge>
                             @else

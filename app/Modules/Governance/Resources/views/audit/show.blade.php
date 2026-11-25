@@ -9,7 +9,7 @@
     <x-slot:header>
         <x-ui.page-header
             :title="\App\Models\AuditTrail::actionInWords($trail->action) . ' — ' . $trail->title()"
-            :subtitle="$trail->created_at->format('d M Y, H:i')">
+            :subtitle="\App\Core\Support\DateFormat::formatWithTime($trail->created_at)">
             <x-slot:actions>
                 <x-ui.button :href="route('governance.audit.record', $trail->id)">
                     {{ __('governance::label.full_history') }}
@@ -28,7 +28,7 @@
             <dl class="space-y-2 text-sm">
                 @foreach ([
                     'governance::field.who' => $trail->user?->name ?? __('governance::message.system'),
-                    'governance::field.when' => $trail->created_at->format('d M Y, H:i:s'),
+                    'governance::field.when' => \App\Core\Support\DateFormat::formatWithTime($trail->created_at),
                     'governance::field.action' => \App\Models\AuditTrail::actionInWords($trail->action),
                     'governance::field.module' => $trail->moduleLabel(),
                     'governance::field.branch' => $trail->branch?->name(),

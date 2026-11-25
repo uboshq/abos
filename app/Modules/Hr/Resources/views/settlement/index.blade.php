@@ -7,7 +7,7 @@
     $columns = [
         ['key' => 'employee', 'label' => __('hr::settlement.employee'),
          'render' => fn ($r) => new \Illuminate\Support\HtmlString('<a class="underline" href="'.e(route('hr.final_settlement.show', $r)).'">'.e($r->employee?->label() ?? '—').'</a>')],
-        ['key' => 'last_day', 'label' => __('hr::settlement.last_day'), 'width' => '8rem', 'render' => fn ($r) => $r->last_day->format('d M Y')],
+        ['key' => 'last_day', 'label' => __('hr::settlement.last_day'), 'width' => '8rem', 'render' => fn ($r) => \App\Core\Support\DateFormat::format($r->last_day)],
         ['key' => 'separation', 'label' => __('hr::settlement.separation'), 'width' => '9rem', 'render' => fn ($r) => __('hr::settlement.separations.'.$r->separation)],
         ['key' => 'net', 'total' => 'money', 'label' => __('hr::settlement.net'), 'numeric' => true, 'width' => '10rem', 'render' => fn ($r) => $money($r->net)],
         ['key' => 'status', 'label' => __('hr::settlement.status'), 'width' => '10rem', 'render' => fn ($r) => __('hr::settlement.statuses.'.$r->status)],
@@ -45,7 +45,7 @@
             <form method="GET" action="{{ route('hr.final_settlement.preview') }}" data-boxed data-settlement-leavers
                   class="mb-4 flex flex-wrap items-end gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
                 <x-ui.select name="employee" :label="__('hr::settlement.leavers')"
-                             :options="$leavers->mapWithKeys(fn ($e) => [$e->id => $e->label().' · '.$e->leaving_date->format('d M Y')])" />
+                             :options="$leavers->mapWithKeys(fn ($e) => [$e->id => $e->label().' · '.\App\Core\Support\DateFormat::format($e->leaving_date)])" />
                 <x-ui.button type="submit" tone="primary">{{ __('hr::settlement.preview') }}</x-ui.button>
             </form>
     @endif
@@ -57,7 +57,7 @@
             <h2 id="pop-settlement-title" class="mb-3 text-base font-semibold">{{ __('hr::settlement.new') }}</h2>
             <form method="GET" action="{{ route('hr.final_settlement.preview') }}" class="space-y-3">
                 <x-ui.select name="employee" :label="__('hr::settlement.leavers')"
-                             :options="$leavers->mapWithKeys(fn ($e) => [$e->id => $e->label().' · '.$e->leaving_date->format('d M Y')])" />
+                             :options="$leavers->mapWithKeys(fn ($e) => [$e->id => $e->label().' · '.\App\Core\Support\DateFormat::format($e->leaving_date)])" />
                 <div class="flex justify-end"><x-ui.button type="submit" tone="primary">{{ __('hr::settlement.preview') }}</x-ui.button></div>
             </form>
         </div>

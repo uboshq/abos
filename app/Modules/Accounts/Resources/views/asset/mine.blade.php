@@ -35,7 +35,7 @@
 
                         @if ($ack !== null)
                             <x-ui.badge tone="success">
-                                {{ __('accounts::asset.ack_done', ['date' => $ack->acknowledged_at?->format('d M Y')]) }}
+                                {{ __('accounts::asset.ack_done', ['date' => \App\Core\Support\DateFormat::format($ack->acknowledged_at)]) }}
                                 · {{ __('accounts::asset.ack_'.$ack->condition) }}
                             </x-ui.badge>
                         @else

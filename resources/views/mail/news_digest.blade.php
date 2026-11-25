@@ -24,7 +24,7 @@
                 <li style="margin:0 0 10px;padding:0 0 10px;border-bottom:1px solid #eef0f2;font-size:14px;">
                     {{ $bell->title }}
                     <span style="display:block;font-size:12px;color:#5b6670;">
-                        {{ \App\Core\Support\NotificationKinds::sourceLabel($bell->module) }} · {{ $bell->created_at?->format('d/m/Y H:i') }}
+                        {{ \App\Core\Support\NotificationKinds::sourceLabel($bell->module) }} · {{ \App\Core\Support\DateFormat::formatWithTime($bell->created_at) }}
                     </span>
                 </li>
             @endforeach

@@ -15,7 +15,7 @@
          'render' => fn ($c) => \App\Core\Support\Money::format($c->amount)],
         ['key' => 'status', 'label' => __('hr::claim.status'), 'render' => fn ($c) => __('hr::claim.state_'.$c->status)],
         ['key' => 'created_at', 'label' => __('hr::claim.submitted_at'), 'width' => '8rem',
-         'render' => fn ($c) => $c->created_at?->format('d/m/Y')],
+         'render' => fn ($c) => \App\Core\Support\DateFormat::format($c->created_at)],
     ];
     // ⭐ এক সারির মাথা কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো
     $abosHead = \App\Core\Support\AbosHead::on();
