@@ -401,7 +401,9 @@ final class APayrollRunNeedsASecondHandEvenWithApprovalsOffTest extends TestCase
         $this->assertNull(app(ApprovalEngine::class)->noSecondSignerNote($own->fresh()), '⛔ মালিকের নিজের অনুরোধে "কেউ নেই" বলা হলো।');
         app(ApprovalEngine::class)->cancel($own->fresh(), $this->owner->fresh());
 
-        $maker = $this->payrollClerk();
+        // ⓘ "আমার অনুরোধ" পাতা নিজের চাবি চায় (approval.view) — দাবিটা লেখার, চাবির নয়
+        $maker = $this->secondHandIn((int) $this->company->id,
+            'approval.decide', 'approval.view', 'hr.employee.view', 'hr.payroll.view', 'hr.payroll.manage', 'hr.salary.view');
         $this->as($maker);
         $this->askOnce(fn () => app(PayrollService::class)->confirm($run->fresh()));
         $approval = $this->pendingFor($run);
