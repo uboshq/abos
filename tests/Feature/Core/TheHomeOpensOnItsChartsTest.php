@@ -69,7 +69,9 @@ final class TheHomeOpensOnItsChartsTest extends TestCase
         $html = (string) $this->actingAs($this->owner())->get(route('dashboard'))->assertOk()->getContent();
 
         // ⓘ পপআপের মাথার Copilot-লাইন পাতার নয় (মালিক, ১৮ নভেম্বর রাত: "সারাংশ পপআপে"; [[shell.day-check]]) — দাবি পাতার
-        $html = (string) preg_replace('~<div[^>]*data-popup-copilot.*?</div>~s', '', $html);
+        $this->assertStringContainsString('data-popup-copilot', $html, 'প্রস্তুতিটাই ভুল — পপআপে Copilot-এর লাইন নেই, ছাঁটার কিছু নেই।');
+        $html = (string) preg_replace('~<div\b[^>]*data-popup-copilot.*?</div>~s', '', $html);
+        $this->assertStringNotContainsString('data-popup-copilot', $html, 'পপআপের লাইনটা ছাঁটা হয়নি — দাবি পাতার বদলে পপআপ দেখছে।');
         $this->assertStringContainsString('data-business-pictures', $html, 'হোমই আঁকা হয়নি — দাবি কিছু দেখছে না।');
         $this->assertStringNotContainsString('data-home-copilot', $html, '⛔ হোমে আবার Copilot-এর লাইন — মালিক এটা পাতা থেকে সরাতে বলেছেন।');
         $this->assertStringNotContainsString('data-copilot-ask', $html, '⛔ হোমে আবার Copilot-এর প্রশ্নের চিপ।');

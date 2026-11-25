@@ -80,7 +80,7 @@ final class ALongModuleBarFoldsByTheMenuGroupsTest extends TestCase
     /** বারের ঘর — সোজা ঘর আর ড্রপডাউনের বোতাম, দুইটাই `modulebar-cell` পরে; ড্রপডাউনের ভিতরের সারি পরে না */
     private function cells(string $bar): int
     {
-        return preg_match_all('/class="[^"]*modulebar-cell/', $bar);
+        return preg_match_all('/class="[^"]*\bmodulebar-cell\b/', $bar);
     }
 
     private function fold(string $bar, string $name): string

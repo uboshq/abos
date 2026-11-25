@@ -173,7 +173,7 @@ return [
 
         /*
          * বাঁ মেনুর মাপ — মালিকের নমুনা থেকে হুবহু
-         * (`E:\ABOSrand\design\_ui.css`: `.nav a{height:30px;
+         * (`E:\ABOS\brand\design\_ui.css`: `.nav a{height:30px;
          * font-size:12.5px}`)।
          *
          * ⚠️ এই অ্যাপে `1rem = 20px`, তাই ডিফল্ট `--text-sm`
