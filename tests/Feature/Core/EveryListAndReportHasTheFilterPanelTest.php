@@ -44,7 +44,7 @@ final class EveryListAndReportHasTheFilterPanelTest extends TestCase
             // ── ইঞ্জিনের রিপোর্ট (সব মডিউলের রিপোর্ট একই পাতায়) আর হিসাবের নিজের রিপোর্ট ──
             'report: ledger' => ['accounts.report.show', ['slug' => 'ledger'], ['from', 'to']],
             'report: trial balance' => ['accounts.report.show', ['slug' => 'trial-balance'], ['from', 'to']],
-            'report: balance sheet (as on)' => ['accounts.report.show', ['slug' => 'balance-sheet'], ['to']],
+            'report: balance sheet (as on)' => ['accounts.report.show', ['slug' => 'balance-sheet'], ['as_of']],
             'report: stock position' => ['inventory.report.show', ['slug' => 'stock-position'], ['warehouse_id', 'product_id', 'brand_id', 'category_id']],
             'balance sheet' => ['accounts.balance_sheet', [], ['as_of']],
             'day book' => ['accounts.daybook', [], ['date']],
@@ -64,7 +64,8 @@ final class EveryListAndReportHasTheFilterPanelTest extends TestCase
             'approval: inbox' => ['approval.inbox.index', [], ['module', 'amount']],
             'assistant: audit' => ['assistant.audit', [], ['from', 'to', 'kind', 'user_id', 'ip', 'bar:q']],
             'customer: binding' => ['customer.binding.index', [], ['ended', 'user_id']],
-            'documents: centre' => ['documents.index', [], ['doc_type', 'status', 'date_from', 'date_to']],
+            'documents: centre' => ['documents.index', [], ['doc_type', 'department_id', 'confidentiality', 'expiry']],
+            'documents: search' => ['documents.search', [], ['doc_type', 'status', 'date_from', 'date_to']],
             'finance: account analysis' => ['finance.account_analysis.index', [], ['account_id', 'from', 'to']],
             'finance: bank charges' => ['finance.bank_charge.index', [], ['from', 'to']],
             'finance: budget' => ['finance.budget.index', [], ['year', 'center']],
@@ -149,6 +150,19 @@ final class EveryListAndReportHasTheFilterPanelTest extends TestCase
         $owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $owner->forceFill(['ui' => $look])->save();
         $this->actingAs($owner);
+
+        if (str_starts_with($route, 'restaurant.')) {
+            app(\App\Core\Services\SettingsService::class)->set('restaurant.enabled', true);
+        }
+        if ($route === 'notification.party_messages.index') {
+            // ⓘ "কে পাঠালেন" ঘরে কেবল যাঁরা পাঠিয়েছেন — তাই একটা বার্তা আগে
+            \App\Models\PartyMessage::query()->create([
+                'company_id' => CompanyContext::id(), 'branch_id' => CompanyContext::branchId(), 'channel' => 'sms',
+                'document_type' => 'accounts_voucher', 'document_id' => 1, 'party_type' => 'customer', 'party_id' => 1,
+                'phone' => '8801712345678', 'locale' => 'bn', 'body' => 'পরীক্ষা', 'sent_by' => $owner->id,
+                'status' => \App\Models\PartyMessage::SENT,
+            ]);
+        }
 
         $html = (string) $this->get(route($route, $params))->assertOk()->getContent();
 

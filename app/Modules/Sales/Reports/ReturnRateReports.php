@@ -125,6 +125,10 @@ final class ReturnRateReports
                 $g = SalesPlace::grouped($q, 'r', $level);
                 // ⓘ কারণ কেবল গ্রাহকের স্তরে — উপরের স্তরে এক সারিতে অনেক গ্রাহকের অনেক কারণ
                 $reason = $level === SalesPlace::CUSTOMER ? self::topReason($f, 'r2.customer_id = r.customer_id') : 'NULL';
+                if ($level === SalesPlace::CUSTOMER) {
+                    // ⛔ মোটের কোয়েরিতে ভেতরের উপ-কোয়েরির `r.customer_id` দলে না থাকলে MySQL 1055 (অডিট, ২৫ নভেম্বর ২০২৬)
+                    $reason = 'MAX('.$reason.')';
+                }
 
                 return $q->selectRaw("{$g['id']} as place_id, ".DB::getPdo()->quote('customer')." as source_type, {$g['id']} as source_id, "
                     ."{$g['place']} as place, {$g['parent']} as parent, COUNT(*) as customers, SUM(r.sales) as sales, SUM(r.returns) as returned, "

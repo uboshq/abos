@@ -34,7 +34,7 @@
                 <span class="mmeet-pill num" data-mm-count></span>
                 <span class="mmeet-sp"></span>
                 <button type="button" class="mmeet-pill" data-mm-act="link">{{ __('messaging::meeting.link') }}</button>
-                <button type="button" class="mmeet-pill" data-mm-act="lock" data-mm-lock hidden></button>
+                <button type="button" class="mmeet-pill" data-mm-act="lock" data-mm-lock hidden>{{ __('messaging::meeting.lock') }}</button>
             </div>
             <div class="mmeet-body" data-mm-body>
                 <div class="mmeet-slide" data-mm-slide hidden>

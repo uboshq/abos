@@ -66,7 +66,7 @@ final class AFestivalBonusNeedsASecondHandTest extends TestCase
 
         $this->company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($this->company->id, $this->company->defaultBranch()?->id);
-        $this->openTheYearsOf('2026-04-10');
+        $this->openTheYearsOf('2026-09-03');
         $this->owner = User::query()->where('email', 'owner@abos.test')->firstOrFail();
         $this->actingAs($this->owner);
 
@@ -107,7 +107,7 @@ final class AFestivalBonusNeedsASecondHandTest extends TestCase
         $maker = $this->payrollClerk();
         $second = $this->payrollClerk();
 
-        $this->as($maker)->post(route('hr.payroll.store'), ['run_type' => PayrollRun::BONUS, 'bonus_date' => '2026-04-10', 'narration' => 'Eid'])
+        $this->as($maker)->post(route('hr.payroll.store'), ['run_type' => PayrollRun::BONUS, 'bonus_date' => '2026-09-03', 'narration' => 'Eid'])
             ->assertSessionHasNoErrors();
         $run = PayrollRun::acrossBranches()->where('run_type', PayrollRun::BONUS)->firstOrFail();
         $this->assertSame(0, bccomp((string) $run->net_total, self::BASIC, 4), 'প্রস্তুতি — ভাতা এক মাসের মূল নয়।');
@@ -141,7 +141,7 @@ final class AFestivalBonusNeedsASecondHandTest extends TestCase
 
     public function test_the_owner_as_maker_signs_his_own_bonus_run_with_the_mark(): void
     {
-        $run = app(PayrollService::class)->buildBonus('2026-04-10', 'Eid');
+        $run = app(PayrollService::class)->buildBonus('2026-09-03', 'Eid');
 
         try {
             app(PayrollService::class)->confirm($run->fresh());

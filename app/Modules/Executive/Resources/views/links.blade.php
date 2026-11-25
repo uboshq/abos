@@ -35,7 +35,8 @@
         @unless ($abosHead)
         <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: var(--exec-bar)">
-                <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::links.title') }}</h1>
+                @php($headTag = \App\Core\Support\PageHeading::tag())
+                <{{ $headTag }} class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::links.title') }}</{{ $headTag }}>
             <form method="GET" action="{{ route('executive.links') }}" class="flex flex-wrap items-center gap-2">
                 <label for="ln-company" class="text-sm text-(--color-ink-muted)">{{ __('executive::links.company') }}</label>
                 <select id="ln-company" name="company" class="h-(--spacing-field-compact) rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
