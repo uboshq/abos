@@ -131,6 +131,11 @@ final class AllBranchesView
         'messaging.x.send', 'messaging.x.direct', 'messaging.x.groups', 'messaging.x.members.add', 'messaging.x.forward', 'messaging.x.papers',
         'messaging.x.read', 'messaging.x.typing', 'messaging.x.mute', 'messaging.x.message.delete',
         'messaging.x.calls.start', 'messaging.x.calls.answer', 'messaging.x.calls.decline', 'messaging.x.calls.end',
+        // ⓘ মিটিং (২৪ নভেম্বর ২০২৬) — একই কারণ; LiveKit-এর খবর সার্ভার পাঠায়, মানুষ নয়
+        'messaging.x.meetings.start', 'messaging.x.meetings.join', 'messaging.x.meetings.renew', 'messaging.x.meetings.leave',
+        'messaging.x.meetings.decline', 'messaging.x.meetings.end', 'messaging.x.meetings.invite', 'messaging.x.meetings.lobby',
+        'messaging.x.meetings.remove', 'messaging.x.meetings.role', 'messaging.x.meetings.set', 'messaging.x.meetings.mute',
+        'messaging.x.meetings.share', 'messaging.x.meetings.stop_share', 'api.messaging.livekit.webhook',
         'api.messaging.send', 'api.messaging.direct', 'api.messaging.groups', 'api.messaging.members.add', 'api.messaging.forward', 'api.messaging.papers',
         'api.messaging.read', 'api.messaging.delivered', 'api.messaging.typing', 'api.messaging.mute', 'api.messaging.message.delete',
         'api.messaging.calls.start', 'api.messaging.calls.answer', 'api.messaging.calls.decline', 'api.messaging.calls.end',
