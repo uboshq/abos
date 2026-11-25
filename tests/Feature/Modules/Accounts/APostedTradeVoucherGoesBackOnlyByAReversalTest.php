@@ -159,7 +159,7 @@ final class APostedTradeVoucherGoesBackOnlyByAReversalTest extends TestCase
         $voucher = $this->posted();
         $search = app(\App\Core\Engines\Search\SearchEngine::class);
 
-        $hits = array_filter($search->search((string) $voucher->document_no, 50, $this->owner->fresh()), fn ($h) => str_contains((string) json_encode($h), (string) $voucher->document_no));
+        $hits = array_filter($search->search((string) $voucher->document_no, $this->owner->fresh(), 50), fn ($h) => str_contains((string) json_encode($h), (string) $voucher->document_no));
         $this->assertCount(1, $hits, '⛔ এক ভাউচার খোঁজায় কয়েকবার।');
     }
 
