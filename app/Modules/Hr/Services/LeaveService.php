@@ -114,7 +114,7 @@ final class LeaveService
             $this->assertPending($application);
 
             // ⛔ বেতন হয়ে যাওয়া মাসে মঞ্জুরি নয় — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️২; [[PaidMonth]], [[LeaveIsCountedWhenItIsApprovedTest]])
-            PaidMonth::assertOpen($application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid_approve');
+            PaidMonth::assertOpen($this->companyOf($application), $application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid_approve');
 
             $employee = Employee::query()->withoutGlobalScopes()->findOrFail($application->employee_id);
             $type = LeaveType::query()->withoutGlobalScopes()->findOrFail($application->leave_type_id);
@@ -220,7 +220,7 @@ final class LeaveService
              * ⓘ প্রত্যাহারে ছুটির দিনগুলোর হাজিরা মুছে যেত, অথচ সেই মাসের বেতন ওই হাজিরা ধরেই হিসাব হয়ে খাতায় বসে গেছে — বেতনশিট আর
              * হাজিরার পাতা আলাদা কথা বলত, আর বিনা বেতনের ছুটি হলে কাটা টাকার কোনো কারণ আর খুঁজে পাওয়া যেত না। আগে সে মাসের রান বাতিল।
              */
-            PaidMonth::assertOpen($application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid');
+            PaidMonth::assertOpen($this->companyOf($application), $application->from_date, $application->to_date, 'status', 'hr::validation.leave_month_paid');
 
             /*
              * ⛔ কেবল যে সারি এখনো "ছুটি" — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️৮; [[LeaveIsCountedWhenItIsApprovedTest]])।
@@ -575,5 +575,11 @@ final class LeaveService
                 ]),
             ]);
         }
+    }
+
+    /** কর্মীর নিজের কোম্পানি — আবেদনটা কোন কোম্পানির পর্দায় লেখা হয়েছে তা নয় */
+    private function companyOf(LeaveApplication $application): int
+    {
+        return (int) Employee::query()->withoutGlobalScopes()->whereKey($application->employee_id)->value('company_id');
     }
 }

@@ -56,7 +56,7 @@ final class AttendanceService
          * ⛔ বেতন হয়ে যাওয়া মাসের হাজিরা বদলায় না — ec, Hr লাইন-নিরীক্ষা, ১৪ অক্টোবর ২০২৬ (⚠️২; [[PaidMonth]])।
          * ⓘ বেতনশিট এই হাজিরা ধরেই হিসাব হয়ে খাতায় বসে গেছে; পরে "কামাই"-কে "উপস্থিত" করলে পাতা আর বেতনশিট আলাদা কথা বলত।
          */
-        PaidMonth::assertOpen($day, $day, 'work_date', 'hr::validation.attendance_month_paid');
+        PaidMonth::assertOpen((int) $employee->company_id, $day, $day, 'work_date', 'hr::validation.attendance_month_paid');
 
         $values = [
             'status' => $status,

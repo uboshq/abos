@@ -194,7 +194,7 @@ final class MaternityDeliveryService
     /** এই কর্মীর এই মাসের বেতন নিশ্চিত কি না — [[PaidMonth]]-এর একই প্রশ্ন, ছুড়ে না দিয়ে */
     private function paid(Employee $employee, Carbon $month): bool
     {
-        return PayrollRun::acrossBranches()
+        return PayrollRun::acrossBranches()->withoutGlobalScope('company')->where('hr_payroll_runs.company_id', $employee->company_id)
             ->where('status', DocumentStatus::CONFIRMED)
             /*
              * ⛔ কেবল মাসের বেতন — উৎসব ভাতার রান মাসটা "দেওয়া" করে না, [[PaidMonth::assertOpen()]]-এর মতোই (মেশানোর পর, a6, ২১ অক্টোবর
@@ -203,7 +203,7 @@ final class MaternityDeliveryService
              */
             ->ofType(PayrollRun::SALARY)
             ->whereDate('month', $month->copy()->startOfMonth()->toDateString())
-            ->whereHas('payslips', fn ($q) => $q->where('employee_id', $employee->id))
+            ->whereHas('payslips', fn ($q) => $q->withoutGlobalScope('company')->where('employee_id', $employee->id))
             ->exists();
     }
 

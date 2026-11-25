@@ -316,7 +316,7 @@ final class SalaryStructureService
      */
     private function assertMonthOpen(Employee $employee, string $date): void
     {
-        PaidMonth::assertOpen(Carbon::parse($date), null, 'effective_from', 'hr::validation.salary_month_paid', (int) $employee->id);
+        PaidMonth::assertOpen((int) $employee->company_id, Carbon::parse($date), null, 'effective_from', 'hr::validation.salary_month_paid', (int) $employee->id);
     }
 
     /**
