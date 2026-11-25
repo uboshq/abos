@@ -50,6 +50,9 @@ return [
     'source' => [
         // ⓘ ভাউচারের নিজের নাম — ধরন জানা না থাকলে খোঁজায় এটাই (ec, Core লাইন-নিরীক্ষা, ১৫ অক্টোবর ২০২৬)
         'voucher' => 'ভাউচার',
+        'trade_voucher' => 'স্টক ছাড়া ভাউচার',
+        'sales_voucher' => 'বিক্রয় ভাউচার',
+        'purchase_voucher' => 'ক্রয় ভাউচার',
         'sales_invoice' => 'বিক্রয় চালান',
         'purchase_invoice' => 'ক্রয় চালান',
         'receipt_voucher' => 'আদায় ভাউচার',
@@ -117,9 +120,6 @@ return [
         'reason_code' => 'কারণ কোড',
         'sales_order' => 'বিক্রয়াদেশ',
         'sales_return' => 'বিক্রয় ফেরত',
-        'trade_voucher' => 'স্টক ছাড়া ভাউচার',
-        'sales_voucher' => 'বিক্রয় ভাউচার',
-        'purchase_voucher' => 'ক্রয় ভাউচার',
         'shipment' => 'চালান প্রেরণ',
         'stock_transfer' => 'মজুদ স্থানান্তর',
         'tax' => 'ভ্যাট',

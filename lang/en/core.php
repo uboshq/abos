@@ -44,6 +44,9 @@ return [
 
     'source' => [
         'voucher' => 'Voucher',
+        'trade_voucher' => 'Stock-free Voucher',
+        'sales_voucher' => 'Sales Voucher',
+        'purchase_voucher' => 'Purchase Voucher',
         'sales_invoice' => 'Sales Invoice',
         'purchase_invoice' => 'Purchase Invoice',
         'receipt_voucher' => 'Receipt Voucher',
@@ -105,9 +108,6 @@ return [
         'reason_code' => 'Reason Code',
         'sales_order' => 'Sales Order',
         'sales_return' => 'Sales Return',
-        'trade_voucher' => 'Stock-free voucher',
-        'sales_voucher' => 'Sales voucher',
-        'purchase_voucher' => 'Purchase voucher',
         'shipment' => 'Shipment',
         'stock_transfer' => 'Stock Transfer',
         'tax' => 'VAT',
