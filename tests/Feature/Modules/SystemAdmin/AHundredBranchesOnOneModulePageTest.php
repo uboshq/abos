@@ -70,8 +70,8 @@ final class AHundredBranchesOnOneModulePageTest extends TestCase
         $branch = Branch::query()->where('is_active', true)->firstOrFail();
         $html = (string) $this->get(route('system_admin.module.branches', ['pick' => [$branch->id]]))->assertOk()->getContent();
 
-        $this->assertMatchesRegularExpression('/<form id="board-form"[^>]*x-data="switchBoard\(/s', $html);
-        $this->assertMatchesRegularExpression('/data-module-all>\s*<input type="checkbox" x-on:change="setAll\(\$event\.target\)"/s', $html);
+        $this->assertMatchesRegularExpression('/<form id="board-form"[^>]*x-data="switchBoard\([^>]*x-on:change="followAll\(\$event\.target\)"/s', $html);
+        $this->assertMatchesRegularExpression('/data-module-all>\s*<input type="checkbox" x-init="followAll\(\$el\)" x-on:change="setAll\(\$event\.target\)"/s', $html);
         $this->assertMatchesRegularExpression('/name="modules\[hr\]"[^>]*data-key="hr"/s', $html, '⛔ মডিউলের সুইচে চাবি নেই — "সব বাছাই" কিছুই নাড়াবে না।');
     }
 

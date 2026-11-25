@@ -127,4 +127,26 @@ describe('switchBoard.setAll', () => {
         expect(on()).toEqual([false, false, false, false])
         expect(Object.keys(board.changed)).toEqual(['modules[b]'])
     })
+
+    it('opens ticked when all are on, half when mixed, and follows single changes', () => {
+        const el = document.createElement('form')
+        el.innerHTML = `<label data-module-all><input type="checkbox" id="all"></label>
+            <input type="checkbox" data-key="a" checked><input type="checkbox" data-key="b" checked>
+            <input type="checkbox" data-key="c" disabled>`
+        const board = switchBoard()
+        const [all, a] = [el.querySelector('#all'), el.querySelector('[data-key=a]')]
+        const seen = () => { board.followAll(a); return [all.checked, all.indeterminate] }
+
+        expect(seen()).toEqual([true, false])
+        a.checked = false
+        expect(seen()).toEqual([false, true])
+        el.querySelector('[data-key=b]').checked = false
+        expect(seen()).toEqual([false, false])
+
+        // ⓘ a mixed row: its switch looks on, "on in all" is not ticked yet
+        el.insertAdjacentHTML('beforeend', '<input type="checkbox" data-key="all_on.a">')
+        a.checked = true
+        el.querySelector('[data-key=b]').checked = true
+        expect(seen()).toEqual([false, true])
+    })
 })

@@ -583,6 +583,26 @@ export function switchBoard ({ on = {} } = {}) {
                 this.touch(box)
             }
         },
+
+        /*
+         * "সব বাছাই" ঘরটা সুইচগুলোর কথা বলে — সব চালু হলে টিক, সব বন্ধ হলে খালি, মিশ্র হলে মাঝের দাগ (তখন চাপলে সব চালু)।
+         * ⓘ মিশ্র সারির সুইচ চালু দেখালেও "সবগুলোয় চালু" (`all_on.`) টিক না থাকলে সেটা মিশ্রই।
+         */
+        followAll (el) {
+            const form = el.form ?? el.closest('form')
+            const all = form?.querySelector('[data-module-all] input')
+
+            if (! all) return
+
+            const open = [...form.querySelectorAll('input[type=checkbox][data-key]')].filter(box => ! box.disabled)
+            const extra = box => box.dataset.key.startsWith('all_on.')
+            const switches = open.filter(box => ! extra(box))
+            const some = switches.some(box => box.checked) || open.some(box => extra(box) && box.checked)
+            const whole = switches.length > 0 && open.every(box => box.checked)
+
+            all.checked = whole
+            all.indeterminate = some && ! whole
+        },
     }
 }
 
