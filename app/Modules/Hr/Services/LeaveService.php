@@ -73,6 +73,8 @@ final class LeaveService
             $this->assertWithinYearlyLimit($employee, $type, $from, $days);
 
             return LeaveApplication::create([
+                // ⛔ কর্মীর কোম্পানির সারি, পর্দার নয় — কর্মী-খাতা এক হলেও
+                'company_id' => $employee->company_id,
                 'employee_id' => $employee->id,
                 'leave_type_id' => $type->id,
                 'from_date' => $from->toDateString(),
