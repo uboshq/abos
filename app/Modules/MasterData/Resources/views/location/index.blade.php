@@ -22,8 +22,8 @@
                      'render' => fn ($l) => new \Illuminate\Support\HtmlString('<span class="font-medium">'.e($l->name()).'</span>')],
                     ...array_map(fn (string $up) => ['key' => 'up_'.$up, 'label' => __('master_data::level.'.$up),
                         'render' => fn ($l) => $map->name($map->above((int) $l->id, $up)) ?: '—'], $upper),
-                    // ⭐ শাখা — মালিক, ২৫ নভেম্বর ২০২৬
-                    ['key' => 'branch', 'label' => __('master_data::field.branch'), 'render' => fn ($l) => $l->branch?->name() ?? __('master_data::message.every_branch')],
+                    // ⭐ শাখা — কেবল "সব শাখা" দেখলে; একটা শাখা বাছা থাকলে নাম উপরেই লেখা (মালিক, ২৫ নভেম্বর ২০২৬)
+                    ...($oneBranch ? [] : [['key' => 'branch', 'label' => __('master_data::field.branch'), 'render' => fn ($l) => $l->branch?->name() ?? __('master_data::message.every_branch')]]),
                     ...(in_array($level, [\App\Modules\MasterData\Models\Location::POINT, \App\Modules\MasterData\Models\Location::ROUTE, \App\Modules\MasterData\Models\Location::COUNTRY], true) ? [] : [
                         // ⓘ কয়টা পয়েন্ট — চাপলে পয়েন্টের তালিকা, এই জায়গায় ছাঁকা
                         ['key' => 'points', 'label' => __('master_data::level.point'), 'numeric' => true, 'width' => '7rem',

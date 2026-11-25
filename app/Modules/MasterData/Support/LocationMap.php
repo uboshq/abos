@@ -100,7 +100,7 @@ final class LocationMap
      *
      * @param  list<string>  $ladder
      */
-    public function filters(string $level, array $ladder): FilterSet
+    public function filters(string $level, array $ladder, bool $withBranch = true): FilterSet
     {
         $facets = [];
         $rows = array_keys(array_filter($this->nodes, fn (array $n) => $n['level'] === $level));
@@ -125,7 +125,7 @@ final class LocationMap
             $options['all'] = ['label' => (string) __('master_data::message.every_branch'), 'apply' => fn (Builder $q) => $q->whereNull($q->qualifyColumn('branch_id'))];
         }
 
-        if ($options !== []) {
+        if ($withBranch && $options !== []) {
             $facets[] = (new ChoiceFacet('branch', (string) __('master_data::field.branch'), $options))->look('blue', '🏬');
         }
 
@@ -142,7 +142,7 @@ final class LocationMap
                 $options[(string) $at] = [
                     // ⓘ একই নাম কয়েক শাখায় থাকে (ময়মনসিংহ) — তাই শাখার নাম সাথে
                     'label' => $at === 'none' ? (string) __('master_data::message.level_not_set')
-                        : implode(' › ', array_filter([$branches[$this->nodes[(int) $at]['branch'] ?? 0] ?? null, $this->name((int) $at)])),
+                        : implode(' › ', array_filter([$withBranch ? ($branches[$this->nodes[(int) $at]['branch'] ?? 0] ?? null) : null, $this->name((int) $at)])),
                     'apply' => fn (Builder $q) => $q->whereIn($q->qualifyColumn('id'), $ids),
                 ];
             }
