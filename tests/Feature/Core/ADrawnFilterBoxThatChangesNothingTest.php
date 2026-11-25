@@ -76,6 +76,8 @@ final class ADrawnFilterBoxThatChangesNothingTest extends TestCase
         'direction' => ['direction' => 'received'],
         // ⓘ টাকা আসার ধরন (accounts.inflow; নগদ · ব্যাংক · MFS — [[CoreReports::MONEY_KINDS]]), ১.৩.১১
         'kind' => [['kind' => 'cash'], ['kind' => 'bank'], ['kind' => 'mfs']],
+        // ⓘ আসা টাকায় কেন গোনা হয়নি (sales.money_in_excluded_papers — [[CoreReports::KEPT_OUT]])
+        'reason' => [['reason' => 'reversal'], ['reason' => 'transfer']],
         'month' => ['month' => '1997-04'],
         'period' => ['period' => 'week'],
         'status' => [['status' => 'bounced'], ['status' => 'slow'], ['status' => 'negative']],
