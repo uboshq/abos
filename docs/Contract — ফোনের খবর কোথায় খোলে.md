@@ -253,6 +253,9 @@
 | `purchase_return` | Purchase | PurchaseReturn |
 | `reason_code` | MasterData | ReasonCode |
 | `receipt_voucher` | Accounts | Voucher |
+| `trade_voucher` | Accounts | TradeVoucher |
+| `sales_voucher` | Accounts | SalesVoucherPaper |
+| `purchase_voucher` | Accounts | PurchaseVoucherPaper |
 | `rental_adjustment` | Finance | RentalAdjustment |
 | `rental_contract` | Finance | RentalContract |
 | `sales_channel` | MasterData | SalesChannel |
