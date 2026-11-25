@@ -51,7 +51,16 @@ final class TheReservedListShowedMinusAndBareIdsTest extends TestCase
             [['product_id' => $product->id, 'ordered_qty' => $qty, 'rate' => (string) $product->sale_price]],
         )->fresh(['lines']))->fresh(['lines']);
         $order('1');   // ⓘ আরেকটা আদেশ আগে — আদেশ আর চালানের আইডি যেন এক না হয়
-        $order = $order('10');
+        $made = $order;
+        $order = $made('10');
+        // ⓘ অটো-নম্বর আগের দাবির পরে যেখানে থাকে সেখান থেকে চলে — একটা চালান বানিয়ে ফেরত নেওয়া বলে দেয় পরের আইডি; আদেশেরটার সমান হলে আরেকটা আদেশ
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        $next = app(DeliveryChallanService::class)->create(
+            ['customer_id' => $customer->id, 'warehouse_id' => $warehouse->id, 'sales_order_id' => $order->id, 'trx_date' => now()->toDateString()],
+            [['product_id' => $product->id, 'sales_order_line_id' => $order->lines->first()->id, 'delivered_qty' => '1', 'rate' => (string) $product->sale_price]],
+        )->id + 1;
+        \Illuminate\Support\Facades\DB::rollBack();
+        $order = $order->id === $next ? $made('10') : $order;
 
         $challans = app(DeliveryChallanService::class);
         $challan = $challans->confirm($challans->create(
