@@ -45,7 +45,7 @@ class InterCompanyController extends Controller implements HasMiddleware
     {
         // ⭐ সব তালিকার একই ছাঁকনি আর কাজের খোঁজা (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
         $base = fn () => InterCompanyTransfer::query()
-            ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where('narration', 'like', "%{$term}%"));
+            ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where('purpose', 'like', "%{$term}%"));
         $filters = \App\Core\ListFilter\Columns::set([
             \App\Core\ListFilter\Columns::between(__('accounts::field.date'), 'trx_date'),
             \App\Core\ListFilter\Columns::is('counter', __('accounts::field.inter_company_counter'), 'counter_company_id', \App\Models\Company::query()
