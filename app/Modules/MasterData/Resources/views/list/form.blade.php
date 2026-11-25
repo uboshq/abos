@@ -13,8 +13,7 @@
 
     <x-slot:header>
         <x-ui.page-header
-            :title="$isNew ? __('master_data::action.new') : __('master_data::action.edit')"
-            :subtitle="__($spec['title'])" />
+            :title="__($spec['title']).' — '.($isNew ? __('master_data::action.new') : __('master_data::action.edit'))" />
     </x-slot:header>
 
     <form method="POST"

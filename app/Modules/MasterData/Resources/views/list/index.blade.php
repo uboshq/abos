@@ -60,30 +60,9 @@
         </div>
     @endif
 
-    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
-    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form id="list-form" method="GET" class="contents">
-            {{-- ⚠️ গোনাটা `total()`, `count()` নয় — `count()` এই পাতার
-                 সারি গোনে, তাই তিনশো একক থাকলেও টুলবারে লেখা উঠত
-                 "৫০টি"। ছাঁকনি দেওয়ার পর "কয়টা রইল" প্রশ্নের উত্তর
-                 ঠিক এই সংখ্যাটাই, আর সেটা পাতার নয়, তালিকার। --}}
-            <x-ui.toolbar :title="__($spec['title'])" :count="trans_choice('master_data::message.count', $records->total(), ['count' => $records->total()])" :sort="$sortOptions" :facets="$facetPanel">
-        <x-slot:actions>
-            @can('master_data.manage')
-                    <x-ui.button tone="primary" icon="plus"
-                                 :href="route('master_data.' . $spec['route'] . '.create')">
-                        {{ __('master_data::action.new') }}
-                    </x-ui.button>
-                @endcan
-        </x-slot:actions>
-            </x-ui.toolbar>
-        </form>
-
-        <x-ui.table
-            :compact="\App\Core\Support\Ui::compact()"
-            :empty="$q ? __('core.empty.no_results') : __('master_data::message.none_yet')"
-            :rows="$records"
-            :columns="array_merge(
+    {{-- ⓘ কলামগুলো একবার — টেবিল আর বারের "কলাম" একই তালিকা পড়ে (অডিট, ২৫ নভেম্বর ২০২৬) --}}
+    @php
+        $listColumns = array_merge(
                 [
                     ['key' => 'code', 'label' => __('master_data::field.code'), 'width' => '9rem',
                      'render' => fn ($r) => view('master_data::list.partials.code', ['record' => $r, 'spec' => $spec])],
@@ -104,7 +83,33 @@
                     ['key' => 'actions', 'label' => __('core.table.action_menu'), 'width' => '9rem',
                      'render' => fn ($r) => view('master_data::list.partials.actions', ['record' => $r, 'spec' => $spec])],
                 ],
-            )" />
+            );
+    @endphp
+
+    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form id="list-form" method="GET" class="contents">
+            {{-- ⚠️ গোনাটা `total()`, `count()` নয় — `count()` এই পাতার
+                 সারি গোনে, তাই তিনশো একক থাকলেও টুলবারে লেখা উঠত
+                 "৫০টি"। ছাঁকনি দেওয়ার পর "কয়টা রইল" প্রশ্নের উত্তর
+                 ঠিক এই সংখ্যাটাই, আর সেটা পাতার নয়, তালিকার। --}}
+            <x-ui.toolbar :title="__($spec['title'])" :count="trans_choice('master_data::message.count', $records->total(), ['count' => $records->total()])" :sort="$sortOptions" :columns="$listColumns" :facets="$facetPanel">
+        <x-slot:actions>
+            @can('master_data.manage')
+                    <x-ui.button tone="primary" icon="plus"
+                                 :href="route('master_data.' . $spec['route'] . '.create')">
+                        {{ __('master_data::action.new') }}
+                    </x-ui.button>
+                @endcan
+        </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
+
+        <x-ui.table
+            :compact="\App\Core\Support\Ui::compact()"
+            :empty="$q ? __('core.empty.no_results') : __('master_data::message.none_yet')"
+            :rows="$records"
+            :columns="$listColumns" />
 
         <x-ui.pager :rows="$records" />
         <x-ui.list-totals :rows="$records" />

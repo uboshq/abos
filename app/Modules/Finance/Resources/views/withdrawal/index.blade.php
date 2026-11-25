@@ -116,7 +116,7 @@
         </div>
     @endif
 
-    <x-ui.filter-layout :filters="$facetPanel" form="list-form">
+    <x-ui.filter-layout :filters="$tab === 'standing' ? $facetPanel : $rowsPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
@@ -136,7 +136,7 @@
                 {{-- ⓘ ট্যাব ছাঁকনির চিপ নয়; `highlight` আসে খতিয়ান থেকে নামার লিংকে --}}
                 :quiet="['tab', 'highlight']"
                 {{-- ⓘ সীমা মাসের হিসাব, তাই "কে কোথায়" পর্দা মাসের — মাসটা প্যানেলে --}}
-                :facets="$tab === 'standing' ? $facetPanel : null">
+                :facets="$tab === 'standing' ? $facetPanel : $rowsPanel">
 
                 <x-slot:actions>
                     @can('finance.withdrawal.create')

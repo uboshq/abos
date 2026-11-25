@@ -76,13 +76,22 @@ class WithdrawalController extends Controller implements HasMiddleware
             is_string($month) && $month !== '' ? $month.'-01' : null,
         );
 
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('core.table.date'), 'trx_date'),
+            \App\Core\ListFilter\Columns::is('person', __('finance::field.who'), 'person_id', \App\Modules\MasterData\Models\Person::query()
+                ->whereIn('id', Withdrawal::query()->select('person_id'))->get()->mapWithKeys(fn ($p) => [$p->id => $p->name()])->all()),
+        ]);
+
         return view('finance::withdrawal.index', [
+            'rowsPanel' => \App\Core\ListFilter\Panel::of($filters, fn () => Withdrawal::query()->inViewedBranch(), $request),
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
             'month' => is_string($month) && $month !== '' ? $month : now()->format('Y-m'),
             'standing' => $standing,
             // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]]); পাতা ভাঙার আগে, কারণ paginate() কোয়েরিতে সীমা বসায়
             'grand' => $this->grandTotals($list = Withdrawal::query()->inViewedBranch()->with(['moneyAccount', 'voucher', 'person'])
+                ->tap(fn ($q) => $filters->apply($q, $request))
                 ->when($term !== '', fn ($q) => $q->where(
                     fn ($w) => $w->where('document_no', 'like', "%{$term}%")
                         ->orWhere('reason', 'like', "%{$term}%")
