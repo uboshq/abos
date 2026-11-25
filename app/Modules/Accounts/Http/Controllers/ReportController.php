@@ -194,6 +194,34 @@ class ReportController extends Controller implements HasMiddleware
     ];
 
     /**
+     * ⭐ লাভ-ক্ষতি ABOS-এর তিন রূপে দুই ট্যাবে — "বিবরণী" (IAS 1, কাগজের অনুমোদিত ছক) আর "খাত ধরে" (আগের ডেবিট-ক্রেডিটের তালিকা); অডিট,
+     *   ২৫ নভেম্বর ২০২৬। ⓘ খোঁজা, তুলনা বা "Top" চাইলে তালিকাই — ওগুলো সারির কাজ। ⛔ অন্য রূপে কিছু বদলায় না।
+     *
+     * @return array<string, mixed>
+     */
+    private function profitLossForm(Request $request, string $key, \App\Core\Engines\Report\ReportResult $result): array
+    {
+        if ($key !== 'accounts.profit_loss' || ! \App\Core\Support\AbosHead::on($request->user())) {
+            return [];
+        }
+
+        $list = $request->query('form') === 'accounts' || $request->filled('q') || $request->filled('compare') || $request->filled('top');
+        $carry = $request->except(['page', 'q', 'top', 'compare', 'export', 'print', 'hide', 'sort', 'dir', 'form']);
+        $tabs = [
+            ['key' => 'statement', 'label' => (string) __('accounts::fs.pl.tab_statement'), 'url' => $request->url().($carry === [] ? '' : '?'.http_build_query($carry)), 'active' => ! $list],
+            ['key' => 'accounts', 'label' => (string) __('accounts::fs.pl.tab_accounts'), 'url' => $request->url().'?'.http_build_query([...$carry, 'form' => 'accounts']), 'active' => $list],
+        ];
+
+        return ['reportTabs' => $tabs] + ($list ? [] : [
+            'pl' => app(\App\Modules\Accounts\Services\FinancialStatements::class)->profitOrLoss(
+                (string) $result->filters['from'], (string) $result->filters['to'],
+                ($result->filters['branch_id'] ?? null) === null ? null : (int) $result->filters['branch_id'],
+            ),
+            'statementTable' => 'accounts::report.partials.profit-loss',
+        ]);
+    }
+
+    /**
      * টাকা আসার পাতায় ট্যাব — অন্য রিপোর্টে কিছুই নয়। ⓘ ঠিকানায় সময় আর ছাঁকনি থেকে যায়; পাতা, খোঁজা আর "Top" নয়।
      *
      * @return array{reportTabs?: list<array{key: string, label: string, url: string, active: bool}>}
@@ -391,6 +419,6 @@ class ReportController extends Controller implements HasMiddleware
             // ⭐ রেওয়ামিল বিবরণী আকারে — দল, উপমোট, অবস্থার সারি; একই ইঞ্জিনের সারি থেকে (মালিক, ১৭ নভেম্বর ২০২৬)
             'statement' => app(TrialBalanceStatement::class)->build($request->only($definition->requestKeys())),
             'statementTable' => 'accounts::report.partials.trial-balance',
-        ] : []));
+        ] : []) + $this->profitLossForm($request, $key, $result));
     }
 }

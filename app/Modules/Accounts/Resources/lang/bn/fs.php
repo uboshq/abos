@@ -169,6 +169,8 @@ return [
         'tax_expense' => 'এ সময়ের আয়কর খরচ — :account',
     ],
     'pl' => [
+        'tab_statement' => 'বিবরণী',
+        'tab_accounts' => 'খাত ধরে',
         'title' => 'লাভ-ক্ষতি ও অন্যান্য সমন্বিত আয়ের বিবরণী',
         'title_en' => 'STATEMENT OF PROFIT OR LOSS',
         'period' => 'সময়কাল',

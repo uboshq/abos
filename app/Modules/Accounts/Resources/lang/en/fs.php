@@ -167,6 +167,8 @@ return [
         'tax_expense' => 'Income tax expense for the period — :account',
     ],
     'pl' => [
+        'tab_statement' => 'Statement',
+        'tab_accounts' => 'By account',
         'title' => 'Statement of Profit or Loss and Other Comprehensive Income',
         'title_en' => 'STATEMENT OF PROFIT OR LOSS',
         'period' => 'Period',

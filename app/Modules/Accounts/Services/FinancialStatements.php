@@ -545,7 +545,8 @@ final class FinancialStatements
             }
 
             $account = $names->get($id);
-            $sections[$section][] = $this->line($account === null ? '#'.$id : $account->code.' '.$account->name(), $now, $then);
+            // ⓘ খাতের id — পর্দায় অঙ্কে চাপলে খতিয়ান (অডিট, ২৫ নভেম্বর ২০২৬); কাগজ এটা পড়ে না
+            $sections[$section][] = $this->line($account === null ? '#'.$id : $account->code.' '.$account->name(), $now, $then) + ['account_id' => $id];
         }
 
         $t = fn (string $s) => [
