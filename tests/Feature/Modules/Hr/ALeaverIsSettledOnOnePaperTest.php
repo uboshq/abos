@@ -92,7 +92,7 @@ final class ALeaverIsSettledOnOnePaperTest extends TestCase
         app(PostingEngine::class)->post(sourceType: 'journal_voucher', sourceId: random_int(1, 9_999_999), trxDate: '2026-07-05', lines: [
             ['account_id' => $this->id(StandardChart::EMPLOYEE_ADVANCE), 'debit' => '5000',
                 'party_type' => Employee::drillSourceType(), 'party_id' => $this->employee->id],
-            ['account_id' => $this->id(StandardChart::CASH_IN_HAND), 'credit' => '5000'],
+            ['account_id' => $this->cash(), 'credit' => '5000'],
         ]);
 
         $this->employee->forceFill(['leaving_date' => '2026-07-20'])->save();
@@ -245,6 +245,16 @@ final class ALeaverIsSettledOnOnePaperTest extends TestCase
     private function id(string $code): int
     {
         return (int) Account::query()->where('code', $code)->value('id');
+    }
+
+    /** ⓘ টিল বসলে 1101 দল — টাকা তখন তার নিচের খাতে (ডেমোর বীজ টিল বসায়) */
+    private function cash(): int
+    {
+        $cash = Account::query()->where('code', StandardChart::CASH_IN_HAND)->firstOrFail();
+
+        return $cash->is_group
+            ? (int) Account::query()->where('parent_id', $cash->id)->where('is_group', false)->orderBy('id')->value('id')
+            : (int) $cash->id;
     }
 
     /** ⓘ 2134-এর জের — ক্রেডিট − ডেবিট */
