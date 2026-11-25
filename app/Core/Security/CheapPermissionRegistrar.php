@@ -41,6 +41,14 @@ final class CheapPermissionRegistrar extends PermissionRegistrar
         return $this->built;
     }
 
+    /** এখনকার রোল-অনুমতির ছাপ — তালিকা তোলা থাকলে তারই, নইলে ডাটাবেসের (বোর্ডের মনে রাখা অঙ্কের চাবি; [[DashboardFigureCache]]) */
+    public function mark(): string
+    {
+        return $this->permissions !== null && $this->permissions === $this->built && $this->builtFrom !== null
+            ? $this->builtFrom
+            : $this->fingerprint();
+    }
+
     private function fingerprint(): string
     {
         $of = function (string $table, array $columns): string {

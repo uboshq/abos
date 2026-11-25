@@ -222,8 +222,12 @@ final class DashboardFigureCache
     private function readKeysOf(User $user): string
     {
         try {
-            $permissions = $user->getAllPermissions()->pluck('name')->sort()->values()->all();
-            $roles = $user->getRoleNames()->sort()->values()->all();
+            // ⓘ কোন রোল, কোন সরাসরি চাবি, আর রোলগুলোর চাবির এখনকার ছাপ — আগে প্রতি পাতায় সব চাবির নাম তুলে সাজানো হত (২৫ নভেম্বর ২০২৬)
+            $registrar = app(\Spatie\Permission\PermissionRegistrar::class);
+            $permissions = $registrar instanceof \App\Core\Security\CheapPermissionRegistrar
+                ? [$registrar->mark(), $user->permissions->pluck('id')->sort()->values()->all()]
+                : $user->getAllPermissions()->pluck('name')->sort()->values()->all();
+            $roles = $user->roles->pluck('id')->sort()->values()->all();
         } catch (Throwable) {
             $permissions = $roles = ['?'.microtime()];
         }
