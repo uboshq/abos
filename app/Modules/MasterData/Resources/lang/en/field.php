@@ -40,6 +40,7 @@ return [
     'party_type' => 'Party type',
     'is_default' => 'Default',
     'state' => 'Status',
+    'branch' => 'Branch',
     'path' => 'Path',
     'prefix' => 'Prefix',
     'suffix' => 'Suffix',

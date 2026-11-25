@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'level_not_set' => 'বসানো নেই',
+    'every_branch' => 'সব শাখা',
     'none_yet' => 'এখনো কিছু নেই।',
     'created' => 'যোগ হয়েছে।',
     'updated' => 'তথ্য বদলেছে।',

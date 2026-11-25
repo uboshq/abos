@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 return [
+    'level_not_set' => 'Not set',
+    'every_branch' => 'All branches',
     'none_yet' => 'Nothing here yet.',
     'created' => 'Added.',
     'updated' => 'Updated.',

@@ -174,14 +174,22 @@ class LocationController extends Controller implements HasMiddleware
              * korlei List theke Hariye zacche keno?"*। ⓘ অবস্থা দেখায় নতুন
              * কলাম; সক্রিয়গুলো আগে, তারপর নিষ্ক্রিয়।
              */
-            ->when(filled($q), fn ($b) => $b->search($q))
+            ->when(filled($q), fn ($b) => $b->search($q));
 
+        // ⭐ ছাঁকনি — উপরের প্রতিটা স্তর আর অবস্থা, পাশে সংখ্যা (মালিকের নমুনা, ২৫ নভেম্বর ২০২৬)
+        $map = new \App\Modules\MasterData\Support\LocationMap;
+        $filters = $map->filters($level, $ladder);
+        $whole = clone $rows;
+        $base = fn () => clone $whole;
+        $filters->apply($rows, $request);
+
+        $rows = $rows
             /*
              * ⚠️ `path()`-এর শিকলটা আগে থেকে তোলা — [[parentOptions()]]-এর
              * মন্তব্য দেখুন। ⛔ না তুললে এই পাতাও ঠিক পয়েন্ট আর রুটেই
              * ৫০০ দিত, যেখানে তালিকাটা সবচেয়ে দরকারি।
              */
-            ->with([...Location::drillRelations(), 'assignee'])
+            ->with([...Location::drillRelations(), 'assignee', 'branch'])
 
             ->orderByDesc('is_active')
             ->orderBy('code')
@@ -203,6 +211,9 @@ class LocationController extends Controller implements HasMiddleware
             'counts' => $counts,
             'level' => $level,
             'rows' => $rows,
+            'map' => $map,
+            'upper' => \App\Modules\MasterData\Support\LocationMap::upper($level, $ladder),
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'responsible' => $this->responsibleAt($rows->getCollection()->pluck('id')->all()),
             'parentLevel' => $parentLevel,
             /*

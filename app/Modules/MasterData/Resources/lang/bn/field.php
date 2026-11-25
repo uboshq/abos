@@ -54,6 +54,7 @@ return [
     'party_type' => 'পক্ষের ধরন',
     'is_default' => 'ডিফল্ট',
     'state' => 'অবস্থা',
+    'branch' => 'শাখা',
     'path' => 'পথ',
     'prefix' => 'উপসর্গ',
     'suffix' => 'অনুসর্গ',

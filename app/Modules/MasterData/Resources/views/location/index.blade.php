@@ -11,10 +11,26 @@
     $columns = [
                 ['key' => 'code', 'label' => __('master_data::field.code'), 'width' => '9rem',
                  'render' => fn ($l) => view('master_data::location.partials.code', ['location' => $l])],
-                ['key' => 'name_en', 'label' => __('master_data::field.path'),
-                 'render' => fn ($l) => $l->path()],
-                ['key' => 'level', 'label' => __('master_data::field.level'), 'width' => '9rem',
-                 'render' => fn ($l) => __('master_data::level.' . $l->level)],
+                // ⭐ স্তরের তালিকায় "পথ" নয় — নিজের নাম, আর উপরের প্রতিটা স্তর নিজের কলামে (মালিকের নমুনা, ২৫ নভেম্বর ২০২৬)
+                ...($level === null ? [
+                    ['key' => 'name_en', 'label' => __('master_data::field.path'),
+                     'render' => fn ($l) => $l->path()],
+                    ['key' => 'level', 'label' => __('master_data::field.level'), 'width' => '9rem',
+                     'render' => fn ($l) => __('master_data::level.' . $l->level)],
+                ] : [
+                    ['key' => 'name_en', 'label' => __('master_data::level.'.$level),
+                     'render' => fn ($l) => new \Illuminate\Support\HtmlString('<span class="font-medium">'.e($l->name()).'</span>')],
+                    ...array_map(fn (string $up) => ['key' => 'up_'.$up, 'label' => __('master_data::level.'.$up),
+                        'render' => fn ($l) => $map->name($map->above((int) $l->id, $up)) ?: '—'], $upper),
+                    // ⭐ শাখা — মালিক, ২৫ নভেম্বর ২০২৬
+                    ['key' => 'branch', 'label' => __('master_data::field.branch'), 'render' => fn ($l) => $l->branch?->name() ?? __('master_data::message.every_branch')],
+                    ...(in_array($level, [\App\Modules\MasterData\Models\Location::POINT, \App\Modules\MasterData\Models\Location::ROUTE, \App\Modules\MasterData\Models\Location::COUNTRY], true) ? [] : [
+                        // ⓘ কয়টা পয়েন্ট — চাপলে পয়েন্টের তালিকা, এই জায়গায় ছাঁকা
+                        ['key' => 'points', 'label' => __('master_data::level.point'), 'numeric' => true, 'width' => '7rem',
+                         'render' => fn ($l) => ($n = $map->points((int) $l->id)) === 0 ? '0' : new \Illuminate\Support\HtmlString(
+                             '<a class="text-(--color-link)" href="'.e(route('master_data.location.level', ['level' => 'point', $l->level => [$l->id]])).'">'.$n.'</a>')],
+                    ]),
+                ]),
                 ['key' => 'assigned_to', 'label' => __('master_data::field.assigned_to'), 'width' => '11rem',
                  'render' => fn ($l) => $l->assignee?->name ?? '—'],
                 // ⭐ বিক্রয়ের দায়িত্ব — আজ চালু এলাকা-বাঁধন, এক কোয়েরিতে আনা (মালিক, ২৩ নভেম্বর ২০২৬)
@@ -29,7 +45,7 @@
             ];
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের ঘরগুলো, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
-    $facetPanel = \App\Core\ListFilter\Facets::panel([
+    $facetPanel = $level !== null ? $filters : \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::flag('inactive', __('master_data::action.show_inactive')),
     ]);
 @endphp
