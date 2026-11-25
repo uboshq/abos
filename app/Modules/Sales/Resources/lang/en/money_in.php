@@ -61,6 +61,7 @@ return [
     'reason_cancelled' => 'Cancelled or reversed receipt',
     'reason_transfer' => 'From one money account to another',
 
+    'territory_total' => ':territory — territory subtotal (:customers customers · :share%)',
     'drill_receipts' => ':amount — open these receipts',
     'drill_down' => ':amount — open one level down',
     'drill_papers' => ':amount — open these papers',

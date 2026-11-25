@@ -189,7 +189,9 @@ final class ReportEngine
 
         if ($byBranch) {
             foreach ($this->branchPlan($report, $filters, $top, $comparison) as $part) {
-                $section = $this->section($report, $part['filters'], $part['id'], $part['name'], $perPage, $part['total_label'] ?? null);
+                $section = $this->section($report, $part['filters'], $part['id'], $part['name'], $perPage, $part['total_label'] ?? null,
+                    // ⓘ ভাগ চাইলে সারির "অবদান %" সর্বমোটের, ভাগের নয় (টাকা আসা, ২৫ নভেম্বর ২০২৬)
+                    ($part['of_total'] ?? false) ? $totals : null);
 
                 if ($section->rowCount > 0) {
                     $sections[] = $section;
@@ -258,7 +260,7 @@ final class ReportEngine
     }
 
     /** @param  array<string, mixed>  $filters */
-    private function section(ReportDefinition $report, array $filters, ?int $id, string $name, int $perPage, ?string $totalLabel = null): BranchSection
+    private function section(ReportDefinition $report, array $filters, ?int $id, string $name, int $perPage, ?string $totalLabel = null, ?array $shareOf = null): BranchSection
     {
         $query = $this->applySearch($report, $this->queryFor($report, $filters), $filters['q'] ?? null);
 
@@ -269,7 +271,7 @@ final class ReportEngine
             ->map(fn ($row) => array_diff_key((array) $row, [self::SEARCH_ORDER => true])));
 
         if ($report->rankBy !== null) {
-            $rows = $this->addContribution($report, $rows, $totals);
+            $rows = $this->addContribution($report, $rows, $shareOf ?? $totals);
         }
 
         return new BranchSection($id, $name, $rows->values()->all(), $totals, $count, $totalLabel);

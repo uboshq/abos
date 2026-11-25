@@ -126,6 +126,8 @@ final class MoneyInReports
                 .ResponsibleSql::person($company, 'cu.id', 'mo.trx_date').' as person_id');
 
         return DB::query()->fromSub($inner, 'm')
+            // ⓘ টেরিটরির ভাগ ([[territories()]]) — ০ মানে টেরিটরি বসানো নেই
+            ->when(isset($f['territory']), fn (Builder $q) => $f['territory'] === 0 ? $q->whereNull('m.territory_id') : $q->where('m.territory_id', $f['territory']))
             ->when(! empty($f['salesman_id']), fn (Builder $q) => $q->where('m.person_id', (int) $f['salesman_id']))
             // ⓘ দলের ভাগ ([[SalespersonReports::teamsFor()]]) — এই জনেরা, বা এঁরা বাদে আর জন বসানো নেই এমন
             ->when(isset($f['team_ids']), fn (Builder $q) => $q->whereIn('m.person_id', $f['team_ids'] === [] ? [0] : $f['team_ids']))
@@ -299,21 +301,65 @@ final class MoneyInReports
                     Location::AREA => null,
                     Location::TERRITORY => $q->groupBy('m.territory_id', 'm.territory'),
                     Location::POINT => $q->groupBy('m.point_id', 'm.point', 'm.territory'),
-                    default => $q->groupBy('m.customer_id', 'm.customer', 'm.point'),
+                    default => $q->groupBy('m.customer_id', 'm.customer', 'm.point', 'm.territory'),
                 };
 
                 // ⓘ টেরিটরি বসানো নেই এমন সারিতে চাপলে তার এরিয়ার পয়েন্টগুলো — নিচে নামার জায়গা এরিয়াই
                 $drill = $level === Location::TERRITORY ? 'COALESCE(m.territory_id, m.area_id)' : $id;
 
                 return $q->selectRaw("{$drill} as place_id, COALESCE({$name}, ".$pdo->quote((string) __('sales::money_in.'.$none)).') as place, '
-                    ."{$parent} as parent, ".self::sums())
+                    ."{$parent} as parent, ".($level === SalesPlace::CUSTOMER ? 'COALESCE(m.territory, '.$pdo->quote((string) __('sales::money_in.no_territory')).') as territory, ' : '').self::sums())
                     ->orderByRaw('SUM(m.amount) DESC')->orderByRaw("{$id}");
             },
             [
                 ['key' => 'place', 'label' => 'sales::money_in.level_'.$level],
                 ...($level === Location::AREA ? [] : [['key' => 'parent', 'label' => 'sales::money_in.parent_'.$level]]),
+                // ⭐ গ্রাহক ধরে: টেরিটরির কলাম, আর তার সাব টোটাল ([[territories()]]; মালিক, ২৫ নভেম্বর ২০২৬)
+                ...($level === SalesPlace::CUSTOMER ? [['key' => 'territory', 'label' => 'sales::money_in.level_territory', 'width' => '11rem']] : []),
                 ...self::figures($row, $below === null ? null : ['slug' => self::levelSlug($below), 'params' => $row]),
-            ], 'place_id', chart: self::totalChart('place'));
+            ], 'place_id', $level === SalesPlace::CUSTOMER ? fn (array $f): array => self::territories($f) : null, self::totalChart('place'));
+    }
+
+    /**
+     * ⭐ টেরিটরি ধরে ভাগ, প্রতিটার শেষে সাব টোটাল (মালিকের নমুনা, ২৫ নভেম্বর ২০২৬) — বেশি টাকার টেরিটরি আগে, "বসানো নেই" শেষে।
+     * ⓘ একটাই ভাগ হলে ভাগ নয় — সাব টোটাল তখন সর্বমোটের হুবহু একই অঙ্ক, আর তালিকা পাতা ধরে চলে।
+     *
+     * @param  array<string, mixed>  $f
+     * @return list<array{id: ?int, name: string, filters: array<string, mixed>, total_label: string, of_total: bool}>
+     */
+    private static function territories(array $f): array
+    {
+        $groups = self::rows($f)
+            ->leftJoin('branches as b', 'b.id', '=', 'm.area_branch_id')
+            ->groupBy('m.territory_id', 'm.territory', 'b.name_bn', 'b.name_en')
+            ->selectRaw('m.territory_id, m.territory, b.name_bn, b.name_en, COUNT(DISTINCT m.customer_id) as customers, SUM(m.amount) as total')
+            ->orderByRaw('m.territory_id IS NULL')->orderByRaw('SUM(m.amount) DESC')->get();
+
+        if ($groups->count() < 2) {
+            return [];
+        }
+
+        $sum = $groups->reduce(fn (string $s, object $g) => bcadd($s, (string) $g->total, 4), '0');
+        $branches = $groups->pluck('name_en')->filter()->unique()->count();
+        $bn = app()->getLocale() === 'bn';
+        $plan = [];
+
+        foreach ($groups as $g) {
+            $name = $g->territory === null ? (string) __('sales::money_in.no_territory') : (string) $g->territory;
+            // ⓘ একাধিক শাখা দেখালে কোন শাখার টেরিটরি — একই নাম চার শাখায় আছে
+            $named = $branches > 1 && $g->name_en !== null ? (($bn && filled($g->name_bn) ? $g->name_bn : $g->name_en).' › '.$name) : $name;
+            $share = bccomp($sum, '0', 4) > 0 ? bcdiv(bcmul((string) $g->total, '100', 6), $sum, 2) : '0.00';
+
+            $plan[] = [
+                'id' => $g->territory_id === null ? null : (int) $g->territory_id,
+                'name' => $named,
+                'filters' => [...$f, 'territory' => (int) ($g->territory_id ?? 0)],
+                'total_label' => (string) __('sales::money_in.territory_total', ['territory' => $named, 'customers' => $g->customers, 'share' => $share]),
+                'of_total' => true,
+            ];
+        }
+
+        return $plan;
     }
 
     private static function byPerson(): ReportDefinition
