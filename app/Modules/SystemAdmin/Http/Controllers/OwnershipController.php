@@ -126,7 +126,8 @@ class OwnershipController extends Controller implements HasMiddleware
         $companyId = $this->mustBeTheOwner($request);
 
         $data = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
+            // ⓘ `exists:users` নয় — পাসওয়ার্ডের আগেই বলে দিত অন্য কোম্পানির কার নম্বর সত্যি; খোঁজা নিচে, কোম্পানি ধরে
+            'user_id' => ['required', 'integer'],
             'password' => ['required', 'string'],
         ]);
 

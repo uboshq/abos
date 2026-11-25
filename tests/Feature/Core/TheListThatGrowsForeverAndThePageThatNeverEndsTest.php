@@ -135,6 +135,7 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
      * @var array<string, string> কন্ট্রোলার => 'সেবা::পদ্ধতি'
      */
     private const PAGED_ELSEWHERE = [
+        'App\Modules\Sales\Http\Controllers\ProductTargetController' => 'App\Modules\Sales\Services\ProductTargetService::board',
         'App\Modules\Finance\Http\Controllers\BankChargeController' => 'App\Modules\Finance\Services\BankCharges::rows',
         'App\Modules\Finance\Http\Controllers\BudgetController' => 'App\Modules\Finance\Services\BudgetService::plan',
         'App\Modules\Sales\Http\Controllers\PortalDeliveryOrderController' => 'App\Modules\Sales\Services\CustomerPapers::deliveryOrders',

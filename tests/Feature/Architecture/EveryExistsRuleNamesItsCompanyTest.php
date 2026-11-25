@@ -37,11 +37,7 @@ class EveryExistsRuleNamesItsCompanyTest extends TestCase
      * ⚠️ সংখ্যাটা কেবল কমে। নতুন একটা যোগ হলে, বা সারানোর পরে সংখ্যা না কমালে, দাবি লাল।
      * ⓘ চূড়ান্ত অডিটের পরের ধাপ — Accounts আগে (টাকার ফর্ম), বাকিগুলো একে একে।
      */
-    private const NOT_YET = [
-        'app/Modules/Inventory/Http/Controllers/StorageLocationController.php' => 1,
-        'app/Modules/Promotion/Http/Controllers/PromotionSuggestController.php' => 1,
-        'app/Modules/SystemAdmin/Http/Controllers/OwnershipController.php' => 1,
-    ];
+    private const NOT_YET = [];
 
     public function test_no_exists_rule_takes_an_id_from_another_company(): void
     {

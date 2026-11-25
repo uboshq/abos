@@ -617,7 +617,7 @@ return [
             'label' => 'purchase::cost_report.setting_threshold',
             'type' => 'number',
             'default' => 3,
-            'group' => 'screens',
+            'group' => 'limits',
         ],
         /*
          * ⭐ কোন কাগজে ছাপা হবে — মালিকের সিদ্ধান্ত, যন্ত্রের নয়।
