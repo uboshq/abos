@@ -62,7 +62,7 @@ class WhyHiddenController extends Controller implements HasMiddleware
         $branch = $branches->firstWhere('id', (int) $request->query('branch'));
         $screen = is_string($request->query('screen')) ? $request->query('screen') : '';
         $steps = $person !== null && $branch !== null && isset($items[$screen])
-            ? $this->steps(User::query()->findOrFail($person->id), $branch, $companyId, ...$items[$screen]) : [];
+            ? $this->steps(User::query()->whereHas('companies', fn ($q) => $q->whereKey($companyId))->findOrFail($person->id), $branch, $companyId, ...$items[$screen]) : [];
 
         return view('system_admin::module-board.why', [
             'menu' => $this->menu->forUser($request->user()),
