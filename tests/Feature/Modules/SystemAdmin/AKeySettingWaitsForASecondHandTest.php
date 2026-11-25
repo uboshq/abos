@@ -108,7 +108,7 @@ final class AKeySettingWaitsForASecondHandTest extends TestCase
         app(SettingsService::class)->set(self::KEY, (string) ((int) $wanted + 1));
         $history = (string) $this->get(route('system_admin.control-panel'))->assertOk()->getContent();
         $this->assertSame(1, substr_count($history, 'data-owner-self-mark'), '⛔ দাগ ভুল সারিতে, বা একাধিক সারিতে।');
-        $first = \Illuminate\Support\Str::between($history, 'data-control-history', '</li>');
+        $first = \Illuminate\Support\Str::betweenFirst($history, 'data-control-history', '</li>');
         $this->assertStringNotContainsString('data-owner-self-mark', $first, '⛔ পরের সাধারণ বদলে দাগ।');
 
         $rows = $this->reportRows();

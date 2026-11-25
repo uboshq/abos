@@ -257,6 +257,8 @@ class ControlPanelController extends Controller implements HasMiddleware
                 'when' => $trail->created_at,
                 'who' => $trail->user?->name,
                 'label' => $label !== '' ? $label : '—',
+                // ⓘ "চালু/বন্ধ" কেবল টিকের সেটিংয়ে; সংখ্যার 0 মানে 0 (অডিট, ২৫ নভেম্বর ২০২৬)
+                'tick' => ($definitions[$key]['type'] ?? null) === 'boolean',
                 'from' => $value?->old_value,
                 'to' => $value?->new_value,
                 'self' => in_array((int) $trail->id, $own, true),
