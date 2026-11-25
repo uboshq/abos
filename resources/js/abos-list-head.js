@@ -388,8 +388,10 @@ export function compactPageHead (root = document) {
     }
 
     // ২) পাতার নিজের ছাঁকনি: একটা GET ফর্ম, টেবিলের আগে; কেবল একটা খোঁজার ঘর হলে নয় (খোঁজা চোখের সামনেই থাকে)
-    const form = [...main.querySelectorAll('form')].find(f => (f.getAttribute('method') || 'get').toLowerCase() === 'get'
-        && outside(f) && before(head, f) && before(f, firstTable) && visibleFields(f).length >= 1
+    // ⛔ নিচে তালিকা বা বাক্স না থাকলে ফর্মটাই পাতার কাজ (ভাই-কোম্পানি বাছা, লেবেল, লট খোঁজা, দুই রোল) — ভাঁজ করলে পাতা ফাঁকা দেখাত; আর
+    //   "এক পাতায় কয়টা" ছাঁকনি নয়, তালিকার নিচেই থাকে (অডিট, ২৫ নভেম্বর ২০২৬)
+    const form = firstTable === null ? undefined : [...main.querySelectorAll('form')].find(f => (f.getAttribute('method') || 'get').toLowerCase() === 'get'
+        && ! f.closest('[data-pager]') && ! f.contains(firstTable) && ! (visibleFields(f).length === 1 && visibleFields(f)[0].name === 'per_page') && outside(f) && before(head, f) && before(f, firstTable) && visibleFields(f).length >= 1
         && ! (visibleFields(f).length === 1 && ['q', 'search'].includes(visibleFields(f)[0].name)))
 
     if (form) {

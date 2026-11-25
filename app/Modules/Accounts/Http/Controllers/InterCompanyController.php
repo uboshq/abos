@@ -43,7 +43,17 @@ class InterCompanyController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        $rows = InterCompanyTransfer::query()
+        // ⭐ সব তালিকার একই ছাঁকনি আর কাজের খোঁজা (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $base = fn () => InterCompanyTransfer::query()
+            ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where('narration', 'like', "%{$term}%"));
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('accounts::field.date'), 'trx_date'),
+            \App\Core\ListFilter\Columns::is('counter', __('accounts::field.inter_company_counter'), 'counter_company_id', \App\Models\Company::query()
+                ->whereIn('id', InterCompanyTransfer::query()->select('counter_company_id'))->get()->mapWithKeys(fn ($c) => [$c->id => $c->name()])->all()),
+        ]);
+        $rows = $base();
+        $filters->apply($rows, $request);
+        $rows = $rows
             ->with(['counterCompany', 'creator'])
             ->latest('trx_date')
             ->latest('id')
@@ -53,6 +63,7 @@ class InterCompanyController extends Controller implements HasMiddleware
         return view('accounts::inter-company.index', [
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $rows,
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
 
             /*
              * ⭐ প্রতিটা সারি কী ধরনের ছিল — গোটা পাতার জন্য **একটাই**

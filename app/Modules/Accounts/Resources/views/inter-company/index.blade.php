@@ -80,21 +80,25 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('accounts::menu.inter_company') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('accounts::menu.inter_company')"
-                          :subtitle="__('accounts::message.inter_company_only_given')">
-            <x-slot:actions>
-                <x-ui.button :href="route('accounts.inter_company.create')" icon="plus">
-                    {{ __('accounts::menu.inter_company_new') }}
-                </x-ui.button>
-            </x-slot:actions>
-        </x-ui.page-header>
-    </x-slot:header>
+    <x-ui.filter-layout :filters="$filters" form="list-form">
+    <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :title="__('accounts::menu.inter_company')" :subtitle="__('accounts::message.inter_company_only_given')"
+                          :facets="$filters" :columns="$columns">
+                <x-slot:actions>
+                    <x-ui.button tone="primary" :href="route('accounts.inter_company.create')" icon="plus">
+                        {{ __('accounts::menu.inter_company_new') }}
+                    </x-ui.button>
+                </x-slot:actions>
+            </x-ui.toolbar>
+        </form>
 
-    <x-ui.table :rows="$rows"
-                :columns="$columns"
-                :empty="__('accounts::message.inter_company_none')" />
+        <x-ui.table :rows="$rows"
+                    :columns="$columns"
+                    :empty="__('accounts::message.inter_company_none')" />
 
-    <x-ui.pager :rows="$rows" />
-    <x-ui.list-totals :rows="$rows" />
+        <x-ui.pager :rows="$rows" />
+        <x-ui.list-totals :rows="$rows" />
+    </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
