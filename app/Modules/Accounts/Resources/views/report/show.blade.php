@@ -239,7 +239,7 @@
             {{-- ⭐ ছাপা গোটা পরিসর — পর্দায় এক পাতার বেশি সারি থাকলে "ছাপুন" `?print=1`-এ যায়, যেখানে ইঞ্জিন সব সারি আঁকে
                  আর পাতাটা নিজেই ছাপা শুরু করে (মালিক, ৩ অক্টোবর ২০২৬: কাস্টমার লেজার পাতা ধরে ধরে ছাপতে হত;
                  [[ReportEngine::wholeDocumentWanted()]])। ⓘ পুরো পরিসর এক পাতায় থাকলে আগের মতো পর্দাটাই ছাপে। --}}
-            <x-ui.toolbar :title="__($report->title)" :report="true" :count="isset($pl) ? null : trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows]).($period !== null && ! ($abosHead && ! $report->isAsOfDate()) ? ' · '.$period : '')"
+            <x-ui.toolbar :title="__($report->title)" :report="true" :count="isset($pl) ? null : trans_choice('accounts::message.row_count', $result->totalRows, ['count' => $result->totalRows]).($period !== null && ! ($abosHead && ($panel['date']['text'] ?? null) === $period) ? ' · '.$period : '')"
                           :search="$report->searchableColumns() !== []"
                           :print-href="\App\Modules\Accounts\Reports\PartyLedgerReports::statementHref($report->key, $result->filters)"
                           :print-view="true"

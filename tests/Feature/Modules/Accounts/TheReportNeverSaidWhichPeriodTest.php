@@ -36,7 +36,10 @@ final class TheReportNeverSaidWhichPeriodTest extends TestCase
             $html = $this->get($url)->assertOk()->getContent();
             $this->assertSame(1, preg_match('/data-record-count[^>]*>([^<]*)</u', $html, $m), 'দৃশ্যটাই বানানো যায়নি — সারির সংখ্যার ঘর নেই: '.$url);
 
-            return html_entity_decode(trim($m[1]));
+            // ⓘ বেছে দেওয়া তারিখ ABOS রূপে তারিখের ঘরেই লেখা — একই কথা দুবার নয় (২৫ নভেম্বর ২০২৬); "এই মাস"-এর মতো নামে লেখা থাকলে সংখ্যার পাশে
+            $chip = preg_match('/data-date-bar-text>([^<]*)</u', $html, $d) === 1 ? $d[1] : '';
+
+            return html_entity_decode(trim($m[1]).' '.$chip);
         };
         $day = fn (string $d) => DateFormat::format($d);
 
