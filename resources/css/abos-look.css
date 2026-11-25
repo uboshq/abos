@@ -723,7 +723,7 @@
 }
 
 :root[data-ui='rose'] .toolbar-view:has([data-head-tabs]) [data-record-count] {
-    max-width: 260px;
+    max-width: 380px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1327,3 +1327,6 @@ html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .is-d
 html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .is-now { border-top-color: var(--color-brand-500); }
 html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .is-bad { border-top-color: var(--color-danger); }
 html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .stage .text-\(--color-ink-muted\) { color: var(--color-ink-muted); opacity: 1; }
+
+/* ⓘ সরু বাক্সের বারেও এক সারি — খোঁজার ঘর আগে ছোট হয় */
+html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .toolbar-view label:has(> input[type='search']) { min-width: 7rem; }

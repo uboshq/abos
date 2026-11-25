@@ -416,6 +416,8 @@
     }
 
     .table-responsive {
+        /* ⓘ ধারক — ভেতরের পর্দা-পাঠকের লেখা (absolute) যেন পাতা চওড়া না করে (ক্রয় বিলের সম্পাদনা, অডিট ২৫ নভেম্বর ২০২৬) */
+        position: relative;
         width: 100%;
         overflow-x: auto;
     }
@@ -2879,7 +2881,7 @@ a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; te
 }
 
 :root:is([data-ui='navy'], [data-ui='blue']) .toolbar-view:has([data-head-tabs]) [data-record-count] {
-    max-width: 260px;
+    max-width: 380px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

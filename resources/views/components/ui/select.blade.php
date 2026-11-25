@@ -60,7 +60,8 @@
     প্রতিটা নতুন মডেলের জন্য এখানে একটা শর্ত জুড়ত।
 --}}
 @php
-    $fid = $id ?? $name;
+    // ⓘ এক পাতায় একই নামের দুই ঘর হলে দ্বিতীয়টার id আলাদা — নাহলে লেবেল প্রথমটাকেই ধরত ([[FieldId]])
+    $fid = $id ?? \App\Core\Support\FieldId::of((string) $name);
     $key = $errorKey ?? $name;
     $hasError = $errors->has($key);
     $describedBy = collect([

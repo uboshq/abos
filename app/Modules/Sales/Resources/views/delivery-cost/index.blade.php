@@ -96,7 +96,8 @@
             @endforeach
         </div>
 
-        <div class="grid items-start gap-3 xl:grid-cols-[minmax(0,2.3fr)_minmax(18rem,1fr)]">
+        {{-- ⓘ চার্টের কিছু না থাকলে তালিকা পুরো চওড়া — ডানে ফাঁকা ঘর নয় --}}
+        <div @class(['grid items-start gap-3', 'xl:grid-cols-[minmax(0,2.3fr)_minmax(18rem,1fr)]' => $chart['bars'] !== []])>
             <div data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                 <form id="list-form" method="GET" class="contents" data-report>
                     <input type="hidden" name="by" value="{{ $by }}">

@@ -29,7 +29,12 @@ function actsColumn (table) {
 }
 
 function worthFolding (cell) {
-    if (! cell || cell.querySelector('[x-data="rowActions"], [role=menu], [role=dialog], [data-folded-acts], svg[data-chart], [data-keep-acts]')) {
+    // ⓘ সারিতেই লেখার ঘর থাকলে (নম্বর সিরিজ) "সংরক্ষণ" তার পাশেই থাকে
+    if (! cell || [...cell.parentElement.cells].some((c) => c !== cell && c.querySelector('input:not([type=hidden]):not([type=checkbox]), select, textarea'))) {
+        return false
+    }
+
+    if ( cell.querySelector('[x-data="rowActions"], [role=menu], [role=dialog], [data-folded-acts], svg[data-chart], [data-keep-acts]')) {
         return false
     }
 
