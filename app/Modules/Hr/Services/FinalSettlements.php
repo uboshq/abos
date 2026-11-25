@@ -42,7 +42,7 @@ use Illuminate\Validation\ValidationException;
  *
  * ── ⭐ খাতায় — কেবল শেষ অনুমোদনে ([[finishSigned()]]) ──────────────────────
  *   Dr 5201 বেতন খরচ (মজুরি + ছুটির টাকা) · Dr 2134 গ্র্যাচুইটির দায় · Dr 2131 ভবিষ্য তহবিল
- *   Cr 1131 কর্মীর অগ্রিম (কর্মীর নামে) · Cr 2130 প্রদেয় বেতন (কর্মীর নামে) — নিট, পরে সাধারণ পরিশোধের ভাউচারে যায়
+ *   Cr 1131 কর্মীর অগ্রিম (কর্মীর নামে) · Cr 2130 প্রদেয় বেতন (নাম বিবরণে) — নিট, পরে সাধারণ পরিশোধের ভাউচারে যায়
  * ⓘ গ্র্যাচুইটির মাসের সঞ্চিতি এই কাগজে মেটানো অঙ্ক বাদ দিয়ে মেলায় ([[Gratuity::accrue()]]) — নাহলে একই দায় দুইবার ছাড়া হত।
  */
 final class FinalSettlements
@@ -322,9 +322,10 @@ final class FinalSettlements
         foreach ([
             [StandardChart::SALARY_EXPENSE, $pay, 'debit', []],
             [StandardChart::GRATUITY_LIABILITY, (string) $settlement->gratuity, 'debit', []],
-            [StandardChart::PROVIDENT_FUND_PAYABLE, (string) $settlement->provident_fund, 'debit', $party],
+            // ⓘ প্রদেয় বেতন আর তহবিল পুঞ্জ খাত, কর্মীর নাম রাখে না (বেতনের রানের মতোই) — নাম বিবরণে; আগে নাম বসাতে গিয়ে পুরো কাগজ পোস্টই হতো না
+            [StandardChart::PROVIDENT_FUND_PAYABLE, (string) $settlement->provident_fund, 'debit', []],
             [StandardChart::EMPLOYEE_ADVANCE, (string) $settlement->advance_recovered, 'credit', $party],
-            [StandardChart::SALARY_PAYABLE, (string) $settlement->net, 'credit', $party],
+            [StandardChart::SALARY_PAYABLE, (string) $settlement->net, 'credit', []],
         ] as [$code, $amount, $side, $extra]) {
             if (bccomp($amount, '0', 2) <= 0) {
                 continue;

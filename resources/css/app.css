@@ -3050,3 +3050,107 @@ a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; te
                    color: var(--color-ink-muted); line-height: 1.1; padding: .1rem .3rem; }
 .ds-seg > button.is-on { background: var(--color-surface-card); color: var(--color-brand-700);
                          box-shadow: inset 0 -2px 0 var(--color-brand-600), 0 1px 2px var(--color-border); }
+
+
+/* টাকার পাতার পট্টি — জাভাস্ক্রিপ্ট ছাড়াও রঙহীন সাদা */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-page-kind] [data-money-hero] {
+    padding-inline: 2px;
+    box-shadow: none;
+    background: transparent;
+    color: var(--color-ink);
+}
+
+/* ⭐ তালিকার ওপরের রঙিন বক্স — তিন ভাগের এক ভাগ উচ্চতা, এক লাইনে। মালিক, ১৯ নভেম্বর ২০২৬ রাত: "প্রতিটা বক্স প্রায় ১১৬ পিক্সেল …
+   তিনটা লাইনে লেখা … এক লাইনে … তিন ভাগের এক ভাগ বক্সটা করা যায় কিনা"। রং (দুই রঙের ঢাল) আগের মতো; বড় আইকন, ভেতরের গোল
+   ছায়া আর মোটা ছায়া নেই। লেখা: নাম · সংখ্যা · নিচের কথা — জায়গা না ধরলে শেষেরটা "…" হয়। */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-cards {
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card {
+    gap: 8px;
+    height: 38px;
+    padding: 0 12px;
+    border-width: 1.5px;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card:hover {
+    transform: none;
+    filter: brightness(1.06);
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card::after {
+    display: none;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card.is-on {
+    border-color: #ffffff;
+    box-shadow: 0 0 0 2px var(--a);
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    font-size: 12px;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card > .min-w-0 {
+    display: flex;
+    flex: 1;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card-label {
+    flex: none;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 1;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card-value {
+    flex: none;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card-sub {
+    min-width: 0;
+    font-size: 12px;
+    opacity: 0.85;
+}
+
+/* ⭐ মাথা সবার আগে — কার্ডের সারি তালিকার বারের নিচে ([[cardsUnderHead]]; মালিক, ২৪ নভেম্বর ২০২৬) */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-filter-layout] > * .list-cards {
+    margin: 8px 12px;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-filter-layout] [data-under-head] {
+    margin: 8px 12px;
+}
+
+/* ⓘ টুলবারে না ওঠা পাতার মাথা (সীমা, নিয়মের বাইরে, মাসবন্ধ …) — বাকি পাতার মতো নাম, রঙিন পট্টি আর বড় চিহ্ন নয় (অডিট, ২৫ নভেম্বর ২০২৬) */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-page-kind] [data-money-hero] [data-hero-icon] {
+    display: none;
+}
+
+/* ⭐ ধাপের পট্টি পড়া যায় — রঙিন জমির উপর ধূসর লেখা নয়; সাদা ঘর, উপরে রঙের দাগ */
+html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .stage {
+    background: var(--color-surface-card);
+    color: var(--color-ink);
+    border-top: 3px solid var(--color-border);
+}
+
+html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .is-done { border-top-color: var(--color-badge-success-ink); }
+html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .is-now { border-top-color: var(--color-brand-500); }
+html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .is-bad { border-top-color: var(--color-danger); }
+html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .stage .text-\(--color-ink-muted\) { color: var(--color-ink-muted); opacity: 1; }
+
+/* ⓘ সরু বাক্সের বারেও এক সারি — খোঁজার ঘর আগে ছোট হয় */
+html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .toolbar-view label:has(> input[type='search']) { min-width: 7rem; }

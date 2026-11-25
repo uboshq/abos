@@ -154,8 +154,9 @@ final class ALeaverIsSettledOnOnePaperTest extends TestCase
         $this->get(route($target['route'][0], $target['route'][1]))->assertOk()->assertSee('data-settlement-head', false);
 
         $payable = $lines->firstWhere('account_id', $this->id(StandardChart::SALARY_PAYABLE));
-        $this->assertSame(Employee::drillSourceType(), $payable->party_type, '⛔ প্রদেয় কর্মীর নামে নয়');
-        $this->assertSame((int) $this->employee->id, (int) $payable->party_id);
+        // ⓘ পুঞ্জ খাত পক্ষ রাখে না — কর্মী বিবরণে; অগ্রিমের সারি কর্মীর নামে
+        $this->assertStringContainsString($this->employee->name(), (string) $payable->narration, '⛔ প্রদেয়ের সারিতে কর্মীর নাম নেই');
+        $this->assertSame((int) $this->employee->id, (int) $lines->firstWhere('account_id', $this->id(StandardChart::EMPLOYEE_ADVANCE))->party_id);
     }
 
     public function test_the_owner_settles_his_own_paper_with_the_mark_and_no_figure_in_the_report(): void

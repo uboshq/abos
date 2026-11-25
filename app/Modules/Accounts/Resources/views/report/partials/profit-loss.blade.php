@@ -30,7 +30,8 @@
     $sign = bccomp((string) $net['now'], '0', 4);
     $result = __('accounts::fs.pl.'.match ($sign) { 1 => 'made_profit', -1 => 'made_loss', default => 'made_none' },
         ['amount' => \App\Core\Support\Money::format(ltrim((string) $net['now'], '-'))]);
-    $bar = 'color: #fff; font-weight: 700; padding-block: .85rem; background: '.match ($sign) { 1 => '#15803d', -1 => '#b91c1c', default => '#475569' };
+    $bar = 'color: var(--color-surface-card); font-weight: 700; padding-block: .85rem; background: '
+        .match ($sign) { 1 => 'var(--color-success)', -1 => 'var(--color-danger)', default => 'var(--color-ink-muted)' };
 @endphp
 
 <div class="overflow-x-auto">
