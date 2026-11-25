@@ -81,7 +81,20 @@ final class GateMemo
             return (bool) $user->can($ability, $row);
         }
 
-        return $this->answers[$key] ??= (bool) $user->can($ability, $row);
+        if (array_key_exists($key, $this->answers)) {
+            return (bool) $this->answers[$key];
+        }
+
+        $answer = (bool) $user->can($ability, $row);
+
+        // ⓘ asking may load the person's roles or keys, and those are part of the key — kept under the key as it now stands
+        $key = $this->key($user, $ability.'@'.$row::class, []);
+
+        if ($key !== null) {
+            $this->answers[$key] = $answer;
+        }
+
+        return $answer;
     }
 
     private function isRowFree(Model $row): bool
