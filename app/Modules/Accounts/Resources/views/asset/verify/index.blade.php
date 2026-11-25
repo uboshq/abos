@@ -32,7 +32,7 @@
     <x-ui.errors />
 
     @can('accounts.asset.verify')
-        <form method="POST" action="{{ route('accounts.asset.verify.store') }}"
+        <form method="POST" data-under-head action="{{ route('accounts.asset.verify.store') }}"
               class="mb-5 grid gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 md:grid-cols-2 lg:grid-cols-4">
             @csrf
             <div class="lg:col-span-4">
@@ -52,15 +52,17 @@
         </form>
     @endcan
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('accounts::menu.asset_verifications')"
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$filters" :title="__('accounts::menu.asset_verifications')"
                           :subtitle="__('accounts::asset.verify_subtitle')"
                           :columns="$columns" />
         </form>
 
         <x-ui.table :rows="$campaigns" :columns="$columns" :empty="__('accounts::asset.verify_empty')" />
     </div>
+    </x-ui.filter-layout>
 
     <div class="mt-3">{{ $campaigns->links() }}</div>
     <x-ui.list-totals :rows="$campaigns" :columns="$columns" />

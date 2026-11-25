@@ -41,12 +41,16 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::loading.title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <x-ui.toolbar :title="__('sales::loading.title')" :count="__('sales::loading.subtitle')" :columns="$columns" />
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$filters" :title="__('sales::loading.title')" :count="__('sales::loading.subtitle')" :columns="$columns" />
+        </form>
 
         <x-ui.table :view-url="fn ($r) => route('sales.loading_sheet.show', $r)" :empty="__('sales::loading.empty')" :rows="$trips" :columns="$columns" />
 
         <x-ui.pager :rows="$trips" />
         <x-ui.list-totals :rows="$trips" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

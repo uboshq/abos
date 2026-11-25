@@ -49,9 +49,17 @@ class LoadingSheetController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         // ⓘ গুদামের কাজ খোলা ট্রিপে — যেগুলো এখনো বেরোয়নি; বেরোনোগুলো ডিসপ্যাচ রেজিস্টারে
-        $trips = Shipment::query()
-            ->where('status', DocumentStatus::DRAFT)
-            ->withCount('lines')
+        // ⭐ সব তালিকার একই ছাঁকনি আর কাজের খোঁজা (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $base = fn () => Shipment::query()->where('status', DocumentStatus::DRAFT)
+            ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
+                fn ($w) => $w->where('document_no', 'like', "%{$term}%")->orWhere('vehicle_no', 'like', "%{$term}%")->orWhere('driver_name', 'like', "%{$term}%")));
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('core.table.date'), 'trx_date'),
+            \App\Core\ListFilter\Columns::is('vehicle', __('sales::field.vehicle_no'), 'vehicle_no', Shipment::query()->where('status', DocumentStatus::DRAFT)->distinct()->pluck('vehicle_no')->filter()->mapWithKeys(fn ($v) => [$v => $v])->all()),
+        ]);
+        $trips = $base();
+        $filters->apply($trips, $request);
+        $trips = $trips->withCount('lines')
             ->orderByDesc('trx_date')
             ->orderByDesc('id')
             ->paginate(\App\Core\Support\PerPage::of())
@@ -60,6 +68,7 @@ class LoadingSheetController extends Controller implements HasMiddleware
         return view('sales::loading.index', [
             'menu' => $this->menu->forUser($request->user()),
             'trips' => $trips,
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
         ]);
     }
 

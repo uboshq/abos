@@ -37,9 +37,22 @@ class AssetCategoryController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
+        // ⭐ সব তালিকার একই ছাঁকনি আর কাজের খোঁজা (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $base = fn () => AssetCategory::query()
+            ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
+                fn ($w) => $w->where('code', 'like', "%{$term}%")->orWhere('name_en', 'like', "%{$term}%")->orWhere('name_bn', 'like', "%{$term}%")));
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::is('method', __('accounts::asset.method'), 'method', AssetCategory::query()->distinct()->pluck('method')->filter()
+                ->mapWithKeys(fn ($m) => [$m => __('accounts::asset.'.$m)])->all()),
+            \App\Core\ListFilter\Columns::is('active', __('accounts::field.state'), 'is_active', ['1' => __('core.state.active'), '0' => __('core.state.inactive')]),
+        ]);
+        $query = $base();
+        $filters->apply($query, $request);
+
         return view('accounts::asset.category.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'categories' => AssetCategory::query()
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
+            'categories' => $query
                 ->with(['assetAccount', 'expenseAccount'])
                 ->withCount('assets')
                 ->orderBy('code')

@@ -63,7 +63,18 @@ class DepositClaimController extends Controller implements HasMiddleware
             ))
             ->orderByDesc('claimed_on')->orderByDesc('id');
 
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('core.table.date'), 'claimed_on'),
+            \App\Core\ListFilter\Columns::is('bank', __('sales::portal.bank_account'), 'bank_account_id', \App\Modules\Accounts\Models\Account::query()
+                ->whereIn('id', DepositClaim::query()->select('bank_account_id'))->get()->mapWithKeys(fn ($a) => [$a->id => $a->code.' — '.$a->name()])->all()),
+        ]);
+        $whole = clone $query;
+        $base = fn () => clone $whole;
+        $filters->apply($query, $request);
+
         return view('sales::claim.index', [
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'menu' => $this->menu->forUser($request->user()),
             'claims' => (clone $query)->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির দাবির অঙ্ক, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)

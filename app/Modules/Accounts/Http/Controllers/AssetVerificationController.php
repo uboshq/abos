@@ -44,9 +44,20 @@ class AssetVerificationController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
+        // ⭐ সব তালিকার একই ছাঁকনি আর কাজের খোঁজা (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $base = fn () => AssetVerification::query()
+            ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where('title', 'like', "%{$term}%"));
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('accounts::asset.verify_started'), 'started_on'),
+            \App\Core\ListFilter\Columns::is('branch', __('accounts::asset.branch'), 'branch_id', Branch::query()->orderBy('code')->get()->mapWithKeys(fn ($b) => [$b->id => $b->name()])->all()),
+        ]);
+        $query = $base();
+        $filters->apply($query, $request);
+
         return view('accounts::asset.verify.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'campaigns' => AssetVerification::query()->with(['branch', 'creator'])->withCount([
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
+            'campaigns' => $query->with(['branch', 'creator'])->withCount([
                 'lines',
                 'lines as checked_count' => fn ($q) => $q->whereNotNull('result'),
                 'lines as exception_count' => fn ($q) => $q->whereNotNull('result')->where('result', '!=', AssetVerificationLine::FOUND),

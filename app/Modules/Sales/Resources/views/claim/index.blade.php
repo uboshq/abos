@@ -78,16 +78,17 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         {{-- ⭐ শিরোনাম আর খোঁজা — বাকি তালিকার মতো এক বাক্সে।
              মালিক, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             {{-- ⓘ "সব" দেখার সময় খোঁজা বা ঘনত্ব বদলালেও "সব"-ই থাকে --}}
             @if ($status !== 'pending')
                 <input type="hidden" name="status" value="{{ $status }}">
             @endif
 
-            <x-ui.toolbar :title="__('sales::portal.desk_title')"
+            <x-ui.toolbar :facets="$filters" :title="__('sales::portal.desk_title')"
                 :subtitle="__('sales::portal.desk_subtitle')"
                 :columns="$columns"
                 :search-placeholder="__('sales::message.claim_search')"
@@ -123,6 +124,7 @@
                     :compact="\App\Core\Support\Ui::compact()"
                     :empty="request('q') ? __('core.empty.no_results') : __('sales::portal.empty')" />
     </div>
+    </x-ui.filter-layout>
 
     {{ $claims->links() }}
     <x-ui.list-totals :rows="$claims" :grand="$grand ?? []" :columns="$columns" />

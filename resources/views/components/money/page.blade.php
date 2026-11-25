@@ -15,7 +15,7 @@
             <x-ui.icon :name="$icon" :size="20" />
         </span>
 
-        <h1 class="text-lg leading-tight font-bold">{{ $title }}</h1>
+        <h1 class="text-lg leading-tight font-bold" data-page-title>{{ $title }}</h1>
 
         @if ($count)
             {{-- ⓘ min-w-0 — লম্বা বাক্য ফোনে ভাঙে, পাতা পাশে সরে না (দফা ২১, [[TheInboxFitsAPhoneTest]]) --}}

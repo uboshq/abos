@@ -508,15 +508,34 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         return ApprovalInbox::searched($query, $term);
     }
 
+    /** নিজের পাঠানো আর আটকে থাকা কাগজের ছাঁকনি — তারিখ, মডিউল, অবস্থা */
+    private function ownListFilters(bool $withStatus): \App\Core\ListFilter\FilterSet
+    {
+        $modules = Approval::query()->distinct()->orderBy('module')->pluck('module')->filter()
+            ->mapWithKeys(fn ($m) => [$m => $this->flows->choices()[$m]['label'] ?? $m])->all();
+
+        return \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('core.table.date'), 'created_at'),
+            \App\Core\ListFilter\Columns::is('module', __('approval::field.module'), 'module', $modules),
+            $withStatus ? \App\Core\ListFilter\Columns::is('state', __('approval::field.status'), 'status', collect([Approval::PENDING, Approval::APPROVED, Approval::REJECTED, Approval::RETURNED, Approval::CANCELLED])
+                ->mapWithKeys(fn ($v) => [$v => __('approval::status.'.$v)])->all()) : null,
+        ]);
+    }
+
     public function mine(Request $request): View
     {
-        $approvals = self::searched(Approval::query(), (string) $request->query('q', ''))
-            ->where('requested_by', $request->user()?->id)
-            ->with(['decisions.user'])
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $base = fn () => self::searched(Approval::query(), (string) $request->query('q', ''))
+            ->where('requested_by', $request->user()?->id);
+        $filters = $this->ownListFilters(withStatus: true);
+        $approvals = $base();
+        $filters->apply($approvals, $request);
+        $approvals = $approvals->with(['decisions.user'])
             ->orderByDesc('id')
-            ->paginate(\App\Core\Support\PerPage::of());
+            ->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('approval::inbox.mine', [
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'menu' => $this->menu->forUser($request->user()),
             'labels' => $this->flows->labels(),
             'approvals' => $approvals,
@@ -534,12 +553,16 @@ class ApprovalInboxController extends Controller implements HasMiddleware
     {
         $signed = app(\App\Core\Engines\Approval\SignedButNotPosted::class);
 
-        $approvals = self::searched($signed->query($request->user()), (string) $request->query('q', ''))
-            ->with(['decisions.user'])
+        $base = fn () => self::searched($signed->query($request->user()), (string) $request->query('q', ''));
+        $filters = $this->ownListFilters(withStatus: false);
+        $approvals = $base();
+        $filters->apply($approvals, $request);
+        $approvals = $approvals->with(['decisions.user'])
             ->orderByDesc('decided_at')
-            ->paginate(\App\Core\Support\PerPage::of());
+            ->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('approval::inbox.mine', [
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'papers' => $signed->papers($request->user()),
             'menu' => $this->menu->forUser($request->user()),
             'labels' => $this->flows->labels(),

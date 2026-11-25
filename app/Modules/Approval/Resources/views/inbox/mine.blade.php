@@ -76,11 +76,12 @@
         }
     @endphp
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         {{-- ⭐ ছাঁকনির সারি আর খোঁজা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: অন্য তালিকার
              মতোই টুলবার ([[ApprovalInboxController::searched()]])। --}}
-        <form method="GET" class="contents">
-            <x-ui.toolbar />
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$filters" />
         </form>
 
         <x-ui.table
@@ -106,5 +107,6 @@
         <x-ui.pager :rows="$approvals" />
         <x-ui.list-totals :rows="$approvals" />
     </div>
+    </x-ui.filter-layout>
     </x-money.page>
 </x-layouts.app>

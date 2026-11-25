@@ -32,9 +32,10 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('accounts::menu.asset_categories')"
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$filters" :title="__('accounts::menu.asset_categories')"
                           :subtitle="__('accounts::asset.category_subtitle')"
                           :columns="$columns">
                 <x-slot:actions>
@@ -47,6 +48,7 @@
 
         <x-ui.table :rows="$categories" :columns="$columns" :empty="__('accounts::asset.category_empty')" />
     </div>
+    </x-ui.filter-layout>
 
     <div class="mt-3">{{ $categories->links() }}</div>
     <x-ui.list-totals :rows="$categories" :columns="$columns" />
