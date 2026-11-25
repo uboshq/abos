@@ -262,7 +262,8 @@
             @endforeach
         </div>
     @endif
-    @if (isset($summary) && $abosHead)
+    {{-- ⓘ লাভ-ক্ষতির বিবরণীতে নিট আর মোট মুনাফা ছকেই — একই অঙ্ক দুবার নয় --}}
+    @if (isset($summary) && $abosHead && ! isset($pl))
         <section data-report-summary
                  @class([
                      'flex flex-wrap items-center gap-3 border-b px-4 py-2',

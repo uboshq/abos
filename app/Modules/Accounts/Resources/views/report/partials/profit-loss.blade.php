@@ -9,7 +9,8 @@
     $fmt = fn ($v) => bccomp((string) $v, '0', 4) < 0
         ? '('.\App\Core\Support\Money::format(bcmul((string) $v, '-1', 4)).')'
         : \App\Core\Support\Money::format((string) $v);
-    $pct = fn (?string $p) => $p === null ? __('accounts::fs.bs.new') : $p.'%';
+    // ⓘ দুই সময়েই শূন্য হলে "নতুন" নয়, ফাঁকা
+    $pct = fn (array $l) => $l['pct'] === null ? (bccomp((string) $l['now'], '0', 4) === 0 ? '' : __('accounts::fs.bs.new')) : $l['pct'].'%';
     $day = fn (string $d) => \App\Core\Support\DateFormat::format($d);
     $link = fn ($id) => $id === null ? null : route('accounts.report.tb_ledger', array_filter([
         'account_id' => $id, 'from' => $pl['from'], 'to' => $pl['to'], 'branch_id' => $pl['branch_id'],
@@ -37,19 +38,19 @@
             @foreach ($plan as [$kind, $key])
                 @php
                     $sum = $pl['totals'][$key];
+                    $tone = match (true) {
+                        $kind === 'section' => 'background: var(--color-surface-hover)',
+                        $kind === 'total' => 'background: var(--color-surface-selected)',
+                        bccomp((string) $sum['now'], '0', 4) >= 0 => 'background: var(--color-badge-success-bg)',
+                        default => 'background: var(--color-badge-danger-bg)',
+                    };
                 @endphp
-                <tr data-pl="{{ $key }}" @class([
-                    'font-semibold',
-                    'bg-(--color-surface-hover)' => $kind === 'section',
-                    'bg-(--color-surface-selected) text-base' => $kind === 'total',
-                    'bg-(--color-badge-success-bg) text-base font-bold' => $kind === 'grand' && bccomp((string) $sum['now'], '0', 4) >= 0,
-                    'bg-(--color-badge-danger-bg) text-base font-bold' => $kind === 'grand' && bccomp((string) $sum['now'], '0', 4) < 0,
-                ])>
-                    <th scope="row" class="text-start">{{ __('accounts::fs.pl.'.$key) }}</th>
-                    <td class="num">{{ $fmt($sum['now']) }}</td>
-                    <td class="num">{{ $fmt($sum['then']) }}</td>
-                    <td class="num">{{ $fmt($sum['change']) }}</td>
-                    <td class="num">{{ $pct($sum['pct']) }}</td>
+                <tr data-pl="{{ $key }}" class="font-semibold">
+                    <td style="{{ $tone }}">{{ __('accounts::fs.pl.'.$key) }}</td>
+                    <td class="num" style="{{ $tone }}">{{ $fmt($sum['now']) }}</td>
+                    <td class="num" style="{{ $tone }}">{{ $fmt($sum['then']) }}</td>
+                    <td class="num" style="{{ $tone }}">{{ $fmt($sum['change']) }}</td>
+                    <td class="num" style="{{ $tone }}">{{ $pct($sum) }}</td>
                 </tr>
                 @foreach ($kind === 'section' ? $pl['sections'][$key] : [] as $line)
                     @php
@@ -66,7 +67,7 @@
                         </td>
                         <td class="num">{{ $fmt($line['then']) }}</td>
                         <td class="num">{{ $fmt($line['change']) }}</td>
-                        <td class="num">{{ $pct($line['pct']) }}</td>
+                        <td class="num">{{ $pct($line) }}</td>
                     </tr>
                 @endforeach
             @endforeach
