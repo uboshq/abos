@@ -23,7 +23,8 @@ class LiveKitRooms
         return $this->ask($room, 'CreateRoom', ['name' => $room, 'empty_timeout' => 300, 'max_participants' => $max]) !== null;
     }
 
-    public function close(string $room): bool
+    /** the room is deleted on the calls server; no record of ours is closed here ([[MeetingService]] locks its own row) */
+    public function deleteRoom(string $room): bool
     {
         return $this->ask($room, 'DeleteRoom', ['room' => $room]) !== null;
     }
