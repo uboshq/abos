@@ -47,9 +47,11 @@ class CompanyModuleController extends Controller implements HasMiddleware
         }
         $shown = $shown->values();
 
-        $per = PerPage::of();
-        $page = LengthAwarePaginator::resolveCurrentPage();
-        $rows = (new LengthAwarePaginator($shown->forPage($page, $per)->values(), $shown->count(), $per, $page, ['path' => $request->url()]))->withQueryString();
+        // ⓘ বাছা আর সাজানো উপরে, পাতা ভাগ কোয়েরিতে — কেবল এই পাতার কোম্পানি ওঠে, উপরের ক্রমেই
+        $order = $shown->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $rows = Company::query()->whereKey($order)
+            ->when($order !== [], fn ($w) => $w->orderByRaw('FIELD(id, '.implode(', ', $order).')'))
+            ->paginate(PerPage::of())->withQueryString();
 
         $ids = ModuleBoard::picked($request->query('pick', []), $shown->pluck('id')->map(fn ($id) => (int) $id)->all());
         if ($ids === [] && $shown->isNotEmpty()) {
