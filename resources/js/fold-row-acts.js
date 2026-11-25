@@ -25,7 +25,7 @@ function actsColumn (table) {
         return marked
     }
 
-    return /^[\s—-]*$/.test(head.cells[last]?.textContent ?? '') ? last : -1
+    return /^[\s—-]*$|^(কাজ|অ্যাকশন|actions?)$/i.test((head.cells[last]?.textContent ?? '').trim()) ? last : -1
 }
 
 function worthFolding (cell) {
@@ -82,8 +82,9 @@ export function foldRowActs (root = document) {
 
         folded += here
 
-        if (here && /^[\s—-]*$/.test(head.textContent)) {
+        if (here) {
             head.textContent = root.documentElement.lang?.startsWith('bn') ? 'অ্যাকশন' : 'Action'
+            head.classList.remove('text-start')
             head.classList.add('text-end')
         }
     }
