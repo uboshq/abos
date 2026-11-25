@@ -389,9 +389,20 @@
                                         </td>
                                     </tr>
                                 @endif
+                                {{-- ⓘ মোটের লেখা সামনের অঙ্কহীন ঘরগুলো জুড়ে — সরু প্রথম কলামে তিন লাইনে ভাঙত --}}
+                                @php
+                                    $lead = 0;
+                                    foreach ($columns as $column) {
+                                        if ($column->total && isset($section->totals[$column->key])) {
+                                            break;
+                                        }
+                                        $lead++;
+                                    }
+                                @endphp
                                 <tr class="font-semibold">
                                     @foreach ($columns as $index => $column)
-                                        <td @class(['num' => isset($numKeys[$column->key])])>
+                                        @continue($index > 0 && $index < $lead)
+                                        <td @if ($index === 0 && $lead > 1) colspan="{{ $lead }}" @endif @class(['num' => isset($numKeys[$column->key])])>
                                             @if ($index === 0)
                                                 {{-- ⓘ ভাগের নিজের মোটের লেখা থাকলে সেটাই ("দল মোট — করিম"; মালিক, ২৩ নভেম্বর ২০২৬) --}}
                                                 @if ($section->totalLabel !== null)

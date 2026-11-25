@@ -313,11 +313,11 @@ final class MoneyInReports
                     ->orderByRaw('SUM(m.amount) DESC')->orderByRaw("{$id}");
             },
             [
-                ['key' => 'place', 'label' => 'sales::money_in.level_'.$level],
+                ['key' => 'place', 'label' => 'sales::money_in.level_'.$level, 'width' => $level === SalesPlace::CUSTOMER ? '17rem' : null],
                 ...($level === Location::AREA ? [] : [['key' => 'parent', 'label' => 'sales::money_in.parent_'.$level]]),
                 // ⭐ গ্রাহক ধরে: টেরিটরির কলাম, আর তার সাব টোটাল ([[territories()]]; মালিক, ২৫ নভেম্বর ২০২৬)
-                ...($level === SalesPlace::CUSTOMER ? [['key' => 'territory', 'label' => 'sales::money_in.level_territory', 'width' => '9rem'],
-                    ['key' => 'customer_branch', 'label' => 'sales::money_in.branch', 'width' => '8rem']] : []),
+                ...($level === SalesPlace::CUSTOMER ? [['key' => 'territory', 'label' => 'sales::money_in.level_territory', 'width' => '7rem'],
+                    ['key' => 'customer_branch', 'label' => 'sales::money_in.branch', 'width' => '7rem']] : []),
                 ...self::figures($row, $below === null ? null : ['slug' => self::levelSlug($below), 'params' => $row]),
             ], 'place_id', $level === SalesPlace::CUSTOMER ? fn (array $f): array => self::territories($f) : null, self::totalChart('place'));
     }
