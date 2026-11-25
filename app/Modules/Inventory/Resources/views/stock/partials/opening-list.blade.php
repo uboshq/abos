@@ -19,6 +19,8 @@
         :empty="__('inventory::message.opening_none')"
         :rows="$entered"
         compact
+        :totals="$facetPanel ? ['value' => $showCost ? \App\Core\Support\Money::format($shownTotal) : \App\Core\Security\FieldSecurity::mask()] : []"
+        :totals-label="__('inventory::message.opening_total')"
         :columns="$columns" />
 
     {{-- ⓘ উপরের "মোট" এই পাতার নয়, সবটার — পেজারের সীমা আর

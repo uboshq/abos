@@ -19,9 +19,12 @@
         ['key' => 'document_no', 'label' => __('sales::field.document_no'), 'width' => '12rem', 'render' => fn ($o) => (string) $o->document_no],
         ['key' => 'customer', 'label' => __('sales::field.customer'), 'wrap' => true, 'render' => fn ($o) => (string) $o->customer?->nameWithPoint()],
         ['key' => 'trx_date', 'label' => __('sales::field.date'), 'width' => '8rem', 'render' => fn ($o) => \App\Core\Support\DateFormat::format($o->trx_date)],
-        ['key' => 'total', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem', 'render' => fn ($o) => \App\Core\Support\Money::format($o->total)],
+        ['key' => 'total', 'total' => 'money', 'label' => __('sales::field.total'), 'numeric' => true, 'width' => '10rem', 'render' => fn ($o) => \App\Core\Support\Money::format($o->total)],
         ['key' => 'status', 'label' => __('sales::field.state'), 'width' => '9rem', 'render' => fn ($o) => view('sales::quotation.partials.status', ['quotation' => $o])],
     ];
+    // ⓘ মোটে তালিকার একই নিয়ম — গোনার বাইরের অবস্থা (UNCOUNTED) বাদে ([[SalesQuotationController::index()]])
+    $pickGrand = $picker === null ? [] : ['total' => $picker->whereNotIn('status', \App\Modules\Sales\Models\SalesQuotation::UNCOUNTED)
+        ->reduce(fn ($sum, $o) => bcadd($sum, (string) $o->total, 4), '0')];
 @endphp
 
 <x-layouts.app :menu="$menu">
@@ -47,8 +50,8 @@
                     </x-ui.toolbar>
                 </form>
                 <form id="compare-form" method="GET" action="{{ route('sales.quotation.compare') }}"></form>
-                <x-ui.table :rows="$picker" :columns="$pickColumns" :empty="__('sales::quotation.compare.pick_empty')" />
-                <x-ui.list-totals :rows="$picker" />
+                <x-ui.table :rows="$picker" :columns="$pickColumns" :grand="$pickGrand" :empty="__('sales::quotation.compare.pick_empty')" />
+                <x-ui.list-totals :rows="$picker" :grand="$pickGrand" :columns="$pickColumns" />
             </div>
             </x-ui.filter-layout>
         @else
