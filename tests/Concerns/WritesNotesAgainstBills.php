@@ -96,6 +96,9 @@ trait WritesNotesAgainstBills
         $bill = PurchaseBill::query()->findOrFail($bill->id)->load('lines');
         $this->assertGreaterThan(0, bccomp((string) $bill->tax, '0', 4), 'দৃশ্যটাই ভুল — ক্রয় বিলে ভ্যাট বসেনি।');
 
+        // ⓘ কেনা মাল বসার অপেক্ষায় নামে, না বসানো পর্যন্ত বেচা যায় না (মালিক, ৪ সেপ্টেম্বর) — গুদামের মানুষ বসালেন
+        app(\App\Modules\Inventory\Services\StockService::class)->place($this->product, $this->warehouse, $qty, PurchaseBill::STOCK_SOURCE, (int) $bill->id);
+
         return $bill;
     }
 

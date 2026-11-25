@@ -137,6 +137,32 @@ final class APostedTradeVoucherGoesBackOnlyByAReversalTest extends TestCase
         $this->assertNull(Reversal::of(Reversal::TRADE_VOUCHER, (int) $draft->id));
     }
 
+    public function test_the_print_of_a_cancelled_one_says_so(): void
+    {
+        $drawn = [];
+        \Illuminate\Support\Facades\View::composer('print.trade-voucher', function ($view) use (&$drawn): void {
+            $drawn[] = $view->getData();
+        });
+        $voucher = $this->posted();
+        $print = fn () => $this->get(route('accounts.trade_voucher.print', ['kind' => 'sale', 'voucher' => $voucher->id]))->assertOk();
+
+        $print();
+        $this->assertNotSame(__('accounts::print.cancelled'), $drawn[0]['notice'], 'প্রস্তুতিটাই ভুল — চালু কাগজ বাতিল বলছে।');
+
+        $this->cancel($voucher, 'ভুল গ্রাহক')->assertSessionHasNoErrors();
+        $print();
+        $this->assertSame(__('accounts::print.cancelled'), $drawn[1]['notice'], '⛔ বাতিল ভাউচার বৈধ কাগজের মতো ছাপা হয়।');
+    }
+
+    public function test_the_search_box_names_one_voucher_once(): void
+    {
+        $voucher = $this->posted();
+        $search = app(\App\Core\Engines\Search\SearchEngine::class);
+
+        $hits = array_filter($search->search((string) $voucher->document_no, 50, $this->owner->fresh()), fn ($h) => str_contains((string) json_encode($h), (string) $voucher->document_no));
+        $this->assertCount(1, $hits, '⛔ এক ভাউচার খোঁজায় কয়েকবার।');
+    }
+
     private function draft(): TradeVoucher
     {
         return app(TradeVoucherService::class)->create(TradeVoucher::SALE, [

@@ -23,9 +23,9 @@
     ⓘ পাতার নিজের `class` দিলে সেটাই খাটে (মাপ পাতার সাথে মেলে); বাকি বৈশিষ্ট্য (data-…, x-…) সরাসরি বসে।
 --}}
 @php
-    // ⓘ ঠিকানার মান সরাসরি আসতে পারে: পুরো তারিখ হলে তার মাস, আর ভুল লেখা হলে না-দেওয়ার মতোই (পাতা ৫০০ নয়)
-    $toMonth = fn ($v) => is_string($v) && preg_match('/^(\d{4}-(?:0[1-9]|1[0-2]))(?:-\d{2})?$/', $v, $m) === 1
-        ? \Illuminate\Support\Carbon::createFromFormat('!Y-m', $m[1])->startOfMonth() : null;
+    // ⓘ ঠিকানার মান পুরো তারিখও হতে পারে (`?month=2026-11-01`) — পাতাগুলো মানে, তাই ঘরও মানে; মাস নয় এমন লেখায় ঘরটা খালি, পাতা ভাঙে না
+    $toMonth = fn ($v) => preg_match('/^(\d{4}-(?:0[1-9]|1[0-2]))(?:-\d{2}|$)/', trim((string) $v), $hit) === 1
+        ? \Illuminate\Support\Carbon::createFromFormat('!Y-m', $hit[1])->startOfMonth() : null;
     $latest = $toMonth($max) ?? now()->startOfMonth()->addMonthsNoOverflow((int) $ahead);
     $chosen = $toMonth($value) ?? ($placeholder !== null ? null : now()->startOfMonth()->min($latest));
     $months = collect(range(0, (int) $back + (int) $ahead))

@@ -69,7 +69,7 @@ final class HrReports
                 // ⓘ ভেতরের প্রশ্নটা বেতনের স্লিপের সারির মডেল থেকে — কোম্পানির দেয়াল সেখানেই ([[ProvidentFund::contributions()]])
                 $inner = app(ProvidentFund::class)->contributions();
                 $running = $inner->newQuery()->fromSub($inner, 'c')
-                    ->select(['c.employee_id', 'c.month', 'c.employee_share', 'c.employer_share'])
+                    ->select(['c.employee_id', 'c.month', 'c.run_id', 'c.employee_share', 'c.employer_share'])
                     ->selectRaw('SUM(c.employee_share + c.employer_share) OVER (PARTITION BY c.employee_id ORDER BY c.month) as balance');
 
                 return self::staff($f)
@@ -81,6 +81,10 @@ final class HrReports
                         DB::raw("DATE_FORMAT(pf.month, '%Y-%m') as pay_month"),
                         DB::raw(self::employeeLabel().' as employee'),
                         DB::raw(self::nameOf('d').' as department'),
+                        'pf.run_id',
+                        DB::raw("'".PayrollRun::drillSourceType()."' as run_source"),
+                        'pf.employee_id as staff_id',
+                        DB::raw("'".Employee::drillSourceType()."' as staff_source"),
                         'pf.employee_share',
                         'pf.employer_share',
                         DB::raw('pf.employee_share + pf.employer_share as month_total'),
@@ -91,11 +95,15 @@ final class HrReports
                 ['key' => 'pay_month', 'label' => 'hr::field.month', 'width' => '6rem'],
                 ['key' => 'employee', 'label' => 'hr::field.employee', 'width' => '14rem'],
                 ['key' => 'department', 'label' => 'hr::field.department', 'width' => '9rem'],
-                ['key' => 'employee_share', 'label' => 'hr::report.pf_employee_share', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view'],
-                ['key' => 'employer_share', 'label' => 'hr::report.pf_employer_share', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view'],
-                ['key' => 'month_total', 'label' => 'hr::report.pf_month_total', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view'],
+                ['key' => 'employee_share', 'label' => 'hr::report.pf_employee_share', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view',
+                    'drill' => ['source' => ['type' => 'run_source', 'id' => 'run_id']]],
+                ['key' => 'employer_share', 'label' => 'hr::report.pf_employer_share', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view',
+                    'drill' => ['source' => ['type' => 'run_source', 'id' => 'run_id']]],
+                ['key' => 'month_total', 'label' => 'hr::report.pf_month_total', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view',
+                    'drill' => ['source' => ['type' => 'run_source', 'id' => 'run_id']]],
                 // ⓘ জের যোগ হয় না — চলতি জেরের যোগফল অর্থহীন
-                ['key' => 'balance', 'label' => 'hr::report.pf_balance', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view', 'total' => false],
+                ['key' => 'balance', 'label' => 'hr::report.pf_balance', 'type' => ReportColumn::MONEY, 'permission' => 'hr.salary.view', 'total' => false,
+                    'drill' => ['source' => ['type' => 'staff_source', 'id' => 'staff_id']]],
             ],
         );
     }
