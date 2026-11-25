@@ -136,7 +136,7 @@
     {{-- ⭐ বিক্রয় আদেশ — নতুন ধারায় DO-র কাজ আদেশই করে; অংশে অংশে, বাকিটা আবার এখানে (নকশার ধাপ ৬) --}}
     <div data-boxed data-depot-orders
          class="mt-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <x-ui.toolbar :title="__('sales::counter_source.orders_title')" :count="__('sales::counter_source.orders_subtitle')"
+        <x-ui.toolbar :title="__('sales::counter_source.orders_title')" :count="__('sales::counter_source.orders_subtitle')" :search="false"
                       :columns="$orderColumns" />
 
         <x-ui.table

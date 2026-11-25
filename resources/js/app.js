@@ -24,6 +24,7 @@ import directPurchase from './counter/direct-purchase.js'
 import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
 import { installFieldNames } from './name-bare-fields.js'
+import { foldRowActs } from './fold-row-acts.js'
 import { installSelectSearch } from './select-search.js'
 import { cardsUnderHead, compactPageHead, foldPageNotes, mergeMoneyHead } from './abos-list-head.js'
 import { keepMenusOnScreen } from './keep-on-screen.js'
@@ -210,6 +211,7 @@ handPrintToTab()
 mergeMoneyHead()
 compactPageHead()
 cardsUnderHead()
+foldRowActs()
 installSelectSearch()
 installFieldNames()
 

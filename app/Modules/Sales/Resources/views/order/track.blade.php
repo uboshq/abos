@@ -47,11 +47,6 @@
          'render' => fn ($o) => view('sales::order.partials.stage', [
              'stage' => $tracking->stageOf($o),
          ])],
-
-        ['key' => 'do', 'label' => __('core.table.actions'), 'width' => '7rem',
-         'render' => fn ($o) => new \Illuminate\Support\HtmlString(
-             '<a class="text-(--color-link)" href="'.e(route('sales.order.show', $o->id)).'">'
-             .e(__('core.action.view')).'</a>')],
     ];
 
     $tabs = [
@@ -96,6 +91,7 @@
         </form>
 
         <x-ui.table :rows="$orders"
+                    :view-url="fn ($o) => route('sales.order.show', $o->id)"
                     :grand="$grand ?? []"
                     :columns="$columns"
                     :compact="\App\Core\Support\Ui::compact()"

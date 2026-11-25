@@ -41,7 +41,11 @@
 
         <h2 class="text-sm font-medium">{{ __('notification::quiet.people') }}</h2>
         @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::quiet.empty') }}</p>
+            @if (\App\Core\Support\AbosHead::on())
+                <x-ui.empty-state :message="__('notification::quiet.empty')" />
+            @else
+                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::quiet.empty') }}</p>
+            @endif
         @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">

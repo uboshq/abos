@@ -25,7 +25,11 @@
         <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::delivery.logs_note') }}</p>
 
         @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::delivery.empty') }}</p>
+            @if (\App\Core\Support\AbosHead::on())
+                <x-ui.empty-state :message="__('notification::delivery.empty')" />
+            @else
+                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::delivery.empty') }}</p>
+            @endif
         @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">

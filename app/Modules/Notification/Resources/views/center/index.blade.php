@@ -36,7 +36,11 @@
         @endif
 
         @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::center.empty') }}</p>
+            @if (\App\Core\Support\AbosHead::on())
+                <x-ui.empty-state :message="__('notification::center.empty')" />
+            @else
+                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::center.empty') }}</p>
+            @endif
         @else
             <form method="POST" action="{{ route('notification.center.archive') }}" data-center-archive>
                 @csrf

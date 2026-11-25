@@ -33,7 +33,11 @@
         @endif
 
         @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('notification::escalation.empty') }}</p>
+            @if (\App\Core\Support\AbosHead::on())
+                <x-ui.empty-state :message="__('notification::escalation.empty')" />
+            @else
+                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::escalation.empty') }}</p>
+            @endif
         @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">

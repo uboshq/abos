@@ -56,6 +56,7 @@
     ];
 
     // ⭐ ছাঁকনি ডান পাশের প্যানেলে — আগের টিক, একই চাবি (মালিক, ২৩ নভেম্বর ২০২৬; [[Facets]])
+    $abosHead = \App\Core\Support\AbosHead::on();
     $facetPanel = \App\Core\ListFilter\Facets::panel([
         \App\Core\ListFilter\Facets::flag('only', __('governance::action.show_seen_too'), 'all'),
     ]);
@@ -64,10 +65,12 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('governance::menu.error_log') }}</x-slot:title>
 
+    @if (! $abosHead)
     <p class="mb-4 rounded-(--radius-field) bg-(--color-surface-hover) px-3 py-2 text-2xs
               text-(--color-ink-muted)">
         {{ __('governance::message.error_why') }}
     </p>
+    @endif
 
     {{--
         গত চব্বিশ ঘণ্টায় কয়টা — শূন্য হলে দেখানোই হয় না।
@@ -75,7 +78,7 @@
         রোজ "০টি ভুল" দেখলে সংখ্যাটা অদৃশ্য হয়ে যায়, আর যেদিন ১৭ হবে
         সেদিনও চোখে পড়ত না।
     --}}
-    @if ($freshCount > 0)
+    @if ($freshCount > 0 && ! $abosHead)
         <p class="mb-4 flex items-center gap-2 rounded-(--radius-field) bg-(--color-badge-danger-bg)
                   px-3 py-2 text-sm text-(--color-badge-danger-ink)">
             <x-ui.icon name="alert-triangle" :size="16" />
@@ -86,9 +89,11 @@
     {{-- ⭐ সব দেখা হয়েছে — তালিকা পরিষ্কার (মালিক, ১ অক্টোবর ২০২৬)। মোছা নয়: সারিগুলো "দেখা হয়েছে" হয়ে সরে যায়,
          "দেখা গুলোও" টিক দিলে ইতিহাসে থাকে; একই ভুল আবার ঘটলে সারিটা আবার খোলে। --}}
     @if (request('only') !== 'all' && $rows->total() > 0)
-        <form method="POST" action="{{ route('governance.error.acknowledge_all') }}" class="mb-3 flex justify-end">
+        <form id="acknowledge-all" method="POST" action="{{ route('governance.error.acknowledge_all') }}" @class(['mb-3 flex justify-end' => ! $abosHead, 'contents' => $abosHead])>
             @csrf
-            <x-ui.button type="submit" tone="secondary">{{ __('governance::action.acknowledge_all') }}</x-ui.button>
+            @if (! $abosHead)
+                <x-ui.button type="submit" tone="secondary">{{ __('governance::action.acknowledge_all') }}</x-ui.button>
+            @endif
         </form>
     @endif
 
@@ -98,7 +103,13 @@
             {{-- খাতাটা রপ্তানি হয় না — ভিতরের পথ ও ট্রেস বাইরে যাওয়ার জিনিস নয় --}}
             <x-ui.toolbar :title="__('governance::menu.error_log')"
                           :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])"
+                          :info="$abosHead ? trim(__('governance::message.error_why').' '.($freshCount > 0 ? __('governance::message.errors_today', ['count' => $freshCount]) : '')) : null"
                           :export="false" :search="false" :facets="$facetPanel">
+                @if ($abosHead && request('only') !== 'all' && $rows->total() > 0)
+                    <x-slot:actions>
+                        <x-ui.button type="submit" tone="secondary" form="acknowledge-all">{{ __('governance::action.acknowledge_all') }}</x-ui.button>
+                    </x-slot:actions>
+                @endif
             </x-ui.toolbar>
         </form>
 
