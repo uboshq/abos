@@ -150,7 +150,14 @@ class ModulePackageController extends Controller implements HasMiddleware
             'name_bn' => ['nullable', 'string', 'max:120'],
             'modules' => ['array'],
             'modules.*' => ['string', Rule::in(array_keys(app(ModuleRegistry::class)->all()))],
+            'allow_duplicate' => ['nullable', 'boolean'],
         ]);
+
+        // ⓘ নতুন করে, বা নাম বদলালে — কেবল মডিউল বদলে আগের নামের জন্য থামে না
+        if ($package === null || $package->name_en !== $data['name_en'] || (string) $package->name_bn !== (string) ($data['name_bn'] ?? '')) {
+            app(\App\Core\Engines\Duplication\DuplicationEngine::class)->check(ModulePackage::class, $data, $package?->id);
+        }
+        unset($data['allow_duplicate']);
 
         return [...$data, 'modules' => array_values($data['modules'] ?? [])];
     }

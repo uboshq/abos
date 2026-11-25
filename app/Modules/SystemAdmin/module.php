@@ -539,6 +539,8 @@ return [
     'duplicates' => [
         ['model' => \App\Models\NoticeCategory::class, 'name' => ['name_en', 'name_bn']],
         ['model' => \App\Models\NoticeTemplate::class, 'name' => ['name_en', 'name_bn']],
+        // ⓘ এক নামের দুই মডিউল প্যাকেজ — শাখায় কোনটা বসল বোঝা যেত না
+        ['model' => \App\Models\ModulePackage::class, 'name' => ['name_en', 'name_bn']],
     ],
 
     'reports' => [

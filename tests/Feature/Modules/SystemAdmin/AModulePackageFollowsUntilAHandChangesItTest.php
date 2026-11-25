@@ -42,6 +42,21 @@ final class AModulePackageFollowsUntilAHandChangesItTest extends TestCase
         $this->branches = Branch::query()->where('is_active', true)->orderBy('id')->limit(2)->get()->all();
     }
 
+    /** ⭐ এক বাংলা নামে দ্বিতীয় প্যাকেজ থামে; জেনেশুনে টিক দিলে চলে */
+    public function test_a_second_package_of_the_same_bangla_name_stops_until_confirmed(): void
+    {
+        $door = route('system_admin.module.packages.store');
+        $count = fn (): int => \App\Models\ModulePackage::query()->where('name_bn', 'দোকান')->count();
+        $this->post($door, ['name_en' => 'Shop one', 'name_bn' => 'দোকান', 'modules' => ['sales']])->assertSessionHasNoErrors();
+        $this->assertSame(1, $count(), 'প্রস্তুতিটাই ভুল।');
+
+        $this->post($door, ['name_en' => 'Shop two', 'name_bn' => 'দোকান', 'modules' => ['sales']])->assertSessionHasErrors('name_en');
+        $this->assertSame(1, $count(), '⛔ একই নামে দ্বিতীয় প্যাকেজ।');
+
+        $this->post($door, ['name_en' => 'Shop two', 'name_bn' => 'দোকান', 'modules' => ['sales'], 'allow_duplicate' => '1'])->assertSessionHasNoErrors();
+        $this->assertSame(2, $count());
+    }
+
     public function test_a_package_writes_the_branch_rows_and_follows_only_branches_left_alone(): void
     {
         [$a, $b] = $this->branches;
