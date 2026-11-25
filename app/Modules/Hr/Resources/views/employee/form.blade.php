@@ -88,12 +88,8 @@
                 <div class="min-w-0 flex-1">
                     {{-- ⛔ বাধ্যতামূলক (মালিক, ৩ অক্টোবর ২০২৬) — ছবি আগে থেকে থাকলে নয়; আসল পাহারা কন্ট্রোলারে --}}
                     <label for="photo" class="mb-1 block text-sm font-medium">{{ __('hr::field.photo') }}@unless ($employee->photo_attachment_id) <span class="text-(--color-danger)">*</span>@endunless</label>
-                    <input id="photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp" @unless ($employee->photo_attachment_id) required @endunless
-                           x-on:change="$store.scanner.begin($el, 'face')"
-                           class="w-full rounded-(--radius-field) border border-(--color-border)
-                                  bg-(--color-surface-card) px-3 py-2 text-sm
-                                  file:mr-3 file:rounded-(--radius-field) file:border-0
-                                  file:bg-(--color-surface-app) file:px-3 file:py-1 file:text-sm" />
+                    <x-ui.file-input id="photo" name="photo" accept="image/jpeg,image/png,image/webp" :required="! $employee->photo_attachment_id"
+                                     x-on:change="$store.scanner.begin($el, 'face')" />
                     @error('photo')
                         <p class="mt-1 text-2xs text-(--color-danger)">{{ $message }}</p>
                     @enderror

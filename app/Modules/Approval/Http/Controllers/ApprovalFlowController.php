@@ -466,7 +466,7 @@ class ApprovalFlowController extends Controller implements HasMiddleware
              * সেটা ধরে নেওয়া যায় না, তাই লিখে রাখা।
              */
             /* ⛔ কেবল এই কোম্পানির রোল — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬ (⛔১৫): আগে সব কোম্পানির রোল দেখাত, আর ভুল রোল বাছলে সীমা নীরবে অকেজো হত */
-            'role' => Role::query()->where('company_id', CompanyContext::id())->pluck('name', 'id')->all(),
+            'role' => Role::query()->where('company_id', CompanyContext::id())->pluck('name', 'id')->map(fn ($name) => \App\Core\Support\RoleLabel::for((string) $name))->all(),
 
             'user' => $this->companyUsers()->pluck('name', 'id')->all(),
         ];

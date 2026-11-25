@@ -48,6 +48,10 @@
     $fid = $id ?? $name;
     $key = $errorKey ?? $name;
     $hasError = $errors->has($key);
+    // ⓘ সংখ্যার ঘরে ডাটাবেসের 4 দশমিক নয় — 200000.0000 → 200000, 15.5000 → 15.5; পাঠানো মান একই (অডিট, ২৫ নভেম্বর ২০২৬)
+    if (($numeric || $type === 'number') && is_scalar($value) && preg_match('/^-?\d+\.(?:\d*0)$/', (string) $value) === 1) {
+        $value = rtrim(rtrim((string) $value, '0'), '.');
+    }
     $describedBy = collect([
         $hint ? "{$fid}-hint" : null,
         $hasError ? "{$fid}-error" : null,

@@ -98,7 +98,7 @@
     <x-slot:title>{{ __('sales::tracking.title') }}</x-slot:title>
 
     {{-- ধাপের ট্যাব — রং আর সংখ্যাসহ --}}
-    <div class="mb-3 flex flex-wrap gap-2" data-tracking-steps>
+    <div class="mb-3 flex flex-wrap gap-2" data-tracking-steps data-under-head>
         @foreach (['all', ...\App\Modules\Sales\Services\SaleTracking::STEPS] as $key)
             @php $on = ($step ?? 'all') === $key; @endphp
             <a href="{{ route('sales.tracking.index', array_filter([...request()->except(['step', 'page']), 'step' => $key === 'all' ? null : $key])) }}"

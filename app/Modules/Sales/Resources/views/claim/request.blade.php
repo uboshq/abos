@@ -96,17 +96,16 @@
                           border-(--color-border) bg-(--color-surface-app) px-3">
         </label>
 
-        <label class="block">
+        <div class="block">
             <span class="mb-1 block text-sm font-medium">{{ __('sales::slip.slip') }}</span>
             {{--
                 ⛔ আগে `capture="environment"` ছিল — অনেক ফোনে সরাসরি ক্যামেরা খুলত, গ্যালারি নয়। ⭐ মালিক, ১৬ নভেম্বর ২০২৬: স্লিপ
                    হোয়াটসঅ্যাপে কয়েক হাত ঘুরে আসে — তাই ক্যামেরা আর গ্যালারি দুটোই। ছবি বাছলেই স্ক্যানার: কোণা, সোজা, পরিষ্কার।
             --}}
-            <input type="file" name="slip" accept="image/jpeg,image/png,image/webp,application/pdf"
-                   data-slip-input
-                   x-on:change="$store.scanner.begin($el, 'paper')"
-                   class="block w-full text-sm">
-        </label>
+            <x-ui.file-input name="slip" accept="image/jpeg,image/png,image/webp,application/pdf"
+                             data-slip-input
+                             x-on:change="$store.scanner.begin($el, 'paper')" />
+        </div>
 
         {{-- ⭐ টাকা কে জমা দিলেন — ঐচ্ছিক (মালিক, ১৬ নভেম্বর ২০২৬: স্লিপ কয়েক হাত ঘুরে আসে) --}}
         <x-ui.field name="depositor" :label="__('sales::slip.depositor')" :value="old('depositor')" maxlength="120"
