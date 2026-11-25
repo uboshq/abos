@@ -14,7 +14,7 @@
         <tr>
             <td class="label">BIN</td>
             <td data-company-bin>
-                @if ($companyBin !== ''){{ $companyBin }}@elseif ($warnBin)<b>⚠ {{ __('accounts::note.bin_missing') }}</b>@else — @endif
+                @if ($companyBin !== ''){{ $companyBin }}@elseif ($warnBin)<b style="border: 0.3mm solid #000; padding: 0 1mm;">{{ __('accounts::note.bin_missing') }}</b>@else — @endif
             </td>
         </tr>
         <tr><td class="label">{{ $recipientLabel }}</td><td>{{ $party['name'] }}</td></tr>
@@ -37,7 +37,7 @@
                     @if ($companyBin !== '')
                         {{ $companyBin }}
                     @elseif ($warnBin)
-                        <b style="border: 0.3mm solid #000; padding: 0 1mm;">⚠ {{ __('accounts::note.bin_missing') }}</b>
+                        <b style="border: 0.3mm solid #000; padding: 0 1mm;">{{ __('accounts::note.bin_missing') }}</b>
                     @else
                         —
                     @endif

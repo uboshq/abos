@@ -5,5 +5,5 @@
     <span data-maternity-wage-rule class="mt-1 block text-2xs text-(--color-ink-muted)">{{ __('hr::message.maternity_wage_rule') }}</span>
 @endif
 @if ($warning = $application->signerWarning())
-    <span data-leave-warning class="mt-1 block text-2xs text-(--color-badge-warning-ink)">⚠ {{ $warning }}</span>
+    <span data-leave-warning class="mt-1 block text-2xs text-(--color-badge-warning-ink)"><x-ui.icon name="alert-triangle" :size="14" class="inline-block align-text-bottom" /> {{ $warning }}</span>
 @endif
