@@ -60,7 +60,7 @@
         @if ($abosHead)
             <form id="list-form" method="GET" class="contents" data-report>
                 <x-ui.toolbar :title="__('hr::action.monthly_sheet')" :count="$month->translatedFormat('F Y')" :info="$affectsSalary ? null : __('hr::message.attendance_off_note')" :search="false" :report="true"
-                              :share="false" :export="false" :print="false" :facets="$facetPanel">
+                              :share="false" :print="false" :facets="$facetPanel">
                     <x-slot:actions>
                         <x-ui.print-view-button />
                         <x-ui.button :href="route('hr.attendance.index')">{{ __('hr::menu.attendance') }}</x-ui.button>
