@@ -299,6 +299,8 @@ final class SalaryStructureService
                     'effective_from' => Carbon::parse($effectiveFrom)->toDateString(),
                 ],
                 [
+                    // ⛔ কর্মীর কোম্পানির সারি, পর্দার নয় — কর্মী-খাতা এক হলেও
+                    'company_id' => $employee->company_id,
                     'amount' => $amount,
                     'created_by' => $by ?? auth()->id(),
                 ],

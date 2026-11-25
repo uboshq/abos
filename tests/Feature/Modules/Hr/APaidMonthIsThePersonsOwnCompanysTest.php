@@ -10,12 +10,21 @@ use App\Core\Support\DocumentStatus;
 use App\Models\Company;
 use App\Models\User;
 use App\Modules\Hr\Models\Attendance;
+use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Hr\Models\Employee;
+use App\Modules\Hr\Models\FinalSettlement;
 use App\Modules\Hr\Models\LeaveApplication;
 use App\Modules\Hr\Models\LeaveType;
 use App\Modules\Hr\Models\OvertimeSheet;
 use App\Modules\Hr\Models\PayrollRun;
 use App\Modules\Hr\Models\Payslip;
+use App\Modules\Hr\Models\PayslipLine;
+use App\Modules\Hr\Models\SalaryHead;
+use App\Modules\Hr\Models\SalaryStructure;
+use App\Modules\Hr\Services\Gratuity;
+use App\Modules\Hr\Services\ProvidentFund;
+use App\Modules\Hr\Services\SalaryHeadService;
+use App\Modules\Hr\Services\SalaryStructureService;
 use App\Modules\Hr\Services\AttendanceService;
 use App\Modules\Hr\Services\LeaveService;
 use App\Modules\Hr\Services\OvertimeService;
@@ -152,6 +161,59 @@ final class APaidMonthIsThePersonsOwnCompanysTest extends TestCase
         $this->assertSame(0, bccomp('30000', (string) $certificate['gross'], 2), '⛔ কর-সনদে অন্য কোম্পানির বেতন।');
         $this->assertSame(0, bccomp('30000', (string) app(SalaryTax::class)->trueUp($this->ofA->fresh(), $this->month->copy()->endOfMonth(), '0')['income'], 2),
             '⛔ কর-সমন্বয়ে অন্য কোম্পানির বেতন।');
+    }
+
+    public function test_rows_written_from_a_sister_screen_belong_to_the_persons_company(): void
+    {
+        $type = LeaveType::query()->create(['code' => 'SHAP', 'name_en' => 'Apply leave', 'days_per_year' => '30', 'is_paid' => true, 'is_active' => true]);
+        app(SalaryHeadService::class)->installDefaults();
+        $head = SalaryHead::query()->where('code', 'BASIC')->firstOrFail();
+        $next = $this->month->copy()->addMonthNoOverflow();
+        $day = $next->copy()->addDays(4);
+        $day = ($day->isFriday() ? $day->addDay() : $day)->toDateString();   // ⓘ সাপ্তাহিক ছুটির দিন নয়
+
+        $this->in($this->a);
+        $leave = app(LeaveService::class)->apply($this->ofB->fresh(), $type, $day, $day, '1', 'x');
+        $structure = app(SalaryStructureService::class)->set($this->ofB->fresh(), $head, $next->toDateString(), '20000');
+        $this->assertSame([(int) $this->b->id, (int) $this->b->id], [(int) $leave->company_id, (int) $structure->company_id], '⛔ সারি পর্দার কোম্পানিতে বসল।');
+
+        // ⓘ সুইচ বন্ধ হলেও কর্মীর কোম্পানিতে সারি দুটো থাকে
+        app(SettingsService::class)->set('hr.shared_across_companies', false);
+        $this->in($this->b);
+        $this->assertNotNull(LeaveApplication::query()->find($leave->id));
+        $this->assertNotNull(SalaryStructure::query()->find($structure->id));
+    }
+
+    public function test_fund_gratuity_settlements_and_the_certificate_are_the_companys_own(): void
+    {
+        app(StandardChart::class)->install();
+        app(SalaryHeadService::class)->installDefaults();
+        $runB = $this->paidRun($this->b, $this->ofB, '77777');
+        $runA = PayrollRun::acrossBranches()->withoutGlobalScope('company')->where('company_id', $this->a->id)->where('document_no', 'PAY-'.$this->a->code)->firstOrFail();
+        foreach ([[$runA, '111'], [$runB, '222']] as [$run, $share]) {
+            $slip = Payslip::query()->withoutGlobalScopes()->where('payroll_run_id', $run->id)->firstOrFail();
+            PayslipLine::query()->create(['company_id' => $run->company_id, 'payslip_id' => $slip->id, 'head_code' => PayslipLine::PF_EMPLOYER_CODE,
+                'head_name_en' => 'PF', 'head_name_bn' => 'PF', 'kind' => PayslipLine::EMPLOYER, 'amount' => $share, 'sort_order' => 1]);
+        }
+
+        $this->in($this->a);
+        $this->assertSame([(int) $this->ofA->id], app(ProvidentFund::class)->contributions()->pluck('employee_id')->map(fn ($id) => (int) $id)->all(), '⛔ তহবিলে অন্য কোম্পানির চাঁদা।');
+        $this->assertSame(0, bccomp('222', (string) app(ProvidentFund::class)->ledgerOf($this->ofB->fresh())[0]['employer_share'], 2), 'ⓘ একজনের খাতা তাঁর নিজের কোম্পানির।');
+
+        $ids = collect(app(Gratuity::class)->rows(Carbon::today()))->map(fn ($r) => (int) $r['employee']->id);
+        $this->assertContains((int) $this->ofA->id, $ids);
+        $this->assertNotContains((int) $this->ofB->id, $ids, '⛔ গ্র্যাচুইটির দায়ে অন্য কোম্পানির মানুষ।');
+
+        foreach ([$this->ofA, $this->ofB] as $person) {
+            FinalSettlement::query()->create(['company_id' => $person->company_id, 'branch_id' => $person->branch_id, 'employee_id' => $person->id,
+                'last_day' => now()->toDateString(), 'separation' => 'resignation', 'wages' => '10', 'leave_encashment' => '0', 'gratuity' => '0',
+                'provident_fund' => '0', 'advance_recovered' => '0', 'net' => '10', 'status' => FinalSettlement::PENDING, 'requested_by' => $this->owner->id]);
+        }
+        $rows = $this->get(route('hr.final_settlement.index'))->assertOk()->viewData('rows');
+        $this->assertSame([(int) $this->ofA->id], collect($rows->items())->pluck('employee_id')->map(fn ($id) => (int) $id)->all(), '⛔ চূড়ান্ত পাওনার তালিকায় অন্য কোম্পানির কাগজ।');
+
+        $this->get(route('hr.employee.tax_certificate', $this->ofA->id))->assertOk();
+        $this->get(route('hr.employee.tax_certificate', $this->ofB->id))->assertNotFound();
     }
 
     private function in(Company $company): void
