@@ -125,7 +125,7 @@
                     <dd>{{ filled($note->reason) ? __('accounts::note.reason_'.$note->reason) : '—' }}</dd>
                 </div>
                 <div class="tv-f">
-                    <dt class="tv-label">{{ $type === 'dn' ? __('accounts::note_form.bill_purchase') : __('accounts::note_form.bill_sale') }}</dt>
+                    <dt class="tv-label">{{-- ⓘ বিলে না-বাঁধা লেখা কেবল রেফারেন্স (২৫ অক্টোবর ২০২৬) --}}{{ $note->against_id === null && filled($note->against_no) ? __('accounts::note.reference') : ($type === 'dn' ? __('accounts::note_form.bill_purchase') : __('accounts::note_form.bill_sale')) }}</dt>
                     <dd class="num">
                         {{ $note->against_no ?: '—' }}@if ($billIssuedAt) · {{ \Illuminate\Support\Carbon::instance($billIssuedAt)->format('d M Y · H:i') }}@endif
                     </dd>

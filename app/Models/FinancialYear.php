@@ -58,6 +58,9 @@ class FinancialYear extends Model
     {
         $date = $date instanceof Carbon ? $date : Carbon::parse($date);
 
+        // ⛔ কেবল তারিখ — মাস-শেষের মুহূর্ত (23:59:59) বছরের শেষ দিনের মধ্যরাতের পরে পড়ে, তাই জুনের গ্র্যাচুইটি "কোনো বছরে নেই" বলে থামত
+        $date = $date->toDateString();
+
         return static::query()
             ->where('starts_on', '<=', $date)
             ->where('ends_on', '>=', $date)
