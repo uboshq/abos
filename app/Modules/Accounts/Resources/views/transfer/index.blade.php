@@ -80,9 +80,10 @@
         </section>
     @endif
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$filters"
                 :sort="$sortOptions"
                 :columns="$columns" />
         </form>
@@ -98,5 +99,6 @@
         <x-ui.pager :rows="$transfers" />
         <x-ui.list-totals :rows="$transfers" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
     </x-money.page>
 </x-layouts.app>

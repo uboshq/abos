@@ -70,11 +70,12 @@
 
     {{-- ⓘ তালিকা খালি হলেও বাক্সটা থাকে — খোঁজায় কিছু না মিললে টুলবারটা
          হারালে খোঁজা মোছার পথও হারাত। খালির বার্তাটা এখন টেবিলের নিজের। --}}
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         {{-- ⭐ শিরোনাম, "নতুন কমিশন" আর খোঁজা/সাজানো — সব এক বাক্সে।
              মালিক, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('sales::menu.commission')"
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$filters" :title="__('sales::menu.commission')"
                 :subtitle="__('sales::message.commission_note')"
                 :sort="$sortOptions"
                 :columns="$columns"
@@ -100,6 +101,7 @@
                             : __('sales::message.no_commissions')" />
         </div>
     </div>
+    </x-ui.filter-layout>
 
     <div class="mt-3">{{ $claims->links() }}</div>
     <x-ui.list-totals :rows="$claims" :grand="$grand ?? []" :columns="$columns" />

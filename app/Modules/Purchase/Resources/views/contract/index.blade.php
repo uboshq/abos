@@ -56,10 +56,11 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed
          class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('purchase::menu.contracts')"
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$filters" :title="__('purchase::menu.contracts')"
                           :count="trans_choice('core.count.records', $contracts->total(), ['count' => $contracts->total()])"
                           :columns="$columns">
                 <x-slot:actions>
@@ -81,4 +82,5 @@
         <x-ui.pager :rows="$contracts" />
         <x-ui.list-totals :rows="$contracts" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

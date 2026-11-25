@@ -58,10 +58,11 @@
 
     {{-- ⭐ শিরোনাম, মোট বকেয়া আর "তৈরি" তালিকার মাথায়, একই বাক্সে — মালিকের
          নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$filters"
                 :search-placeholder="__('accounts::message.loan_search')"
                 :columns="$columns" />
         </form>
@@ -77,5 +78,6 @@
         <x-ui.pager :rows="$loans" />
         <x-ui.list-totals :rows="$loans" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
     </x-money.page>
 </x-layouts.app>

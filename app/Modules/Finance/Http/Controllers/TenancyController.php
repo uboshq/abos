@@ -68,7 +68,15 @@ class TenancyController extends Controller implements HasMiddleware
             ))
             ->orderBy('ends_on')->orderBy('id');
 
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('finance::tenancy.ends_on'), 'ends_on', bar: false),
+        ]);
+        $base = fn () => Tenancy::query()->inViewedBranch()->where('status', $tab === 'closed' ? Tenancy::CLOSED : Tenancy::ACTIVE);
+        $filters->apply($query, $request);
+
         return view('finance::tenancy.index', [
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'menu' => $this->menu->forUser($request->user()),
             'tab' => $tab,
             'grand' => $this->grandTotals($query, ['monthly_rent' => 't.monthly_rent']),

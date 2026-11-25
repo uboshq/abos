@@ -77,6 +77,7 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <section data-boxed
              class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
@@ -86,13 +87,13 @@
              ⓘ "বন্ধগুলোও দেখাও" চেকবক্সটা এখন ট্যাব (চালু · বন্ধ), মূলধনের পাতার
              মতো। ⭐ টেবিলটা এখন `x-ui.table`, তাই ঘনত্ব, কলাম আর রপ্তানি সত্যিই
              কাজ করে — আর "+ নতুন চুক্তি" শিরোনামের ডানে, ফর্মটা নিজের পাতায়। --}}
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             {{-- ⓘ ঘনত্ব, কলাম বা খোঁজা বদলালে খোলা ট্যাবটা হারায় না --}}
             @if ($tab === 'closed')
                 <input type="hidden" name="tab" value="closed">
             @endif
 
-            <x-ui.toolbar :title="__('finance::menu.rental')"
+            <x-ui.toolbar :facets="$filters" :title="__('finance::menu.rental')"
                 :subtitle="__('finance::message.rental_note')"
                 :columns="$rentColumns"
                 :search-placeholder="__('finance::message.rental_search')"
@@ -208,4 +209,5 @@
             <x-ui.list-totals :rows="$contracts" :grand="$grand ?? []" :columns="$rentColumns" />
         @endif
     </section>
+    </x-ui.filter-layout>
 </x-layouts.app>

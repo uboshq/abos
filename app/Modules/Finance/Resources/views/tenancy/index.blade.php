@@ -38,15 +38,16 @@
 
     <x-ui.errors />
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <section data-boxed data-tenancy-list
              class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                     bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             @if ($tab === 'closed')
                 <input type="hidden" name="tab" value="closed">
             @endif
 
-            <x-ui.toolbar :title="__('finance::tenancy.title')"
+            <x-ui.toolbar :facets="$filters" :title="__('finance::tenancy.title')"
                 :subtitle="__('finance::tenancy.list_note')"
                 :columns="$tenancyColumns"
                 :search-placeholder="__('finance::tenancy.search')"
@@ -109,4 +110,5 @@
         <x-ui.pager :rows="$tenancies" />
         <x-ui.list-totals :rows="$tenancies" :grand="$grand ?? []" :columns="$tenancyColumns" />
     </section>
+    </x-ui.filter-layout>
 </x-layouts.app>

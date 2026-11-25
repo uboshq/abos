@@ -35,9 +35,10 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('accounts::menu.cash_count')"
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$filters" :title="__('accounts::menu.cash_count')"
                 :sort="$sortOptions"
                 :columns="$columns">
         <x-slot:actions>
@@ -59,4 +60,5 @@
         <x-ui.pager :rows="$counts" />
         <x-ui.list-totals :rows="$counts" :grand="$grand ?? []" :columns="$columns" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

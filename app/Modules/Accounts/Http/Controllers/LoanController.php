@@ -65,6 +65,15 @@ class LoanController extends Controller implements HasMiddleware
             ))
             ->orderByDesc('id');
 
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::is('kind', __('accounts::field.loan_kind'), 'kind', Loan::query()->distinct()->pluck('kind')->mapWithKeys(fn ($k) => [$k => (new Loan(['kind' => $k]))->kindLabel()])->all()),
+            \App\Core\ListFilter\Columns::between(__('accounts::field.starts_on'), 'start_date', bar: false),
+        ]);
+        $whole = clone $list;
+        $base = fn () => clone $whole;
+        $filters->apply($list, $request);
+
         /*
          * ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে ([[GrandTotals]])। ⓘ বকেয়া সারি ধরে হিসাব হয় ([[Loan::outstanding()]]),
          * তাই সেটা গোটা তালিকা হেঁটে — ঋণ হাতে গোনা কয়েকটা।
@@ -74,6 +83,7 @@ class LoanController extends Controller implements HasMiddleware
         $loans = $list->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('accounts::loan.index', [
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'menu' => $this->menu->forUser($request->user()),
             'loans' => $loans,
             'grand' => $grand,

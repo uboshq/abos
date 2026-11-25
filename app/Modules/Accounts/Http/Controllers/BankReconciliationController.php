@@ -51,9 +51,7 @@ class BankReconciliationController extends Controller implements HasMiddleware
 
     public function index(Request $request): View
     {
-        return view('accounts::reconciliation.index', [
-            'menu' => $this->menu->forUser($request->user()),
-            'reconciliations' => BankReconciliation::query()
+        $base = fn () => BankReconciliation::query()
                 ->with(['bankAccount', 'confirmer'])
                 /*
                  * খোঁজা — ব্যাংক হিসাবের নাম/কোড/নম্বর, আর বিবরণ।
@@ -68,8 +66,19 @@ class BankReconciliationController extends Controller implements HasMiddleware
                             ->orWhere('name_bn', 'like', "%{$term}%")
                             ->orWhere('code', 'like', "%{$term}%")
                             ->orWhere('account_number', 'like', "%{$term}%"))
-                ))
-                ->orderByDesc('statement_date')
+                ));
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('accounts::recon.statement_date'), 'statement_date'),
+            \App\Core\ListFilter\Columns::is('status', __('accounts::field.state'), 'status', [BankReconciliation::DRAFT => __('accounts::recon.draft'), BankReconciliation::CONFIRMED => __('accounts::recon.confirmed')]),
+        ]);
+        $query = $base();
+        $filters->apply($query, $request);
+
+        return view('accounts::reconciliation.index', [
+            'menu' => $this->menu->forUser($request->user()),
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
+            'reconciliations' => $query->orderByDesc('statement_date')->orderByDesc('id')
                 ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString(),
             'q' => $request->query('q'),

@@ -54,8 +54,6 @@ class CommissionClaimController extends Controller implements HasMiddleware
     {
         $query = CommissionClaim::query()
             ->with(['customer.location.parent', 'customer.branch', 'supplier', 'invoice'])
-            ->when($request->query('status'), fn ($q, $s) => $q->where('status', $s))
-            ->when($request->query('supplier'), fn ($q, $s) => $q->where('supplier_id', $s))
             /*
              * ⭐ খোঁজা — টুলবারের ঘরটা সত্যিই কাজ করে (১৯ সেপ্টেম্বর ২০২৬)।
              * ⓘ নম্বর, বিবরণ, আর ডিলার ও কোম্পানির নাম/কোড।
@@ -68,9 +66,19 @@ class CommissionClaimController extends Controller implements HasMiddleware
                     ->orWhereHas('supplier', fn ($s) => $s->search($term)),
             ));
 
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('accounts::field.date'), 'trx_date'),
+            \App\Core\ListFilter\Columns::is('status', __('sales::field.state'), 'status', collect([CommissionClaim::PENDING, CommissionClaim::SETTLED, CommissionClaim::REJECTED, CommissionClaim::CANCELLED])->mapWithKeys(fn ($v) => [$v => $v === CommissionClaim::CANCELLED ? __('core.status.cancelled') : __('sales::field.commission_'.$v)])->all()),
+            \App\Core\ListFilter\Columns::is('supplier', __('supplier::menu.party'), 'supplier_id', \App\Modules\Supplier\Models\Supplier::query()->whereIn('id', CommissionClaim::query()->select('supplier_id'))->get()->mapWithKeys(fn ($x) => [$x->id => $x->name()])->all()),
+        ]);
+        $base = fn () => CommissionClaim::query();
+        $filters->apply($query, $request);
+
         $sort = $this->applySort($query, $request, $this->sorts());
 
         return view('sales::commission.index', [
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'menu' => $this->menu->forUser($request->user()),
             'grand' => $this->grandTotals($query, ['amount' => 't.amount']),
             'claims' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),

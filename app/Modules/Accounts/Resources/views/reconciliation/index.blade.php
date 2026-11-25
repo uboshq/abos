@@ -73,9 +73,10 @@
 
     {{-- ⭐ শিরোনাম, "নতুন মিলকরণ" আর খোঁজা তালিকার মাথায়, একই বাক্সে — মালিকের
          নির্দেশ, ১৯ সেপ্টেম্বর ২০২৬: *"সব মডিউলেই একই অবস্থা, সব ঠিক করো"*। --}}
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <form method="GET" class="contents">
-            <x-ui.toolbar :title="__('accounts::recon.title')"
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :facets="$filters" :title="__('accounts::recon.title')"
                 :subtitle="__('accounts::recon.subtitle')"
                 :search-placeholder="__('accounts::message.recon_search')"
                 :columns="$columns">
@@ -96,6 +97,7 @@
                     :compact="\App\Core\Support\Ui::compact()"
                     :empty="$q ? __('core.empty.no_results') : __('accounts::recon.empty')" />
     </div>
+    </x-ui.filter-layout>
 
     <div class="mt-3">{{ $reconciliations->links() }}</div>
     <x-ui.list-totals :rows="$reconciliations" />

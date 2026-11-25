@@ -56,12 +56,25 @@ class PurchaseContractController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         $query = PurchaseContract::query()
+            ->when(trim((string) $request->query('q')) ?: null, fn ($q, $term) => $q->where(
+                fn ($w) => $w->where('document_no', 'like', "%{$term}%")->orWhere('supplier_ref', 'like', "%{$term}%")
+                    ->orWhereHas('supplier', fn ($x) => $x->search($term))))
             ->with('supplier')
             ->withCount('lines')
             ->orderByRaw("CASE WHEN status = '".DocumentStatus::CONFIRMED."' THEN 0 ELSE 1 END")
             ->orderBy('ends_on');
 
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('purchase::field.ends_on'), 'ends_on', bar: false),
+            \App\Core\ListFilter\Columns::is('status', __('purchase::field.state'), 'status', collect(['draft', 'confirmed', 'cancelled'])->mapWithKeys(fn ($v) => [$v => __('core.status.'.$v)])->all()),
+            \App\Core\ListFilter\Columns::is('supplier', __('purchase::field.supplier'), 'supplier_id', Supplier::query()->whereIn('id', PurchaseContract::query()->select('supplier_id'))->get()->mapWithKeys(fn ($x) => [$x->id => $x->name()])->all()),
+        ]);
+        $base = fn () => PurchaseContract::query();
+        $filters->apply($query, $request);
+
         return view('purchase::contract.index', [
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'menu' => $this->menu->forUser($request->user()),
             'contracts' => $query->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
         ]);

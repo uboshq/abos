@@ -150,6 +150,13 @@ class RentalContractController extends Controller implements HasMiddleware
             ))
             ->orderBy('ends_on');
 
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('finance::field.rental_ends_on'), 'ends_on', bar: false),
+        ]);
+        $base = fn () => RentalContract::query()->inViewedBranch()->when($tab === 'running', fn ($q) => $q->active(), fn ($q) => $q->where('status', RentalContract::CLOSED));
+        $filters->apply($query, $request);
+
         /*
          * ⭐ এই জায়গার চুক্তি — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬।
          *
@@ -186,6 +193,7 @@ class RentalContractController extends Controller implements HasMiddleware
         $people = $tab !== 'people' ? [] : $this->peopleRows();
 
         return view('finance::rental.index', [
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'people' => $people,
             'subject' => $subject,
             'subjectSeen' => $subject === null

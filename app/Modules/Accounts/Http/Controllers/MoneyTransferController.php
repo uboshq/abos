@@ -55,6 +55,17 @@ class MoneyTransferController extends Controller implements HasMiddleware
             ->search($request->query('q'))
             ->with(['fromTill', 'toTill', 'toAccount', 'giver', 'receiver']);
 
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('core.table.date'), 'trx_date'),
+            \App\Core\ListFilter\Columns::is('status', __('accounts::field.state'), 'status', [
+                MoneyTransfer::AWAITING => __('accounts::state.awaiting_signature'), 'draft' => __('accounts::state.awaiting_receipt'),
+                'confirmed' => __('accounts::state.received'), 'cancelled' => __('core.status.cancelled')]),
+            \App\Core\ListFilter\Columns::is('from_till', __('accounts::field.moved_from'), 'from_till_id', \App\Modules\Accounts\Models\CashTill::query()->orderBy('code')->get()->mapWithKeys(fn ($t) => [$t->id => $t->name()])->all()),
+        ]);
+        $base = fn () => MoneyTransfer::query()->search($request->query('q'));
+        $filters->apply($query, $request);
+
         $sort = $this->applySort($query, $request, $this->sorts());
 
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, পাতা ভাঙার আগে ([[GrandTotals]])
@@ -63,6 +74,7 @@ class MoneyTransferController extends Controller implements HasMiddleware
         $transfers = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('accounts::transfer.index', [
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'menu' => $this->menu->forUser($request->user()),
             'transfers' => $transfers,
             'grand' => $grand,
