@@ -261,7 +261,7 @@ return [
         'admin' => 'প্রশাসন',
         'publish' => 'প্রকাশ',
         'share' => 'শেয়ার',
-        'signature_request' => 'সই চাওয়া',
+        'signature_request' => 'স্বাক্ষর চাওয়া',
         'audit' => 'অডিট দেখা',
         'templates' => 'ছাঁচ',
         'confidential' => 'গোপনীয় দেখা',
