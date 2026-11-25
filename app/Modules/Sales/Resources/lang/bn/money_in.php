@@ -61,6 +61,7 @@ return [
     'reason_cancelled' => 'বাতিল বা উল্টানো রসিদ',
     'reason_transfer' => 'এক টাকার খাত থেকে আরেক খাতে',
 
+    'territory_total' => ':territory — টেরিটরি সাব টোটাল (:customers গ্রাহক · :share%)',
     'drill_receipts' => ':amount — এই রসিদগুলো খুলুন',
     'drill_down' => ':amount — এক স্তর নিচে খুলুন',
     'drill_papers' => ':amount — এই কাগজগুলো খুলুন',

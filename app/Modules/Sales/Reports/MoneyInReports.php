@@ -45,6 +45,8 @@ final class MoneyInReports
     {
         $bn = app()->getLocale() === 'bn';
         $named = fn (string $t) => $bn ? "COALESCE(NULLIF({$t}.name_bn, ''), {$t}.name_en)" : "{$t}.name_en";
+        // ⭐ গ্রাহকের টেরিটরি — নিজের জায়গা বা উপরের প্রথম যে ধাপটা টেরিটরি (মালিক, ২৫ নভেম্বর ২০২৬: "সব জায়গায় টেরিটরি")
+        $up = fn (\Closure $what): string => "CASE WHEN l1.level = 'territory' THEN ".$what('l1')." WHEN l2.level = 'territory' THEN ".$what('l2')." WHEN l3.level = 'territory' THEN ".$what('l3').' END';
         // ⓘ টাকার সারিতে পক্ষ থাকে না — একই কাগজের গ্রাহক
         $customer = '(SELECT MIN(pk.party_id) FROM ledger_entries AS pk WHERE pk.company_id = ledger_entries.company_id'
             .' AND pk.source_type = ledger_entries.source_type AND pk.source_id = ledger_entries.source_id'
@@ -79,11 +81,59 @@ final class MoneyInReports
 
         $inner = DB::query()->fromSub($money, 'mo')
             ->leftJoin('customers as cu', fn ($join) => $join->on('cu.id', '=', 'mo.payer_id')->whereNull('cu.deleted_at'))
+            ->leftJoin('mdm_locations as l1', 'l1.id', '=', 'cu.location_id')
+            ->leftJoin('mdm_locations as l2', 'l2.id', '=', 'l1.parent_id')
+            ->leftJoin('mdm_locations as l3', 'l3.id', '=', 'l2.parent_id')
             ->tap(ReportEngine::dealerWall($f, 'cu.id'))
             ->when(! empty($f['customer_id']), fn (Builder $q) => $q->where('cu.id', (int) $f['customer_id']))
-            ->selectRaw('mo.*, cu.id as customer_id, '.$named('cu').' as customer');
+            ->selectRaw('mo.*, cu.id as customer_id, '.$named('cu').' as customer, '.$up(fn (string $l) => "{$l}.id").' as territory_id, '
+                .$up(fn (string $l) => $named($l)).' as territory, '.$up(fn (string $l) => "{$l}.branch_id").' as territory_branch_id');
 
-        return DB::query()->fromSub($inner, 'm');
+        return DB::query()->fromSub($inner, 'm')
+            // ⓘ টেরিটরির ভাগ ([[territories()]]) — ০ মানে টেরিটরি বসানো নেই
+            ->when(isset($f['territory']), fn (Builder $q) => $f['territory'] === 0 ? $q->whereNull('m.territory_id') : $q->where('m.territory_id', $f['territory']));
+    }
+
+    /**
+     * ⭐ টেরিটরি ধরে ভাগ, প্রতিটার শেষে সাব টোটাল (মালিকের নমুনা, ২৫ নভেম্বর ২০২৬) — বেশি টাকার টেরিটরি আগে, "বসানো নেই" শেষে।
+     * ⓘ একটাই ভাগ হলে ভাগ নয় — সাব টোটাল তখন সর্বমোটের হুবহু একই অঙ্ক, আর তালিকা পাতা ধরে চলে।
+     *
+     * @param  array<string, mixed>  $f
+     * @return list<array{id: ?int, name: string, filters: array<string, mixed>, total_label: string, of_total: bool}>
+     */
+    private static function territories(array $f): array
+    {
+        $groups = self::rows($f)
+            ->leftJoin('branches as b', 'b.id', '=', 'm.territory_branch_id')
+            ->groupBy('m.territory_id', 'm.territory', 'b.name_bn', 'b.name_en')
+            ->selectRaw('m.territory_id, m.territory, b.name_bn, b.name_en, COUNT(DISTINCT m.customer_id) as customers, SUM(m.amount) as total')
+            ->orderByRaw('m.territory_id IS NULL')->orderByRaw('SUM(m.amount) DESC')->get();
+
+        if ($groups->count() < 2) {
+            return [];
+        }
+
+        $sum = $groups->reduce(fn (string $s, object $g) => bcadd($s, (string) $g->total, 4), '0');
+        $branches = $groups->pluck('name_en')->filter()->unique()->count();
+        $bn = app()->getLocale() === 'bn';
+        $plan = [];
+
+        foreach ($groups as $g) {
+            $name = $g->territory === null ? (string) __('sales::money_in.no_territory') : (string) $g->territory;
+            // ⓘ একাধিক শাখা দেখালে কোন শাখার টেরিটরি — একই নাম চার শাখায় আছে
+            $named = $branches > 1 && $g->name_en !== null ? (($bn && filled($g->name_bn) ? $g->name_bn : $g->name_en).' › '.$name) : $name;
+            $share = bccomp($sum, '0', 4) > 0 ? bcdiv(bcmul((string) $g->total, '100', 6), $sum, 2) : '0.00';
+
+            $plan[] = [
+                'id' => $g->territory_id === null ? null : (int) $g->territory_id,
+                'name' => $named,
+                'filters' => [...$f, 'territory' => (int) ($g->territory_id ?? 0)],
+                'total_label' => (string) __('sales::money_in.territory_total', ['territory' => $named, 'customers' => $g->customers, 'share' => $share]),
+                'of_total' => true,
+            ];
+        }
+
+        return $plan;
     }
 
     private static function byCustomer(): ReportDefinition
@@ -96,6 +146,7 @@ final class MoneyInReports
         $columns = [
             // ⭐ "নাম · পয়েন্ট" — জায়গা ইঞ্জিন জোড়ে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
             ['key' => 'customer_name', 'label' => 'sales::money_in.level_customer', 'place' => ['customer', 'customer_id']],
+            ['key' => 'territory', 'label' => 'sales::money_in.level_territory', 'width' => '11rem'],
             ['key' => 'receipts', 'label' => 'sales::money_in.receipts', 'type' => ReportColumn::QUANTITY, 'width' => '6rem'],
         ];
 
@@ -114,6 +165,7 @@ final class MoneyInReports
             groupBy: 'customer_id',
             rankBy: 'total',
             splitByBranch: false,
+            sections: fn (array $f): array => self::territories($f),
             summary: function (array $totals): array {
                 return [
                     'label' => (string) __('sales::money_in.summary', ['receipts' => Money::quantity((string) ($totals['receipts'] ?? '0'))]),
@@ -126,8 +178,10 @@ final class MoneyInReports
                 $none = DB::getPdo()->quote((string) __('sales::money_in.no_customer'));
                 $kinds = implode(', ', array_map(fn (string $k) => "SUM(CASE WHEN m.kind = '{$k}' THEN m.amount ELSE 0 END) as {$k}", self::KINDS));
 
-                return self::rows($f)->groupBy('m.customer_id', 'm.customer')
-                    ->selectRaw("m.customer_id as customer_id, COALESCE(m.customer, {$none}) as customer_name, "
+                $no = DB::getPdo()->quote((string) __('sales::money_in.no_territory'));
+
+                return self::rows($f)->groupBy('m.customer_id', 'm.customer', 'm.territory')
+                    ->selectRaw("m.customer_id as customer_id, COALESCE(m.customer, {$none}) as customer_name, COALESCE(m.territory, {$no}) as territory, "
                         ."COUNT(DISTINCT CONCAT(m.source_type, ':', m.source_id)) as receipts, {$kinds}, SUM(m.amount) as total")
                     ->orderByRaw('SUM(m.amount) DESC')->orderBy('m.customer_id');
             },
