@@ -1,5 +1,9 @@
 # What's new
 
+## 1.3.12 — 25-11-2026
+
+- New report "Money in by customer" (Sales → Reports): how much came from each customer in cash, bank and mobile banking; click a figure for its receipts.
+
 ## 1.3.11 — 25-11-2026
 
 - Call and message alerts reach the phone at once: Google used to refuse them, so calls did not ring in the app.

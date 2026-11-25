@@ -55,6 +55,9 @@ class SalesReportController extends Controller implements HasMiddleware
         'by-biller' => \App\Modules\Sales\Reports\BillerReports::KEY,
         // ⭐ প্রতিদিনের জমার খাতা (জমার খবর ধাপ গ, ১৮ নভেম্বর ২০২৬; [[DepositRegisterReport]])
         'deposit-register' => \App\Modules\Sales\Reports\DepositRegisterReport::KEY,
+        // ⭐ টাকা আসা — গ্রাহক ধরে, আর রসিদগুলো (মালিক, ২৫ নভেম্বর ২০২৬; [[MoneyInReports]])
+        'money-in-customer' => 'sales.money_in_customer',
+        'money-in-receipts' => \App\Modules\Sales\Reports\MoneyInReports::PAPERS,
     ];
 
     /**

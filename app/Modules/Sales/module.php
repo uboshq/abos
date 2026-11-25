@@ -339,6 +339,9 @@ return [
             // ⭐ প্রতিদিনের জমার খাতা (জমার খবর ধাপ গ, ১৮ নভেম্বর ২০২৬)
             ['label' => 'sales::deposit.register_title', 'icon' => 'list', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'deposit-register'], 'permission' => 'sales.claim.view'],
+            // ⭐ টাকা আসা — গ্রাহক ধরে (মালিক, ২৫ নভেম্বর ২০২৬: জরুরি)
+            ['label' => 'sales::money_in.title_customer', 'icon' => 'wallet', 'route' => 'sales.report.show',
+                'route_params' => ['slug' => 'money-in-customer'], 'permission' => 'sales.report'],
             ['label' => 'sales::menu.pending_orders', 'icon' => 'clock', 'route' => 'sales.report.show',
                 'route_params' => ['slug' => 'pending-orders'], 'permission' => 'sales.report'],
             // ⭐ আদায়ের সূচি — কার কাছে আজ যেতে হবে, সপ্তাহে কত আসার কথা (রিপোর্ট সেন্টার ধাপ ৪)
@@ -887,6 +890,8 @@ return [
         \App\Modules\Sales\Reports\PartyTargetReport::class,
         // ⭐ প্রতিদিনের জমার খাতা — খবর, মিল, খাতায়, অপেক্ষা (ধাপ গ, ১৮ নভেম্বর ২০২৬)
         \App\Modules\Sales\Reports\DepositRegisterReport::class,
+        // ⭐ টাকা আসা — গ্রাহক ধরে (মালিক, ২৫ নভেম্বর ২০২৬)
+        \App\Modules\Sales\Reports\MoneyInReports::class,
     ],
 
     /*
