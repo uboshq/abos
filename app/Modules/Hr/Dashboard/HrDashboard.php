@@ -18,6 +18,7 @@ use App\Core\Services\DataScope;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
 use App\Core\Support\PhoneAnswer;
+use App\Core\Support\CompanyContext;
 use App\Models\Branch;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
@@ -116,7 +117,7 @@ final class HrDashboard implements ProvidesDashboard
                 // ⛔ বেতনের রানের গোনাও বেতনের খবর — ফোনের উত্তরে নয় (মালিক, ১৭ অক্টোবর ২০২৬; [[PhoneAnswer]])
                 ...(PhoneAnswer::active() ? [] : [new Stat(
                     label: __('hr::dashboard.payroll_runs'),
-                    value: (string) PayrollRun::query()->count(),
+                    value: (string) PayrollRun::query()->where('company_id', CompanyContext::id())->count(),
                     hint: __('hr::dashboard.payroll_hint'),
                     href: route('hr.payroll.index'),
                 )]),
@@ -375,7 +376,7 @@ final class HrDashboard implements ProvidesDashboard
         $start = Carbon::today()->startOfMonth()->subMonths(5);
         $expr = "DATE_FORMAT(month, '%Y-%m')";
 
-        $rows = self::inView(PayrollRun::query(), 'hr_payroll_runs.branch_id')
+        $rows = self::inView(PayrollRun::query()->where('hr_payroll_runs.company_id', CompanyContext::id()), 'hr_payroll_runs.branch_id')
             ->whereIn('status', DocumentStatus::POSTED)
             ->where('month', '>=', $start->toDateString())
             ->selectRaw("{$expr} as ym, COALESCE(SUM(gross_total), 0) as gross, COALESCE(SUM(net_total), 0) as net")
@@ -885,7 +886,8 @@ final class HrDashboard implements ProvidesDashboard
     /** নিশ্চিত বেতন-রান, দেখার শাখায় — বেতনের সব চার্টের একই ভিত। */
     private static function payrollRuns(): \Illuminate\Database\Eloquent\Builder
     {
-        return self::inView(PayrollRun::query(), 'hr_payroll_runs.branch_id')
+        // ⛔ বেতনের অঙ্ক কোম্পানির — কর্মী-খাতা এক হলেও
+        return self::inView(PayrollRun::query()->where('hr_payroll_runs.company_id', CompanyContext::id()), 'hr_payroll_runs.branch_id')
             ->whereIn('hr_payroll_runs.status', DocumentStatus::POSTED);
     }
 

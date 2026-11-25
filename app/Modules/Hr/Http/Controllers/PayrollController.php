@@ -64,7 +64,8 @@ class PayrollController extends Controller implements HasMiddleware
          */
         $pay = $request->user()->can('hr.salary.view');
 
-        $list = PayrollRun::query()
+        // ⛔ রান কোম্পানির খাতার কাগজ — কর্মী-খাতা এক হলেও তালিকা আর মোট এই কোম্পানির
+        $list = PayrollRun::query()->where('hr_payroll_runs.company_id', \App\Core\Support\CompanyContext::id())
                 ->with('branch')
                 ->when($limited, fn ($q) => $q->select('hr_payroll_runs.*')
                     ->selectSub($seen('COUNT(*)'), 'seen_count')
