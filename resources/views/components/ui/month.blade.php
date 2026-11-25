@@ -23,9 +23,11 @@
     ⓘ পাতার নিজের `class` দিলে সেটাই খাটে (মাপ পাতার সাথে মেলে); বাকি বৈশিষ্ট্য (data-…, x-…) সরাসরি বসে।
 --}}
 @php
-    $toMonth = fn ($v) => \Illuminate\Support\Carbon::createFromFormat('!Y-m', (string) $v)->startOfMonth();
-    $latest = filled($max) ? $toMonth($max) : now()->startOfMonth()->addMonthsNoOverflow((int) $ahead);
-    $chosen = filled($value) ? $toMonth($value) : ($placeholder !== null ? null : now()->startOfMonth()->min($latest));
+    // ⓘ ঠিকানার মান সরাসরি আসতে পারে: পুরো তারিখ হলে তার মাস, আর ভুল লেখা হলে না-দেওয়ার মতোই (পাতা ৫০০ নয়)
+    $toMonth = fn ($v) => is_string($v) && preg_match('/^(\d{4}-(?:0[1-9]|1[0-2]))(?:-\d{2})?$/', $v, $m) === 1
+        ? \Illuminate\Support\Carbon::createFromFormat('!Y-m', $m[1])->startOfMonth() : null;
+    $latest = $toMonth($max) ?? now()->startOfMonth()->addMonthsNoOverflow((int) $ahead);
+    $chosen = $toMonth($value) ?? ($placeholder !== null ? null : now()->startOfMonth()->min($latest));
     $months = collect(range(0, (int) $back + (int) $ahead))
         ->map(fn (int $i) => $latest->copy()->subMonthsNoOverflow($i))
         ->when($chosen !== null, fn ($c) => $c->push($chosen))
