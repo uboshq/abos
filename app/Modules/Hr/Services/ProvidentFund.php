@@ -384,6 +384,7 @@ final class ProvidentFund
                     ->where('hr_payslip_lines.account_id', $fund))))
             ->groupBy('s.employee_id', 'r.month')
             ->select(['s.employee_id', 'r.month'])
+            ->selectRaw('MAX(r.id) as run_id')
             ->selectRaw('SUM(CASE WHEN hr_payslip_lines.kind = ? THEN hr_payslip_lines.amount ELSE 0 END) as employee_share', [SalaryHead::DEDUCTION])
             ->selectRaw('SUM(CASE WHEN hr_payslip_lines.kind = ? THEN hr_payslip_lines.amount ELSE 0 END) as employer_share', [PayslipLine::EMPLOYER]);
     }
