@@ -46,6 +46,14 @@ final class ABranchSaysWhatKindItIsTest extends TestCase
         }
     }
 
+    /** পাতার নিজের অংশ — উপরের বারের শাখা-বদলে সব শাখার নাম থাকে */
+    private function main(string $html): string
+    {
+        $this->assertSame(1, preg_match('/<main\b.*<\/main>/s', $html, $m), 'the page has no main part');
+
+        return $m[0];
+    }
+
     public function test_the_seeded_branches_stay_without_a_type_and_the_words_exist(): void
     {
         $this->assertSame(0, Branch::query()->where('code', 'not like', 'TYP%')->whereNotNull('type')->count());
@@ -79,7 +87,7 @@ final class ABranchSaysWhatKindItIsTest extends TestCase
     public function test_the_branch_list_shows_and_filters_several_types_at_once(): void
     {
         $seen = function (array $types): array {
-            $html = (string) $this->get(route('system_admin.branch.index', ['type' => $types, 'q' => 'Typed']))->assertOk()->getContent();
+            $html = $this->main((string) $this->get(route('system_admin.branch.index', ['type' => $types, 'q' => 'Typed']))->assertOk()->getContent());
 
             return array_values(array_filter(['Typed 0', 'Typed 1', 'Typed 2', 'Typed 3'], fn (string $n) => str_contains($html, $n)));
         };
@@ -114,7 +122,10 @@ final class ABranchSaysWhatKindItIsTest extends TestCase
         $package = ModulePackage::query()->create(['name_en' => 'Shop', 'modules' => ['sales']]);
         $door = route('system_admin.module.packages.assign', $package);
 
-        $html = (string) $this->post($door, ['types' => ['shop']])->assertOk()->assertSee('Typed 0')->assertDontSee('Typed 1')->assertDontSee('Closed shop')->getContent();
+        $html = $this->main((string) $this->post($door, ['types' => ['shop']])->assertOk()->getContent());
+        $this->assertStringContainsString('Typed 0', $html);
+        $this->assertStringNotContainsString('Typed 1', $html);
+        $this->assertStringNotContainsString('Closed shop', $html);
         $this->assertSame(0, BranchModule::query()->count(), '⛔ দেখাতেই লেখা হয়ে গেছে।');
 
         preg_match('/name="stamp" value="([^"]+)"/', $html, $m);

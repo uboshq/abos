@@ -71,10 +71,10 @@
         {{-- ── এক নজরে — গোটা কোম্পানির সংখ্যা ── --}}
         <div class="list-cards p-3" data-list-cards data-security-summary>
             @foreach ([
-                ['two-step', __('system_admin::security.two_step_on'), $on.' / '.$everyone->count(), '#b45309', '#d97706', 'lock'],
-                ['failed', __('system_admin::security.failed_week'), (string) $failedCount, '#be123c', '#e11d48', 'alert-triangle'],
-                ['phones', __('system_admin::security.phones'), (string) $everyone->sum('phones'), '#2346d8', '#3b6cf6', 'chat'],
-                ['logout', __('system_admin::security.auto_logout'), $logoutMinutes > 0 ? __('system_admin::security.minutes', ['n' => $logoutMinutes]) : __('system_admin::security.never'), '#047857', '#059669', 'clock'],
+                ['two-step', __('system_admin::security.two_step_on'), $on.' / '.$everyone->count(), ...$cardLooks['two-step']],
+                ['failed', __('system_admin::security.failed_week'), (string) $failedCount, ...$cardLooks['failed']],
+                ['phones', __('system_admin::security.phones'), (string) $everyone->sum('phones'), ...$cardLooks['phones']],
+                ['logout', __('system_admin::security.auto_logout'), $logoutMinutes > 0 ? __('system_admin::security.minutes', ['n' => $logoutMinutes]) : __('system_admin::security.never'), ...$cardLooks['logout']],
             ] as [$key, $label, $value, $a, $b, $icon])
                 <div class="list-card" data-security-card="{{ $key }}" style="--a: {{ $a }}; --b: {{ $b }}">
                     <span class="list-card-icon" aria-hidden="true"><x-ui.icon :name="$icon" :size="14" /></span>

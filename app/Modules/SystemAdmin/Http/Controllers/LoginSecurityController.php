@@ -88,6 +88,13 @@ final class LoginSecurityController extends Controller implements HasMiddleware
             'tab' => $request->query('tab') === 'failed' ? 'failed' : 'people',
             // ⓘ কার্ডের সংখ্যা গোটা কোম্পানির, ছাঁকা বা এক পাতার নয়
             'everyone' => $rows,
+            // ⓘ কার্ডের রং আর চিহ্ন এখানে, পাতায় হাতে লেখা নয় ([[PartyMessageController]]-এর মতো)
+            'cardLooks' => [
+                'two-step' => ['#b45309', '#d97706', 'lock'],
+                'failed' => ['#be123c', '#e11d48', 'alert-triangle'],
+                'phones' => ['#2346d8', '#3b6cf6', 'chat'],
+                'logout' => ['#047857', '#059669', 'clock'],
+            ],
             'people' => $this->page($this->narrowed($rows, $request), $request),
             'failed' => $this->narrowedWrong($wrong(), $request)->paginate(PerPage::of(), ['identifier', 'reason', 'ip_address', 'created_at', 'user_id'])->withQueryString(),
         ]);

@@ -33,15 +33,17 @@ class TheBlueLookHasNoOuterFrameTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('~--blue-ring:\s*+(?!0px)~', $rules, '⛔ ফ্রেমের চওড়া আবার ০-এর বেশি।');
         $this->assertStringNotContainsString('body::after', $rules, '⛔ নিচের বারের পেছনের নীল পট্টি ফিরে এসেছে।');
         $this->assertStringNotContainsString('body::before', $rules, '⛔ নিচের নীল ফালি ফিরে এসেছে।');
-        $this->assertDoesNotMatchRegularExpression('~footer\[data-footer\]~', $rules, '⛔ নিচের বার আবার আলাদা পিল।');
+        // ⭐ নোটিশের বার গোল কোণার সাদা বাক্স (মালিক "ok", ২৪ নভেম্বর ২০২৬, নমুনা 8kuUTtFx v2)
+        $this->assertMatchesRegularExpression('~footer\[data-footer\] \{[^}]*border-radius: 999px;~', $rules, '⛔ নিচের নোটিশের বার গোল বাক্স নয়।');
     }
 
-    public function test_the_page_sits_on_the_normal_page_background(): void
+    /** ⭐ অ্যাপের নীল পর্দার কিনারা পর্যন্ত, হালকা নীল ফ্রেম নেই (মালিক "ok", ২৪ নভেম্বর ২০২৬, নমুনা v2) */
+    public function test_the_apps_blue_runs_to_the_edges_without_a_frame(): void
     {
         $this->assertMatchesRegularExpression(
-            "~:root\[data-ui='blue'\] body \{\s*background: var\(--color-surface-app\);\s*padding: 0;~",
+            "~:root\[data-ui='blue'\] body \{\s*background: var\(--blue-shell\);\s*padding: 0;~",
             $this->rules(),
-            '⛔ পাতার জমিন আবার নীল, নয়তো চারপাশে ফাঁক।',
+            '⛔ পাতার জমিন অ্যাপের নীল নয়, নয়তো চারপাশে ফাঁক।',
         );
     }
 

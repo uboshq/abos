@@ -115,7 +115,9 @@ class TheBackupRanWhereNobodyCouldSeeItTest extends TestCase
 
         $page = (string) file_get_contents(base_path('app/Modules/Backup/Resources/views/restore.blade.php'));
 
-        $this->assertStringNotContainsString('<form', $page,
+        // ⓘ তালিকার ছাঁকনির GET ফর্ম (২৪ নভেম্বর ২০২৬) কিছু বদলায় না; বাকি কোনো ফর্ম নয়
+        preg_match_all('/<form\b[^>]*>/', $page, $forms);
+        $this->assertSame([], array_values(array_filter($forms[0], fn (string $f): bool => ! str_contains($f, 'id="list-form"') || ! str_contains($f, 'method="GET"'))),
             'ফেরানোর দেখার পাতায় একটা ফর্ম বসেছে — ফেরানো কমান্ড লাইনের কাজ।');
 
         $this->assertSame([], $restoring, implode("\n", [

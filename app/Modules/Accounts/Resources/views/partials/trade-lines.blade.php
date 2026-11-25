@@ -12,7 +12,7 @@
     <div class="tv-main">
         <div class="tv-lines" data-trade-lines>
             <div class="tv-scroll">
-                <table>
+                <table class="ui-lines">
                     <thead>
                         <tr>
                             <th class="tv-c-no">{{ __('accounts::trade_form.col_no') }}</th>
@@ -187,7 +187,7 @@
                     <span class="tv-retchip" x-show="hasReturns" data-return-chip>{{ $returnChip }}</span>
                 @endif
             </summary>
-            <table>
+            <table class="ui-lines">
                 <thead>
                     <tr>
                         <th>{{ __('accounts::trade_form.col_account') }}</th>
@@ -210,7 +210,7 @@
             @if ($returnLabel)
                 <div x-show="hasReturns">
                     <p class="tv-sub"><b>{{ $returnNote }}</b> (<span x-text="returnItems"></span>)</p>
-                    <table>
+                    <table class="ui-lines">
                         <tbody>
                             <template x-for="row in returnRows()" :key="row.key">
                                 <tr>

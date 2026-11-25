@@ -126,7 +126,7 @@
             <div class="tv-main">
                 <div class="tv-lines">
                     <div class="tv-scroll">
-                        <table>
+                        <table class="ui-lines">
                             <thead>
                                 <tr>
                                     <th class="tv-c-no">{{ __('accounts::trade_form.col_no') }}</th>
@@ -191,7 +191,7 @@
                             <span class="tv-ok">{{ __('accounts::trade_form.balanced') }}</span>
                         @endif
                     </summary>
-                    <table>
+                    <table class="ui-lines">
                         <thead>
                             <tr>
                                 <th>{{ __('accounts::trade_form.col_account') }}</th>
