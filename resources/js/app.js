@@ -23,6 +23,7 @@ import directSale from './counter/direct-sale.js'
 import directPurchase from './counter/direct-purchase.js'
 import openingCart from './counter/opening-cart.js'
 import { registerComponents } from './components/index.js'
+import { installFieldNames } from './name-bare-fields.js'
 import { installSelectSearch } from './select-search.js'
 import { cardsUnderHead, compactPageHead, foldPageNotes, mergeMoneyHead } from './abos-list-head.js'
 import { keepMenusOnScreen } from './keep-on-screen.js'
@@ -210,6 +211,7 @@ mergeMoneyHead()
 compactPageHead()
 cardsUnderHead()
 installSelectSearch()
+installFieldNames()
 
 // ⭐ ছাঁকনির বার স্থির, দুই পাশের পাতায় যার যার স্ক্রল ([[abos-bar-stays.js]]) — মাথা সাজানোর পরে, শেষ মাপে
 barStays()
