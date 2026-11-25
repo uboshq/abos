@@ -163,19 +163,19 @@ final class WorkersGetTheirShareOfTheProfitTest extends TestCase
             ->assertOk()->getContent();
 
         // ⓘ জাবেদার আগে — লাইন দুটো নেই, পর্দা আগের মতো
-        $this->assertStringNotContainsString((string) __('accounts::message.profit_before_tax'), $page());
+        $this->assertStringNotContainsString('data-pl="workers_fund"', $page());
 
         $this->switchOn();
         $this->post(route('hr.wppf.provision', ['year' => $this->year->id]))->assertSessionHasNoErrors();
 
         $after = $page();
-        $wppf = strpos($after, __('accounts::message.pl_wppf_line').': ');
-        $pbt = strpos($after, __('accounts::message.profit_before_tax').': ');
+        $wppf = strpos($after, 'data-pl="workers_fund"');
+        $pbt = strpos($after, 'data-pl="profit_before_tax"');
         $this->assertNotFalse($wppf, '⛔ লাভ-ক্ষতিতে তহবিলের লাইন নেই');
         $this->assertNotFalse($pbt, '⛔ লাভ-ক্ষতিতে কর-পূর্ব মুনাফা নেই');
         $this->assertLessThan($pbt, $wppf, '⛔ তহবিলের লাইন কর-পূর্ব মুনাফার উপরে নয়');
-        $this->assertStringContainsString(__('accounts::message.pl_wppf_line').': <span class="num tabular-nums">'.Money::format('6172.87'), $after);
-        $this->assertStringContainsString(__('accounts::message.profit_before_tax').': <span class="num tabular-nums">'.Money::format('117284.44'), $after);
+        $this->assertStringContainsString('('.Money::format('6172.87').')', $after);
+        $this->assertStringContainsString(Money::format('117284.44'), $after);
 
         // ⓘ মোট মেলে — রিপোর্টের ডেবিট-ক্রেডিট থেকে নিট = কর-পূর্ব মুনাফা, আর তহবিল + কর-পূর্ব = তহবিলের আগের মুনাফা
         $pl = app(ReportEngine::class)->run('accounts.profit_loss', ['from' => '2026-07-01', 'to' => '2027-06-30', 'branch_id' => null]);

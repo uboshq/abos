@@ -508,6 +508,8 @@ final class FinancialStatements
         $cost = $in([StandardChart::COST_OF_GOODS_SOLD, StandardChart::PURCHASE_PRICE_VARIANCE]);
         $finance = $in([StandardChart::INTEREST_EXPENSE, StandardChart::EARLY_BREAK_PENALTY]);
         $tax = $in([StandardChart::INCOME_TAX_EXPENSE]);
+        // ⓘ শ্রমিকের মুনাফায় অংশ (শ্রম আইন ২০০৬, অধ্যায় ১৫) — নিজের সারি, করপূর্ব মুনাফার ঠিক উপরে
+        $wppf = $in([StandardChart::WPPF_EXPENSE]);
 
         $rows = DB::table('ledger_entries')
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
@@ -525,7 +527,7 @@ final class FinancialStatements
         // ⓘ নাম কেবল যে খাতে এই দুই সময়ে লেনদেন — ছকের গাছ উপরে [[chart()]] থেকে
         $names = Account::query()->whereKey($rows->pluck('account_id')->all())->get()->keyBy('id');
 
-        $sections = array_fill_keys(['revenue', 'cost_of_sales', 'other_income', 'operating_expenses', 'finance_costs', 'income_tax'], []);
+        $sections = array_fill_keys(['revenue', 'cost_of_sales', 'other_income', 'operating_expenses', 'finance_costs', 'workers_fund', 'income_tax'], []);
         foreach ($rows as $row) {
             $id = (int) $row->account_id;
             $section = match (true) {
@@ -534,6 +536,7 @@ final class FinancialStatements
                 $row->type === Account::INCOME => 'other_income',
                 in_array($id, $finance, true) => 'finance_costs',
                 in_array($id, $tax, true) => 'income_tax',
+                in_array($id, $wppf, true) => 'workers_fund',
                 default => 'operating_expenses',
             };
             // ⓘ সব অঙ্ক ক্রেডিট − ডেবিট: আয় ধনাত্মক, খরচ ঋণাত্মক (কাগজে বন্ধনীতে) — তাই উপমোটগুলো সোজা যোগ
@@ -564,7 +567,7 @@ final class FinancialStatements
         $totals = array_combine(array_keys($sections), array_map($t, array_keys($sections)));
         $totals['gross_profit'] = $plus($totals['revenue'], $totals['cost_of_sales']);
         $totals['operating_profit'] = $plus($plus($totals['gross_profit'], $totals['other_income']), $totals['operating_expenses']);
-        $totals['profit_before_tax'] = $plus($totals['operating_profit'], $totals['finance_costs']);
+        $totals['profit_before_tax'] = $plus($plus($totals['operating_profit'], $totals['finance_costs']), $totals['workers_fund']);
         $totals['profit'] = $plus($totals['profit_before_tax'], $totals['income_tax']);
 
         // ⭐ অন্যান্য সমন্বিত আয় (IAS 1.81A, IAS 16.39) — সম্পদের পুনর্মূল্যায়নের উদ্বৃত্ত, যা সোজা স্বত্বে যায়; আগে কাগজে সবসময় 0.00 লেখা থাকত

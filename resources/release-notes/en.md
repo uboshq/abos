@@ -1,6 +1,6 @@
 # What's new
 
-## 1.3.12 — 25-11-2026
+## 1.3.13 — 25-11-2026
 
 - Profit and loss in the international statement order (IAS 1): gross, operating and pre-tax results beside the same period last year; the bottom bar is green for a profit and red for a loss, with the amount in words; "By account" keeps the old list.
 - Fixes from the whole-system audit: one form of digits and dates, filters on the lists that had none, search inside long choices, row actions in one small menu, and faster pages.
@@ -17,6 +17,10 @@
 - Looks: ABOS Blue without the outer frame, a white ABOS Navy rail, three frame colours.
 - Long lists open with fewer questions to the database.
 - A call stays open on a PC with no microphone; and every page draws its menu in less time.
+
+## 1.3.12 — 25-11-2026
+
+- New report "Money in by customer" (Sales → Reports): how much came from each customer in cash, bank and mobile banking; click a figure for its receipts.
 
 ## 1.3.11 — 25-11-2026
 

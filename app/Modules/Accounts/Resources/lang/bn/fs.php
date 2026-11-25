@@ -182,6 +182,7 @@ return [
         'operating_expenses' => 'পরিচালন খরচ',
         'operating_profit' => 'পরিচালন মুনাফা / (ক্ষতি)',
         'finance_costs' => 'অর্থায়ন খরচ',
+        'workers_fund' => 'শ্রমিকের মুনাফায় অংশ (WPPF)',
         'profit_before_tax' => 'করপূর্ব মুনাফা / (ক্ষতি)',
         'income_tax' => 'আয়কর খরচ (IAS 12)',
         'profit' => 'এই সময়ের মুনাফা / (ক্ষতি)',

@@ -103,23 +103,27 @@ final class MoneyInReports
         $company = (int) $f['company_id'];
         $channel = app()->getLocale() === 'bn' ? "COALESCE(NULLIF(accounts.name_bn, ''), accounts.name_en)" : 'accounts.name_en';
 
-        $inner = CoreReports::moneyIn($f)
-            ->leftJoin('customers as cu', fn ($join) => $join->on('cu.id', '=', DB::raw(self::customerOfPaper()))->whereNull('cu.deleted_at'))
-            ->tap(fn (Builder $q) => SalesPlace::join($q))
-            ->tap(ReportEngine::dealerWall($f, 'cu.id'))
-            ->when(! empty($f['location_id']), fn (Builder $q) => SalesPlace::under($q, (int) $f['location_id']))
-            ->when(! empty($f['customer_id']), fn (Builder $q) => $q->where('cu.id', (int) $f['customer_id']))
+        // ⭐ আগে টাকার সারি আর তার গ্রাহক, তারপর জোড়া — জোড়ার শর্তে উপ-প্রশ্ন থাকলে প্রতিটা গ্রাহকে আবার চলত (লাইভ, ২৫ নভেম্বর ২০২৬)
+        $money = CoreReports::moneyIn($f)
             ->when(! empty($f['account_id']), fn (Builder $q) => $q->where('ledger_entries.account_id', (int) $f['account_id']))
             ->when(in_array($f['kind'] ?? null, self::KINDS, true), fn (Builder $q) => $q->where('accounts.money_kind', $f['kind']))
             ->selectRaw('ledger_entries.id as entry_id, ledger_entries.trx_date as trx_date, ledger_entries.document_no as document_no, '
                 .'ledger_entries.source_type as source_type, ledger_entries.source_id as source_id, ledger_entries.debit as amount, '
                 .'ledger_entries.branch_id as branch_id, ledger_entries.account_id as account_id, accounts.money_kind as kind, '
-                ."{$channel} as channel, cu.id as customer_id, ".SalesPlace::named('cu').' as customer, '
+                ."{$channel} as channel, ".self::customerOfPaper().' as payer_id');
+
+        $inner = DB::query()->fromSub($money, 'mo')
+            ->leftJoin('customers as cu', fn ($join) => $join->on('cu.id', '=', 'mo.payer_id')->whereNull('cu.deleted_at'))
+            ->tap(fn (Builder $q) => SalesPlace::join($q))
+            ->tap(ReportEngine::dealerWall($f, 'cu.id'))
+            ->when(! empty($f['location_id']), fn (Builder $q) => SalesPlace::under($q, (int) $f['location_id']))
+            ->when(! empty($f['customer_id']), fn (Builder $q) => $q->where('cu.id', (int) $f['customer_id']))
+            ->selectRaw('mo.*, cu.id as customer_id, '.SalesPlace::named('cu').' as customer, '
                 .SalesPlace::first(Location::AREA, 'id').' as area_id, '.SalesPlace::first(Location::AREA, 'name').' as area, '
                 .SalesPlace::first(Location::AREA, 'branch_id').' as area_branch_id, '
                 .SalesPlace::first(Location::TERRITORY, 'id').' as territory_id, '.SalesPlace::first(Location::TERRITORY, 'name').' as territory, '
                 .SalesPlace::first(Location::POINT, 'id').' as point_id, '.SalesPlace::first(Location::POINT, 'name').' as point, '
-                .ResponsibleSql::person($company, 'cu.id', 'ledger_entries.trx_date').' as person_id');
+                .ResponsibleSql::person($company, 'cu.id', 'mo.trx_date').' as person_id');
 
         return DB::query()->fromSub($inner, 'm')
             ->when(! empty($f['salesman_id']), fn (Builder $q) => $q->where('m.person_id', (int) $f['salesman_id']))

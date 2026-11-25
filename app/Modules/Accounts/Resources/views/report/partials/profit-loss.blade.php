@@ -18,7 +18,9 @@
     $plan = [
         ['section', 'revenue'], ['section', 'cost_of_sales'], ['total', 'gross_profit'],
         ['section', 'other_income'], ['section', 'operating_expenses'], ['total', 'operating_profit'],
-        ['section', 'finance_costs'], ['total', 'profit_before_tax'],
+        ['section', 'finance_costs'],
+        ...($pl['sections']['workers_fund'] !== [] ? [['section', 'workers_fund']] : []),
+        ['total', 'profit_before_tax'],
         ['section', 'income_tax'],
         // ⓘ অন্যান্য সমন্বিত আয় থাকলে তবেই এই তিন সারি — না থাকলে মোট সমন্বিত আয় = নিচের লাভ-ক্ষতিই, একই অঙ্ক দুবার নয়
         ...(collect(['now', 'then'])->contains(fn ($k) => bccomp($pl['totals']['oci'][$k], '0', 4) !== 0)

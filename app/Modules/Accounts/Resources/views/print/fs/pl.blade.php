@@ -35,6 +35,9 @@
         {!! $tl('operating_expenses', 'sec') !!}{!! $lines('operating_expenses') !!}
         {!! $tl('operating_profit') !!}
         {!! $tl('finance_costs', 'sec') !!}{!! $lines('finance_costs') !!}
+        @if ($pl['sections']['workers_fund'] !== [])
+            {!! $tl('workers_fund', 'sec') !!}{!! $lines('workers_fund') !!}
+        @endif
         {!! $tl('profit_before_tax') !!}
         {!! $tl('income_tax', 'sec') !!}{!! $lines('income_tax') !!}
         {!! $tl('profit', 'grand') !!}

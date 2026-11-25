@@ -180,6 +180,7 @@ return [
         'operating_expenses' => 'Operating expenses',
         'operating_profit' => 'Operating profit / (loss)',
         'finance_costs' => 'Finance costs',
+        'workers_fund' => 'Profit participation fund of workers (WPPF)',
         'profit_before_tax' => 'Profit / (loss) before tax',
         'income_tax' => 'Income tax expense (IAS 12)',
         'profit' => 'Profit / (loss) for the period',

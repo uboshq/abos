@@ -244,7 +244,7 @@ final class CoreReports
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as rv')
                 ->whereColumn('rv.company_id', 'ledger_entries.company_id')
                 ->whereColumn('rv.source_id', 'ledger_entries.source_id')
-                ->whereRaw("rv.source_type LIKE CONCAT(ledger_entries.source_type, ':reversal%')"))
+                ->whereRaw("rv.source_type = CONCAT(ledger_entries.source_type, ':reversal')"))
             ->whereExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as o')
                 ->join('accounts as oa', 'oa.id', '=', 'o.account_id')
                 ->whereColumn('o.company_id', 'ledger_entries.company_id')
@@ -296,7 +296,7 @@ final class CoreReports
             ." WHEN ledger_entries.source_type NOT IN ({$papers}) THEN 'other_paper'"
             .' WHEN EXISTS (SELECT 1 FROM ledger_entries AS rv WHERE rv.company_id = ledger_entries.company_id'
             .' AND rv.source_id = ledger_entries.source_id'
-            ." AND rv.source_type LIKE CONCAT(ledger_entries.source_type, ':reversal%')) THEN 'cancelled'"
+            ." AND rv.source_type = CONCAT(ledger_entries.source_type, ':reversal')) THEN 'cancelled'"
             .' WHEN NOT EXISTS (SELECT 1 FROM ledger_entries AS o JOIN accounts AS oa ON oa.id = o.account_id'
             .' WHERE o.company_id = ledger_entries.company_id AND o.source_type = ledger_entries.source_type'
             .' AND o.source_id = ledger_entries.source_id AND o.credit > 0 AND oa.money_kind IS NULL'
