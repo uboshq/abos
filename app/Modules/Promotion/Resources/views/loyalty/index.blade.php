@@ -12,17 +12,20 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('promotion::loyalty_screen.title') }}</x-slot:title>
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div class="space-y-4">
-        <x-ui.toolbar :title="__('promotion::loyalty_screen.title')"
+        <form id="list-form" method="GET" class="contents">
+        <x-ui.toolbar :facets="$filters" :title="__('promotion::loyalty_screen.title')"
                       :search-placeholder="__('promotion::loyalty_screen.search')"
                       :info="__('promotion::loyalty_screen.balance_note')"
-                      :filter="false" :export="false" :share="false" />
+                      :export="false" :share="false" />
+        </form>
 
         {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
         <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('promotion::loyalty_screen.balance_note') }}</p>
 
         @if ($rows->isEmpty())
-            <p class="text-sm text-(--color-ink-muted)">{{ __('promotion::loyalty_screen.none') }}</p>
+            <x-ui.empty-state :message="__('promotion::loyalty_screen.none')" />
         @else
             <div class="overflow-x-auto">
                 <table class="ui-grid">
@@ -57,4 +60,5 @@
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

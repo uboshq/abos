@@ -87,9 +87,14 @@ final class PromotionLoyaltyController extends Controller implements HasMiddlewa
             ->groupBy('customer_id')
             ->havingRaw('SUM(points) <> 0');
 
-        $rows = $this->visibleCustomers($request->user())
-            ->search($request->query('q'))
-            ->whereIn('id', $holders)
+        // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
+        $base = fn () => $this->visibleCustomers($request->user())->search($request->query('q'))->whereIn('id', $holders);
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::is('branch', __('core.company.branch'), 'branch_id', \App\Models\Branch::query()->orderBy('code')->get()->mapWithKeys(fn ($b) => [$b->id => $b->name()])->all()),
+        ]);
+        $rows = $base();
+        $filters->apply($rows, $request);
+        $rows = $rows
             // ⭐ নামের পাশে পয়েন্ট আর শাখা — মালিক, ১৯ অক্টোবর ২০২৬; গোটা পাতার এক প্রশ্নে ([[Customer::PLACE]])
             ->with(Customer::PLACE)
             ->orderBy('code')
@@ -106,6 +111,7 @@ final class PromotionLoyaltyController extends Controller implements HasMiddlewa
         return view('promotion::loyalty.index', [
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $rows,
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
             'balances' => $balances,
         ]);
     }
