@@ -160,6 +160,19 @@ final class EveryApprovableActionStopsWhenOnAndPassesWhenOffTest extends TestCas
 
         $off = $this->engine()->request($this->paper(), $module, $action, '1000', null, 'on/off test', $this->maker->id);
 
+        /*
+         * ⛔ দুই হাতের কাজ (বেতনের রান, কাঠামো, ব্যাংকের ঠিকানা, চূড়ান্ত পাওনা …) — ছক বন্ধ থাকলেও আরেকজনের অনুমোদন লাগে, যন্ত্রের
+         * নিজের "দ্বিতীয় সই"-এ (মালিক, ২১ অক্টোবর ২০২৬; [[ApprovalEngine::twoHands()]])। যিনি চাইলেন তিনি দিতে পারেন না।
+         */
+        if ($this->engine()->twoHands($module, $action)) {
+            return match (true) {
+                $off === null => 'two-handed action, flow OFF: passed with one hand',
+                ! $this->engine()->isSecondHand($off) => 'two-handed action, flow OFF: asked, but not by the built-in second hand',
+                $this->engine()->canDecide($off, $this->maker) => 'two-handed action, flow OFF: the maker can sign',
+                default => null,
+            };
+        }
+
         if ($off !== null) {
             return 'flow OFF (is_active=false), but request() still opened approval #'.$off->id;
         }
