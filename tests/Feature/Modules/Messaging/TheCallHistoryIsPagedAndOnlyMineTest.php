@@ -135,6 +135,52 @@ final class TheCallHistoryIsPagedAndOnlyMineTest extends TestCase
         $this->assertSame(['missed', 'out'], [$rows[1]['last']['status'], $rows[1]['last']['direction']], 'the latest call with Ann');
     }
 
+    /** ⭐ someone on the page in both directions, and the plain door: the same questions for two people as for fourteen; presence read once */
+    public function test_people_met_in_both_directions_and_the_plain_door_cost_no_more(): void
+    {
+        $doors = [[['limit' => 50], ''], [[], ''], [[], '/people']];
+        $shape = function (array $query, string $tail): array {
+            $sql = [];
+            $on = true;
+            DB::listen(function ($q) use (&$sql, &$on): void {
+                if ($on) {
+                    $sql[] = preg_replace('/\(\?(, \?)*\)/', '(?)', preg_replace('/in \([0-9, ]+\)/', 'in (?)', $q->sql));
+                }
+            });
+            $gets = 0;
+            \Illuminate\Support\Facades\Event::listen(\Illuminate\Cache\Events\RetrievingKey::class, function () use (&$gets, &$on): void { $on && $gets++; });
+            $this->ask($query, $tail)->assertOk();
+            $on = false;
+
+            return [array_count_values($sql), $gets];
+        };
+        $both = function (User $who, int $at): void {
+            $this->call_($this->me, $who, Call::ENDED, $at, 10);
+            $this->call_($who, $this->me, Call::ENDED, $at + 1, 10);
+        };
+
+        $both($this->ann, 10);
+        $both($this->bob, 20);
+        $few = [];
+        foreach ($doors as $i => [$query, $tail]) {
+            $this->ask($query, $tail);
+            $few[$i] = $shape($query, $tail);
+        }
+
+        for ($i = 0; $i < 12; $i++) {
+            $both($this->person('B'.$i), 30 + 10 * $i);
+        }
+
+        foreach ($doors as $i => [$query, $tail]) {
+            $this->ask($query, $tail);
+            [$sql, $gets] = $shape($query, $tail);
+            foreach ($sql as $question => $times) {
+                $this->assertLessThanOrEqual($few[$i][0][$question] ?? 1, $times, "asked again per person ({$i}): {$question}");
+            }
+            $this->assertLessThanOrEqual($few[$i][1] + 2, $gets, "the cache was asked per person ({$i})");
+        }
+    }
+
     public function test_more_calls_and_more_people_ask_no_more_questions(): void
     {
         $count = function (array $query, string $tail = ''): int {

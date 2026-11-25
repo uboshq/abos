@@ -183,6 +183,8 @@ final class CallService
             ->limit(self::LOG)
             ->get();
 
+        $this->presenter->warm($calls->map(fn (Call $call): User => $this->peerOf($call, $user))->all());
+
         return $calls->map(fn (Call $call): array => $this->row($call, $user))->values()->all();
     }
 

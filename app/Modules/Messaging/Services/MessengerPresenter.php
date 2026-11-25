@@ -23,6 +23,9 @@ final class MessengerPresenter
     /** @var array<int, string|null> */
     private array $branches = [];
 
+    /** @var array<int, bool> who is online, read together by {@see warm()} */
+    private array $online = [];
+
     /** @var array<int, object>|null */
     private ?array $hrDesignations = null;
 
@@ -41,7 +44,7 @@ final class MessengerPresenter
             'branch' => $this->branchOf($user),
             'photo_url' => $this->photoOf($user),
             'colour' => null,
-            'online' => $online ?? $this->presence->online((int) $user->id),
+            'online' => $online ?? $this->online[(int) $user->id] ?? $this->presence->online((int) $user->id),
         ];
 
         if ($canOpenPaper !== null) {
@@ -283,14 +286,18 @@ final class MessengerPresenter
      */
     public function warm(iterable $users): void
     {
-        $users = \Illuminate\Database\Eloquent\Collection::make($users)->unique('id')->values();
+        $users = \Illuminate\Database\Eloquent\Collection::make($users);
+
+        // ⓘ every object, not one per person: someone who both called and was called is two objects on a page
+        $users->loadMissing('roles');
+        $this->online = $this->presence->onlineMany($users->pluck('id')->unique()->map(fn ($id): int => (int) $id)->values()->all()) + $this->online;
+
+        $users = $users->unique('id')->values();
         $ids = $users->pluck('id')->map(fn ($id): int => (int) $id)->reject(fn (int $id): bool => array_key_exists($id, $this->branches))->values()->all();
 
         if ($ids === []) {
             return;
         }
-
-        $users->loadMissing('roles');
 
         $company = (int) CompanyContext::id();
         $rows = DB::table('company_user')->whereIn('user_id', $ids)->orderBy('company_id')
