@@ -179,7 +179,8 @@ class LocationController extends Controller implements HasMiddleware
         // ⭐ ছাঁকনি — উপরের প্রতিটা স্তর আর অবস্থা, পাশে সংখ্যা (মালিকের নমুনা, ২৫ নভেম্বর ২০২৬)
         $map = new \App\Modules\MasterData\Support\LocationMap;
         $oneBranch = app(\App\Core\Services\DataScope::class)->viewsOneBranch($request->user());
-        $filters = $map->filters($level, $ladder, withBranch: ! $oneBranch);
+        $filters = $map->filters($level, $ladder, withBranch: ! $oneBranch,
+            only: Location::query()->inViewedBranch()->atLevel($level)->pluck('id')->map(fn ($id) => (int) $id)->all());
         $whole = clone $rows;
         $base = fn () => clone $whole;
         $filters->apply($rows, $request);

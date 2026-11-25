@@ -99,11 +99,13 @@ final class LocationMap
      * ছাঁকনি — উপরের প্রতিটা স্তর (পাশে কয়টা সারি), আর অবস্থা।
      *
      * @param  list<string>  $ladder
+     * @param  list<int>|null  $only
      */
-    public function filters(string $level, array $ladder, bool $withBranch = true): FilterSet
+    public function filters(string $level, array $ladder, bool $withBranch = true, ?array $only = null): FilterSet
     {
         $facets = [];
-        $rows = array_keys(array_filter($this->nodes, fn (array $n) => $n['level'] === $level));
+        // ⓘ কেবল যে সারিগুলো এই মানুষ এখন দেখছেন — অন্য শাখার জায়গা ছাঁকনিতে "0" নিয়ে আসে না
+        $rows = $only ?? array_keys(array_filter($this->nodes, fn (array $n) => $n['level'] === $level));
         $branches = Branch::query()->orderBy('code')->get()->mapWithKeys(fn (Branch $b) => [(int) $b->id => (string) $b->name()])->all();
 
         // ⭐ শাখা (মালিক, ২৫ নভেম্বর ২০২৬) — কেবল যেগুলোয় সারি আছে
