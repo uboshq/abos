@@ -964,12 +964,12 @@
 /* ⭐ তালিকার ওপরের রঙিন বক্স — তিন ভাগের এক ভাগ উচ্চতা, এক লাইনে। মালিক, ১৯ নভেম্বর ২০২৬ রাত: "প্রতিটা বক্স প্রায় ১১৬ পিক্সেল …
    তিনটা লাইনে লেখা … এক লাইনে … তিন ভাগের এক ভাগ বক্সটা করা যায় কিনা"। রং (দুই রঙের ঢাল) আগের মতো; বড় আইকন, ভেতরের গোল
    ছায়া আর মোটা ছায়া নেই। লেখা: নাম · সংখ্যা · নিচের কথা — জায়গা না ধরলে শেষেরটা "…" হয়। */
-:root[data-ui='rose'] .list-cards {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-cards {
     gap: 8px;
     margin-bottom: 10px;
 }
 
-:root[data-ui='rose'] .list-card {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card {
     gap: 8px;
     height: 38px;
     padding: 0 12px;
@@ -978,28 +978,28 @@
     box-shadow: none;
 }
 
-:root[data-ui='rose'] .list-card:hover {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card:hover {
     transform: none;
     filter: brightness(1.06);
 }
 
-:root[data-ui='rose'] .list-card::after {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card::after {
     display: none;
 }
 
-:root[data-ui='rose'] .list-card.is-on {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card.is-on {
     border-color: #ffffff;
     box-shadow: 0 0 0 2px var(--a);
 }
 
-:root[data-ui='rose'] .list-card-icon {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card-icon {
     width: 22px;
     height: 22px;
     border-radius: 6px;
     font-size: 12px;
 }
 
-:root[data-ui='rose'] .list-card > .min-w-0 {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card > .min-w-0 {
     display: flex;
     flex: 1;
     align-items: baseline;
@@ -1007,21 +1007,21 @@
     white-space: nowrap;
 }
 
-:root[data-ui='rose'] .list-card-label {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card-label {
     flex: none;
     font-size: 13px;
     font-weight: 600;
     opacity: 1;
 }
 
-:root[data-ui='rose'] .list-card-value {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card-value {
     flex: none;
     font-size: 14px;
     font-weight: 700;
     line-height: 1;
 }
 
-:root[data-ui='rose'] .list-card-sub {
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .list-card-sub {
     min-width: 0;
     font-size: 12px;
     opacity: 0.85;
@@ -1194,4 +1194,9 @@
         min-height: 0 !important;
         overflow-y: auto;
     }
+}
+
+/* ⭐ মাথা সবার আগে — কার্ডের সারি তালিকার বারের নিচে ([[cardsUnderHead]]; মালিক, ২৪ নভেম্বর ২০২৬) */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-filter-layout] > * .list-cards {
+    margin: 8px 12px;
 }

@@ -450,3 +450,29 @@ export function compactPageHead (root = document) {
 
     return done
 }
+
+/**
+ * ⭐ মাথা সবার আগে (মালিক, ২৪ নভেম্বর ২০২৬) — তালিকার রঙিন কার্ডের সারি বারের উপরে নয়, ঠিক নিচে; কার্ড, সংখ্যা আর লিংক একই।
+ * ⓘ অংশ-বদল ([[list-swap.js]]) `data-list-part="cards"` ধরে বদলায়, জায়গা ধরে নয় — তাই সরালেও চলে। ⛔ অন্য রূপে কিছু নড়ে না।
+ */
+export function cardsUnderHead (root = document) {
+    if (! ABOS_HEAD_LOOKS.includes(root.documentElement?.dataset.ui)) {
+        return 0
+    }
+
+    let moved = 0
+
+    for (const cards of root.querySelectorAll('main [data-filter-layout] > [data-list-cards]')) {
+        const bar = cards.parentElement.querySelector('.toolbar-view')
+        const after = bar?.closest('form') ?? bar
+
+        if (! after || ! (cards.compareDocumentPosition(after) & 4)) {
+            continue
+        }
+
+        after.after(cards)
+        moved++
+    }
+
+    return moved
+}
