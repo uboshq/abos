@@ -54,4 +54,24 @@ final class AKeyIsFoundByNameWithoutWalkingTheListTest extends TestCase
         $registrar->forgetCachedPermissions();
         $this->assertCount(1, $registrar->getPermissions($how, true), '⛔ the index outlived the list it was built from.');
     }
+
+    /** ⛔ the list is kept only while the three tables are exactly the same — a key taken in the database, even past the models, is seen at the next context */
+    public function test_a_key_taken_away_behind_the_models_is_seen_after_the_next_forget(): void
+    {
+        $registrar = app(PermissionRegistrar::class);
+        $role = \Spatie\Permission\Models\Role::findOrCreate('claim-role', 'web');
+        $role->givePermissionTo(Permission::findOrCreate('claim.key', 'web'));
+        $how = ['name' => 'claim.key', 'guard_name' => 'web'];
+
+        $registrar->forgetCachedPermissions();
+        $first = $registrar->getPermissions($how, true)->first();
+        $this->assertTrue($first->roles->contains('id', $role->id));
+
+        $registrar->forgetCachedPermissions();
+        $this->assertSame($first, $registrar->getPermissions($how, true)->first(), 'nothing changed — the list need not be built again');
+
+        \Illuminate\Support\Facades\DB::table('role_has_permissions')->where('role_id', $role->id)->delete();
+        $registrar->forgetCachedPermissions();
+        $this->assertFalse($registrar->getPermissions($how, true)->first()->roles->contains('id', $role->id), '⛔ a taken key stayed in the list.');
+    }
 }
