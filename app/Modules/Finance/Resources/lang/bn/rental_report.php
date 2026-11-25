@@ -50,7 +50,7 @@ return [
     'notice_overdue' => ':who — ভাড়া বকেয়া (:place)',
     'notice_overdue_body' => ':count মাসের ভাড়া বকেয়া (:months) — ৳:amount',
     'dash_label' => 'বকেয়া ভাড়া',
-    'dash_hint' => ':overdue চুক্তিতে ভাড়া বকেয়া · :ending চুক্তি ৬০ দিনের মধ্যে শেষ',
+    'dash_hint' => ':overdue চুক্তিতে ভাড়া বকেয়া · :ending চুক্তি 60 দিনের মধ্যে শেষ',
 
     // ঙ — চুক্তির তালিকা
     'contracts_short' => 'চুক্তির তালিকা',

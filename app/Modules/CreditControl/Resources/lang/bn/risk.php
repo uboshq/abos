@@ -15,7 +15,7 @@ return [
     'reason_overdue_age' => 'সবচেয়ে পুরনো বিল মেয়াদের :days দিন পরেও বাকি',
     'reason_overdue_share' => 'মেয়াদ পেরোনো :amount — সীমা :limit-এর অর্ধেক বা বেশি',
     'reason_late_beyond_terms' => 'মেয়াদের :days দিন পরে — নিজের :terms দিনের শর্তের বাইরে',
-    'reason_wall_stops' => 'গত ৯০ দিনে দেয়ালে :n বার থেমেছে',
-    'reason_bounced_cheques' => 'গত ১৮০ দিনে :nটা চেক ফেরত',
-    'reason_blocks' => 'গত ৩৬৫ দিনে :n বার বাকি বন্ধ',
+    'reason_wall_stops' => 'গত 90 দিনে দেয়ালে :n বার থেমেছে',
+    'reason_bounced_cheques' => 'গত 180 দিনে :nটা চেক ফেরত',
+    'reason_blocks' => 'গত 365 দিনে :n বার বাকি বন্ধ',
 ];

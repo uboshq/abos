@@ -48,9 +48,9 @@ return [
     // ঙ — রেজিস্টার বনাম খাতা
     'reconcile_title' => 'মূলধন: রেজিস্টার বনাম খাতা',
     'register_capital' => 'রেজিস্টারে মূলধন',
-    'books_capital' => 'খাতায় মূলধন (৩১০০)',
+    'books_capital' => 'খাতায় মূলধন (3100)',
     'register_drawings' => 'রেজিস্টারে উত্তোলন',
-    'books_drawings' => 'খাতায় উত্তোলন (৩২০০)',
+    'books_drawings' => 'খাতায় উত্তোলন (3200)',
     'gap' => 'ফাঁক',
     'reconcile_summary' => 'রেজিস্টার আর খাতার ফাঁক',
     'reconcile_text' => 'মূলধনে ফাঁক ৳:capital, উত্তোলনে ফাঁক ৳:drawings',

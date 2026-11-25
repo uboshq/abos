@@ -5,7 +5,7 @@
 --}}
 @php
     $bn = app()->getLocale() === 'bn';
-    $digits = fn (string $s): string => $bn ? \App\Core\Support\BanglaDigits::of($s) : $s;
+    $digits = fn (string $s): string => $s; // ⓘ পর্দার সংখ্যা ইংরেজি (মালিক, ১৬ নভেম্বর ২০২৬)
     $taka = fn (string $v): string => '৳'.$digits(\App\Core\Support\Money::format($v, 0));
     $lakh = fn (string $v): string => $digits(bcdiv($v, '100000', 1));
     $signed = fn (string $v): string => (bccomp($v, '0', 4) < 0 ? '−' : '+').'৳'.$lakh(ltrim($v, '-')).' '.__('finance::fund.lakh');

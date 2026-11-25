@@ -215,7 +215,7 @@ final class LoanBox
 
     private function digits(string $s): string
     {
-        return app()->getLocale() === 'bn' ? \App\Core\Support\BanglaDigits::of($s) : $s;
+        return $s; // ⓘ পর্দার সংখ্যা ইংরেজি (মালিক, ১৬ নভেম্বর ২০২৬)
     }
 
     /** খাতের জের তারিখ পর্যন্ত, দেখার শাখায়, নিজের প্রকৃতিতে */

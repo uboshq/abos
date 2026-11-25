@@ -26,7 +26,7 @@ return [
     'blocked_by' => 'বন্ধ করেছেন',
     'blocked_on' => 'বন্ধের দিন',
     'overdue_amount' => 'পুরনো বাকি',
-    'bounced_cheques' => 'চেক ফেরত (৯০ দিন)',
+    'bounced_cheques' => 'চেক ফেরত (90 দিন)',
     'over_limit' => 'সীমার বেশি',
     'risk_flags' => 'ঝুঁকির নোট',
     'requested_on' => 'অনুরোধের দিন',

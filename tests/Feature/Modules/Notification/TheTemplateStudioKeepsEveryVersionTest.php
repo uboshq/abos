@@ -75,7 +75,7 @@ final class TheTemplateStudioKeepsEveryVersionTest extends TestCase
         $this->assertNull($template->fresh()->published_version_id, 'সংরক্ষণ মানে প্রকাশ নয়');
 
         $page = $this->get(route('notification.templates.edit', [$template, 'version' => 1]))->assertOk();
-        $page->assertSee('১,২৫,০০০.০০ টাকা বাকি — মেসার্স রহমান ট্রেডার্স')->assertDontSee('<b>১,২৫,০০০.০০</b>', false);
+        $page->assertSee('1,25,000.00 টাকা বাকি — মেসার্স রহমান ট্রেডার্স')->assertDontSee('<b>1,25,000.00</b>', false);
     }
 
     public function test_publishing_needs_its_own_key_a_second_person_and_an_older_version_rolls_back(): void
@@ -130,7 +130,7 @@ final class TheTemplateStudioKeepsEveryVersionTest extends TestCase
         $sent = Notification::query()->withoutGlobalScopes()->where('type', 'notification.template_test')->get();
         $this->assertCount(1, $sent);
         $this->assertSame($this->owner->id, (int) $sent[0]->user_id, '⛔ পরীক্ষার খবর অন্য কারও কাছে গেল');
-        $this->assertSame('১,২৫,০০০.০০ টাকা বাকি — মেসার্স রহমান ট্রেডার্স', $sent[0]->title);
+        $this->assertSame('1,25,000.00 টাকা বাকি — মেসার্স রহমান ট্রেডার্স', $sent[0]->title);
     }
 
     public function test_a_schedule_sends_once_on_time_to_todays_group_members_and_moves_on(): void

@@ -31,7 +31,7 @@ return [
         'accounts.count' => 'নগদ গণনা',
         'accounts.day_close' => 'দিন শেষের হিসাব', // ⓘ দেখা, দিন বন্ধ, আবার খোলা (১৮ নভেম্বর ২০২৬)
         'accounts.loan' => 'ঋণ',
-        'accounts.obligation' => 'করণীয় (কোষাগারে জমা, মূসক-৬.৬)',
+        'accounts.obligation' => 'করণীয় (কোষাগারে জমা, মূসক-6.6)',
         'accounts.period' => 'মাসের তালা',
         'accounts.reconciliation' => 'ব্যাংক মিলকরণ',
         'accounts.report' => 'হিসাবের রিপোর্ট',

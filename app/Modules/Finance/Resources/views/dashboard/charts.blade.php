@@ -5,7 +5,7 @@
 --}}
 @php
     $bn = app()->getLocale() === 'bn';
-    $digits = fn (string $s): string => $bn ? \App\Core\Support\BanglaDigits::of($s) : $s;
+    $digits = fn (string $s): string => $s; // ⓘ পর্দার সংখ্যা ইংরেজি (মালিক, ১৬ নভেম্বর ২০২৬)
     $lakh = fn (string $v): string => (bccomp($v, '0', 4) < 0 ? '−' : '').'৳'.$digits(bcdiv(ltrim($v, '-'), '100000', 1)).' '.__('finance::fund.lakh');
     $taka = fn (string $v): string => '৳'.$digits(\App\Core\Support\Money::format($v, 0));
     // ⓘ মাপও bcmath-এ — বড়টা, ছোটটা, আর অঙ্ক থেকে পিক্সেল (এক ঘর দশমিক)

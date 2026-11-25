@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 return [
     'title' => 'ব্যাংক চার্জ',
-    'subtitle' => 'কোন ব্যাংক বা MFS কত কাটল — খতিয়ানের ৫২১০ ও ৫২১১ থেকে',
+    'subtitle' => 'কোন ব্যাংক বা MFS কত কাটল — খতিয়ানের 5210 ও 5211 থেকে',
     'this_month' => 'এই মাস',
     'last_month' => 'গত মাস',
     'this_year' => 'এই বছর',

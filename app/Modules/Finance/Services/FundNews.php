@@ -135,6 +135,6 @@ final class FundNews
 
     private function digits(string $s): string
     {
-        return app()->getLocale() === 'bn' ? \App\Core\Support\BanglaDigits::of($s) : $s;
+        return $s; // ⓘ পর্দার সংখ্যা ইংরেজি (মালিক, ১৬ নভেম্বর ২০২৬)
     }
 }

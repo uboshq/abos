@@ -33,7 +33,7 @@ return [
     'ends_on' => 'মেয়াদ শেষ',
     'rent_day' => 'ভাড়া দেওয়ার দিন',
     'income_account' => 'আয়ের খাত',
-    'income_default' => '৪৩২০ ভাড়া আয়',
+    'income_default' => '4320 ভাড়া আয়',
     'deposit_money_account' => 'জামানত কোন খাতে এল',
     'deposit_later' => 'জামানত এখনো আসেনি / পরে নেব',
     'money_account' => 'টাকার খাত',
