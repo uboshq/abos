@@ -51,7 +51,7 @@ final class ARowAsksItsOwnKeyOnceTest extends TestCase
         $voucher = app(VoucherService::class)->create(['type' => Voucher::JOURNAL, 'trx_date' => now()->toDateString(), 'narration' => 'x'],
             [['account_id' => StandardChart::find(StandardChart::RECEIVABLE)->id, 'debit' => '10', 'party_type' => 'customer', 'party_id' => \App\Modules\Customer\Models\Customer::query()->value('id')],
                 ['account_id' => StandardChart::find('4300')->id, 'credit' => '10']]);
-        $asked = $this->count(Voucher::class, 'view');
+        $asked = $this->timesAsked(Voucher::class, 'view');
         $html = view('accounts::voucher.partials.row-menu', ['voucher' => $voucher])->render();
 
         $this->assertSame(1, $asked());
@@ -79,7 +79,7 @@ final class ARowAsksItsOwnKeyOnceTest extends TestCase
             foreach ([DocumentStatus::DRAFT, DocumentStatus::CONFIRMED, DocumentStatus::CANCELLED] as $status) {
                 $bill->status = $status;
                 $may = $user->can('update', $bill);
-                $asked = $this->count(PurchaseBill::class, 'update');
+                $asked = $this->timesAsked(PurchaseBill::class, 'update');
                 $html = view('purchase::bill.partials.row-menu', ['bill' => $bill])->render();
                 $this->assertSame(1, $asked(), $status);
                 $this->assertSame($may, str_contains($html, 'href="'.$edit.'"'), "⛔ {$status}: সম্পাদনার উত্তর নীতির নয়।");
@@ -94,7 +94,7 @@ final class ARowAsksItsOwnKeyOnceTest extends TestCase
         }
     }
 
-    private function count(string $class, string $ability): \Closure
+    private function timesAsked(string $class, string $ability): \Closure
     {
         $n = 0;
         Gate::after(function ($u, string $asked, $result, array $arguments = []) use (&$n, $class, $ability) {
