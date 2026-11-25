@@ -889,12 +889,14 @@ final class VoucherService
      * ⓘ চালান আর ট্রিপের ভাড়া — হাতে লেখা ভাউচারের পথে; সই লাগলে শেষ সইয়ে, লেখক নিজে হলে অন্য কেউ ভাউচারের পর্দা থেকে।
      * ⓘ জমার খবরের রসিদ — একই পথ (মালিক, ২০ নভেম্বর ২০২৬: খবরের টাকা রসিদে): সই লাগলে শেষ সইয়ে, লেখক নিজে হলে অন্য কেউ এই পর্দা
      *   থেকে, বা খবরের "অনুমোদন দিন" আবার চাপলে; না থাকলে অপেক্ষার রসিদ চিরকাল খসড়া থাকত।
+     * ⓘ আটকে থাকা মজুরি — খসড়াটা HR বানায়, পাকা করেন হিসাবরক্ষক কোম্পানির অনুমোদনের নিয়মে; না থাকলে টাকা দেওয়ার পথই বন্ধ (২৫ নভেম্বর ২০২৬)।
      */
     private const HANDED_TO_THE_VOUCHER_SCREEN = [
         'hr_expense_claims.payment_voucher_id',
         'sal_challans.fare_voucher_id',
         'sal_shipments.fare_voucher_id',
         'sal_deposit_claims.voucher_id',
+        'hr_held_wage_payments.voucher_id',
     ];
 
     /**

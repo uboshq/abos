@@ -159,7 +159,7 @@ final class TheSameSlipCameTwiceThroughWhatsappTest extends TestCase
             $this->assertDoesNotMatchRegularExpression('/<input[^>]*name="slip"[^>]*capture=/s', $html, "⛔ {$page}: স্লিপের ঘর কেবল ক্যামেরা খোলে");
         }
 
-        $this->assertMatchesRegularExpression('/<input[^>]*name="slip"[^>]*\$store\.scanner\.begin\(\$el, \'paper\'\)/s', $staff,
+        $this->assertMatchesRegularExpression('/<(?:input|x-ui\.[\w-]+)[^>]*name="slip"[^>]*\$store\.scanner\.begin\(\$el, \'paper\'\)/s', $staff,
             '⛔ জমার খবরের স্লিপ স্ক্যানারে যায় না — কোণা, সোজা, পরিষ্কার হয় না');
     }
 

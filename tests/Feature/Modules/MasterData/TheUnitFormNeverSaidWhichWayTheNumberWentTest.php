@@ -94,7 +94,7 @@ final class TheUnitFormNeverSaidWhichWayTheNumberWentTest extends TestCase
     {
         $hint = __('master_data::message.factor_hint');
 
-        $this->assertStringContainsString('১২', $hint, implode(PHP_EOL, [
+        $this->assertStringContainsString('12', $hint, implode(PHP_EOL, [
             'ইঙ্গিতে কোনো উদাহরণ নেই।',
             '',
             'ⓘ "এককের রূপান্তর" লেখা একটা বাক্য কিছুই পরিষ্কার করে না —',

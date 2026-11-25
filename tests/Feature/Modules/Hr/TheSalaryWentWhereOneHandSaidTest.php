@@ -199,7 +199,7 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         // ── আইনের শেষ দিন: ৩১ আগস্ট ২০২৬ (সোম) + ৭ কর্মদিবস, শুক্রবার বাদ = ৮ সেপ্টেম্বর; আজ ৫ ডিসেম্বর — লাল
         $this->assertSame('2026-09-08', PayrollService::wageDeadline($august)->toDateString());
         $this->get(route('hr.payroll.show', $august->id))->assertOk()
-            ->assertSee('data-held-late', false)->assertSee('08 Sep 2026', false)->assertSee(__('hr::payroll.held_late'), false);
+            ->assertSee('data-held-late', false)->assertSee(\App\Core\Support\DateFormat::format('2026-09-08'), false)->assertSee(__('hr::payroll.held_late'), false);
         // ⓘ "রান আবার বানান" নির্দেশটা আর নেই — বকেয়া পরের ফাইলে যায়
         $this->assertSame('hr::payroll.held_rebuild', __('hr::payroll.held_rebuild'));
         $this->get(route('module.dashboard', ['module' => 'hr']))->assertOk()

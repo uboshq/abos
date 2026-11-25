@@ -51,17 +51,17 @@ final class CheapPermissionRegistrar extends PermissionRegistrar
 
     private function fingerprint(): string
     {
-        $of = function (string $table, array $columns): string {
+        $of = function (\Illuminate\Database\Query\Builder $query, array $columns): string {
             $row = "CONCAT_WS('|', ".implode(', ', array_map(fn (string $c): string => "IFNULL({$c}, '~')", $columns)).')';
-            $mark = DB::table($table)->selectRaw("COUNT(*) as n, COALESCE(SUM(CRC32({$row})), 0) as s, COALESCE(BIT_XOR(CRC32(REVERSE({$row}))), 0) as x")->first();
+            $mark = $query->selectRaw("COUNT(*) as n, COALESCE(SUM(CRC32({$row})), 0) as s, COALESCE(BIT_XOR(CRC32(REVERSE({$row}))), 0) as x")->first();
 
             return "{$mark->n}:{$mark->s}:{$mark->x}";
         };
 
         return implode(' ', [
-            $of('role_has_permissions', ['permission_id', 'role_id']),
-            $of((new ($this->getPermissionClass())())->getTable(), ['id', 'name', 'guard_name', 'updated_at']),
-            $of((new ($this->getRoleClass())())->getTable(), ['id', 'name', 'guard_name', 'company_id', 'updated_at']),
+            $of(DB::table('role_has_permissions'), ['permission_id', 'role_id']),
+            $of($this->getPermissionClass()::query()->toBase(), ['id', 'name', 'guard_name', 'updated_at']),
+            $of($this->getRoleClass()::query()->toBase(), ['id', 'name', 'guard_name', 'company_id', 'updated_at']),
             DB::connection()->getDatabaseName(),
         ]);
     }
