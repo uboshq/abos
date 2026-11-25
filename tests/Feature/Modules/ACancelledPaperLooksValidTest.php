@@ -234,6 +234,7 @@ class ACancelledPaperLooksValidTest extends TestCase
             'accounts.transfer.print' => 'টাকা হস্তান্তরের স্লিপ — HandoverSlipTest ধরে',
             'accounts.year_end.closing.print' => 'বছরশেষের সমাপনী ভাউচার — বাতিল হয় না; বছর আবার খুললে উল্টো দাখিলা একই কাগজেই ছাপা হয় (TheYearClosedWithoutAPaperTest)',
             'accounts.note.print' => 'ডেবিট/ক্রেডিট নোট — ANoteCouldNotBePrintedTest ধরে (বাতিল নোট "বাতিল" বলে)',
+            'accounts.trade_voucher.print' => 'স্টক ছাড়া ভাউচার — APostedTradeVoucherGoesBackOnlyByAReversalTest ধরে (বাতিল ভাউচার "বাতিল" বলে)',
             'hr.payslip.print' => 'পে-স্লিপ — বাতিল হয় না, খসড়া হয়',
             'inventory.label.print' => 'পণ্যের লেবেল — কোনো ডকুমেন্ট নয়',
             'sales.print_queue.index' => 'কিউয়ের পর্দা, কাগজ নয়',
