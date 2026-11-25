@@ -207,7 +207,7 @@ final class MessengerMessagesTest extends TestCase
 
         Queue::assertPushed(SendPushToUser::class, fn (SendPushToUser $job): bool => $job->userId === (int) $c->id
             && $job->data['type'] === 'chat' && $job->data['thread_id'] === $thread && $job->data['message_id'] === $id
-            && $job->data['from'] === (string) $a->id && $job->body === 'meeting at 5');
+            && $job->data['sender'] === (string) $a->id && ! array_key_exists('from', $job->data) && $job->body === 'meeting at 5');
         Queue::assertNotPushed(SendPushToUser::class, fn (SendPushToUser $job): bool => $job->userId === (int) $b->id);
         Queue::assertNotPushed(SendPushToUser::class, fn (SendPushToUser $job): bool => $job->userId === (int) $a->id);
 

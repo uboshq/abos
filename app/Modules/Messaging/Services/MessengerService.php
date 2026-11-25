@@ -785,7 +785,8 @@ final class MessengerService
             'type' => 'chat',
             'thread_id' => (string) $thread->public_id,
             'message_id' => (string) $message->id,
-            'from' => (string) $sender->id,
+            // ⛔ 'from' নয় — Firebase-এর সংরক্ষিত নাম, পুরো বার্তা 400 হয় (২৫ নভেম্বর ২০২৬)
+            'sender' => (string) $sender->id,
         ];
 
         Member::query()->where('thread_id', $thread->id)->where('user_id', '!=', $sender->id)->where('muted', false)
