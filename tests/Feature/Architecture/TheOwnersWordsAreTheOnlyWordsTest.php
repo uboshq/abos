@@ -100,8 +100,6 @@ final class TheOwnersWordsAreTheOnlyWordsTest extends TestCase
             'ছাপা বিলের নিচে স্বাক্ষরের ঘর'],
         ['sign_for_approve', 'app/Modules/SystemAdmin/Resources/lang/bn/settings.php', 'সইয়ের ঘর',
             'ছাপা বিলের নিচে স্বাক্ষরের ঘর'],
-        ['sign_for_approve', 'app/Modules/SystemAdmin/Resources/lang/bn/permission.php', 'সই চাওয়া',
-            'ডকুমেন্টে ডিজিটাল স্বাক্ষর চাওয়ার অনুমতি (documents.signature_request)'],
         // ⓘ বার্তার ⋮ মেনু — মালিকের অনুমোদিত ওয়েব নমুনা v7 (২১ নভেম্বর ২০২৬) হুবহু "নোটিফিকেশন বন্ধ" লেখে: এটা একটা
         //   কথোপকথনের ফোন/ব্রাউজার-ঘণ্টা চুপ করানো (WhatsApp-এর নিজের শব্দ), ABOS-এর বিজ্ঞপ্তি মডিউল নয়
         ['notification_en', 'app/Modules/Messaging/Resources/lang/bn/web.php', 'নোটিফিকেশন বন্ধ',

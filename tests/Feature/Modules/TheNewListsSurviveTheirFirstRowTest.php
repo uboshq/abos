@@ -158,7 +158,7 @@ class TheNewListsSurviveTheirFirstRowTest extends TestCase
 
         $this->get(route('accounts.asset.show', $asset))
             ->assertOk()
-            ->assertSee('Aug 2026');
+            ->assertSee(\Illuminate\Support\Carbon::parse('2026-08-31')->translatedFormat('M Y'));
     }
 
     public function test_the_deposit_claim_list_survives_its_first_row(): void

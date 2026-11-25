@@ -68,7 +68,7 @@ class PurchaseContractController extends Controller implements HasMiddleware
         $filters = \App\Core\ListFilter\Columns::set([
             \App\Core\ListFilter\Columns::between(__('purchase::field.ends_on'), 'ends_on', bar: false),
             \App\Core\ListFilter\Columns::is('status', __('purchase::field.state'), 'status', collect(['draft', 'confirmed', 'cancelled'])->mapWithKeys(fn ($v) => [$v => __('core.status.'.$v)])->all()),
-            \App\Core\ListFilter\Columns::is('supplier', __('purchase::field.supplier'), 'supplier_id', Supplier::query()->whereIn('id', PurchaseContract::query()->select('supplier_id'))->get()->mapWithKeys(fn ($x) => [$x->id => $x->name()])->all()),
+            \App\Core\ListFilter\Columns::is('supplier', __('purchase::field.supplier'), 'supplier_id', Supplier::query()->inViewedBranch()->whereIn('id', PurchaseContract::query()->select('supplier_id'))->get()->mapWithKeys(fn ($x) => [$x->id => $x->name()])->all()),
         ]);
         $base = fn () => PurchaseContract::query();
         $filters->apply($query, $request);

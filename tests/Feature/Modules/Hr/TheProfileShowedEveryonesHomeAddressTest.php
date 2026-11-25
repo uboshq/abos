@@ -65,7 +65,7 @@ final class TheProfileShowedEveryonesHomeAddressTest extends TestCase
         $this->give($clerk, 'hr.employee.manage');
 
         $page = $this->as($clerk)->get(route('hr.employee.show', $employee->id))->assertOk();
-        foreach ([...array_values(self::PERSONAL), '17 May 1990'] as $value) {
+        foreach ([...array_values(self::PERSONAL), '17 May 1990', \App\Core\Support\DateFormat::format('1990-05-17')] as $value) {
             $page->assertDontSee($value, false);
         }
         $page->assertSee(FieldSecurity::mask(), false);

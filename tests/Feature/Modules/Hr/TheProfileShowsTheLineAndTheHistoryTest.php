@@ -73,7 +73,7 @@ final class TheProfileShowsTheLineAndTheHistoryTest extends TestCase
         app()->setLocale('en');
         $html = (string) $this->actingAs($this->clerk)->get(route('hr.employee.show', $karim))->assertOk()->getContent();
 
-        foreach (['04 May 1990', 'B+', 'Amena Begum', 'Rahim Uddin (Brother)', '01811000000'] as $fact) {
+        foreach ([\App\Core\Support\DateFormat::format('1990-05-04'), 'B+', 'Amena Begum', 'Rahim Uddin (Brother)', '01811000000'] as $fact) {
             $this->assertStringContainsString(e($fact), $html, "ফর্মে লেখা \"{$fact}\" প্রোফাইলে ফেরেনি।");
         }
 

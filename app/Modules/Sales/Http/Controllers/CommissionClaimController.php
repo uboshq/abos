@@ -70,7 +70,7 @@ class CommissionClaimController extends Controller implements HasMiddleware
         $filters = \App\Core\ListFilter\Columns::set([
             \App\Core\ListFilter\Columns::between(__('accounts::field.date'), 'trx_date'),
             \App\Core\ListFilter\Columns::is('status', __('sales::field.state'), 'status', collect([CommissionClaim::PENDING, CommissionClaim::SETTLED, CommissionClaim::REJECTED, CommissionClaim::CANCELLED])->mapWithKeys(fn ($v) => [$v => $v === CommissionClaim::CANCELLED ? __('core.status.cancelled') : __('sales::field.commission_'.$v)])->all()),
-            \App\Core\ListFilter\Columns::is('supplier', __('supplier::menu.party'), 'supplier_id', \App\Modules\Supplier\Models\Supplier::query()->whereIn('id', CommissionClaim::query()->select('supplier_id'))->get()->mapWithKeys(fn ($x) => [$x->id => $x->name()])->all()),
+            \App\Core\ListFilter\Columns::is('supplier', __('supplier::menu.party'), 'supplier_id', \App\Modules\Supplier\Models\Supplier::query()->inViewedBranch()->whereIn('id', CommissionClaim::query()->select('supplier_id'))->get()->mapWithKeys(fn ($x) => [$x->id => $x->name()])->all()),
         ]);
         $base = fn () => CommissionClaim::query();
         $filters->apply($query, $request);
