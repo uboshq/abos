@@ -20,6 +20,46 @@ use Spatie\Permission\PermissionRegistrar;
  */
 final class CheapPermissionRegistrar extends PermissionRegistrar
 {
+    private ?object $indexOf = null;
+
+    /** @var array<string, array<string, object>> গার্ড => নাম => অনুমতি */
+    private array $byName = [];
+
+    /**
+     * ⭐ নাম ধরে একটা অনুমতি — তালিকা ঘেঁটে নয়, সূচি থেকে (২৫ নভেম্বর ২০২৬)। মেনু প্রতি পাতায় ~৩০০ নাম খোঁজে, প্রতিটায় মূল কোড ৩৬২
+     * সারি হাঁটত — ছোট পাতার প্রায় তৃতীয়াংশ সময়।
+     *   ⛔ সূচি বাঁধা তালিকার বস্তুর সাথে: ক্যাশ ছাড়লে তালিকা নতুন বস্তু, সূচিও নতুন। অন্য যেকোনো প্রশ্ন (আইডি, একাধিক, সংখ্যার মতো
+     *   নাম) মূলের পথে — উত্তর হুবহু এক।
+     */
+    public function getPermissions(array $params = [], bool $onlyOne = false): Collection
+    {
+        $name = $params['name'] ?? null;
+        $guard = $params['guard_name'] ?? null;
+
+        if (! $onlyOne || count($params) !== 2 || ! is_string($name) || ! is_string($guard) || is_numeric($name)) {
+            return parent::getPermissions($params, $onlyOne);
+        }
+
+        // ⓘ মূলের `loadPermissions()` private — তালিকা না থাকলে মূলের পথেই তোলা
+        if (! is_object($this->permissions)) {
+            return parent::getPermissions($params, true);
+        }
+
+        if ($this->indexOf !== $this->permissions) {
+            $this->indexOf = $this->permissions;
+            $this->byName = [];
+
+            foreach ($this->permissions as $permission) {
+                // ⓘ একই নাম দুইবার হলে প্রথমটা — মূলের `first()`
+                $this->byName[(string) $permission->getAttribute('guard_name')][(string) $permission->getAttribute('name')] ??= $permission;
+            }
+        }
+
+        $one = $this->byName[$guard][$name] ?? null;
+
+        return new Collection($one === null ? [] : [$one]);
+    }
+
     protected function getPermissionsWithRoles(): Collection
     {
         $roles = $this->getRoleClass()::query()->get()->keyBy(fn ($role) => $role->getKey());
