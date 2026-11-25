@@ -6,24 +6,24 @@ declare(strict_types=1);
 return [
     'menu' => 'Sales by area',
     'menu_branch' => 'Sales by branch',
-    'title_area' => 'Sales by area — area',
-    'title_territory' => 'Sales by area — territory',
+    'title_area' => 'Sales by area — region',
+    'title_territory' => 'Sales by area — area',
     'title_point' => 'Sales by area — point',
     'title_customer' => 'Sales by area — customer',
     'title_branch' => 'Sales by branch',
 
-    'tab_area' => 'Area',
-    'tab_territory' => 'Territory',
+    'tab_area' => 'Region',
+    'tab_territory' => 'Area',
     'tab_point' => 'Point',
     'tab_customer' => 'Customer',
 
     'branch' => 'Branch',
-    'level_area' => 'Area',
-    'level_territory' => 'Territory',
+    'level_area' => 'Region',
+    'level_territory' => 'Area',
     'level_point' => 'Point',
     'level_customer' => 'Customer',
-    'parent_territory' => 'Area',
-    'parent_point' => 'Territory · Area',
+    'parent_territory' => 'Region',
+    'parent_point' => 'Area · Region',
     'parent_customer' => 'Point',
 
     'customers' => 'Customers',
@@ -40,7 +40,7 @@ return [
 
     'no_branch' => 'No branch set',
     'no_place' => 'No place set',
-    'no_territory' => 'No territory set',
+    'no_territory' => 'No area set',
 
     'drill_down' => ':amount — open one level down',
     'chart' => 'Net sales, collected and due',

@@ -5,8 +5,8 @@ declare(strict_types=1);
 /* Due ageing by area — [[DueAgeingReports]] (owner, 23 November 2026) */
 return [
     'menu' => 'Due ageing by area',
-    'title_area' => 'Due ageing by area — area',
-    'title_territory' => 'Due ageing by area — territory',
+    'title_area' => 'Due ageing by area — region',
+    'title_territory' => 'Due ageing by area — area',
     'title_point' => 'Due ageing by area — point',
     'title_customer' => 'Due ageing by area — customer',
     'bucket_current' => '0–30 days',
