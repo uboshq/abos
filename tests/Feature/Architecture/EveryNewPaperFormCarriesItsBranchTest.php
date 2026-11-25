@@ -140,6 +140,10 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
         'sales.portal.logout' => 'dealer portal sign out',
         'system_admin.import.check' => 'dry run of an import, writes nothing',
         'system_admin.look.import' => 'appearance import',
+        'system_admin.module.branches.apply' => 'writes the listed on/off module switches (settings of companies or branches) after the preview; no paper, no money',
+        'system_admin.module.branches.preview' => 'lists the module switches that would change, writes nothing',
+        'system_admin.module.companies.apply' => 'writes the listed on/off module switches (settings of companies or branches) after the preview; no paper, no money',
+        'system_admin.module.companies.preview' => 'lists the module switches that would change, writes nothing',
         'system_admin.look.preview.stop' => 'appearance preview',
         'theme.switch' => 'personal theme',
     ];

@@ -143,7 +143,7 @@ class StorageLocationController extends Controller implements HasMiddleware
             'sort' => ['nullable', 'integer', 'min:0', 'max:65535'],
             'parent_id' => [
                 'nullable', 'integer',
-                Rule::exists('inv_storage_locations', 'id')->where('warehouse_id', $warehouse->id),
+                Rule::exists('inv_storage_locations', 'id')->where('company_id', $warehouse->company_id)->where('warehouse_id', $warehouse->id),
             ],
             'is_active' => ['nullable', 'boolean'],
         ]);

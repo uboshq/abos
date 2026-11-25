@@ -57,8 +57,7 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
         'EveryMasterNamesItsDuplicateGuardTest::EXEMPT',
         'EveryPolicyRuleIsActuallyReachedTest::REACHED_WITHOUT_A_ROUTE',
         'EveryPortalScreenAsksTheNarrowPathTest::HANDLED',
-        // ⚠️ কোম্পানি না-ছাঁকা `exists` — Accounts-এর বাইরে বাকি, সংখ্যা কেবল কমে (চূড়ান্ত অডিট ⛔১০)
-        'EveryExistsRuleNamesItsCompanyTest::NOT_YET',
+        // ⓘ EveryExistsRuleNamesItsCompanyTest::NOT_YET এখন খালি (শেষ তিনটাও কোম্পানি ছাঁকে, ২৫ নভেম্বর ২০২৬) — খালি ধ্রুবক চেনা যায় না, তাই নাম নেই
         'EveryRawQueryNamesItsCompanyTest::DECLARED',
         // ⚠️ দেয়াল ছাড়া চলা রিপোর্ট — সারিগুলো কোনো শাখার নয় (অডিট ২৭ সেপ্টেম্বর, §৩)
         'EveryReportStandsBehindTheBranchWallTest::SAME_FOR_EVERYONE',
@@ -545,6 +544,8 @@ final class EveryExcuseWeGrantedIsCountedTest extends TestCase
     //      (পাতার খোলস messaging.index NOT_REALLY_A_LIST-এ — চাহিদার তালিকা, গোনায় আসে না)
     // ⓘ ২৪ নভেম্বর ২০২৬ (মিটিং), ছাদ একই ৫৫৩: +১ OPEN_TO_THE_WORLD `api.messaging.livekit.webhook` (কল-সার্ভারের সই করা খবর);
     //   −১ NOT_WIRED_ON_PURPOSE `nameOf` — আর মৃত নয়: একক বদলালে productPacks::baseBecame() ওটাই ডাকে। ⛔ Mac-এ এখনো মাপা নয়
+    // ⓘ ২৫ নভেম্বর ২০২৬ (1.3.12-এর রান), ছাদ একই ৫৫৩, প্রতিফলনে গোনা ৫৫৩: +৪ EXCLUDED `system_admin.module.{branches,companies}.{apply,preview}`
+    //   (মডিউলের সুইচ, কাগজ নয়); −৩ EveryExistsRuleNamesItsCompanyTest::NOT_YET খালি; −১ কোপাইলটের খাতায় পট্টি বসেছে। ⛔ Mac-এ এখনো মাপা নয়
     private const CEILING = 553;
 
     /*

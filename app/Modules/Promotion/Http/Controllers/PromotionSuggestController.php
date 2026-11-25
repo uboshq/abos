@@ -13,7 +13,6 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 
 /**
  * বিক্রয়ের পর্দা যে প্রশ্নটা করে: *"এই সারিতে কোন অফার খাটে?"* — §১০।
@@ -48,7 +47,7 @@ final class PromotionSuggestController extends Controller implements HasMiddlewa
     public function __invoke(Request $request): JsonResponse
     {
         $check = Validator::make($request->all(), [
-            'product_id' => ['required', 'integer', Rule::exists('inv_products', 'id')],
+            'product_id' => ['required', 'integer'],
             'qty' => ['required', 'numeric', Decimal::RULE, 'gt:0'],
             'value' => ['required', 'numeric', Decimal::RULE, 'gte:0'],
             'customer_id' => ['nullable', 'integer'],
@@ -65,12 +64,8 @@ final class PromotionSuggestController extends Controller implements HasMiddlewa
         /*
          * ⛔ অন্য কোম্পানির পণ্য — কোম্পানির ছাঁকনি দিয়েই।
          *
-         * ⓘ `Rule::exists` গ্লোবাল স্কোপ মানে না — সে কাঁচা কোয়েরি চালায়,
-         * Eloquent নয়। ⚠️ (মন্তব্যে ঐ ফাংশনের নামটা লেখা হয়নি ইচ্ছা করে:
-         * `EveryRawQueryNamesItsCompany` একবার একটা মন্তব্যের লেখা ধরেই
-         * মিথ্যা লাল হয়েছিল।)
-         * ⚠️ তাই এখানে Eloquent দিয়ে আবার খোঁজা: [[BelongsToCompany]]
-         * অন্য কোম্পানির পণ্য লুকিয়ে রাখে, আর তখন `null` আসে।
+         * ⓘ নিয়মে `exists` নেই ইচ্ছা করে: সে কাঁচা কোয়েরিতে সব কোম্পানির পণ্য দেখত। Eloquent দিয়েই খোঁজা: [[BelongsToCompany]]
+         * অন্য কোম্পানির পণ্য লুকিয়ে রাখে, না-থাকা আর অন্য কোম্পানির — দুটোরই একই উত্তর।
          */
         $product = Product::query()->find($data['product_id']);
 
