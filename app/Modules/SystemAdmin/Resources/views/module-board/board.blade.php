@@ -134,7 +134,7 @@
                         </details>
                     </div>
 
-                    <form id="board-form" method="POST" action="{{ route($here.'.preview') }}" class="space-y-4">
+                    <form id="board-form" method="POST" action="{{ route($here.'.preview') }}" class="space-y-4" @if ($isBranch) x-data="switchBoard({ on: {} })" @endif>
                         @csrf
                         @if ($isBranch)
                             <input type="hidden" name="company" value="{{ $company->id }}">
@@ -143,6 +143,12 @@
                             <input type="hidden" name="pick[]" value="{{ $id }}">
                         @endforeach
 
+                        @if ($isBranch)
+                            {{-- ⭐ "সব বাছাই" — আগের শাখার পাতার (মালিকের দেখানো পর্দা); কেবল টিক নাড়ে, তালা আর কোম্পানির দেয়ালের সারি নড়ে না, মিশ্র সারিতে "সবগুলোয় চালু"-ও বসে --}}
+                            <label class="flex items-center gap-2 px-4 text-sm" data-module-all>
+                                <input type="checkbox" x-on:change="setAll($event.target)" class="size-4"> {{ __('system_admin::branch_module.select_all') }}
+                            </label>
+                        @endif
                         @foreach ($groups as $group)
                             <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)" data-module-group="{{ $group['key'] }}">
                                 <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-2 text-sm font-semibold">{{ $group['label'] }}</h2>
