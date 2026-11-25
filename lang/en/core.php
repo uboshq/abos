@@ -44,9 +44,6 @@ return [
 
     'source' => [
         'voucher' => 'Voucher',
-        'trade_voucher' => 'Stock-free Voucher',
-        'sales_voucher' => 'Sales Voucher',
-        'purchase_voucher' => 'Purchase Voucher',
         'sales_invoice' => 'Sales Invoice',
         'purchase_invoice' => 'Purchase Invoice',
         'receipt_voucher' => 'Receipt Voucher',
