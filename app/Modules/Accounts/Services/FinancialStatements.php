@@ -549,6 +549,12 @@ final class FinancialStatements
             $sections[$section][] = $this->line($account === null ? '#'.$id : $account->code.' '.$account->name(), $now, $then) + ['account_id' => $id];
         }
 
+        // ⓘ প্রতিটা দলে খাত কোডের ক্রমে — কোয়েরির ক্রম যা-ই হোক
+        foreach ($sections as &$lines) {
+            usort($lines, fn (array $a, array $b) => strnatcmp($a['label'], $b['label']));
+        }
+        unset($lines);
+
         $t = fn (string $s) => [
             array_reduce($sections[$s], fn ($x, $l) => bcadd($x, $l['now'], 4), '0'),
             array_reduce($sections[$s], fn ($x, $l) => bcadd($x, $l['then'], 4), '0'),
@@ -561,11 +567,37 @@ final class FinancialStatements
         $totals['profit_before_tax'] = $plus($totals['operating_profit'], $totals['finance_costs']);
         $totals['profit'] = $plus($totals['profit_before_tax'], $totals['income_tax']);
 
+        // ⭐ অন্যান্য সমন্বিত আয় (IAS 1.81A, IAS 16.39) — সম্পদের পুনর্মূল্যায়নের উদ্বৃত্ত, যা সোজা স্বত্বে যায়; আগে কাগজে সবসময় 0.00 লেখা থাকত
+        $totals['oci'] = $this->otherComprehensiveIncome($from, $to, $priorFrom, $priorTo);
+        $totals['total_ci'] = $plus($totals['profit'], $totals['oci']);
+
         return [
             'from' => $from, 'to' => $to, 'prior_from' => $priorFrom, 'prior_to' => $priorTo, 'branch_id' => $branchId,
             'sections' => $sections,
             'totals' => array_map(fn (array $p) => ['now' => $p[0], 'then' => $p[1], 'change' => bcsub($p[0], $p[1], 4), 'pct' => self::percent($p[0], $p[1])], $totals),
         ];
+    }
+
+    /**
+     * এই সময় আর আগের বছরের একই সময় — সম্পদের ঘটনা থেকে স্বত্বের খাতে যা গেছে (উল্টানোসহ)।
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function otherComprehensiveIncome(string $from, string $to, string $priorFrom, string $priorTo): array
+    {
+        $source = \App\Modules\Accounts\Models\AssetEvent::drillSourceType();
+
+        $row = DB::table('ledger_entries')
+            ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
+            ->where('ledger_entries.company_id', CompanyContext::id())
+            ->where('accounts.type', Account::EQUITY)
+            ->whereIn('ledger_entries.source_type', [$source, $source.':reversal'])
+            ->tap(fn ($q) => ($this->scope)($q, 'ledger_entries.branch_id'))
+            ->selectRaw('SUM(CASE WHEN ledger_entries.trx_date BETWEEN ? AND ? THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END) as now_net', [$from, $to])
+            ->selectRaw('SUM(CASE WHEN ledger_entries.trx_date BETWEEN ? AND ? THEN ledger_entries.credit - ledger_entries.debit ELSE 0 END) as then_net', [$priorFrom, $priorTo])
+            ->first();
+
+        return [bcadd((string) ($row->now_net ?? '0'), '0', 4), bcadd((string) ($row->then_net ?? '0'), '0', 4)];
     }
 
     // ══ নগদ প্রবাহ — পরোক্ষ পদ্ধতি ══════════════════════════════════════

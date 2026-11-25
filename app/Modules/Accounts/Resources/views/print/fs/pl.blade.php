@@ -38,7 +38,7 @@
         {!! $tl('profit_before_tax') !!}
         {!! $tl('income_tax', 'sec') !!}{!! $lines('income_tax') !!}
         {!! $tl('profit', 'grand') !!}
-        <tr class="ln"><td>{{ __('accounts::fs.pl.oci') }}</td><td class="num">0.00</td><td class="num">0.00</td><td class="num">0.00</td><td class="num"></td></tr>
-        <tr class="grand"><td>{{ __('accounts::fs.pl.total_ci') }}</td><td class="num">{{ $paren($pl['totals']['profit']['now']) }}</td><td class="num">{{ $paren($pl['totals']['profit']['then']) }}</td><td class="num">{{ $paren($pl['totals']['profit']['change']) }}</td><td class="num">{!! $pctOf($pl['totals']['profit']['pct']) !!}</td></tr>
+        {!! $tl('oci', 'ln') !!}
+        {!! $tl('total_ci', 'grand') !!}
     </tbody>
 </table>

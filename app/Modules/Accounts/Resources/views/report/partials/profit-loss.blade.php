@@ -19,15 +19,25 @@
         ['section', 'revenue'], ['section', 'cost_of_sales'], ['total', 'gross_profit'],
         ['section', 'other_income'], ['section', 'operating_expenses'], ['total', 'operating_profit'],
         ['section', 'finance_costs'], ['total', 'profit_before_tax'],
-        ['section', 'income_tax'], ['grand', 'profit'],
+        ['section', 'income_tax'],
+        // ⓘ অন্যান্য সমন্বিত আয় থাকলে তবেই এই তিন সারি — না থাকলে মোট সমন্বিত আয় = নিচের লাভ-ক্ষতিই, একই অঙ্ক দুবার নয়
+        ...(collect(['now', 'then'])->contains(fn ($k) => bccomp($pl['totals']['oci'][$k], '0', 4) !== 0)
+            ? [['total', 'profit'], ['section', 'oci'], ['total', 'total_ci']] : []),
     ];
+
+    // ⭐ নিচের বার — লাভ হলে গোটা সারি সবুজ, ক্ষতি হলে গোটা সারি লাল, কথায় আর অঙ্কে (মালিক, ২৫ নভেম্বর ২০২৬)
+    $net = $pl['totals']['profit'];
+    $sign = bccomp((string) $net['now'], '0', 4);
+    $result = __('accounts::fs.pl.'.match ($sign) { 1 => 'made_profit', -1 => 'made_loss', default => 'made_none' },
+        ['amount' => \App\Core\Support\Money::format(ltrim((string) $net['now'], '-'))]);
+    $bar = 'color: #fff; font-weight: 700; padding-block: .85rem; background: '.match ($sign) { 1 => '#15803d', -1 => '#b91c1c', default => '#475569' };
 @endphp
 
 <div class="overflow-x-auto">
     <table class="ui-grid" data-pl-table>
         <thead>
             <tr>
-                <th scope="col">{{ __('accounts::fs.bs.particulars') }}</th>
+                <th scope="col">{{ __('accounts::fs.pl.particulars') }}</th>
                 <th scope="col" class="num">{{ $day($pl['from']) }} – {{ $day($pl['to']) }}</th>
                 <th scope="col" class="num">{{ $day($pl['prior_from']) }} – {{ $day($pl['prior_to']) }}</th>
                 <th scope="col" class="num">{{ __('accounts::fs.bs.change') }}</th>
@@ -40,9 +50,7 @@
                     $sum = $pl['totals'][$key];
                     $tone = match (true) {
                         $kind === 'section' => 'background: var(--color-surface-hover)',
-                        $kind === 'total' => 'background: var(--color-surface-selected)',
-                        bccomp((string) $sum['now'], '0', 4) >= 0 => 'background: var(--color-badge-success-bg)',
-                        default => 'background: var(--color-badge-danger-bg)',
+                        default => 'background: var(--color-surface-selected)',
                     };
                 @endphp
                 <tr data-pl="{{ $key }}" class="font-semibold">
@@ -52,7 +60,7 @@
                     <td class="num" style="{{ $tone }}">{{ $fmt($sum['change']) }}</td>
                     <td class="num" style="{{ $tone }}">{{ $pct($sum) }}</td>
                 </tr>
-                @foreach ($kind === 'section' ? $pl['sections'][$key] : [] as $line)
+                @foreach ($kind === 'section' ? ($pl['sections'][$key] ?? []) : [] as $line)
                     @php
                         $href = $link($line['account_id'] ?? null);
                     @endphp
@@ -72,5 +80,14 @@
                 @endforeach
             @endforeach
         </tbody>
+        <tfoot>
+            <tr data-pl="profit" data-pl-result="{{ $sign }}" class="text-base">
+                <td style="{{ $bar }}">{{ $result }}</td>
+                <td class="num" style="{{ $bar }}">{{ $fmt($net['now']) }}</td>
+                <td class="num" style="{{ $bar }}">{{ $fmt($net['then']) }}</td>
+                <td class="num" style="{{ $bar }}">{{ $fmt($net['change']) }}</td>
+                <td class="num" style="{{ $bar }}">{{ $pct($net) }}</td>
+            </tr>
+        </tfoot>
     </table>
 </div>
