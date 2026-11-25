@@ -270,6 +270,8 @@ final class CallService
         $this->presenter->warm($users->values());
         // ⓘ the latest call with each — one more question for all of them; a call's id grows with its time
         $lasts = Call::query()->whereIn('id', $rows->pluck('last_id')->all())->with(['caller', 'callee'])->get()->keyBy('id');
+        // ⓘ the last call's people are other objects than `$users` — their roles together too, not one question each
+        $this->presenter->warm($lasts->map(fn (Call $call): User => $this->peerOf($call, $user))->values()->all());
 
         return $rows->filter(fn ($row): bool => $users->has($row->peer_id))->map(fn ($row): array => [
             'peer' => $this->presenter->person($users->get($row->peer_id)),
