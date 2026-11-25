@@ -109,6 +109,9 @@ final class ReportColumn
 
         /* ⭐ টাকার ঘরে ৳ — এক রিপোর্টের সব টাকার কলাম এক ধাঁচে (প্রিন্সিপালের কমিশন: কথার জেরে ৳ ছিল, খালি অঙ্কে নয়; মালিক, ২৪ অক্টোবর ২০২৬) */
         public readonly bool $currency = false,
+
+        /* ⭐ শাখার কলাম কেবল "সব শাখা" দেখলে — একটা শাখা বাছা থাকলে তার নাম উপরেই লেখা (মালিক, ২৫ নভেম্বর ২০২৬) */
+        public readonly bool $allBranchesOnly = false,
     ) {}
 
     /** অঙ্কে চাপলে উৎস খোলে কি ([[self::$drill]]) */
@@ -251,6 +254,7 @@ final class ReportColumn
             place: self::placeOf($definition, $type),
             drill: self::drillOf($definition),
             currency: (bool) ($definition['currency'] ?? false),
+            allBranchesOnly: (bool) ($definition['all_branches_only'] ?? false),
         );
     }
 

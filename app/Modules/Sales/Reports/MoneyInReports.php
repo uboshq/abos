@@ -151,7 +151,7 @@ final class MoneyInReports
             ['key' => 'customer_name', 'label' => 'sales::money_in.level_customer', 'width' => '17rem'],
             ['key' => 'point', 'label' => 'sales::money_in.level_point', 'width' => '10rem'],
             ['key' => 'territory', 'label' => 'sales::money_in.level_territory', 'width' => '7rem'],
-            ['key' => 'customer_branch', 'label' => 'sales::money_in.branch', 'width' => '7rem'],
+            ['key' => 'customer_branch', 'label' => 'sales::money_in.branch', 'width' => '7rem', 'all_branches_only' => true],
             ['key' => 'receipts', 'label' => 'sales::money_in.receipts', 'type' => ReportColumn::QUANTITY, 'width' => '4rem'],
         ];
 

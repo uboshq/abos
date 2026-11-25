@@ -93,10 +93,17 @@ final class ReportResult
     {
         $columns = array_values(array_filter(
             $this->report->columns,
-            fn (ReportColumn $column) => $column->visibleTo($user),
+            fn (ReportColumn $column) => $column->visibleTo($user) && ! ($column->allBranchesOnly && $this->oneBranch($user)),
         ));
 
         return [...$columns, ...$this->addedColumns($user)];
+    }
+
+    /** একটা শাখাই দেখা হচ্ছে — হেডারে বাছা, নাগালে একটাই, বা রিপোর্টের নিজের শাখা-ছাঁকনি */
+    private function oneBranch(mixed $user): bool
+    {
+        return ! empty($this->filters['branch_id'])
+            || app(\App\Core\Services\DataScope::class)->viewsOneBranch($user);
     }
 
     /**
