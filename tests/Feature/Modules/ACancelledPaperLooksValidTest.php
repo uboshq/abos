@@ -199,6 +199,23 @@ class ACancelledPaperLooksValidTest extends TestCase
             'বাতিল রসিদে জলছাপ চাওয়া হয়নি।');
     }
 
+    /** ⓘ স্টক ছাড়া বিক্রয়/ক্রয় ভাউচার (SV/PUV) — উল্টানো কাগজ "বাতিল" বলে */
+    public function test_a_reversed_stock_free_voucher_says_so(): void
+    {
+        app(StandardChart::class)->install();
+        app(\App\Core\Services\SettingsService::class)->set('accounts.stock_free_vouchers', true);
+        $trades = app(\App\Modules\Accounts\Services\TradeVoucherService::class);
+        $voucher = $trades->create(\App\Modules\Accounts\Models\TradeVoucher::SALE, [
+            'party_id' => Customer::query()->value('id'), 'narration' => 'x', 'trx_date' => now()->toDateString(),
+            'lines' => [['type' => \App\Modules\Accounts\Models\NoteLine::ACCOUNT, 'account_id' => StandardChart::find('4300')->id, 'amount' => '500']]]);
+        $trades->confirm($voucher);
+        $url = route('accounts.trade_voucher.print', ['kind' => $voucher->kind, 'voucher' => $voucher]);
+
+        $this->assertStringNotContainsString(__('accounts::print.cancelled'), $this->paperHtml('print.trade-voucher', $url), 'বৈধ কাগজে বাতিলের কথা।');
+        $trades->cancel($voucher->fresh(), 'ভুল', 'REV-TEST-1');
+        $this->assertStringContainsString(__('accounts::print.cancelled'), $this->paperHtml('print.trade-voucher', $url), 'উল্টানো ভাউচারের কাগজে বাতিলের কথা নেই।');
+    }
+
     /** কন্ট্রোলার এই ভাউচারের জন্য জলছাপ চায় কি না। */
     private function watermarkFor($voucher): ?string
     {
@@ -215,7 +232,7 @@ class ACancelledPaperLooksValidTest extends TestCase
         /** যেগুলো এই ফাইলে পরীক্ষিত */
         $tested = [
             'sales.print.invoice', 'sales.print.challan', 'sales.print.gatepass',
-            'sales.print.order', 'accounts.voucher.print',
+            'sales.print.order', 'accounts.voucher.print', 'accounts.trade_voucher.print',
         ];
 
         /** যেগুলো এখানে নয়, আর কেন */
