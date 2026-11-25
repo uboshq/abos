@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { beforeEach, describe, expect, it } from 'vitest'
 import { foldRowActs, spot } from './fold-row-acts.js'
 

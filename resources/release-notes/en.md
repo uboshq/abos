@@ -2,6 +2,8 @@
 
 ## 1.3.12 — 25-11-2026
 
+- Profit and loss in the international statement order (IAS 1): gross, operating and pre-tax results beside the same period last year; the bottom bar is green for a profit and red for a loss, with the amount in words; "By account" keeps the old list.
+- Fixes from the whole-system audit: one form of digits and dates, filters on the lists that had none, search inside long choices, row actions in one small menu, and faster pages.
 - Credit notes, debit notes and stock-free vouchers with a lines grid, plus the Mushak-6.7/6.8/6.3 papers; a posted stock-free voucher goes back only by a reversal with its own number; purchase prices show only to those who hold the cost key.
 - HR and payroll law (the owner's plan of 21 Oct): a leaver's final settlement, expected credit loss (ECL) on customer dues, "approve" wording everywhere.
 - Meetings and group calls on the web (up to ten people, one screen shown at a time), off until a setting turns them on; a call history with missed, incoming and outgoing calls.

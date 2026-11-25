@@ -18,8 +18,10 @@ export function nameOf (field) {
 
     if (cell) {
         const table = cell.closest('table')
-        const head = table?.tHead?.rows[table.tHead.rows.length - 1]?.cells[cell.cellIndex]
-        const first = [...cell.parentElement.cells].find((c) => c !== cell && text(c) !== '' && ! c.querySelector('select, textarea'))
+        const heads = table ? [...table.querySelectorAll(':scope > thead > tr')] : []
+        const cells = [...cell.parentElement.children]
+        const head = heads[heads.length - 1]?.children[cells.indexOf(cell)]
+        const first = cells.find((c) => c !== cell && text(c) !== '' && ! c.querySelector('select, textarea'))
 
         return [text(head) || cell.dataset?.label, text(first)].filter(Boolean).join(' — ').slice(0, 120)
     }

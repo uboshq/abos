@@ -11,26 +11,28 @@ const DOTS = '<svg viewBox="0 0 24 24" aria-hidden="true" class="size-5 shrink-0
 const ACTS = 'a[href], button'
 
 /** ⓘ কাজের কলাম = `data-row-menu` মাথা ([[x-ui.table]]), অথবা শেষ কলাম যার মাথায় নাম নেই */
+const headOf = (table) => [...table.querySelectorAll(':scope > thead > tr')].pop()
+
 function actsColumn (table) {
-    const head = table.tHead?.rows[table.tHead.rows.length - 1]
+    const head = headOf(table)
 
     if (! head) {
         return -1
     }
 
-    const last = head.cells.length - 1
-    const marked = [...head.cells].findIndex((c) => c.hasAttribute('data-row-menu'))
+    const last = head.children.length - 1
+    const marked = [...head.children].findIndex((c) => c.hasAttribute('data-row-menu'))
 
     if (marked >= 0) {
         return marked
     }
 
-    return /^[\s—-]*$|^(কাজ|অ্যাকশন|actions?)$/i.test((head.cells[last]?.textContent ?? '').trim()) ? last : -1
+    return /^[\s—-]*$|^(কাজ|অ্যাকশন|actions?)$/i.test((head.children[last]?.textContent ?? '').trim()) ? last : -1
 }
 
 function worthFolding (cell) {
     // ⓘ সারিতেই লেখার ঘর থাকলে (নম্বর সিরিজ) "সংরক্ষণ" তার পাশেই থাকে
-    if (! cell || [...cell.parentElement.cells].some((c) => c !== cell && c.querySelector('input:not([type=hidden]):not([type=checkbox]), select, textarea'))) {
+    if (! cell || [...cell.parentElement.children].some((c) => c !== cell && c.querySelector('input:not([type=hidden]):not([type=checkbox]), select, textarea'))) {
         return false
     }
 
@@ -73,18 +75,18 @@ export function foldRowActs (root = document) {
             continue
         }
 
-        for (const body of table.tBodies) {
-            for (const row of body.rows) {
-                const cell = row.cells.length === table.tHead.rows[table.tHead.rows.length - 1].cells.length ? row.cells[at] : null
+        const heads = headOf(table)
 
-                if (worthFolding(cell)) {
-                    fold(cell)
-                    here++
-                }
+        for (const row of table.querySelectorAll(':scope > tbody > tr')) {
+            const cell = row.children.length === heads.children.length ? row.children[at] : null
+
+            if (worthFolding(cell)) {
+                fold(cell)
+                here++
             }
         }
 
-        const head = table.tHead.rows[table.tHead.rows.length - 1].cells[at]
+        const head = heads.children[at]
 
         folded += here
 

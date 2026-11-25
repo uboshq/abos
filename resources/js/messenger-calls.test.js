@@ -22,6 +22,13 @@ const flush = async (n = 14) => { for (let i = 0; i < n; i++) await new Promise(
 const reply = (data) => ({ ok: true, status: 200, json: async () => data })
 
 beforeAll(() => {
+    // ⓘ some runners give the page no localStorage at all; the calls page remembers what was looked at there
+    if (! window.localStorage) {
+        const kept = new Map()
+        const store = { getItem: (k) => kept.get(k) ?? null, setItem: (k, v) => { kept.set(k, String(v)) }, removeItem: (k) => { kept.delete(k) }, clear: () => kept.clear() }
+        Object.defineProperty(window, 'localStorage', { value: store, configurable: true })
+        Object.defineProperty(globalThis, 'localStorage', { value: store, configurable: true })
+    }
     globalThis.CSS ??= {}
     globalThis.CSS.escape ??= (s) => String(s)
     try { window.happyDOM?.setURL?.('http://abos.test/messages') } catch { /* not needed */ }
