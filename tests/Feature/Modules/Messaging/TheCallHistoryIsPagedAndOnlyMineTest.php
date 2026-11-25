@@ -157,6 +157,11 @@ final class TheCallHistoryIsPagedAndOnlyMineTest extends TestCase
             $this->call_($this->me, $this->person('P'.$i), Call::ENDED, $i + 10, 10);
         }
 
+        // ⓘ a given key drops the permission list, and the next page reads it again whoever is on it — both pages are warm, as at first
+        $this->ask(['limit' => 50]);
+        $this->ask([], '/people');
+        $this->assertCount(14, $this->ask(['limit' => 50])->json('data'), 'the setup is wrong: not all calls are on the page');
+
         $this->assertLessThanOrEqual($page + 1, $count(['limit' => 50]), 'a question per row or per person');
         $this->assertLessThanOrEqual($people + 1, $count([], '/people'), 'a question per person');
     }
@@ -168,13 +173,23 @@ final class TheCallHistoryIsPagedAndOnlyMineTest extends TestCase
         }
     }
 
-    public function test_the_doors_need_the_key(): void
+    /** ⭐ owner, 24 Nov 2026: no key to hand out — an active account opens them, a switched-off account and a stranger do not */
+    public function test_the_doors_open_for_an_active_account_and_for_nobody_else(): void
     {
         $this->me->revokePermissionTo('messaging.use');
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $this->ask(['kind' => 'missed'])->assertForbidden();
-        $this->ask([], '/people')->assertForbidden();
+        $this->ask(['kind' => 'missed'])->assertOk();
+        $this->ask([], '/people')->assertOk();
+
+        $this->me->forceFill(['is_active' => false])->save();
+        foreach (['' => ['kind' => 'missed'], '/people' => []] as $tail => $query) {
+            $this->assertContains($this->ask($query, $tail)->getStatusCode(), [401, 403], 'a switched-off account read the history');
+        }
+
+        $this->app['auth']->forgetGuards();
+        $this->getJson(self::DOOR.'?kind=missed')->assertUnauthorized();
+        $this->getJson(self::DOOR.'/people')->assertUnauthorized();
     }
 
     // ── helpers ──────────────────────────────────────────────────────────

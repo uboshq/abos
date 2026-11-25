@@ -28,6 +28,7 @@
             <x-ui.field name="name_bn" :label="__('system_admin::module_board.name_bn')" :value="old('name_bn', $package->name_bn)" />
             <x-ui.field name="name_en" :label="__('system_admin::module_board.name_en')" :value="old('name_en', $package->name_en)" required />
         </div>
+        <x-ui.duplicate-confirm />
         @foreach ($groups as $group)
             <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
                 <h2 class="border-b border-(--color-border) bg-(--color-section-head) px-4 py-2 text-sm font-semibold">{{ $group['label'] }}</h2>

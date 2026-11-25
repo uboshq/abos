@@ -481,7 +481,7 @@ final class MeetingService
             $this->note($row, 'ended', $by);
         });
 
-        $this->rooms->close($meeting->room());
+        $this->rooms->deleteRoom($meeting->room());
     }
 
     // ── LiveKit's own word ───────────────────────────────────────────────
