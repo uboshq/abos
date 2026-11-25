@@ -76,7 +76,7 @@
             </x-ui.toolbar>
         </form>
         <x-ui.table :rows="$rows" :columns="$columns" :grand="$grand" :compact="\App\Core\Support\Ui::compact()"
-                    :view-url="fn ($r) => route('hr.final_settlement.show', $r)" :empty="__('core.empty.no_results')" />
+                    :view-url="fn ($r) => route('hr.final_settlement.show', $r)" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" :grand="$grand" :columns="$columns" />
     </div>

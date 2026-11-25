@@ -65,7 +65,7 @@
 
                 <x-ui.table
                     :rows="$block['actions']"
-                    :empty="__('core.empty.no_results')"
+                    :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')"
                     :columns="[
                         [
                             'key' => 'where',

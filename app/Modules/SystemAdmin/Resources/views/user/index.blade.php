@@ -215,7 +215,7 @@
         <x-ui.table :rows="$users"
                     :columns="$columns"
                     :compact="\App\Core\Support\Ui::compact()"
-                    :empty="__('core.empty.no_results')" />
+                    :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
     </div>
 
     </x-ui.filter-layout>

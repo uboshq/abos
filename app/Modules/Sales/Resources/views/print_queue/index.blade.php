@@ -88,7 +88,7 @@
             <x-ui.table :rows="$jobs"
                         :columns="$columns"
                         :compact="\App\Core\Support\Ui::compact()"
-                        :empty="__('core.empty.no_results')" />
+                        :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
 
             <x-ui.pager :rows="$jobs" />
         @endif

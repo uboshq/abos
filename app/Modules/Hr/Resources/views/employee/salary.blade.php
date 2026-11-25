@@ -115,7 +115,7 @@
 
         <x-ui.table :rows="$heads"
                     :columns="$columns"
-                    :empty="__('core.empty.no_results')" />
+                    :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
 
                     <div class="mt-3 flex justify-end">
                         <x-ui.button type="submit" tone="primary">{{ __('hr::action.save') }}</x-ui.button>

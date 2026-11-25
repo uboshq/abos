@@ -86,7 +86,7 @@
             $sum = fn ($list, string $key) => \App\Core\Support\Money::format($list->reduce(fn ($c, $r) => bcadd($c, (string) $r[$key], 4), '0'));
         @endphp
         <h2 class="mb-2 font-semibold">{{ __('hr::message.pf_members_title') }}</h2>
-        <x-ui.table :rows="$members" :columns="$columns" :empty="__('core.empty.no_results')"
+        <x-ui.table :rows="$members" :columns="$columns" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')"
                     :totals="['current' => $sum($members, 'current'), 'proposed' => $sum($members, 'proposed'), 'employer' => $sum($members, 'employer')]"
                     :totalsLabel="__('core.print.total')" />
 

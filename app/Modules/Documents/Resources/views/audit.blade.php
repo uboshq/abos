@@ -55,7 +55,7 @@
         @endunless
 
         @if ($abosHead)
-        <x-ui.table :rows="$rows" :columns="$columns" :empty="__('core.empty.no_results')" :row-attributes="fn ($r) => ['data-audit' => $r->action]" />
+        <x-ui.table :rows="$rows" :columns="$columns" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" :row-attributes="fn ($r) => ['data-audit' => $r->action]" />
         @else
         <div class="overflow-x-auto">
             <table class="ui-list w-full border-collapse text-sm">

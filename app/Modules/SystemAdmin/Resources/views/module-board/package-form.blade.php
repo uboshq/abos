@@ -51,7 +51,7 @@
             <form method="POST" action="{{ route('system_admin.module.packages.assign', $package) }}" data-package-assign>
                 @csrf
                 <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-                    <x-ui.table :rows="$branches" :compact="true" :empty="__('core.empty.no_results')" :columns="$branchColumns" />
+                    <x-ui.table :rows="$branches" :compact="true" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" :columns="$branchColumns" />
                     <x-ui.pager :rows="$branches" />
                     <x-ui.list-totals :rows="$branches" />
                 </div>

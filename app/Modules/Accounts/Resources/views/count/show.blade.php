@@ -138,7 +138,7 @@
                                 'amount' => \App\Core\Support\Money::format($count->counted_amount),
                             ]"
                             :totalsLabel="__('core.print.total')"
-                            :empty="__('core.empty.no_results')" />
+                            :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
             @endif
         </section>
 

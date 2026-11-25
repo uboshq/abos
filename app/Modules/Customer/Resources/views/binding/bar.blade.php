@@ -85,7 +85,7 @@
             <x-ui.pager :rows="$rows" />
         @else
             <div data-preview>
-                <x-ui.table :rows="$preview" :columns="$columns" :compact="\App\Core\Support\Ui::compact()" :empty="__('core.empty.no_results')"
+                <x-ui.table :rows="$preview" :columns="$columns" :compact="\App\Core\Support\Ui::compact()" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')"
                             :row-attributes="fn ($row) => ['data-staff' => $row['user']->id, 'data-blind' => $blind($row) ? '1' : '0', 'class' => $blind($row) ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)' : '']" />
             </div>
         @endif

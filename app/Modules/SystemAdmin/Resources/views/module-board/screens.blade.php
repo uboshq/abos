@@ -37,7 +37,7 @@
         </div>
         <div data-split class="grid items-start gap-4 lg:grid-cols-[16.25rem_minmax(0,1fr)]">
             <div data-boxed class="min-w-0 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-                <x-ui.table :rows="$rows" :columns="$columns" :compact="true" :empty="__('core.empty.no_results')" />
+                <x-ui.table :rows="$rows" :columns="$columns" :compact="true" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
                 <x-ui.pager :rows="$rows" />
                 <x-ui.list-totals :rows="$rows" />
             </div>

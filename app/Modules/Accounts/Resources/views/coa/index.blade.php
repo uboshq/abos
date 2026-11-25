@@ -110,7 +110,7 @@
                 @else
                     <x-ui.table :view-url="fn ($r) => route('accounts.coa.show', $r)"
             :compact="\App\Core\Support\Ui::compact()"
-                        :empty="__('core.empty.no_results')"
+                        :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')"
                         :rows="$results"
                         :columns="$columns" />
                 @endif

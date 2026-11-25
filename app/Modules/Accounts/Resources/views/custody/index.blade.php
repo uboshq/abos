@@ -127,7 +127,7 @@
                             'sent' => '—',
                         ]"
                         :totalsLabel="\App\Modules\Accounts\Services\StandardChart::CASH_IN_TRANSIT"
-                        :empty="__('core.empty.no_results')" />
+                        :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
         </div>
     </div>
     </x-ui.filter-layout>

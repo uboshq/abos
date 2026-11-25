@@ -54,7 +54,7 @@
                                   :search-placeholder="__('documents::message.abe_pick')" :share="false" :columns="$pickColumns" :facets="$facetPanel"
                                   :sort="['newest' => __('core.notify.sort.newest'), 'name' => __('documents::field.name')]" />
                 </form>
-                <x-ui.table :rows="$picks" :columns="$pickColumns" :empty="__('core.empty.no_results')" />
+                <x-ui.table :rows="$picks" :columns="$pickColumns" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
                 <x-ui.pager :rows="$picks" />
                 <x-ui.list-totals :rows="$picks" />
             </div>

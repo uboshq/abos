@@ -38,7 +38,7 @@
             @endif
         @endforeach
         <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-            <x-ui.table :rows="$plan['changes']" :columns="$columns" :compact="true" :empty="__('core.empty.no_results')" />
+            <x-ui.table :rows="$plan['changes']" :columns="$columns" :compact="true" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
         </div>
         <div class="flex flex-wrap gap-3">
             <x-ui.button type="submit" tone="primary">{{ __('system_admin::module_board.confirm') }}</x-ui.button>

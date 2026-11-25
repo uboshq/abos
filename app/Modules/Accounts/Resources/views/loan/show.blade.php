@@ -313,7 +313,7 @@
             <div class="overflow-x-auto">
                 <x-ui.table :rows="$loan->movements"
                             :columns="$movementColumns"
-                            :empty="__('core.empty.no_results')" />
+                            :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
             </div>
         </section>
     @endif

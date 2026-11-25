@@ -106,7 +106,7 @@
                         bg-(--color-surface-card)">
         <x-ui.table :rows="$recipients"
                     :columns="$columns"
-                    :empty="__('core.empty.no_results')" />
+                    :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
             </div>
         @endif
     @endif

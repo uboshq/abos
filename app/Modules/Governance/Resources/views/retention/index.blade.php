@@ -61,7 +61,7 @@
             </form>
             {{-- ⭐ আগে মাথা, বাক্স তার নিচে (মালিকের নিয়ম; তিন ABOS রূপে) --}}
             <div class="px-3 pt-3">@include('governance::retention.partials.gap')</div>
-            <x-ui.table :rows="$shown" :columns="$columns" :row-attributes="fn ($row) => ['data-kept' => $row['key']]" :empty="__('core.empty.no_results')" />
+            <x-ui.table :rows="$shown" :columns="$columns" :row-attributes="fn ($row) => ['data-kept' => $row['key']]" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
         </div>
         </x-ui.filter-layout>
     @else

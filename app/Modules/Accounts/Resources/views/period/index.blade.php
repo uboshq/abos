@@ -92,7 +92,7 @@
                           :sort="['recent' => __('accounts::period_list.recent'), 'oldest' => __('accounts::period_list.oldest')]"
                           :quiet="['fy']" :facets="$facetPanel" />
         </form>
-        <x-ui.table :rows="$months" :columns="$columns" :empty="__('core.empty.no_results')" />
+        <x-ui.table :rows="$months" :columns="$columns" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
     </div>
     </x-ui.filter-layout>
     @elseif ($months === [])
@@ -100,6 +100,6 @@
     @else
     <x-ui.table :rows="$months"
                 :columns="$columns"
-                :empty="__('core.empty.no_results')" />
+                :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
     @endif
 </x-layouts.app>

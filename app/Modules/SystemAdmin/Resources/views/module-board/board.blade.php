@@ -74,7 +74,7 @@
                         <a href="{{ route($here, [...$keep, ...$filters, 'pick' => [$ids[0]]]) }}" data-pick-one class="text-(--color-ink-muted) hover:underline">{{ __('system_admin::module_board.pick_one') }}</a>
                     @endif
                 </div>
-                <x-ui.table :rows="$rows" :columns="$columns" :compact="true" :empty="__('core.empty.no_results')" />
+                <x-ui.table :rows="$rows" :columns="$columns" :compact="true" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
                 <x-ui.pager :rows="$rows" />
                 <x-ui.list-totals :rows="$rows" />
             </div>

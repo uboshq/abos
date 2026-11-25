@@ -38,7 +38,7 @@
                     </x-slot:actions>
                 </x-ui.toolbar>
             </form>
-            <x-ui.table :rows="$rows" :columns="$columns" :empty="__('core.empty.no_results')" />
+            <x-ui.table :rows="$rows" :columns="$columns" :empty="request()->except(['page', 'per_page']) !== [] ? __('core.empty.no_results') : __('core.empty.nothing_here')" />
             <x-ui.pager :rows="$rows" />
             <x-ui.list-totals :rows="$rows" />
         </div>
