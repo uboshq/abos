@@ -42,7 +42,8 @@ final class CollectionDueReport
             filters: ['branch', 'customer_id'],
             query: fn (array $f) => self::query($f),
             columns: [
-                ['key' => 'customer_code', 'label' => 'sales::due.code', 'type' => ReportColumn::TEXT, 'width' => '7rem'],
+                ['key' => 'customer_code', 'label' => 'sales::due.code', 'type' => ReportColumn::TEXT, 'width' => '7rem',
+                    'drill' => ['route' => 'customer.show', 'params' => ['customer' => 'customer_id']]],
                 // ⭐ "নাম · পয়েন্ট · শাখা" — জায়গা ইঞ্জিন জোড়ে, পাতার একবারে (মালিক, ১৯ অক্টোবর ২০২৬, স্থায়ী নিয়ম)
                 ['key' => 'customer_name', 'label' => 'sales::due.customer', 'type' => ReportColumn::TEXT, 'place' => ['customer', 'customer_id']],
                 ['key' => 'overdue', 'label' => 'sales::due.overdue', 'type' => ReportColumn::MONEY],

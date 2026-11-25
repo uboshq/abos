@@ -81,6 +81,11 @@
         {{-- ⭐ পক্ষের ঘর — এক লাইনে, কাটা পড়লে পুরো নাম `title`-এ (মালিক, ১৯ অক্টোবর ২০২৬; [[ReportColumn::$partyKey]]) --}}
         @if ($column->isParty() && filled($value))
             <span class="block max-w-56 truncate whitespace-nowrap" title="{{ $value }}" data-party>{{ $value }}</span>
+        @elseif ($href !== null && filled($value))
+            <a href="{{ $href }}" class="text-(--color-link) hover:underline" data-report-drill="{{ $column->key }}">{{ $value }}</a>
+        @elseif (($codeOf = \App\Core\Engines\Report\ReportResult::codeOf($column, $columns ?? [])) !== null && filled($value))
+            {{-- ⭐ কোডেও একই লিংক — পাশের নামের কাগজ (মালিক, ২৩ নভেম্বর ২০২৬: প্রতিটা নম্বর-পক্ষ লিংক) --}}
+            <x-ui.drill :source="$row[$codeOf->sourceTypeKey] ?? null" :id="$row[$codeOf->sourceIdKey] ?? null">{{ $value }}</x-ui.drill>
         @else
             {{ $value }}
         @endif

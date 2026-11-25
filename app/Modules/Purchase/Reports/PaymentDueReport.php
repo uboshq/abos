@@ -38,7 +38,8 @@ final class PaymentDueReport
             filters: ['branch', 'supplier_id'],
             query: fn (array $f) => self::query($f),
             columns: [
-                ['key' => 'supplier_code', 'label' => 'purchase::due.code', 'type' => ReportColumn::TEXT, 'width' => '7rem'],
+                ['key' => 'supplier_code', 'label' => 'purchase::due.code', 'type' => ReportColumn::TEXT, 'width' => '7rem',
+                    'drill' => ['route' => 'supplier.show', 'params' => ['supplier' => 'supplier_id']]],
                 ['key' => 'supplier_name', 'label' => 'purchase::due.supplier', 'type' => ReportColumn::TEXT],
                 ['key' => 'overdue', 'label' => 'purchase::due.overdue', 'type' => ReportColumn::MONEY],
                 ['key' => 'due_today', 'label' => 'purchase::due.today', 'type' => ReportColumn::MONEY],

@@ -197,7 +197,7 @@ final class TheFundBoxReadsTheBooksAndTheComingDuesTest extends TestCase
         $said = $news();
         $this->assertArrayHasKey('soon', $said, '⛔ ৩ দিন পরের বিল "৭ দিনে" খবরে নেই।');
         $lakh = bcdiv($bill->dueAmount(), '100000', 1);
-        $this->assertStringContainsString(app()->getLocale() === 'bn' ? \App\Core\Support\BanglaDigits::of($lakh) : $lakh, $said['soon']['bold'],
+        $this->assertStringContainsString($lakh, $said['soon']['bold'],
             '⛔ ৭ দিনের খবরের অঙ্ক বিলের নয়।');
         $this->assertArrayHasKey('budget', $said, '⛔ বাজেট ছাড়ানো খাত খবরে নেই।');
         $this->assertStringContainsString($rent->name(), $said['budget']['lead'], '⛔ বাজেট ছাড়ানো খাতের নাম নেই।');

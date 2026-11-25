@@ -107,6 +107,16 @@
     \App\Core\Engines\Report\ReportExport::capture($result, $columns);
 
     /*
+        ⭐ সংখ্যা সবসময় ডানে — টাকা, পরিমাণ, শতাংশ, জের, আর যে লেখার কলামের প্রতিটা মান কেবল সংখ্যা ("কয়দিন", "কয়জন")
+        (মালিকের অডিট, ২৫ নভেম্বর ২০২৬)। ⓘ কোড, নম্বর, ফোন, বছর সংখ্যা হলেও লেখা — বাঁয়ে।
+    */
+    $numKeys = \App\Core\Engines\Report\ReportResult::rightAligned($columns, $result->isSplitByBranch()
+        ? array_merge([], ...array_map(fn ($s) => $s->rows, $result->sections)) : $result->rows);
+
+    // ⭐ মাথা সবার আগে — ABOS-এর তিন রূপে মোটের ফিতা আর কথার বাক্স মাথার বারের নিচে, নোটিশ ⓘ-তে (মালিক, ২৪ নভেম্বর ২০২৬)
+    $abosHead = \App\Core\Support\AbosHead::on();
+
+    /*
         ⭐ ডান পাশের ছাঁকনির প্যানেল — রিপোর্ট যা ঘোষণা করে আর পাতা আগে যা আঁকত, ঠিক সেগুলোই ([[ReportPanel]])।
         ⓘ শাখার তালিকা উপরে নাগালে ছাঁটা — তার পরে, তাই প্যানেলেও কেবল নাগালের শাখা।
     */
@@ -142,16 +152,16 @@
         <x-ui.list-tabs :tabs="$reportTabs" :label="__($report->title)" />
     @endisset
 
-    @isset($notice)
+    @if (isset($notice) && ! $abosHead)
         <div role="note"
              class="mb-3 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app)
                     px-3 py-2 text-sm text-(--color-ink-muted)">
             {{ $notice }}
         </div>
-    @endisset
+    @endif
 
     {{-- ⭐ অঙ্কটা কীভাবে এল — কমিশনের সূত্র, রিপোর্টের নিজের মানে (প্রিন্সিপালের কমিশনের drill; মালিক, ২৪ অক্টোবর ২০২৬) --}}
-    @if (! empty($explain))
+    @if (! empty($explain) && ! $abosHead)
         <div role="note" data-report-explain
              class="mb-3 space-y-1 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-3 py-2 text-sm">
             @foreach ($explain as $line)
@@ -177,7 +187,7 @@
 
         ⭐ `@isset` বলে বাকি ৩৬টা রিপোর্টের কিছুই বদলায় না।
     --}}
-    @isset($summary)
+    @if (isset($summary) && ! $abosHead)
         <section data-boxed
                  @class([
                      'mb-4 flex flex-wrap items-center gap-3 rounded-(--radius-card) border px-4 py-3',
@@ -202,7 +212,7 @@
                 {{ $summary['text'] ?? \App\Core\Support\Money::format($summary['value']) }}
             </strong>
         </section>
-    @endisset
+    @endif
 
     {{-- ⭐ ডান পাশের ছাঁকনি — সব তালিকার একই ছাঁচ ([[filter-layout]]); রিপোর্টে "দেখান" চাপলে চলে --}}
     <x-ui.filter-layout :filters="$panel" form="list-form" :report="true">
@@ -233,6 +243,7 @@
                           :search="$report->searchableColumns() !== []"
                           :print-href="\App\Modules\Accounts\Reports\PartyLedgerReports::statementHref($report->key, $result->filters)"
                           :print-view="true"
+                          :info="$abosHead ? ($notice ?? null) : null"
                           :columns="$menuColumns" :facets="$panel">
                 {{--
                     ⭐ ঘরগুলো এখন ডান পাশের ছাঁকনির প্যানেলে (মালিক, ২৩ নভেম্বর ২০২৬; [[ReportPanel]]) — তারিখ, হিসাব, প্রকল্প,
@@ -242,6 +253,41 @@
                 @isset($extraFilters) @include($extraFilters) @endisset
             </x-ui.toolbar>
         </form>
+
+    @if (! empty($explain) && $abosHead)
+        <div role="note" data-report-explain
+             class="space-y-1 border-b border-(--color-border) px-4 py-2 text-sm">
+            @foreach ($explain as $line)
+                <p class="num">{{ $line }}</p>
+            @endforeach
+        </div>
+    @endif
+    @if (isset($summary) && $abosHead)
+        <section data-report-summary
+                 @class([
+                     'flex flex-wrap items-center gap-3 border-b px-4 py-2',
+                     'border-(--color-border) bg-(--color-badge-success-bg)' => $summary['good'],
+                     'border-(--color-danger) bg-(--color-badge-danger-bg)' => ! $summary['good'],
+                 ])>
+            <span @class(['font-semibold',
+                'text-(--color-badge-success-ink)' => $summary['good'],
+                'text-(--color-badge-danger-ink)' => ! $summary['good']])>
+                {{ $summary['label'] }}
+            </span>
+
+            <span class="flex-1"></span>
+
+            {{-- ⭐ বাড়তি অঙ্ক — লাভ-ক্ষতিতে মোট মুনাফা (পুনঃঅডিট, ৯ অক্টোবর ২০২৬; [[CoreReports::profitAndLoss()]]) --}}
+            @foreach ($summary['lines'] ?? [] as $line)
+                <span class="text-sm" data-summary-line>{{ $line['label'] }}: <span class="num tabular-nums">{{ \App\Core\Support\Money::format($line['value']) }}</span></span>
+            @endforeach
+
+            <strong class="num text-lg tabular-nums">
+                {{-- ⓘ `text` দিলে সেটাই — খাতার জের "(Dr) 250.79" ([[PartyLedgerReports]]) --}}
+                {{ $summary['text'] ?? \App\Core\Support\Money::format($summary['value']) }}
+            </strong>
+        </section>
+    @endif
 
         {{--
             কতগুলো সারি বাদ পড়ল, সেটা লেখা থাকে।
@@ -293,7 +339,7 @@
                             @foreach ($columns as $column)
                                 <th scope="col"
                                     @class([
-                                        'num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true),
+                                        'num' => isset($numKeys[$column->key]),
                                         'whitespace-nowrap' => $column->type === $date,
                                     ])
                                     @if ($column->width) style="width: {{ $column->width }}" @endif>
@@ -323,7 +369,7 @@
                                         @foreach ($columns as $column)
                                             <td @class([
                                                 'align-middle',
-                                                'num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true),
+                                                'num' => isset($numKeys[$column->key]),
                                                 'whitespace-nowrap' => $column->type === $date,
                                             ])>
                                                 @include('accounts::report.partials.cell', [
@@ -344,7 +390,7 @@
                                 @endif
                                 <tr class="font-semibold">
                                     @foreach ($columns as $index => $column)
-                                        <td @class(['num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true)])>
+                                        <td @class(['num' => isset($numKeys[$column->key])])>
                                             @if ($index === 0)
                                                 {{-- ⓘ ভাগের নিজের মোটের লেখা থাকলে সেটাই ("দল মোট — করিম"; মালিক, ২৩ নভেম্বর ২০২৬) --}}
                                                 @if ($section->totalLabel !== null)
@@ -354,7 +400,7 @@
                                                 @endif
                                             @elseif ($column->total && isset($section->totals[$column->key]))
                                                 {{-- ⓘ পরিমাণের মোটও দশমিক ছাড়া ([[ReportResult::number()]]) --}}
-                                                {{ \App\Core\Engines\Report\ReportResult::number($section->totals[$column->key], $column) }}
+                                                {{ \App\Core\Engines\Report\ReportResult::number($section->totals[$column->key], $column) }}{{ $column->type === \App\Core\Engines\Report\ReportColumn::PERCENT ? '%' : '' }}
                                             @endif
                                         </td>
                                     @endforeach
@@ -368,7 +414,7 @@
                                     @foreach ($columns as $column)
                                         <td @class([
                                             'align-middle',
-                                            'num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true),
+                                            'num' => isset($numKeys[$column->key]),
                                             'whitespace-nowrap' => $column->type === $date,
                                         ])>
                                             @include('accounts::report.partials.cell', [
@@ -386,13 +432,14 @@
                     <tfoot>
                         <tr>
                             @foreach ($columns as $index => $column)
-                                <td @class(['num' => in_array($column->type, [$money, \App\Core\Engines\Report\ReportColumn::DR_CR], true)])>
+                                <td @class(['num' => isset($numKeys[$column->key])])>
                                     @if ($index === 0)
                                         {{ $result->isSplitByBranch() ? __('core.report.grand_total') : __('core.print.total') }}
                                     @elseif ($column->total && isset($result->totals[$column->key]))
                                         {{-- ⭐ মোটের অঙ্কও খোলে — সব সারি মিলিয়ে ([[ReportColumn::drillTotalHref()]]; মালিক, ২৪ অক্টোবর ২০২৬) --}}
                                         @php
-                                            $grandShown = \App\Core\Engines\Report\ReportResult::number($result->totals[$column->key], $column);
+                                            $grandShown = \App\Core\Engines\Report\ReportResult::number($result->totals[$column->key], $column)
+                                                .($column->type === \App\Core\Engines\Report\ReportColumn::PERCENT ? '%' : '');
                                             $grandHref = $column->drillTotalHref($filters);
                                         @endphp
                                         @if ($grandHref !== null)

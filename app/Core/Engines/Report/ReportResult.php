@@ -235,6 +235,75 @@ final class ReportResult
     }
 
     /**
+     * কোন কলাম ডানে বসে — সংখ্যার ধরন, আর যে লেখার কলামের এই পাতার প্রতিটা মান কেবল সংখ্যা (অন্তত একটা)।
+     *
+     * @param  list<ReportColumn>  $columns
+     * @param  list<array<string, mixed>>  $rows
+     * @return array<string, true>
+     */
+    public static function rightAligned(array $columns, array $rows): array
+    {
+        $out = [];
+
+        foreach ($columns as $column) {
+            if ($column->isNumeric() || $column->type === ReportColumn::DR_CR) {
+                $out[$column->key] = true;
+
+                continue;
+            }
+
+            if ($column->type !== ReportColumn::TEXT || $column->isParty()
+                || preg_match('/(^|_)(code|no|number|phone|mobile|year|id|bin|tin|nid|batch|lot|sku|key)$/', $column->key) === 1) {
+                continue;
+            }
+
+            $seen = false;
+
+            foreach ($rows as $row) {
+                $value = $row[$column->key] ?? null;
+
+                if ($value === null || $value === '') {
+                    continue;
+                }
+
+                if (! is_scalar($value) || preg_match('/^-?\d+(\.\d+)?%?$/', trim((string) $value)) !== 1) {
+                    $seen = false;
+
+                    break;
+                }
+
+                $seen = true;
+            }
+
+            if ($seen) {
+                $out[$column->key] = true;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * এই কোডের ঘরের কাগজ — একই সারির প্রথম কাগজের (DOCUMENT) কলাম; কোডের কলাম না হলে null।
+     *
+     * @param  list<ReportColumn>  $columns
+     */
+    public static function codeOf(ReportColumn $column, array $columns): ?ReportColumn
+    {
+        if ($column->type !== ReportColumn::TEXT || preg_match('/(^|_)code$/', $column->key) !== 1) {
+            return null;
+        }
+
+        foreach ($columns as $other) {
+            if ($other->isDrillable()) {
+                return $other;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * একটা সংখ্যা দেখানোর রূপ — টাকা ঠিক দশমিকে, **পরিমাণ ভগ্নাংশ থাকলে তবেই দশমিকে**।
      *
      * ⭐ মালিক, ৩০ সেপ্টেম্বর ২০২৬ (Profit by Product-এর ছবিতে "3796.0000"): *"dosomiker pore eto sunno
