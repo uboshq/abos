@@ -135,6 +135,52 @@ final class TheCallHistoryIsPagedAndOnlyMineTest extends TestCase
         $this->assertSame(['missed', 'out'], [$rows[1]['last']['status'], $rows[1]['last']['direction']], 'the latest call with Ann');
     }
 
+    /** ⭐ someone on the page in both directions, and the plain door: the same questions for two people as for fourteen; presence read once */
+    public function test_people_met_in_both_directions_and_the_plain_door_cost_no_more(): void
+    {
+        $doors = [[['limit' => 50], ''], [[], ''], [[], '/people']];
+        $shape = function (array $query, string $tail): array {
+            $sql = [];
+            $on = true;
+            DB::listen(function ($q) use (&$sql, &$on): void {
+                if ($on) {
+                    $sql[] = preg_replace('/\(\?(, \?)*\)/', '(?)', preg_replace('/in \([0-9, ]+\)/', 'in (?)', $q->sql));
+                }
+            });
+            $gets = 0;
+            \Illuminate\Support\Facades\Event::listen(\Illuminate\Cache\Events\RetrievingKey::class, function () use (&$gets, &$on): void { $on && $gets++; });
+            $this->ask($query, $tail)->assertOk();
+            $on = false;
+
+            return [array_count_values($sql), $gets];
+        };
+        $both = function (User $who, int $at): void {
+            $this->call_($this->me, $who, Call::ENDED, $at, 10);
+            $this->call_($who, $this->me, Call::ENDED, $at + 1, 10);
+        };
+
+        $both($this->ann, 10);
+        $both($this->bob, 20);
+        $few = [];
+        foreach ($doors as $i => [$query, $tail]) {
+            $this->ask($query, $tail);
+            $few[$i] = $shape($query, $tail);
+        }
+
+        for ($i = 0; $i < 12; $i++) {
+            $both($this->person('B'.$i), 30 + 10 * $i);
+        }
+
+        foreach ($doors as $i => [$query, $tail]) {
+            $this->ask($query, $tail);
+            [$sql, $gets] = $shape($query, $tail);
+            foreach ($sql as $question => $times) {
+                $this->assertLessThanOrEqual($few[$i][0][$question] ?? 1, $times, "asked again per person ({$i}): {$question}");
+            }
+            $this->assertLessThanOrEqual($few[$i][1] + 2, $gets, "the cache was asked per person ({$i})");
+        }
+    }
+
     public function test_more_calls_and_more_people_ask_no_more_questions(): void
     {
         $count = function (array $query, string $tail = ''): int {
@@ -157,6 +203,11 @@ final class TheCallHistoryIsPagedAndOnlyMineTest extends TestCase
             $this->call_($this->me, $this->person('P'.$i), Call::ENDED, $i + 10, 10);
         }
 
+        // ⓘ a given key drops the permission list, and the next page reads it again whoever is on it — both pages are warm, as at first
+        $this->ask(['limit' => 50]);
+        $this->ask([], '/people');
+        $this->assertCount(14, $this->ask(['limit' => 50])->json('data'), 'the setup is wrong: not all calls are on the page');
+
         $this->assertLessThanOrEqual($page + 1, $count(['limit' => 50]), 'a question per row or per person');
         $this->assertLessThanOrEqual($people + 1, $count([], '/people'), 'a question per person');
     }
@@ -168,13 +219,23 @@ final class TheCallHistoryIsPagedAndOnlyMineTest extends TestCase
         }
     }
 
-    public function test_the_doors_need_the_key(): void
+    /** ⭐ owner, 24 Nov 2026: no key to hand out — an active account opens them, a switched-off account and a stranger do not */
+    public function test_the_doors_open_for_an_active_account_and_for_nobody_else(): void
     {
         $this->me->revokePermissionTo('messaging.use');
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $this->ask(['kind' => 'missed'])->assertForbidden();
-        $this->ask([], '/people')->assertForbidden();
+        $this->ask(['kind' => 'missed'])->assertOk();
+        $this->ask([], '/people')->assertOk();
+
+        $this->me->forceFill(['is_active' => false])->save();
+        foreach (['' => ['kind' => 'missed'], '/people' => []] as $tail => $query) {
+            $this->assertContains($this->ask($query, $tail)->getStatusCode(), [401, 403], 'a switched-off account read the history');
+        }
+
+        $this->app['auth']->forgetGuards();
+        $this->getJson(self::DOOR.'?kind=missed')->assertUnauthorized();
+        $this->getJson(self::DOOR.'/people')->assertUnauthorized();
     }
 
     // ── helpers ──────────────────────────────────────────────────────────

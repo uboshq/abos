@@ -101,7 +101,7 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
     public function test_a_gap_in_a_posted_cash_count_is_on_the_list_and_a_clean_count_is_not(): void
     {
         $count = CashCount::query()->forceCreate([
-            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'financial_year_id' => \App\Models\FinancialYear::forDate(self::DAY)?->id, 'document_no' => 'CC-T-1', 'trx_date' => self::DAY,
+            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'financial_year_id' => \App\Models\FinancialYear::forDate(self::DAY)?->id, 'document_no' => 'CC-T-1', 'trx_date' => self::DAY, 'cash_till_id' => $this->tillId(),
             'counted_amount' => '9500', 'expected_amount' => '10000', 'difference' => '-500', 'status' => DocumentStatus::CONFIRMED,
         ]);
 
@@ -117,7 +117,7 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
     public function test_the_new_rows_never_block_the_day_closing_page(): void
     {
         CashCount::query()->forceCreate([
-            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'financial_year_id' => \App\Models\FinancialYear::forDate(self::DAY)?->id, 'document_no' => 'CC-T-2', 'trx_date' => self::DAY,
+            'company_id' => $this->company->id, 'branch_id' => $this->a->id, 'financial_year_id' => \App\Models\FinancialYear::forDate(self::DAY)?->id, 'document_no' => 'CC-T-2', 'trx_date' => self::DAY, 'cash_till_id' => $this->tillId(),
             'counted_amount' => '100', 'expected_amount' => '300', 'difference' => '-200', 'status' => DocumentStatus::CONFIRMED,
         ]);
 
@@ -125,6 +125,14 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
         $page->assertOk();
         $page->assertSee('data-check="count_gap"', false);
         $page->assertSee('data-day-close-form', false);
+    }
+
+    /** ⓘ গোনা সবসময় একটা বাক্সের — ঘরটা বাধ্যতামূলক */
+    private function tillId(): int
+    {
+        app(\App\Modules\Accounts\Services\StandardChart::class)->install();
+
+        return (int) app(\App\Modules\Accounts\Services\CashTillService::class)->ensurePrimaryTill()->id;
     }
 
     /** @return array<string, mixed>|null */
