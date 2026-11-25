@@ -148,11 +148,11 @@ final class MoneyInReports
         ];
         $columns = [
             // ⭐ গ্রাহক, পয়েন্ট, এরিয়া, শাখা — প্রতিটা নিজের কলামে, নামের সাথে জোড়া নয় (মালিক, ২৫ নভেম্বর ২০২৬ সন্ধ্যা)
-            ['key' => 'customer_name', 'label' => 'sales::money_in.level_customer'],
-            ['key' => 'point', 'label' => 'sales::money_in.level_point', 'width' => '11rem'],
-            ['key' => 'territory', 'label' => 'sales::money_in.level_territory', 'width' => '9rem'],
-            ['key' => 'customer_branch', 'label' => 'sales::money_in.branch', 'width' => '8rem'],
-            ['key' => 'receipts', 'label' => 'sales::money_in.receipts', 'type' => ReportColumn::QUANTITY, 'width' => '6rem'],
+            ['key' => 'customer_name', 'label' => 'sales::money_in.level_customer', 'width' => '17rem'],
+            ['key' => 'point', 'label' => 'sales::money_in.level_point', 'width' => '10rem'],
+            ['key' => 'territory', 'label' => 'sales::money_in.level_territory', 'width' => '7rem'],
+            ['key' => 'customer_branch', 'label' => 'sales::money_in.branch', 'width' => '7rem'],
+            ['key' => 'receipts', 'label' => 'sales::money_in.receipts', 'type' => ReportColumn::QUANTITY, 'width' => '4rem'],
         ];
 
         foreach (self::KINDS as $kind) {
