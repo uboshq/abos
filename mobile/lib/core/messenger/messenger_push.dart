@@ -20,7 +20,8 @@ class MessengerEvent {
   String? get messageId => data['message_id'];
 
   /// যিনি পাঠালেন বা কল দিলেন — তাঁর user id (লেখায়)
-  String? get from => data['from'];
+  // ⓘ 'from' Firebase-এর সংরক্ষিত নাম — সার্ভার এখন 'sender' পাঠায় (২৫ নভেম্বর ২০২৬)
+  String? get from => data['sender'] ?? data['from'];
 
   /// কলে ভিডিও কিনা — সার্ভার `true`/`1` পাঠায়
   bool get video => const {'1', 'true'}.contains(data['video']?.toLowerCase());
