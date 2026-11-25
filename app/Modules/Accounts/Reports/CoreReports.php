@@ -98,7 +98,7 @@ final class CoreReports
                 ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as rv')
                     ->whereColumn('rv.company_id', 'ledger_entries.company_id')
                     ->whereColumn('rv.source_id', 'ledger_entries.source_id')
-                    ->whereRaw("rv.source_type LIKE CONCAT(ledger_entries.source_type, ':reversal%')"))
+                    ->whereRaw("rv.source_type = CONCAT(ledger_entries.source_type, ':reversal')"))
                 ->whereExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as o')
                     ->join('accounts as oa', 'oa.id', '=', 'o.account_id')
                     ->whereColumn('o.company_id', 'ledger_entries.company_id')

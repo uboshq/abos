@@ -50,21 +50,20 @@ final class MoneyInReports
             .' AND pk.source_type = ledger_entries.source_type AND pk.source_id = ledger_entries.source_id'
             ." AND pk.party_type = 'customer' AND pk.party_id IS NOT NULL)";
 
-        $inner = DB::table('ledger_entries')
+        // ⭐ আগে টাকার সারি আর তার গ্রাহক, তারপর নাম জোড়া — জোড়ার শর্তে উপ-প্রশ্ন থাকলে প্রতিটা গ্রাহকে আবার চলত (৩.৮ সেকেন্ড)
+        $money = DB::table('ledger_entries')
             ->join('accounts', 'accounts.id', '=', 'ledger_entries.account_id')
-            ->leftJoin('customers as cu', fn ($join) => $join->on('cu.id', '=', DB::raw($customer))->whereNull('cu.deleted_at'))
             ->where('ledger_entries.company_id', $f['company_id'])
             ->whereNotNull('accounts.money_kind')
             ->where('accounts.is_group', false)
             ->tap(ReportEngine::branchWall($f, 'ledger_entries.branch_id'))
-            ->tap(ReportEngine::dealerWall($f, 'cu.id'))
             ->whereBetween('ledger_entries.trx_date', [$f['from'], $f['to']])
             ->where('ledger_entries.debit', '>', 0)
             ->whereIn('ledger_entries.source_type', self::MONEY_IN)
             ->whereNotExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as rv')
                 ->whereColumn('rv.company_id', 'ledger_entries.company_id')
                 ->whereColumn('rv.source_id', 'ledger_entries.source_id')
-                ->whereRaw("rv.source_type LIKE CONCAT(ledger_entries.source_type, ':reversal%')"))
+                ->whereRaw("rv.source_type = CONCAT(ledger_entries.source_type, ':reversal')"))
             ->whereExists(fn ($q) => $q->selectRaw('1')->from('ledger_entries as o')
                 ->join('accounts as oa', 'oa.id', '=', 'o.account_id')
                 ->whereColumn('o.company_id', 'ledger_entries.company_id')
@@ -73,11 +72,16 @@ final class MoneyInReports
                 ->where('o.credit', '>', 0)
                 ->whereNull('oa.money_kind')
                 ->where('oa.code', '<>', StandardChart::CASH_IN_TRANSIT))
-            ->when(! empty($f['customer_id']), fn (Builder $q) => $q->where('cu.id', (int) $f['customer_id']))
             ->when(in_array($f['kind'] ?? null, self::KINDS, true), fn (Builder $q) => $q->where('accounts.money_kind', $f['kind']))
             ->selectRaw('ledger_entries.id as entry_id, ledger_entries.trx_date as trx_date, ledger_entries.document_no as document_no, '
                 .'ledger_entries.source_type as source_type, ledger_entries.source_id as source_id, ledger_entries.debit as amount, '
-                .'accounts.money_kind as kind, '.$named('accounts').' as channel, cu.id as customer_id, '.$named('cu').' as customer');
+                .'accounts.money_kind as kind, '.$named('accounts').' as channel, '.$customer.' as payer_id');
+
+        $inner = DB::query()->fromSub($money, 'mo')
+            ->leftJoin('customers as cu', fn ($join) => $join->on('cu.id', '=', 'mo.payer_id')->whereNull('cu.deleted_at'))
+            ->tap(ReportEngine::dealerWall($f, 'cu.id'))
+            ->when(! empty($f['customer_id']), fn (Builder $q) => $q->where('cu.id', (int) $f['customer_id']))
+            ->selectRaw('mo.*, cu.id as customer_id, '.$named('cu').' as customer');
 
         return DB::query()->fromSub($inner, 'm');
     }
