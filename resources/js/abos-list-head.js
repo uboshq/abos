@@ -347,8 +347,15 @@ export function compactPageHead (root = document) {
         }
 
         const count = [...toolbar.querySelectorAll('[data-record-count]')].pop()
+        const panel = tabs.closest('#toolbar-filters')
         const placed = asHeadTabs(tabs, root)
         ;(count && title.parentElement === count.parentElement ? count : title).after(placed)
+
+        // ⓘ ট্যাব উঠে গেলে পুরনো ছাঁকনির খোপে আর কিছু নেই — "+ ছাঁকনি" বোতামও নয় (অডিট, ২৫ নভেম্বর ২০২৬)
+        if (panel && ! panel.querySelector('input:not([type=hidden]), select, textarea, a[href]')) {
+            panel.style.display = 'none'
+            toolbar.querySelectorAll('[aria-controls="toolbar-filters"]').forEach(b => { b.style.display = 'none' })
+        }
 
         // ⓘ ছাঁকনির বারে জিনিসগুলো ভিতরের সারিতে; চালু ছাঁকনির চিপ ইচ্ছে করেই নিজের লাইনে, তাই ভাঙা বলে গোনা নয়
         const barRow = toolbar.closest('[data-bar-head]') ? title.parentElement : null

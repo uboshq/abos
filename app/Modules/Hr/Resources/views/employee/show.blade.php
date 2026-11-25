@@ -449,7 +449,7 @@
                         {{-- ⭐ ছাড়লে না-নেওয়া অর্জিত ছুটির টাকা — বেতনের চাবিতে; নিয়ম লেখা নিচে (ধারা ১১, ১১৭, ২(৪৫); [[EarnedLeave::encashment()]]) --}}
                         @if ($encashment !== null)
                             <div data-encashment class="mt-3 border-t border-(--color-border) pt-3">
-                                <h3 class="mb-2 text-sm font-semibold">{{ __('hr::profile.encashment', ['date' => $encashment['on']]) }}</h3>
+                                <h3 class="mb-2 text-sm font-semibold">{{ __('hr::profile.encashment', ['date' => \App\Core\Support\DateFormat::format($encashment['on'])]) }}</h3>
                                 <dl class="grid grid-cols-2 gap-1 text-sm">
                                     <dt class="text-(--color-ink-muted)">{{ __('hr::profile.encashment_days') }}</dt><dd class="tabular text-right">{{ $encashment['days'] }}</dd>
                                     <dt class="text-(--color-ink-muted)">{{ __('hr::profile.encashment_wages') }}</dt><dd class="tabular text-right">{{ \App\Core\Support\Money::format($encashment['monthly_wage']) }}</dd>

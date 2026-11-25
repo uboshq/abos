@@ -137,7 +137,7 @@ final class HrDashboard implements ProvidesDashboard
                         ['key' => 'employee', 'label' => __('hr::dashboard.employee'),
                             'render' => fn ($l) => $l->employee?->name() ?? '—'],
                         ['key' => 'from', 'label' => __('hr::dashboard.from_date'), 'width' => '8rem',
-                            'render' => fn ($l) => $l->from_date],
+                            'render' => fn ($l) => \App\Core\Support\DateFormat::format($l->from_date)],
                         ['key' => 'days', 'label' => __('hr::dashboard.days'), 'width' => '5rem',
                             'render' => fn ($l) => $l->days],
                     ],

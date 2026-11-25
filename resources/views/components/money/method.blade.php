@@ -100,6 +100,10 @@
     $dateOf = fn ($value) => $value instanceof \DateTimeInterface ? $value->format('Y-m-d') : (string) ($value ?? '');
 
     $chosen = (string) $was('instrument', 'cash');
+    // ⓘ পুরনো কাগজে পদ্ধতি বড় হাতের কোডে (CASH) — একই পদ্ধতি; না হলে পর্দায় "money.method.CASH" দেখাত (অডিট, ২৫ নভেম্বর ২০২৬)
+    if (in_array(strtolower($chosen), [...\App\Core\Support\MoneyMethod::METHODS, ...\App\Core\Support\MoneyMethod::LEGACY], true)) {
+        $chosen = strtolower($chosen);
+    }
 
     /*
      * ⓘ খাতের তালিকা দিলে — নতুন কাগজে প্রথম পদ্ধতি বাছা খাতের ধরনে, নইলে যে পদ্ধতির খাত আছে ([[MoneyMethod::startWith()]]);

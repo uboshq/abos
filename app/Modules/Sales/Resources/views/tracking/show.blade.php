@@ -15,7 +15,7 @@
         <div>
             <h1 class="text-lg font-semibold">{{ $sale['no'] }}</h1>
             <div class="text-sm">{{ $sale['customer'] }}</div>
-            <div class="text-sm text-(--color-ink-muted)">{{ $sale['date'] }}</div>
+            <div class="text-sm text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($sale['date']) }}</div>
             <div class="num text-sm">{{ \App\Core\Support\Money::format($sale['total']) }}</div>
             <div class="mt-1 text-sm font-semibold" style="color: {{ $trackingColours[$sale['category']] ?? 'var(--color-ink)' }}">
                 {{ __('sales::tracking.step.'.$sale['step']) }}

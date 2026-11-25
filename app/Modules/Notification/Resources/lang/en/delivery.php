@@ -31,6 +31,7 @@ return [
         'processing' => 'Processing',
         'sent' => 'Delivered',
         'retrying' => 'Retry due',
+        'held' => 'Held for quiet hours',
         'dead' => 'Failed',
         'cancelled' => 'Cancelled',
     ],

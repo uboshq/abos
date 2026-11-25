@@ -211,12 +211,6 @@
         .ds-dialog { width: 100%; max-width: 46rem; max-height: calc(100dvh - 3rem); overflow-y: auto; }
         .ds-kbd { font-size: .55rem; font-weight: 700; color: var(--color-ink-muted); border: 1px solid var(--color-border);
                   border-bottom-width: 2px; border-radius: .3rem; padding: 0 .35rem; }
-        .ds-seg { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: .25rem;
-                  border: 1px solid var(--color-border); border-radius: var(--radius-field); padding: .15rem; background: var(--color-surface-app); }
-        .ds-seg > button { min-height: 2rem; border-radius: var(--radius-field); font-size: .68rem; font-weight: 700;
-                           color: var(--color-ink-muted); line-height: 1.1; padding: .1rem .3rem; }
-        .ds-seg > button.is-on { background: var(--color-surface-card); color: var(--color-brand-700);
-                                 box-shadow: inset 0 -2px 0 var(--color-brand-600), 0 1px 2px var(--color-border); }
         .ds-rkv-plain { display: flex; justify-content: space-between; gap: .5rem; padding: .15rem 0; border-bottom: 1px dotted var(--color-border); }
         /* ⭐ নিচের চারটা কার্ড — আগের নকশার মতো (মালিক, ৪ অক্টোবর ২০২৬) */
         .ds-cards { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }

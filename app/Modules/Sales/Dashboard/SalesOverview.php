@@ -114,7 +114,7 @@ final class SalesOverview
 
             $cards[] = self::card('receivable', $dues['amount'], Money::format($dues['amount']),
                 route('customer.report.show', ['slug' => 'due-list']), tone: 'bad',
-                hint: __('sales::overview.receivable_hint', ['shops' => $dues['shops'], 'date' => $to]));
+                hint: __('sales::overview.receivable_hint', ['shops' => $dues['shops'], 'date' => \App\Core\Support\DateFormat::format($to)]));
         }
 
         if ($can(self::INVOICE, self::COLLECTION)) {
