@@ -66,6 +66,22 @@
                                        @checked($setting['value']) class="mt-1 size-4">
                                 <span>{{ __($setting['label']) }}</span>
                             </label>
+                        @elseif ($setting['type'] === 'choice')
+                            {{-- ⓘ বাছাইয়ের ঘর তালিকা থেকে — আগে "a4" লিখতে হত, ভুল বানানও বসত (অডিট, ২৫ নভেম্বর ২০২৬); নামের নিয়ম কন্ট্রোল প্যানেলের --}}
+                            <label class="block">
+                                <span class="mb-1 block text-sm font-medium">{{ __($setting['label']) }}</span>
+                                <select name="settings[{{ $setting['key'] }}]"
+                                        class="h-(--spacing-field) w-full max-w-72 rounded-(--radius-field) border
+                                               border-(--color-border) bg-(--color-surface-card) px-3">
+                                    @foreach ($setting['options'] ?? [] as $option)
+                                        <option value="{{ $option }}" @selected((string) $setting['value'] === (string) $option)>
+                                            {{ isset($setting['option_label'])
+                                                ? __($setting['option_label'].$option)
+                                                : \App\Core\Engines\Print\PaperSize::of($option)->label() }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </label>
                         @else
                             <label class="block">
                                 <span class="mb-1 block text-sm font-medium">{{ __($setting['label']) }}</span>

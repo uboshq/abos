@@ -33,7 +33,8 @@ function worthFolding (cell) {
         return false
     }
 
-    if (cell.querySelectorAll(ACTS).length === 0) {
+    // ⓘ কেবল একটা চিহ্ন ("+" — হিসাবের গাছে নিচে যোগ) গোটানো নয়, ওটা এমনিতেই ছোট
+    if ([...cell.querySelectorAll(ACTS)].every((a) => a.textContent.trim().length <= 1)) {
         return false
     }
 

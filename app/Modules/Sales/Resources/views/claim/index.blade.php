@@ -78,6 +78,14 @@
         </div>
     @endif
 
+    {{-- অপেক্ষমাণ / সব — এই পাতার প্রথম প্রশ্ন, তাই ছাঁকনির ভিতরে নয়, ট্যাবে; খোঁজা সাথে যায়, পাতার নম্বর যায় না --}}
+    <x-ui.list-tabs :label="__('sales::portal.desk_title')" :tabs="[
+        ['key' => 'pending', 'label' => __('sales::portal.only_pending'), 'count' => $pendingCount, 'active' => $status === 'pending',
+            'url' => route('sales.claim.index', request()->except(['status', 'page']))],
+        ['key' => 'all', 'label' => __('sales::portal.show_all'), 'active' => $status === 'all',
+            'url' => route('sales.claim.index', [...request()->except(['status', 'page']), 'status' => 'all'])],
+    ]" />
+
     <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         {{-- ⭐ শিরোনাম আর খোঁজা — বাকি তালিকার মতো এক বাক্সে।
@@ -95,28 +103,6 @@
                 {{-- ⓘ অপেক্ষায়/সব — নিচের দুই লিংকই দেখায়, চিপ নয় --}}
                 :quiet="['status']" />
         </form>
-
-        {{-- অপেক্ষমাণ / সব — টুলবারের ঠিক নিচে, বাক্সের ভেতরে। ⓘ ছাঁকনির
-             প্যানেলে নয়, কারণ এই পাতার প্রথম প্রশ্নই এটা, লুকানো থাকলে চলে না।
-             খোঁজাটা সাথে যায়, পাতার নম্বর যায় না। --}}
-        <div class="flex flex-wrap gap-2 border-b border-(--color-border) px-3 py-2">
-            <a href="{{ route('sales.claim.index', request()->except(['status', 'page'])) }}"
-               @class([
-                   'rounded-(--radius-field) border px-3 py-1.5 text-sm',
-                   'border-(--color-brand-500) text-(--color-brand-500)' => $status === 'pending',
-                   'border-(--color-border)' => $status !== 'pending',
-               ])>
-                {{ __('sales::portal.only_pending') }} ({{ $pendingCount }})
-            </a>
-            <a href="{{ route('sales.claim.index', [...request()->except(['status', 'page']), 'status' => 'all']) }}"
-               @class([
-                   'rounded-(--radius-field) border px-3 py-1.5 text-sm',
-                   'border-(--color-brand-500) text-(--color-brand-500)' => $status === 'all',
-                   'border-(--color-border)' => $status !== 'all',
-               ])>
-                {{ __('sales::portal.show_all') }}
-            </a>
-        </div>
 
         <x-ui.table :rows="$claims"
                     :grand="$grand ?? []"

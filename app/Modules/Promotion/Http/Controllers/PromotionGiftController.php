@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Modules\Promotion\Http\Controllers;
 
+use App\Core\ListFilter\Columns;
+use App\Core\ListFilter\Panel;
 use App\Core\Services\DataScope;
 use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
@@ -62,6 +64,9 @@ final class PromotionGiftController extends Controller implements HasMiddleware
             ->withSum('gifts as issued_qty', 'qty')
             ->where('benefit_kind', BenefitKind::GOODS->value)
             ->whereNull('reversed_at')
+            // ⭐ খোঁজা আর ছাঁকনি (মালিকের অডিট, ২৫ নভেম্বর ২০২৬) — অফারের কোড/নাম
+            ->when(trim((string) $request->query('q', '')), fn ($q, $t) => $q->whereHas('promotion', fn ($p) => $p->where(fn ($w) => $w
+                ->where('code', 'like', '%'.$t.'%')->orWhere('name_en', 'like', '%'.$t.'%')->orWhere('name_bn', 'like', '%'.$t.'%'))))
 
             /*
              * ⓘ পুরো দেওয়া হয়ে গেলে তালিকা থেকে সরে যায়। ⚠️ ছাঁকনিটা
@@ -73,8 +78,13 @@ final class PromotionGiftController extends Controller implements HasMiddleware
              */
             ->whereRaw('benefit_amount > coalesce((select sum(g.qty) from promotion_gift_issues g '
                 .'where g.promotion_application_id = promotion_applications.id), 0)')
-            ->orderBy('id')
-            ->paginate(\App\Core\Support\PerPage::of());
+            ->orderBy('id');
+
+        $filters = Columns::set([Columns::between(__('core.list_filter.date'), 'created_at')]);
+        $base = fn () => clone $rows;
+        $panel = Panel::of($filters, $base, $request);
+        $filters->apply($rows, $request);
+        $rows = $rows->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         /*
          * ⓘ একটা পাতার সব উপহার-পণ্যের লট একবারে — সারি ধরে ধরে নয়।
@@ -89,6 +99,7 @@ final class PromotionGiftController extends Controller implements HasMiddleware
         return view('promotion::gifts', [
             'menu' => $this->menu->forUser($request->user()),
             'rows' => $rows,
+            'filters' => $panel,
             'warehouses' => Warehouse::query()->where('is_active', true)->orderBy('code')->get(),
             'lots' => Batch::query()->whereIn('product_id', $productIds)->orderBy('expiry_date')->get()->groupBy('product_id'),
         ]);

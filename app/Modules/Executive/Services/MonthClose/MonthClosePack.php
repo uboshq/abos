@@ -1096,11 +1096,12 @@ final class MonthClosePack
         $change = $this->change($sales['parts']['gross'], $sales['prior']['gross']);
         $left[] = $line.($change !== null ? $t(str_starts_with($change, '-') ? 'sales_down' : 'sales_up', ['pct' => e(ltrim($change, '-'))]) : '');
 
-        $left[] = $t(bccomp($month['net_profit'], '0', 4) >= 0 ? 'profit' : 'loss', [
+        // ⓘ বিক্রি না থাকলে হার নেই — খালি বন্ধনী নয়
+        $left[] = str_replace(' ()', '', $t(bccomp($month['net_profit'], '0', 4) >= 0 ? 'profit' : 'loss', [
             'amount' => $b(Money::format(ltrim($month['net_profit'], '-'))),
             'pct' => e((string) $pack['pl']['margin']['month']),
             'prior' => e(Money::format($prior['net_profit'])),
-        ]);
+        ]));
 
         $gm = $this->percent($month['gross_profit'], $month['net_sales']);
         $budget = $pack['pl']['figures']['budget'];

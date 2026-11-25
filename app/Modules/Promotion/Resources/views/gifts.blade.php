@@ -11,11 +11,14 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('promotion::menu.gifts') }}</x-slot:title>
 
-    <x-slot:header>
-        <x-ui.page-header :title="__('promotion::menu.gifts')" />
-    </x-slot:header>
-
     <x-ui.errors />
+
+    <x-ui.filter-layout :filters="$filters" form="list-form">
+    <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :title="__('promotion::menu.gifts')" :facets="$filters" />
+        </form>
+    </div>
 
     <div class="space-y-3">
         @forelse ($rows as $row)
@@ -68,10 +71,11 @@
                 @endif
             </section>
         @empty
-            <p class="text-sm text-(--color-ink-muted)">{{ __('promotion::message.no_gifts_owed') }}</p>
+            <x-ui.empty-state :message="__('promotion::message.no_gifts_owed')" />
         @endforelse
 
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
