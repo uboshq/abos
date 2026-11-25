@@ -99,6 +99,13 @@ class LedgerEntry extends Model
          * (আর [[LedgerChain::reseal()]]) তা query builder-এ লেখে, এখানে আসে না। ডাটাবেসের trigger (পুরো দরজা) মাইগ্রেশন চায়,
          * ফ্রিজের পরে।
          */
+        // ⭐ পক্ষের সারি — লেনদেন পাকা হলে খবর ([[PartyBooked]])
+        static::created(function (self $entry): void {
+            if ($entry->party_type !== null && $entry->party_id !== null) {
+                \Illuminate\Support\Facades\DB::afterCommit(fn () => event(\App\Core\Events\PartyBooked::from($entry)));
+            }
+        });
+
         static::updating(function (self $entry): never {
             throw new \LogicException('A posted ledger line is never changed: post a reversal instead (ledger entry '.$entry->getKey().').');
         });

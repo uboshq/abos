@@ -317,7 +317,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
             ->reduce(fn (string $sum, $total) => bcadd($sum, (string) $total, 4), '0.0000');
     }
 
-    public function scopeWithCollected(Builder $query): Builder
+    public function scopeWithCollected(Builder $query, bool $auto = true): Builder
     {
         /*
          * ⭐ খোলা ক্রেডিটের প্রয়োগও আদায়ের যোগে — দফা ৩ ([[clearedByCredits()]]-এর হুবহু শর্ত)। ⓘ `collected_total` যে সব জায়গা
@@ -371,6 +371,11 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
                 ->selectRaw('COALESCE(SUM(amount), 0)')
                 ->whereColumn('sal_commission_claims.sales_invoice_id', 'sal_invoices.id')
                 ->where('status', '!=', CommissionClaim::CANCELLED),
+            // ⭐ খাতার জের ধরে আপনা থেকে শোধ ([[AutoDues]]; মালিক, ২৫ নভেম্বর ২০২৬)
+            'auto_total' => $auto
+                ? DB::table('sal_auto_dues')->selectRaw('COALESCE(SUM(settled), 0)')
+                    ->whereColumn('sal_auto_dues.company_id', 'sal_invoices.company_id')->whereColumn('sal_auto_dues.sales_invoice_id', 'sal_invoices.id')
+                : DB::raw('0'),
         ]);
     }
 
@@ -545,6 +550,9 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
             ->get(['company_id', 'party_id', 'against_id', 'direction', 'total'])
             ->groupBy(fn ($note) => (int) $note->against_id);
 
+        $autos = DB::table('sal_auto_dues')->whereIn('company_id', $bills->pluck('company_id')->unique()->all())
+            ->whereIn('sales_invoice_id', $ids)->pluck('settled', 'sales_invoice_id');
+
         foreach ($bills as $id => $bill) {
             $collected = bcadd((string) ($lines[$id] ?? '0') ?: '0', bcadd((string) ($credits[$id] ?? '0') ?: '0', '0', 4), 4);
             $vouchers = bcadd((string) ($single[$id] ?? '0') ?: '0', (string) ($rows[$id] ?? '0') ?: '0', 4);
@@ -563,6 +571,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
                 'returned_total' => $returned,
                 'claimed_total' => $claimed,
                 'noted_total' => $noted,
+                'auto_total' => (string) ($autos[$id] ?? '0.0000'),
             ];
 
             foreach ($figures as $name => $value) {
@@ -574,7 +583,25 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
         }
     }
 
+    /** ⭐ বাকি — বিলে বাঁধা টাকা, ফেরত, দাবি, নোট, আর খাতার জের ধরে আপনা থেকে শোধ বাদে ([[AutoDues]]) */
     public function dueAmount(): string
+    {
+        $due = bcsub($this->ownDue(), $this->autoSettled(), 4);
+
+        return bccomp($due, '0', 4) > 0 ? $due : '0.0000';
+    }
+
+    /** খাতার জের ধরে আপনা থেকে যতটা শোধ — তালিকা withCollected() দিয়ে এলে সারির সাথেই */
+    public function autoSettled(): string
+    {
+        $preloaded = $this->getAttribute('auto_total');
+
+        return bcadd((string) ($preloaded ?? DB::table('sal_auto_dues')->where('company_id', (int) $this->company_id)
+            ->where('sales_invoice_id', $this->getKey())->sum('settled') ?: '0'), '0', 4);
+    }
+
+    /** বিলের নিজের কাগজ ধরে বাকি — অটো ভাগ ছাড়া ([[AutoDues]] এটা থেকেই ভাগ করে) */
+    public function ownDue(): string
     {
         /*
          * ⛔ পাকা ফেরতও বাকি কমায় — গভীর অডিট, ২৯ সেপ্টেম্বর ২০২৬। আগে বাকি = মোট − আদায়; ফেরত খাতায়
@@ -637,7 +664,7 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
      */
     public static function dueSql(string $alias): string
     {
-        return "({$alias}.total - {$alias}.collected_total - {$alias}.voucher_total - {$alias}.returned_total - {$alias}.claimed_total - {$alias}.noted_total)";
+        return "({$alias}.total - {$alias}.collected_total - {$alias}.voucher_total - {$alias}.returned_total - {$alias}.claimed_total - {$alias}.noted_total - {$alias}.auto_total)";
     }
 
     public function claimedAmount(): string

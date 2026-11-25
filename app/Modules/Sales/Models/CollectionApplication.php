@@ -33,6 +33,21 @@ class CollectionApplication extends Model
 
     protected $fillable = ['collection_id', 'kind', 'source_id', 'target_invoice_id', 'amount'];
 
+    /** ⓘ খোলা ক্রেডিট বিলে বসলে খাতা নড়ে না, বিলের নিজের বাকি নড়ে — অটো ভাগ আবার ([[AutoDues]]) */
+    protected static function booted(): void
+    {
+        $again = fn (self $row) => \Illuminate\Support\Facades\DB::afterCommit(function () use ($row): void {
+            $bill = SalesInvoice::query()->withoutGlobalScopes()->find($row->target_invoice_id);
+
+            if ($bill !== null && $bill->customer_id !== null) {
+                app(\App\Modules\Sales\Services\AutoDues::class)->refresh((int) $bill->company_id, (int) $bill->customer_id);
+            }
+        });
+
+        static::saved($again);
+        static::deleted($again);
+    }
+
     protected function casts(): array
     {
         return ['amount' => 'decimal:4'];

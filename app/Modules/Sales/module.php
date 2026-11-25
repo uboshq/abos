@@ -1010,6 +1010,8 @@ return [
      * সিদ্ধান্ত ১, ২৭ সেপ্টেম্বর ২০২৬ ([[HeldCounterSaleFinisher]])।
      */
     'listeners' => [
+        // ⭐ গ্রাহকের খাতা বদলালে বিলের অটো বাকি আবার গোনা (মালিক, ২৫ নভেম্বর ২০২৬; [[AutoDues]])
+        \App\Core\Events\PartyBooked::class => [\App\Modules\Sales\Listeners\SpreadTheBalanceOverTheBills::class],
         /*
          * ⭐ ডেলিভারি অর্ডারের হিসাব আর মাল — বিক্রয়ের কাজের ধারা, ধাপ গ + ঘ (৩ অক্টোবর ২০২৬)।
          * সুপারভাইজারের শেষ অনুমোদনে মাল আটকানো আর হিসাবের যাচাই; বাতিলে ছাড়; টাকা এলে আটকে থাকা DO আবার।
