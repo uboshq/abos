@@ -75,7 +75,7 @@
     <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :title="__('hr::menu.overtime') . ' · ' . $month->format('M Y')" :columns="$columns" :search="$abosHead" :search-placeholder="__('hr::field.employee')" :facets="$facetPanel"
+            <x-ui.toolbar :title="__('hr::menu.overtime') . ' · ' . $month->translatedFormat('M Y')" :columns="$columns" :search="$abosHead" :search-placeholder="__('hr::field.employee')" :facets="$facetPanel"
                           :sort="$abosHead ? ['employee' => __('hr::field.employee'), 'hours' => __('hr::field.ot_hours'), 'days' => __('hr::field.ot_days')] : []"
                           :info="__($enabled ? 'hr::message.ot_on_note' : 'hr::message.ot_off_note', ['hours' => $dailyHours, 'types' => $eligible === '' ? '—' : $eligible])
                               .' '.__('hr::message.ot_formula_note').' '.__('hr::message.worker_note')">

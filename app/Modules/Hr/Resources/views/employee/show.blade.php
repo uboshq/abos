@@ -510,7 +510,7 @@
                     </div>
                     @foreach ($pfLedger as $row)
                         <div class="flex items-center justify-between gap-2" data-pf-month="{{ $row['month']->format('Y-m') }}">
-                            <dt class="text-(--color-ink-muted)">{{ $row['month']->format('M Y') }}</dt>
+                            <dt class="text-(--color-ink-muted)">{{ $row['month']->translatedFormat('M Y') }}</dt>
                             <dd class="num">
                                 {{ \App\Core\Support\Money::format($row['employee_share']) }} ·
                                 {{ \App\Core\Support\Money::format($row['employer_share']) }} ·

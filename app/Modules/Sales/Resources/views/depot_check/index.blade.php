@@ -114,9 +114,12 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
-        <x-ui.toolbar :title="__('sales::counter_source.title')" :count="__('sales::counter_source.subtitle')"
-                      :search-placeholder="__('sales::counter_source.search')" :columns="$columns" />
+        <form id="list-form" method="GET" class="contents">
+            <x-ui.toolbar :title="__('sales::counter_source.title')" :count="__('sales::counter_source.subtitle')"
+                          :search-placeholder="__('sales::counter_source.search')" :columns="$columns" :facets="$filters" />
+        </form>
 
         {{-- ⓘ "দেখুন" — ডেলিভারি ট্র্যাকিংয়ে এই DO-র নম্বরে; খোলা (যাচাই) শেষের বোতামে --}}
         <x-ui.table
@@ -144,4 +147,5 @@
 
         <x-ui.pager :rows="$salesOrders" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

@@ -62,6 +62,27 @@ final class OrderListFilters
                 'partial' => ['label' => __('sales::order_tabs.partial'), 'tone' => 'blue', 'apply' => fn (Builder $q) => $this->tab($q, OrderTracking::LIST_PARTIAL)],
                 'back' => ['label' => __('sales::order_tabs.back'), 'tone' => 'red', 'apply' => fn (Builder $q) => $this->tab($q, OrderTracking::LIST_BACK)],
             ]))->look('amber', '🚚'),
+            ...$this->common(),
+            // ⓘ বাতিলগুলোও — তালিকার নিজের কোয়েরি ("সব" ট্যাব) `?cancelled=1` পড়ে; এখানে কেবল ঘর আর চিপ
+            (new ChoiceFacet('cancelled', __('sales::filter.cancelled'), [
+                '1' => ['label' => __('sales::action.show_cancelled'), 'chip' => __('core.toolbar.filter_names.cancelled'), 'apply' => fn (Builder $q) => $q],
+            ], counted: false))->look('slate', '✕'),
+        ], $this->cards());
+    }
+
+    /**
+     * ⭐ "আদেশ কোথায় দাঁড়িয়ে" পাতার ছাঁকনি — তারিখ, ডিপো, এলাকা, টাকা (মালিকের অডিট, ২৫ নভেম্বর ২০২৬)। ⓘ ধাপ সেখানে উপরের ট্যাব, তাই অবস্থার
+     *   ঘর নেই; `stage` চাবিটা ওই পাতায় ট্যাবের।
+     */
+    public function track(): FilterSet
+    {
+        return new FilterSet($this->common());
+    }
+
+    /** @return list<DateRangeFacet|ChoiceFacet|RangeFacet> */
+    private function common(): array
+    {
+        return [
             (new DateRangeFacet('date', __('sales::filter.order_date'), function (Builder $q, ?string $from, ?string $to): void {
                 if ($from !== null) {
                     $q->where('sal_orders.trx_date', '>=', $from);
@@ -80,11 +101,7 @@ final class OrderListFilters
                     $q->where('sal_orders.total', '<=', $max);
                 }
             }))->look('amber', '⇕'),
-            // ⓘ বাতিলগুলোও — তালিকার নিজের কোয়েরি ("সব" ট্যাব) `?cancelled=1` পড়ে; এখানে কেবল ঘর আর চিপ
-            (new ChoiceFacet('cancelled', __('sales::filter.cancelled'), [
-                '1' => ['label' => __('sales::action.show_cancelled'), 'chip' => __('core.toolbar.filter_names.cancelled'), 'apply' => fn (Builder $q) => $q],
-            ], counted: false))->look('slate', '✕'),
-        ], $this->cards());
+        ];
     }
 
     /**

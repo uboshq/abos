@@ -11,7 +11,7 @@
         [
             'key' => 'period_end',
             'label' => __('accounts::asset.period'),
-            'render' => fn ($e) => $e->period_end?->format('M Y'),
+            'render' => fn ($e) => $e->period_end?->translatedFormat('M Y'),
         ],
         [
             'key' => 'amount',

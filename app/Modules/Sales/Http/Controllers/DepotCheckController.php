@@ -49,7 +49,21 @@ final class DepotCheckController extends Controller implements HasMiddleware
     {
         $q = trim((string) $request->query('q', ''));
         $ready = class_exists(self::DELIVERY_ORDER) && class_exists(self::STATUS);
+        // ⭐ ছাঁকনি — তারিখ আর ডিপো, দুই তালিকাতেই একই (মালিকের অডিট, ২৫ নভেম্বর ২০২৬)
+        $filters = \App\Core\ListFilter\Columns::set([
+            \App\Core\ListFilter\Columns::between(__('sales::counter_source.column.date'), 'trx_date'),
+            \App\Core\ListFilter\Columns::is('depot', __('sales::filter.depot'), 'branch_id',
+                \App\Models\Branch::query()->orderBy('name_en')->get()->mapWithKeys(fn ($b) => [$b->id => $b->name()])->all()),
+        ]);
+        $base = fn () => self::deliveryOrders($q) ?? self::heldOrders($q);
         $query = self::deliveryOrders($q);
+        $held = self::heldOrders($q);
+
+        if ($query !== null) {
+            $filters->apply($query, $request);
+        }
+
+        $filters->apply($held, $request);
 
         return view('sales::depot_check.index', [
             'menu' => $this->menu->forUser($request->user()),
@@ -59,12 +73,13 @@ final class DepotCheckController extends Controller implements HasMiddleware
             // ⓘ সর্বমোট — গোটা ছাঁকা তালিকার, সব পাতার ([[GrandTotals]])
             'grand' => $query === null ? [] : $this->grandTotals($query, ['total' => 't.total']),
             'ready' => $ready,
+            'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
 
             /*
              * ⭐ বিক্রয় আদেশও — নতুন ধারার সংরক্ষিত আদেশ, যার চালান এখনো পুরো হয়নি (নকশা "DO বিক্রয় আদেশে মেশানো", ধাপ ৬)।
              * ⓘ খোলা DO নিজের নম্বরে শেষ হয়, তাই দুই তালিকা পাশাপাশি; আংশিক চালানের পরে আদেশ আবার এখানে আসে।
              */
-            'salesOrders' => self::heldOrders($q)
+            'salesOrders' => $held
                 ->paginate(\App\Core\Support\PerPage::of(), pageName: 'orders_page')
                 ->withQueryString(),
         ]);

@@ -79,7 +79,7 @@
             <form method="POST" action="{{ route('hr.gratuity.store') }}" class="mt-3">
                 @csrf
                 <input type="hidden" name="month" value="{{ $on->format('Y-m') }}">
-                <x-ui.button type="submit" tone="primary">{{ __('hr::action.gratuity_book', ['month' => $on->format('M Y')]) }}</x-ui.button>
+                <x-ui.button type="submit" tone="primary">{{ __('hr::action.gratuity_book', ['month' => $on->translatedFormat('M Y')]) }}</x-ui.button>
             </form>
         @endcan
     </div>
@@ -91,7 +91,7 @@
             <x-ui.toolbar :title="$abosHead ? __('hr::menu.report_gratuity') : null" :subtitle="$abosHead ? $note : null" :search="false" :report="true" :columns="$columns" :facets="$facetPanel">
                 @if ($abosHead && auth()->user()?->can('hr.payroll.manage'))
                     <x-slot:actions>
-                        <x-ui.button type="submit" form="gratuity-book" tone="primary">{{ __('hr::action.gratuity_book', ['month' => $on->format('M Y')]) }}</x-ui.button>
+                        <x-ui.button type="submit" form="gratuity-book" tone="primary">{{ __('hr::action.gratuity_book', ['month' => $on->translatedFormat('M Y')]) }}</x-ui.button>
                     </x-slot:actions>
                 @endif
             </x-ui.toolbar>

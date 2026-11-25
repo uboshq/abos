@@ -90,12 +90,19 @@ class SalesOrderController extends Controller implements HasMiddleware
         // ⓘ গ্রাহকের পাতা থেকে এলে কেবল তাঁর আদেশ — সংখ্যা আর তালিকা এক কথা বলে
         $customerId = (int) $request->query('customer') ?: null;
 
+        // ⭐ ছাঁকনি — তারিখ, ডিপো, এলাকা, টাকা (মালিকের অডিট, ২৫ নভেম্বর ২০২৬)
+        $filters = app(OrderListFilters::class)->track();
+        $also = function ($q) use ($filters, $request): void {
+            $filters->apply($q, $request);
+        };
+
         return view('sales::order.track', [
             'menu' => $this->menu->forUser($request->user()),
-            'orders' => $tracking->rows($term, $stage, $customerId),
+            'filters' => Panel::of($filters, fn () => $tracking->query($term, $stage, $customerId), $request),
+            'orders' => $tracking->rows($term, $stage, $customerId, $also),
             // ⭐ যোগফলের পট্টি — গোটা ছাঁকনির আদেশের মোট, পাতার নয় (মালিক, ৫ অক্টোবর ২০২৬)
-            'grand' => $this->grandTotals($tracking->query($term, $stage, $customerId), ['total' => 't.total']),
-            'counts' => $tracking->counts($term, $customerId),
+            'grand' => $this->grandTotals($tracking->query($term, $stage, $customerId, $also), ['total' => 't.total']),
+            'counts' => $tracking->counts($term, $customerId, $also),
             'tracking' => $tracking,
             'stage' => $stage,
             'customer' => $customerId === null ? null : Customer::query()->with(Customer::PLACE)->find($customerId),

@@ -61,14 +61,24 @@
         \App\Modules\Sales\Services\OrderTracking::DELIVERED => __('sales::field.stage_delivered'),
         \App\Modules\Sales\Services\OrderTracking::BILLED => __('sales::field.stage_billed'),
     ];
+
+    $tabList = [];
+    foreach ($tabs as $key => $label) {
+        $tabList[] = ['key' => $key, 'label' => $label, 'count' => $counts[$key] ?? 0, 'active' => $stage === $key,
+            'url' => route('sales.order.track', array_filter([...request()->except(['stage', 'page']), 'stage' => $key === 'all' ? null : $key]))];
+    }
 @endphp
 
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('sales::menu.order_track') }}</x-slot:title>
 
+    {{-- ধাপের ট্যাব — পাশে কয়টা; ছাঁকনি খোলা থাকলে ট্যাবেও থাকে --}}
+    <x-ui.list-tabs :tabs="$tabList" :label="__('sales::menu.order_track')" />
+
+    <x-ui.filter-layout :filters="$filters" form="list-form" :noun="__('sales::filter.order_noun')">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
-        <form method="GET" class="contents">
+        <form id="list-form" method="GET" class="contents">
             @if ($stage !== 'all')
                 <input type="hidden" name="stage" value="{{ $stage }}">
             @endif
@@ -80,32 +90,10 @@
             {{-- ⭐ বাকি সব তালিকার মতোই গড়ন (১৯ সেপ্টেম্বর ২০২৬) --}}
             <x-ui.toolbar :title="__('sales::menu.order_track')"
                           :subtitle="$customer?->nameWithPoint() ?? __('sales::message.order_track_note')"
-                          :columns="$columns"
+                          :columns="$columns" :facets="$filters"
                           :search-placeholder="__('sales::message.order_track_search')"
                           :quiet="['stage', 'customer']" />
         </form>
-
-        {{-- ধাপের ট্যাব — পাশে কয়টা --}}
-        <nav class="flex flex-wrap gap-1 border-b border-(--color-border) px-2 text-sm"
-             aria-label="{{ __('sales::menu.order_track') }}">
-            @foreach ($tabs as $key => $label)
-                <a href="{{ route('sales.order.track', array_filter([
-                        'stage' => $key === 'all' ? null : $key,
-                        'q' => request('q'),
-                        'customer' => $customer?->id,
-                    ])) }}"
-                   @if ($stage === $key) aria-current="page" @endif
-                   class="-mb-px flex min-h-(--spacing-touch) items-center gap-2 border-b-2 px-3
-                          {{ $stage === $key
-                              ? 'border-(--color-brand-500) font-semibold text-(--color-ink)'
-                              : 'border-transparent text-(--color-ink-muted) hover:text-(--color-ink)' }}">
-                    {{ $label }}
-                    <span class="rounded-full bg-(--color-surface-sunken) px-2 text-2xs text-(--color-ink-muted)">
-                        {{ $counts[$key] ?? 0 }}
-                    </span>
-                </a>
-            @endforeach
-        </nav>
 
         <x-ui.table :rows="$orders"
                     :grand="$grand ?? []"
@@ -116,4 +104,5 @@
 
     <div class="mt-3">{{ $orders->links() }}</div>
     <x-ui.list-totals :rows="$orders" :grand="$grand ?? []" :columns="$columns" />
+    </x-ui.filter-layout>
 </x-layouts.app>

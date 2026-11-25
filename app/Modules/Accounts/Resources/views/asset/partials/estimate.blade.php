@@ -90,7 +90,7 @@
                 <ul class="divide-y divide-(--color-border) text-sm">
                     @foreach ($asset->usages as $usage)
                         <li class="flex items-center gap-3 px-4 py-2">
-                            <span class="tabular-nums text-(--color-ink-muted)">{{ $usage->period_end?->format('M Y') }}</span>
+                            <span class="tabular-nums text-(--color-ink-muted)">{{ $usage->period_end?->translatedFormat('M Y') }}</span>
                             <span class="min-w-0 flex-1 truncate">{{ $usage->note }}</span>
                             <span class="num tabular-nums">{{ \App\Core\Support\Money::quantity((string) $usage->units) }}</span>
                         </li>

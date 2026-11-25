@@ -109,9 +109,9 @@ final class OrderTracking
      *
      * @return LengthAwarePaginator<int, SalesOrder>
      */
-    public function rows(?string $term, string $stage, ?int $customerId = null): LengthAwarePaginator
+    public function rows(?string $term, string $stage, ?int $customerId = null, ?\Closure $also = null): LengthAwarePaginator
     {
-        return $this->query($term, $stage, $customerId)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
+        return $this->query($term, $stage, $customerId, $also)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
     }
 
     /**
@@ -119,12 +119,14 @@ final class OrderTracking
      *
      * @return EloquentBuilder<SalesOrder>
      */
-    public function query(?string $term, string $stage, ?int $customerId = null): EloquentBuilder
+    public function query(?string $term, string $stage, ?int $customerId = null, ?\Closure $also = null): EloquentBuilder
     {
         $base = SalesOrder::query()
             ->where('status', '<>', DocumentStatus::CANCELLED)
             ->when($term, fn ($q, $t) => $q->search($t))
             ->when($customerId, fn ($q, $id) => $q->where('customer_id', $id))
+            // ⓘ পাতার ছাঁকনি ([[OrderListFilters::track()]]) — তালিকা, যোগফল আর ট্যাবের গোনা একই
+            ->when($also !== null, fn ($q) => $also($q))
             ->select('sal_orders.*')
             ->selectSub($this->orderedQty(), 'ordered_total')
             ->selectSub($this->deliveredQty(), 'delivered_total')
@@ -170,7 +172,7 @@ final class OrderTracking
      *
      * @return array<string, int>
      */
-    public function counts(?string $term, ?int $customerId = null): array
+    public function counts(?string $term, ?int $customerId = null, ?\Closure $also = null): array
     {
         $rows = DB::query()
             ->fromSub(
@@ -178,6 +180,7 @@ final class OrderTracking
                     ->where('status', '<>', DocumentStatus::CANCELLED)
                     ->when($term, fn ($q, $t) => $q->search($t))
                     ->when($customerId, fn ($q, $id) => $q->where('customer_id', $id))
+                    ->when($also !== null, fn ($q) => $also($q))
                     ->select('sal_orders.id')
                     ->selectSub($this->orderedQty(), 'ordered_total')
                     ->selectSub($this->deliveredQty(), 'delivered_total')
