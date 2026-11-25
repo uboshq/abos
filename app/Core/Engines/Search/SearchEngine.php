@@ -192,7 +192,7 @@ final class SearchEngine
      */
     public function maySee(User $user, Model $record): bool
     {
-        $source = $this->sources()[$record::class] ?? null;
+        $source = $this->sources()[$record::class] ?? $this->sources()[get_parent_class($record) ?: ''] ?? null;
 
         if ($source === null || ! $this->mayOpen($user, $source)) {
             return false;
@@ -285,6 +285,14 @@ final class SearchEngine
         $map = [];
 
         foreach (array_keys($classes) as $class) {
+            /*
+             * ⛔ একই কাগজের খাতার-নামের শ্রেণি (SalesVoucherPaper, PurchaseVoucherPaper) মূল শ্রেণির সাথে ঘোষিত হলে কেবল মূলটা —
+             * টেবিল একটাই, নইলে এক ভাউচার খোঁজায় তিনবার আসত, দুইবার ভুল নামে (২৫ নভেম্বর ২০২৬)।
+             */
+            if (array_intersect(class_parents($class) ?: [], array_keys($classes)) !== []) {
+                continue;
+            }
+
             $source = $this->describe($class);
 
             if ($source !== null) {

@@ -150,6 +150,7 @@ return [
     ],
 
     'verbs' => [
+        'credit_loss' => 'Expected loss and write-off drafts',
         // ⓘ চেক ছাপা, পার্টির বার্তা, SMS ফোন, কোপাইলট (১০–১২ নভেম্বর ২০২৬)
         'print_free' => 'Print a cheque only',
         'layout' => 'Cheque layouts and books',
@@ -160,7 +161,6 @@ return [
         'sms_gateway' => 'Office SMS phone',
         'use' => 'Use',
         'view' => 'View',
-        'credit_loss' => 'Expected loss allowance',
         'create' => 'Create',
         'update' => 'Edit',
         'delete' => 'Delete',

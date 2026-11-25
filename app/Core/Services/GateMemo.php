@@ -75,20 +75,22 @@ final class GateMemo
             return false;
         }
 
-        $key = $this->isRowFree($row) ? $this->key($user, $ability.'@'.$row::class, []) : null;
-
-        if ($key === null) {
+        if (! $this->isRowFree($row)) {
             return (bool) $user->can($ability, $row);
         }
 
-        if (array_key_exists($key, $this->answers)) {
+        $name = $ability.'@'.$row::class;
+        $key = $this->key($user, $name, []);
+
+        if ($key !== null && array_key_exists($key, $this->answers)) {
             return (bool) $this->answers[$key];
         }
 
         $answer = (bool) $user->can($ability, $row);
 
-        // ⓘ asking may load the person's roles or keys, and those are part of the key — kept under the key as it now stands
-        $key = $this->key($user, $ability.'@'.$row::class, []);
+        // ⓘ The key is taken again after asking, as [[remember()]] does: the first question itself loads the user's roles, and an
+        //   answer kept under the key from before that is never found again — the second row asked once more
+        $key = $this->key($user, $name, []);
 
         if ($key !== null) {
             $this->answers[$key] = $answer;
