@@ -126,9 +126,9 @@ final class TheDaySheetLosesNothingTest extends TestCase
     public function test_without_the_stamp_it_is_as_before_and_a_leave_link_stays(): void
     {
         $e = $this->people()->first();
-        $type = \App\Modules\Hr\Models\LeaveType::query()->first() ?? tap(null, fn () => $this->post(route('hr.leave_type.install'))) ?? \App\Modules\Hr\Models\LeaveType::query()->firstOrFail();
-        $leave = \App\Modules\Hr\Models\LeaveApplication::query()->withoutEvents(fn () => \App\Modules\Hr\Models\LeaveApplication::query()->create(['company_id' => CompanyContext::id(), 'employee_id' => $e->id,
-            'leave_type_id' => $type->id, 'from_date' => $this->day, 'to_date' => $this->day, 'days' => 1, 'reason' => 'x', 'status' => 'approved']));
+        $type = \App\Modules\Hr\Models\LeaveType::query()->create(['code' => 'DAYSHEET', 'name_en' => 'Day sheet leave', 'days_per_year' => '10', 'is_paid' => true, 'is_active' => true]);
+        $leave = \App\Modules\Hr\Models\LeaveApplication::query()->create(['employee_id' => $e->id, 'leave_type_id' => $type->id,
+            'from_date' => $this->day, 'to_date' => $this->day, 'days' => 1, 'reason' => 'x', 'status' => 'approved']);
         Attendance::writeDay($e->id, $this->day, ['status' => Attendance::LEAVE, 'leave_application_id' => $leave->id, 'created_by' => $this->owner->id]);
 
         $this->post(route('hr.attendance.store'), ['work_date' => $this->day, 'rows' => [$e->id => ['status' => Attendance::PRESENT]]])->assertSessionHasNoErrors();
