@@ -187,6 +187,7 @@ return [
         'sms_gateway' => 'অফিসের SMS ফোন',
         'use' => 'ব্যবহার',
         'view' => 'দেখা',
+        'credit_loss' => 'সম্ভাব্য ক্ষতির ভাতা',
         'create' => 'তৈরি',
         'update' => 'সম্পাদনা',
         'delete' => 'মোছা',

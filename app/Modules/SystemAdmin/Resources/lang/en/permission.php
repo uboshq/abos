@@ -160,6 +160,7 @@ return [
         'sms_gateway' => 'Office SMS phone',
         'use' => 'Use',
         'view' => 'View',
+        'credit_loss' => 'Expected loss allowance',
         'create' => 'Create',
         'update' => 'Edit',
         'delete' => 'Delete',
