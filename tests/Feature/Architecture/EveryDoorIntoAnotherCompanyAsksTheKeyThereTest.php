@@ -55,6 +55,10 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
         'app/Modules/SystemAdmin/Http/Controllers/UserController.php' => 'অন্য কোম্পানি কেবল যেখানে কর্তা নিজে সুপার অ্যাডমিন (companiesWithinReach); বাকিগুলো কেবল গুদামের নাম পড়া',
         'app/Modules/SystemAdmin/Services/BranchDesk.php' => 'কেবল BranchController/CompanyController ডাকে, আর ওরা আগে canInCompany জিজ্ঞেস করে',
         'app/Modules/SystemAdmin/Services/ScheduledReportRunner.php' => 'ক্রন — কোনো মানুষ নেই, নির্ধারিত রিপোর্ট যার নামে তার কোম্পানিতেই চলে',
+        // ⭐ বার্তার মিটিং (২৪ নভেম্বর ২০২৬) — মানুষের কাজ এখানে কোম্পানি বদলায় না; ঢোকা দুই জায়গায়, কোনোটাই মানুষের চাবিতে নয়
+        'app/Modules/Messaging/Services/MeetingService.php' => 'isOn(): মিটিংয়ের কোম্পানির একটা সুইচ চালু কি না — কেবল পড়া, উত্তর হ্যাঁ/না; '
+            .'heard(): LiveKit-এর খবর, মানুষ নেই — সই মেলানোর পরে (LiveKitToken::webhookIsOurs) কেবল ওই মিটিংয়ের নিজের সারি লেখে। '
+            .'মিটিংয়ে কে কী পারেন তা মিটিংয়ের নিজের সারি বলে (MeetingPerson), কোম্পানির চাবি নয় — বার্তা গোটা দলের (মালিক, ২৪ নভেম্বর)',
         // ⭐ চাকরি ছাড়ায় লগইন বন্ধ — অন্য কোম্পানির সদস্যপদ কেবল আছে কি না দেখা (লগইন খোলা রাখতে), কিছু পড়া বা লেখা নয় (a6, ২১ অক্টোবর ২০২৬)
         'app/Modules/Hr/Services/LeaversLoseTheirLogin.php' => 'চাকরি ছাড়া কর্মীর অন্য কোম্পানিতে চালু সদস্যপদ আছে কি না — কেবল exists(); থাকলে লগইন খোলা থাকে, এই কোম্পানির প্রবেশই বন্ধ হয়; রাতের ক্রনও চালায়, মানুষ নেই',
         'app/Modules/Approval/Services/MoneyFlowDefaults.php' => 'নতুন কোম্পানির ডিফল্ট ছক বসানো — প্রভিশনিং, কারও চাবিতে নয়',
