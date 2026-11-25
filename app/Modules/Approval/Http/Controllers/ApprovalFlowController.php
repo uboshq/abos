@@ -332,7 +332,10 @@ class ApprovalFlowController extends Controller implements HasMiddleware
          * কোনোদিন কিছু মেলাত না। ⚠️ কোনো ত্রুটি ওঠেনি, পর্দা শান্তভাবে
          * "কিছু পাওয়া যায়নি" বলত — আর সেটা পড়ে মানুষ ভাবতেন নিয়মটাই নেই।
          */
-        foreach ([$names['role'], $names['user']] as $list) {
+        // ⓘ রোল পর্দায় বাংলা নামে, তবু ভেতরের নাম লিখেও পাওয়া যায় (২৫ নভেম্বর ২০২৬) — তিনটা তালিকা আলাদা, জোড়া নয়
+        $stored = Role::query()->where('company_id', CompanyContext::id())->pluck('name', 'id')->all();
+
+        foreach ([$names['role'], $stored, $names['user']] as $list) {
             foreach ($list as $id => $name) {
                 if (mb_stripos((string) $name, $q) !== false) {
                     $found[] = (int) $id;

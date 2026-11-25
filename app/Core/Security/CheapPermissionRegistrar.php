@@ -31,9 +31,14 @@ final class CheapPermissionRegistrar extends PermissionRegistrar
      */
     private function asTheDatabaseIsNow(): Collection
     {
+        // ⓘ প্রথমবার ছাপ নেওয়া লাগে না — মেলানোর কিছু নেই; এক কোম্পানির সাধারণ পাতা আগের মতোই তিন প্রশ্নে
+        if ($this->built === null) {
+            return $this->built = $this->getPermissionsWithRoles();
+        }
+
         $now = $this->fingerprint();
 
-        if ($this->built === null || $now !== $this->builtFrom) {
+        if ($now !== $this->builtFrom) {
             $this->built = $this->getPermissionsWithRoles();
             $this->builtFrom = $now;
         }
@@ -109,7 +114,13 @@ final class CheapPermissionRegistrar extends PermissionRegistrar
 
     protected function getPermissionsWithRoles(): Collection
     {
-        $roles = $this->getRoleClass()::query()->get()->keyBy(fn ($role) => $role->getKey());
+        // ⓘ spatie-র তালিকায় সময়ের ঘরগুলো থাকে না (`column_names_except`) — এখানেও নয়, উত্তর হুবহু এক
+        $plain = function ($model) {
+            $model->setRawAttributes(array_diff_key($model->getAttributes(), array_flip((array) config('permission.cache.column_names_except', ['created_at', 'updated_at', 'deleted_at']))), true);
+
+            return $model;
+        };
+        $roles = $this->getRoleClass()::query()->get()->map($plain)->keyBy(fn ($role) => $role->getKey());
         $of = [];
 
         foreach (DB::table('role_has_permissions')->get([$this->pivotPermission.' as permission', $this->pivotRole.' as role']) as $pair) {
@@ -118,7 +129,7 @@ final class CheapPermissionRegistrar extends PermissionRegistrar
             }
         }
 
-        return $this->getPermissionClass()::select()->get()
+        return $this->getPermissionClass()::select()->get()->each($plain)
             ->each(fn ($permission) => $permission->setRelation('roles', new Collection($of[$permission->getKey()] ?? [])));
     }
 }
