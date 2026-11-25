@@ -205,6 +205,33 @@ function asHeadTabs (nav, root, collapse = false) {
     return wrap
 }
 
+// ⓘ বারের নিচে একই বাক্সে, প্রথম টেবিলের আগে — ভাড়াটে, ভাড়া, উত্তোলনের ট্যাব এখানে লেখা (অডিট, ২৫ নভেম্বর ২০২৬)
+const underBar = (n, toolbar) => {
+    const box = toolbar.closest('[data-boxed]')
+
+    return box !== null && box.contains(n) && before(toolbar, n) && ! n.closest('table, dialog, [data-pager]')
+        && before(n, box.querySelector('table, [data-list-part="table"], [data-empty-state]'))
+}
+
+/*
+ * ⓘ চিহ্নিত ট্যাব ছাড়া লিংকের সারি (ভাড়ার চার রিপোর্ট, জমার রিপোর্ট …) — আলাদা সারি নয়, মাথায় একটা "নাম ▾" বোতাম; লিংকগুলো একই।
+ */
+function linkBars (main, toolbar, root) {
+    const bars = [...main.querySelectorAll('nav[aria-label]')].filter(n => ! n.hasAttribute('data-head-tabs') && ! n.closest('[data-pager], dialog')
+        && underBar(n, toolbar) && n.querySelectorAll('a').length >= 2 && ! n.querySelector('a[aria-current]') && ! n.querySelector('form, button'))
+
+    return bars.map(nav => {
+        const label = root.createElement('a')
+        label.setAttribute('aria-current', 'page')
+        label.textContent = nav.getAttribute('aria-label')
+        nav.prepend(label)
+        const menu = asHeadTabs(nav, root, true)
+        label.remove()
+
+        return menu
+    })
+}
+
 /*
  * ⭐ Pills first: the search shrinks (CSS, down to 140px) and the tabs fold only if the row still breaks. ⓘ Measured again when the
  *   fonts are in, when Alpine is up and when the window changes — the first measure runs in the fallback font, which is wider, and
@@ -339,17 +366,22 @@ export function compactPageHead (root = document) {
 
     if (toolbar) {
         const tabs = [...main.querySelectorAll('nav, [data-list-tabs]')].find(n => ! n.hasAttribute('data-head-tabs')
-            && ! aside(n) && (toolbar.contains(n) || before(n, toolbar))
+            && ! aside(n) && (toolbar.contains(n) || before(n, toolbar) || underBar(n, toolbar))
             && n.querySelectorAll('a').length >= 2 && n.querySelector('a[aria-current="page"]'))
 
+        const links = linkBars(main, toolbar, root)
+
         if (! tabs) {
-            return null
+            links.forEach(menu => title.after(menu))
+
+            return links.length > 0 ? { tabs: true, filter: false } : null
         }
 
         const count = [...toolbar.querySelectorAll('[data-record-count]')].pop()
         const panel = tabs.closest('#toolbar-filters')
         const placed = asHeadTabs(tabs, root)
         ;(count && title.parentElement === count.parentElement ? count : title).after(placed)
+        links.forEach(menu => placed.after(menu))
 
         // ⓘ ট্যাব উঠে গেলে পুরনো ছাঁকনির খোপে আর কিছু নেই — "+ ছাঁকনি" বোতামও নয় (অডিট, ২৫ নভেম্বর ২০২৬)
         if (panel && ! panel.querySelector('input:not([type=hidden]), select, textarea, a[href]')) {
