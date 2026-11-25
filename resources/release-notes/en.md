@@ -1,5 +1,15 @@
 # What's new
 
+## 1.3.11 — 25-11-2026
+
+- Call and message alerts reach the phone at once: Google used to refuse them, so calls did not ring in the app.
+- A call no longer turns "missed" after two seconds; calls also ring within seconds on the web, with clearer video.
+- Messages and calls are open to everyone in every company of the group: find anyone by name or mobile; a call from another company rings too.
+- A person's own designation in Bengali and English, set only by the owner; shown beside the name in messages.
+- The approval inbox is a board in the three ABOS looks: papers in coloured groups on the left, the chosen paper on the right; "View" shows it exactly as it prints, and viewing is not counted as printing.
+- The users list has the filter, the name opens the person, and password reset has its own column.
+- Web top bar on phones: the ☰ menu opens properly, and the logo and search icon no longer overlap.
+
 ## 1.3.10 — 23-11-2026
 
 - Copilot has its own full page: questions and answers on a big screen; each person's earlier talks are kept and open again later.
