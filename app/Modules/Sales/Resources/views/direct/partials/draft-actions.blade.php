@@ -38,6 +38,8 @@
         {{ __('sales::action.view_draft') }}
     </button>
 
+    {{-- ⓘ body-তে — সারির ⋯ তালিকা বন্ধ হলেও পপআপ থাকে ([[fold-row-acts.js]]) --}}
+    <template x-teleport="body">
     <div x-show="open" x-cloak role="dialog" aria-modal="true"
          x-on:keydown.escape.window="open = false"
          class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 text-start">
@@ -109,4 +111,5 @@
             </div>
         </div>
     </div>
+    </template>
 </div>

@@ -29,7 +29,7 @@ function actsColumn (table) {
 }
 
 function worthFolding (cell) {
-    if (! cell || cell.querySelector('[x-data], [data-folded-acts], svg[data-chart], [data-keep-acts]')) {
+    if (! cell || cell.querySelector('[x-data="rowActions"], [role=menu], [role=dialog], [data-folded-acts], svg[data-chart], [data-keep-acts]')) {
         return false
     }
 
