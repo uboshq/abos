@@ -318,8 +318,13 @@ final class FilterSet
             } elseif ($facet instanceof FieldsFacet) {
                 // ⓘ ঠিকানায় না থাকলে পাতার মানা মান (`default`, যেমন স্থিতিপত্রের "আজ") — ঘরে দেখায়, চিপ হয় না
                 $section += ['fields' => array_map(fn (array $field) => $field + [
-                    'value' => is_scalar($request->query($field['key'])) && (string) $request->query($field['key']) !== ''
-                        ? (string) $request->query($field['key']) : (string) ($field['default'] ?? ''),
+                    'value' => (string) match (true) {
+                        ! is_scalar($request->query($field['key'])) || (string) $request->query($field['key']) === '' => $field['default'] ?? '',
+                        // ⓘ পড়া যায় না এমন তারিখ বা মাসে পাতার মানা মানটাই ঘরে ([[FieldsFacet::read()]]-এর একই নিয়ম)
+                        $field['type'] === 'date' => DateFormat::plainDay($request->query($field['key'])) ?? $field['default'] ?? '',
+                        $field['type'] === 'month' => DateFormat::plainMonth($request->query($field['key'])) ?? $field['default'] ?? '',
+                        default => $request->query($field['key']),
+                    },
                 ], $facet->fields)];
             }
 

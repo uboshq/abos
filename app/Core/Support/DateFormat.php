@@ -79,6 +79,26 @@ final class DateFormat
     }
 
     /**
+     * ঠিকানা থেকে আসা তারিখ — সত্যিকারের Y-m-d হলে সেটাই, নইলে null (`abc`, `2026-02-30`, `2026-10-05x` তারিখ নয়)।
+     * ⓘ Carbon::parse() এখানে যথেষ্ট নয়: সে ৩০ ফেব্রুয়ারিকে ২ মার্চ ধরে, আর অন্য লেখায় ব্যতিক্রম ছোড়ে — পাতা ৫০০।
+     */
+    public static function plainDay(mixed $value): ?string
+    {
+        return is_string($value) && preg_match('/^(\d{4})-(\d{2})-(\d{2})$/D', $value, $m) === 1 && checkdate((int) $m[2], (int) $m[3], (int) $m[1])
+            ? $value : null;
+    }
+
+    /** ঠিকানা থেকে আসা মাস — Y-m; পুরো তারিখ হলে তার মাস; নইলে null */
+    public static function plainMonth(mixed $value): ?string
+    {
+        if (is_string($value) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/D', $value) === 1) {
+            return $value;
+        }
+
+        return self::plainDay($value) === null ? null : substr((string) $value, 0, 7);
+    }
+
+    /**
      * একটা তারিখ, কোম্পানির ছকে।
      *
      * null এলে খালি লেখা — ড্যাশ নয়। ড্যাশ বসালে টেবিলের ঘরে সেটা

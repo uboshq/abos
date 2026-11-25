@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core\ListFilter;
 
+use App\Core\Support\DateFormat;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ use Illuminate\Http\Request;
  * ⓘ ঘরের ধরন: select · number · date · text (লেখা, যেমন "রেফারেন্স") · find (লিখে-খোঁজা, নিচে নামের তালিকা — datalist;
  *   রিপোর্টের গুদাম/পণ্য/দোকান: লেখা যায় "কোড · নাম", সার্ভার নম্বরে বদলায়)।
  *
- * @phpstan-type Field array{key: string, label: string, type: 'select'|'number'|'date'|'text'|'find', options?: array<string, string>, placeholder?: string, min?: int, max?: int}
+ * @phpstan-type Field array{key: string, label: string, type: 'select'|'number'|'date'|'month'|'text'|'find', options?: array<string, string>, placeholder?: string, min?: int, max?: int}
  */
 final class FieldsFacet extends Facet
 {
@@ -61,6 +62,17 @@ final class FieldsFacet extends Facet
             $raw = (string) $raw;
 
             if ($field['type'] === 'select' && ! array_key_exists($raw, $field['options'] ?? [])) {
+                continue;
+            }
+
+            // ⛔ তারিখ বা মাস নয় এমন লেখা ঘরে বসে না — চিপ হয় না, আর সাজাতে গিয়ে পাতা ৫০০ দেয় না
+            $raw = match ($field['type']) {
+                'date' => DateFormat::plainDay($raw),
+                'month' => DateFormat::plainMonth($raw),
+                default => $raw,
+            };
+
+            if ($raw === null) {
                 continue;
             }
 
