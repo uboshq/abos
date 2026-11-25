@@ -191,6 +191,8 @@ final class HrReports
                 ->join('hr_employees', 'hr_employees.id', '=', 'hr_payslips.employee_id')
                 ->leftJoin('mdm_departments as d', 'd.id', '=', 'hr_employees.department_id')
                 ->leftJoin('mdm_designations as g', 'g.id', '=', 'hr_employees.designation_id')
+                // ⛔ বেতনের রেজিস্টার এক কোম্পানির খাতা — কর্মী-খাতা এক হলেও
+                ->where('hr_payslips.company_id', (int) $f['company_id'])
                 ->where('r.status', DocumentStatus::CONFIRMED)
                 ->whereNull('r.deleted_at')
                 ->whereBetween('r.month', [Carbon::parse($f['from'])->startOfMonth()->toDateString(), $f['to']])

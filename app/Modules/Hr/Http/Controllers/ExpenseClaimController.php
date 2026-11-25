@@ -49,6 +49,8 @@ class ExpenseClaimController extends Controller implements HasMiddleware
         $all = $request->query('tab') === 'all' && $request->user()->can('hr.claim.view');
 
         $query = ExpenseClaim::query()->with(['employee', 'expenseAccount'])
+            // ⛔ সবার দাবির মোট এই কোম্পানির খাতার — নিজের দাবি যে কোম্পানিরই হোক
+            ->when($all, fn ($q) => $q->where('company_id', \App\Core\Support\CompanyContext::id()))
             ->when(
                 $all,
                 fn ($q) => app(BranchReach::class)->throughEmployee($q, $request->user()),

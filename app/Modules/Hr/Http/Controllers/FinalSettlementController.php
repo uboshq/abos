@@ -44,7 +44,7 @@ final class FinalSettlementController extends Controller implements HasMiddlewar
     public function index(Request $request): View
     {
         $term = is_string($request->query('q')) ? trim($request->query('q')) : '';
-        $query = FinalSettlement::query()->with('employee')
+        $query = FinalSettlement::query()->where('hr_final_settlements.company_id', \App\Core\Support\CompanyContext::id())->with('employee')
             ->whereIn('employee_id', app(BranchReach::class)->employeesInView(Employee::query()->withTrashed(), $request->user())
                 ->when($term !== '', fn ($q) => $q->search($term))->select('id'))
             ->when(is_string($request->query('status')) && $request->query('status') !== '', fn ($q) => $q->where('status', $request->query('status')))

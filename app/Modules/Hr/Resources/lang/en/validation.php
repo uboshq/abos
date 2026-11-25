@@ -14,6 +14,7 @@ return [
     'basic_cannot_be_deactivated' => 'The basic salary head cannot be switched off — the percentage allowances stand on it.',
     'nobody_on_payroll' => 'Nobody was on the payroll that month.',
     'month_already_run' => 'Salary for :month has already been run. Cancel that one before starting another.',
+    'run_of_another_company' => 'This payroll run belongs to another company — open that company to change it.',
     'only_a_draft_can_change' => 'A confirmed run cannot be changed — cancel it and run again.',
     'nothing_to_confirm' => 'This run has no payslips.',
     'already_cancelled' => 'This run was already cancelled.',

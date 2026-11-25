@@ -22,6 +22,8 @@ use Illuminate\Validation\ValidationException;
 final class PaidMonth
 {
     /**
+     * @param  int  $companyId  কর্মীর নিজের কোম্পানি — মাথায় বাছা কোম্পানি নয়: কর্মী-খাতা এক হলে ([[SharedAcrossCompaniesWhenAsked]]) এক
+     *                          কোম্পানির দেওয়া মাস অন্য কোম্পানির কর্মীকে আটকাবে না, আর অন্য কোম্পানি থেকেও দেওয়া মাস বদলাবে না (২৫ নভেম্বর ২০২৬)
      * @param  ?Carbon  $to  ⓘ `null` = শেষ নেই — `$from`-এর মাস আর তার পরের সব মাস (বেতনের কাঠামো, নিচে)
      * @param  string  $field  কোন ঘরে ভুলটা দেখাবে
      * @param  string  $messageKey  `:month` আর `:no` নেয় এমন বার্তা
@@ -32,15 +34,15 @@ final class PaidMonth
      *
      * @throws ValidationException সেই মাসগুলোর কোনোটার বেতন নিশ্চিত হয়ে থাকলে
      */
-    public static function assertOpen(Carbon $from, ?Carbon $to, string $field, string $messageKey, ?int $employeeId = null): void
+    public static function assertOpen(int $companyId, Carbon $from, ?Carbon $to, string $field, string $messageKey, ?int $employeeId = null): void
     {
-        $paid = PayrollRun::acrossBranches()
+        $paid = self::runs($companyId)
             ->where('status', DocumentStatus::CONFIRMED)
             // ⓘ কেবল মাসের বেতন — উৎসব ভাতা হাজিরা, ছুটি বা অধিকাল পড়ে না, তাই সেগুলো তার কারণে আটকায় না (a6, ২১ অক্টোবর ২০২৬)
             ->ofType(PayrollRun::SALARY)
             ->whereDate('month', '>=', $from->copy()->startOfMonth()->toDateString())
             ->when($to !== null, fn ($q) => $q->whereDate('month', '<=', $to->copy()->startOfMonth()->toDateString()))
-            ->when($employeeId !== null, fn ($q) => $q->whereHas('payslips', fn ($slips) => $slips->where('employee_id', $employeeId)))
+            ->when($employeeId !== null, fn ($q) => $q->whereHas('payslips', fn ($slips) => $slips->withoutGlobalScope('company')->where('employee_id', $employeeId)))
             ->orderBy('month')
             ->first();
 
@@ -52,5 +54,21 @@ final class PaidMonth
                 ]),
             ]);
         }
+    }
+
+    /** এই কোম্পানির এই মাসের বেতন দেওয়া হয়ে গেছে কি না — একই প্রশ্ন, না থামিয়ে */
+    public static function isPaid(int $companyId, Carbon $month): bool
+    {
+        return self::runs($companyId)
+            ->where('status', DocumentStatus::CONFIRMED)
+            ->ofType(PayrollRun::SALARY)
+            ->whereDate('month', $month->copy()->startOfMonth()->toDateString())
+            ->exists();
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Builder<PayrollRun> */
+    private static function runs(int $companyId): \Illuminate\Database\Eloquent\Builder
+    {
+        return PayrollRun::acrossBranches()->withoutGlobalScope('company')->where('hr_payroll_runs.company_id', $companyId);
     }
 }

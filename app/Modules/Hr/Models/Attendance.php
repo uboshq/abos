@@ -161,6 +161,11 @@ class Attendance extends Model
             $row = static::query()->where($key)->lockForUpdate()->first();
         }
 
+        // ⛔ কর্মী-খাতা এক হলে অন্য কোম্পানির পর্দা থেকে লেখা দিনও কর্মীর নিজের কোম্পানির সারি — নইলে সুইচ বন্ধ হলে তাঁর বেতন থেকে হারাত
+        if ($row === null && static::sharesAcrossCompanies()) {
+            $values += ['company_id' => (int) Employee::query()->withoutGlobalScopes()->whereKey($employeeId)->value('company_id')];
+        }
+
         if ($row === null) {
             try {
                 return static::query()->withSavepointIfNeeded(fn () => static::query()->create($key + $values));

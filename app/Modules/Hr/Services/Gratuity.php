@@ -116,7 +116,8 @@ final class Gratuity
      */
     public function rows(Carbon $asOf, ?User $for = null): array
     {
-        $staff = Employee::query()->onPayrollFor($asOf->copy()->endOfMonth())->orderBy('code');
+        // ⛔ দায় এই কোম্পানির খাতার (২১৩৪) — বসা সঞ্চিতির সাথে মেলে
+        $staff = Employee::query()->where('company_id', CompanyContext::id())->onPayrollFor($asOf->copy()->endOfMonth())->orderBy('code');
         $staff = $for === null ? $staff : app(BranchReach::class)->employeesInView($staff, $for);
         $rows = [];
 

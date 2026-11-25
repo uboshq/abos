@@ -213,6 +213,8 @@ final class SalaryTax
         $start = Carbon::create(self::incomeYearOf($monthEnd), 7, 1)->startOfDay();
 
         $slips = Payslip::query()
+            // ⛔ কর কাটে আর সনদ দেয় যে কোম্পানি বেতন দেয় — কর্মীর নিজের কোম্পানি
+            ->where('company_id', $employee->company_id)
             ->where('employee_id', $employee->id)
             ->whereHas('run', fn ($run) => $run->withoutGlobalScope('user-branch')
                 ->where('status', DocumentStatus::CONFIRMED)
@@ -277,6 +279,8 @@ final class SalaryTax
         $to = $from->copy()->addYear()->subDay();
 
         $slips = Payslip::query()
+            // ⛔ কর কাটে আর সনদ দেয় যে কোম্পানি বেতন দেয় — কর্মীর নিজের কোম্পানি
+            ->where('company_id', $employee->company_id)
             ->where('employee_id', $employee->id)
             ->whereHas('run', fn ($run) => $run->withoutGlobalScope('user-branch')
                 ->where('status', DocumentStatus::CONFIRMED)

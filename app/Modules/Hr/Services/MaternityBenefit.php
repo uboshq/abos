@@ -61,6 +61,7 @@ final class MaternityBenefit
         [$from, $to] = $this->window($application);
 
         $wages = Payslip::query()->withoutGlobalScopes()
+            ->where('hr_payslips.company_id', $employee->company_id)
             ->where('hr_payslips.employee_id', $employee->id)
             ->join('hr_payroll_runs as r', 'r.id', '=', 'hr_payslips.payroll_run_id')
             ->where('r.status', DocumentStatus::CONFIRMED)

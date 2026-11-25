@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Hr\Services;
 
+use App\Core\Support\CompanyContext;
 use App\Core\Services\SettingsService;
 use App\Core\Support\DocumentStatus;
 use App\Core\Support\Money;
@@ -87,9 +88,9 @@ final class ProvidentFund
     }
 
     /** তহবিলের দায় — ২১৩১ */
-    public function fundAccount(): ?Account
+    public function fundAccount(?int $companyId = null): ?Account
     {
-        return Account::query()->postable()->where('code', StandardChart::PROVIDENT_FUND_PAYABLE)->first();
+        return ($companyId === null ? Account::query() : Account::query()->withoutGlobalScope('company')->where('company_id', $companyId))->postable()->where('code', StandardChart::PROVIDENT_FUND_PAYABLE)->first();
     }
 
     /** প্রতিষ্ঠানের চাঁদার খরচ — ৫২২৫ */
@@ -369,13 +370,16 @@ final class ProvidentFund
      * ⓘ কর্মীর ভাগ = তহবিলের দায়ে (২১৩১) বসা কর্তনের সারি; প্রতিষ্ঠানের ভাগ = [[PayslipLine::EMPLOYER]] সারি। ⓘ রিপোর্ট
      * ([[HrReports::providentFund()]]) আর কর্মীর পাতা ([[ledgerOf()]]) দুটোই এই এক প্রশ্ন পড়ে।
      */
-    public function contributions(): Builder
+    public function contributions(?int $companyId = null): Builder
     {
-        $fund = $this->fundAccount()?->id;
+        // ⛔ তহবিল কোম্পানির — কর্মী-খাতা এক হলেও; একজনের খাতা তাঁর নিজের কোম্পানির ([[ledgerOf()]])
+        $companyId ??= (int) CompanyContext::id();
+        $fund = $this->fundAccount($companyId)?->id;
 
         return PayslipLine::query()->toBase()
             ->join('hr_payslips as s', 's.id', '=', 'hr_payslip_lines.payslip_id')
             ->join('hr_payroll_runs as r', 'r.id', '=', 's.payroll_run_id')
+            ->where('s.company_id', $companyId)
             ->where('r.status', DocumentStatus::CONFIRMED)
             ->whereNull('r.deleted_at')
             ->whereNull('s.deleted_at')
@@ -399,7 +403,7 @@ final class ProvidentFund
         $balance = '0';
         $rows = [];
 
-        foreach ($this->contributions()->where('s.employee_id', $employee->id)->orderBy('r.month')->get() as $row) {
+        foreach ($this->contributions((int) $employee->company_id)->where('s.employee_id', $employee->id)->orderBy('r.month')->get() as $row) {
             $employeeShare = bcadd((string) $row->employee_share, '0', 4);
             $employerShare = bcadd((string) $row->employer_share, '0', 4);
             $balance = bcadd($balance, bcadd($employeeShare, $employerShare, 4), 4);

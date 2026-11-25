@@ -45,6 +45,8 @@ class TaxCertificateController extends Controller implements HasMiddleware
     public function show(Request $request, Employee $employee): Response
     {
         $this->authorize('viewSalary', $employee);
+        // ⛔ সনদ কোম্পানির কাগজ — অন্য কোম্পানির মাথা দিয়ে নয়
+        abort_unless((int) $employee->company_id === (int) \App\Core\Support\CompanyContext::id(), 404);
 
         $start = preg_match('/^\d{4}$/', (string) $request->query('year'))
             ? (int) $request->query('year')

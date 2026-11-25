@@ -9,6 +9,7 @@ use App\Core\Services\PermissionSyncer;
 use App\Core\Services\SettingsService;
 use App\Core\Support\Money;
 use App\Models\User;
+use App\Core\Support\CompanyContext;
 use App\Modules\Hr\Models\Attendance;
 use App\Modules\Hr\Models\Employee;
 use App\Modules\Hr\Models\OvertimeSheet;
@@ -158,13 +159,20 @@ final class OvertimeService
     public function prepare(Carbon $month, User $by): int
     {
         $month = $month->copy()->startOfMonth();
-        PaidMonth::assertOpen($month, $month, 'month', 'hr::validation.ot_month_paid');
-
         $staff = $this->reach->employeesInView(Employee::query()->onPayrollFor($month->copy()->endOfMonth()), $by)
             ->with('employmentType')->orderBy('code')->get();
         $made = 0;
 
-        foreach ($staff as $employee) {
+        // ⛔ প্রতিজন নিজের কোম্পানির দেওয়া মাসে — এক তালিকায় দুই কোম্পানির মানুষ থাকলে দেওয়া কোম্পানির জনেরা বাদ, বাকিরা নয়; কেউ না থাকলে থামে
+        $paid = $staff->pluck('company_id')->unique()
+            ->filter(fn ($id): bool => PaidMonth::isPaid((int) $id, $month))->map(fn ($id): int => (int) $id)->all();
+        $open = $staff->reject(fn (Employee $e): bool => in_array((int) $e->company_id, $paid, true));
+
+        if ($open->isEmpty()) {
+            PaidMonth::assertOpen($paid[0] ?? (int) CompanyContext::id(), $month, $month, 'month', 'hr::validation.ot_month_paid');
+        }
+
+        foreach ($open as $employee) {
             if ($this->isEligible($employee) && $this->prepareFor($employee, $month, (int) $by->id) !== null) {
                 $made++;
             }
@@ -259,7 +267,7 @@ final class OvertimeService
                 throw ValidationException::withMessages(['status' => __('hr::validation.ot_not_your_line')]);
             }
 
-            PaidMonth::assertOpen($fresh->month, $fresh->month, 'month', 'hr::validation.ot_month_paid', (int) $fresh->employee_id);
+            PaidMonth::assertOpen((int) Employee::query()->withoutGlobalScopes()->whereKey($fresh->employee_id)->value('company_id'), $fresh->month, $fresh->month, 'month', 'hr::validation.ot_month_paid', (int) $fresh->employee_id);
 
             $fresh->forceFill([
                 'status' => OvertimeSheet::SIGNED,

@@ -1490,8 +1490,18 @@ final class PayrollService
         }
     }
 
+    /** ⛔ রানের দাখিলা রানের কোম্পানির খাতায় — কর্মী-খাতা এক হলে অন্য কোম্পানির পর্দা থেকে রানটা খোলে, কিন্তু সেখান থেকে বদলায় না */
+    private function assertOwnCompany(PayrollRun $run): void
+    {
+        if (CompanyContext::id() !== null && (int) $run->company_id !== (int) CompanyContext::id()) {
+            throw ValidationException::withMessages(['status' => __('hr::validation.run_of_another_company')]);
+        }
+    }
+
     private function assertNotCancelled(PayrollRun $run): void
     {
+        $this->assertOwnCompany($run);
+
         if ($run->status === DocumentStatus::CANCELLED) {
             throw ValidationException::withMessages([
                 'status' => __('hr::validation.already_cancelled'),
@@ -1501,6 +1511,8 @@ final class PayrollService
 
     private function assertDraft(PayrollRun $run): void
     {
+        $this->assertOwnCompany($run);
+
         if ($run->status !== DocumentStatus::DRAFT) {
             throw ValidationException::withMessages([
                 'status' => __('hr::validation.only_a_draft_can_change'),
