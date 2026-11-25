@@ -66,7 +66,7 @@ class DepositClaimController extends Controller implements HasMiddleware
         // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
         $filters = \App\Core\ListFilter\Columns::set([
             \App\Core\ListFilter\Columns::between(__('core.table.date'), 'claimed_on'),
-            \App\Core\ListFilter\Columns::is('bank', __('sales::portal.bank_account'), 'bank_account_id', \App\Modules\Accounts\Models\Account::query()
+            \App\Core\ListFilter\Columns::is('bank', __('sales::portal.bank_account'), 'bank_account_id', \App\Modules\Accounts\Models\Account::query()->postable()
                 ->whereIn('id', DepositClaim::query()->select('bank_account_id'))->get()->mapWithKeys(fn ($a) => [$a->id => $a->code.' — '.$a->name()])->all()),
         ]);
         $whole = clone $query;

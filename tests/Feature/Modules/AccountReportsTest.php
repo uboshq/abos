@@ -366,7 +366,8 @@ class AccountReportsTest extends TestCase
         $this->assertStringNotContainsString('1102-RPT', $names);
 
         foreach ($result->rows as $row) {
-            $this->assertContains($row['type'], [Account::INCOME, Account::EXPENSE]);
+            // ⓘ ধরন এখন কথায় (আয় / ব্যয়), ডাটাবেসের ইংরেজি চাবি নয় (অডিট, ২৫ নভেম্বর ২০২৬)
+            $this->assertContains($row['type'], [__('accounts::type.'.Account::INCOME), __('accounts::type.'.Account::EXPENSE)]);
         }
     }
 

@@ -19,7 +19,6 @@ final class EveryListPageHasTheToolbarTest extends TestCase
 {
     /** বসানো বাকি (৩ অক্টোবর ২০২৬) — বসলে নাম কাটা */
     private const PENDING = [
-        'Accounts/Resources/views/inter-company/index.blade.php',
         'Approval/Resources/views/limit/index.blade.php',
         'Finance/Resources/views/account-analysis/index.blade.php',
         'Finance/Resources/views/budget/index.blade.php',
