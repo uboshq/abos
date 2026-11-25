@@ -48,6 +48,7 @@ use Tests\TestCase;
 final class TheSalaryWentWhereOneHandSaidTest extends TestCase
 {
     use RefreshDatabase;
+    use \Tests\Concerns\PutsMoneyInTheTill;
     use \Tests\Concerns\SeesTheOwnersOwnMark;
     use \Tests\SignsTheSecondHand;
 
@@ -133,7 +134,7 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         $this->assertStringContainsString('EMP-PAY', $file, 'প্রস্তুতি — সই-পড়া কর্মী ফাইলে নেই');
 
         $reason = (string) __('hr::payroll.held_waiting', [], 'bn');
-        $this->assertStringContainsString('দ্বিতীয় সইয়ের অপেক্ষায়', $reason);
+        $this->assertStringContainsString('দ্বিতীয় অনুমোদনের অপেক্ষায়', $reason);
         $this->as($this->owner)->get(route('hr.payroll.show', $run->id))->assertOk()
             ->assertSee('data-bank-left-out', false)->assertSee('EMP-NEW', false)->assertSee(__('hr::payroll.held_waiting'), false);
         $report = $this->as($this->owner)->get(route('hr.payroll.bank_file_left_out', $run->id))->assertOk();
@@ -295,6 +296,8 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
             'type' => \App\Modules\Accounts\Models\Account::ASSET, 'nature' => \App\Modules\Accounts\Models\Account::DEBIT,
             'money_kind' => \App\Modules\Accounts\Models\Account::MFS, 'is_active' => true, 'status' => \App\Core\Support\DocumentStatus::CONFIRMED,
         ])->id;
+        // ⓘ খাতে টাকা — মোবাইলের জের শূন্যের নিচে নামে না, নইলে ভাউচার অনুমোদনে নয়, টাকার অভাবে থামত
+        $this->putMoneyIn(\App\Modules\Accounts\Models\Account::query()->findOrFail($wallet), '50000');
         // ⛔ ব্যাংকের পথে MFS খাত — ফেরে, কিছুই লেখা হয় না
         $this->as($this->owner)->post(route('hr.payroll.held.pay', ['channel' => 'bank']), ['payslips' => [$held->id], 'account_id' => $wallet])
             ->assertStatus(422);
@@ -399,6 +402,8 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
             'type' => \App\Modules\Accounts\Models\Account::ASSET, 'nature' => \App\Modules\Accounts\Models\Account::DEBIT,
             'money_kind' => \App\Modules\Accounts\Models\Account::MFS, 'is_active' => true, 'status' => \App\Core\Support\DocumentStatus::CONFIRMED,
         ])->id;
+        // ⓘ খাতে টাকা — মোবাইলের জের শূন্যের নিচে নামে না, নইলে ভাউচার অনুমোদনে নয়, টাকার অভাবে থামত
+        $this->putMoneyIn(\App\Modules\Accounts\Models\Account::query()->findOrFail($wallet), '50000');
         $held_ = fn () => app(\App\Modules\Hr\Services\HeldWages::class)->ready()->pluck('payslip.id')->map(fn ($id) => (int) $id)->all();
         $pay = function () use ($held, $wallet): \App\Modules\Accounts\Models\Voucher {
             $this->as($this->owner)->post(route('hr.payroll.held.pay', ['channel' => 'mfs']), ['payslips' => [$held->id], 'account_id' => $wallet])->assertOk();
@@ -427,12 +432,11 @@ final class TheSalaryWentWhereOneHandSaidTest extends TestCase
         app()->forgetInstance(ApprovalEngine::class);
 
         $second = $pay();
-        try {
-            $vouchers->post($second->fresh());
-            $this->fail('প্রস্তুতি — ভাউচার সইয়ের অপেক্ষায় থামেনি');
-        } catch (\Illuminate\Validation\ValidationException) {
-        }
-        $asked = Approval::query()->where('approvable_id', $second->id)->where('status', Approval::PENDING)->latest('id')->firstOrFail();
+        // ⓘ অনুমোদন চায় পোস্টের দরজা ([[VoucherApproval::stopping()]]), সেবার post() নিজে নয় — তাই আসল দরজা দিয়ে
+        $this->as($this->owner)->post(route('accounts.voucher.post', $second));
+        $this->assertTrue($second->fresh()->isDraft(), 'প্রস্তুতি — ভাউচার অনুমোদনের অপেক্ষায় থামেনি');
+        $asked = Approval::query()->where('approvable_type', $second->getMorphClass())->where('approvable_id', $second->id)
+            ->where('status', Approval::PENDING)->latest('id')->firstOrFail();
         app(ApprovalEngine::class)->reject($asked, $checker->fresh(), 'not this month');
         $this->assertContains((int) $held->id, $held_(), '⛔ "না" পাওয়া ভাউচারে মজুরি আটকে রইল');
         $this->assertTrue($second->fresh()->isCancelled(), '⛔ "না" পাওয়া খসড়া রয়ে গেল — পরে পাকা হলে একই মজুরি দুইবার');
