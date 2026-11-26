@@ -136,7 +136,7 @@
                  আছে: মালিকের নিজের নির্দেশ ছিল *"bank loan alada rako"* —
                  হাতধার আর ব্যাংক ঋণ এক জিনিস নয়। ⚠️ এক করে ফেললে সুদের
                  হিসাব, জামানত আর নবায়ন সব এক ছাঁচে পড়ত। --}}
-            <x-ui.toolbar :title="__('finance::menu.bank_facility')"
+            <x-ui.toolbar :title="__('finance::menu.bank_facility')" :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest', 'due_soon', 'amount_high', 'amount_low'])"
                           :subtitle="__('finance::field.facility_book_tag').($abosHead && auth()->user()?->can('finance.bank_facility.create') ? ' · '.__('finance::bank_loan_report.accrual_note') : '')"
                           :columns="$bfColumns"
                           :search-placeholder="__('finance::message.facility_search')"
