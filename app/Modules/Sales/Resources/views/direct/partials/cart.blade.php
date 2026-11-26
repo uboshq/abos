@@ -238,6 +238,29 @@
                                 </template>
                             </tbody>
                         </template>
+                        {{-- ⭐ সর্বমোট — প্রতিটা অঙ্ক নিজের কলামের নিচে (মালিক, ২৬ নভেম্বর ২০২৬; কেবল ABOS-এর রূপে) --}}
+                        @if (($abosLook ?? false))
+                            <tfoot x-show="lines.length > 0" x-cloak data-grand-total>
+                                <tr>
+                                    <td></td>
+                                    <td class="ds-foot-l" x-text="@js(__('sales::field.grand_total')) + ' · ' + lines.length + ' ' + @js(__('sales::field.items'))"></td>
+                                    <td></td>
+                                    <td class="num text-end" x-text="foot.sales"></td>
+                                    @if ($show['free_qty'])
+                                        <td class="num text-end" x-text="foot.free"></td>
+                                    @endif
+                                    <td class="num text-end" x-text="foot.total"></td>
+                                    @if ($show['line_discount'])
+                                        <td class="num text-end" x-text="money(foot.discount)"></td>
+                                    @endif
+                                    @if ($vatEnabled)
+                                        <td class="num text-end" x-text="money(vatTotal)"></td>
+                                    @endif
+                                    <td class="num text-end" x-text="'৳' + money(grossTotal)"></td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        @endif
                     </table>
                 </div>
 

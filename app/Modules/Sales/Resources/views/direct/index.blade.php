@@ -340,46 +340,60 @@
         form[data-abos-counter] tbody.ds-tone-3 > tr:first-child > td { background: #fce4f1; }
         form[data-abos-counter] tbody.ds-tone-4 > tr:first-child > td { background: #ece6ff; }
         form[data-abos-counter] tbody.ds-tone-5 > tr:first-child > td { background: #dcf5f8; }
-        /* ডান পাশ — পুরোটা টকটকে গোলাপিতে; ভিতরে সাদা গোল বাক্স; বোতাম সবসময় দেখা যায় (নিচে আটকানো) */
-        form[data-abos-counter] .ds-side > aside.ds-tot-abos { background: #ff00aa !important; border: 0 !important; border-radius: 20px !important;
-            box-shadow: none !important; padding: .55rem; }
-        form[data-abos-counter] .ds-tot-abos > div:first-child { background: transparent !important; }
-        form[data-abos-counter] .ds-tot-card { background: #fff; border-radius: 16px; overflow: hidden; }
-        form[data-abos-counter] .ds-tot-card > .space-y-1 { padding: 0 !important; background: #fff !important; }
+        /* ⭐ ডান পাশ — নমুনা "খ · স্লেট ও টিল" (মালিক, ২৬ নভেম্বর ২০২৬: "তোমার পরামর্শ যেটা, এটাই"): সাদা বাক্স, স্লেট মাথায়
+           লোগোর টিল সংখ্যা; রং কেবল মাথা, নিট পরিশোধ আর "নিশ্চিত করুন"-এ; সারি সাদা, পাতলা দাগে আলাদা */
+        form[data-abos-counter] .ds-side > aside.ds-tot-abos { background: #fff !important; border: 1px solid #cbd5e1 !important; border-radius: 16px !important;
+            box-shadow: 0 8px 24px rgb(15 23 42 / .10) !important; padding: 0; }
+        form[data-abos-counter] .ds-tot-abos > div:first-child { background: #fff !important; }
+        form[data-abos-counter] .ds-tot-card { background: #fff; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1 { padding: 0 !important; background: #fff !important; font-size: .8rem; }
         form[data-abos-counter] .ds-tot-card > .space-y-1 > * { margin: 0 !important; }
-        form[data-abos-counter] .ds-tot-card > .space-y-1 > :not([data-tone]) { padding-inline: .75rem; }
-        form[data-abos-counter] .ds-tot-card > .space-y-1 > :first-child { padding: .55rem .75rem; border-bottom: 0; }
-        form[data-abos-counter] .ds-tot-card [data-tone] { padding: .3rem .75rem; }
-        form[data-abos-counter] .ds-tot-card [data-tone='w'] { background: #fff; }
-        form[data-abos-counter] .ds-tot-card [data-tone='l'] { background: #eef4ff; }
-        form[data-abos-counter] .ds-tot-card [data-tone='s'] { background: #dce8ff; }
-        form[data-abos-counter] .ds-tot-card [data-tone='net'] { background: #4338ca; color: #fff; font-weight: 700; }
-        form[data-abos-counter] .ds-tot-card [data-tone='net'] * { color: #fff !important; }
-        form[data-abos-counter] .ds-tot-card [data-tone='due'] { background: #ffedd5; color: #9a3412; font-weight: 700; }
-        form[data-abos-counter] .ds-tot-card [data-tone='due'] * { color: #9a3412 !important; }
-        form[data-abos-counter] .ds-dep-sub { background: #eef4ff; padding: 0 .75rem .25rem 1.4rem !important; font-size: .65rem; color: #4b5a70; }
-        form[data-abos-counter] .ds-out { background: #dce8ff; padding: .45rem .6rem !important; }
-        form[data-abos-counter] .ds-out > [data-sign='adv'] { background: #15803d !important; color: #fff !important; }
-        form[data-abos-counter] .ds-out > [data-sign='due'] { background: #dc2626 !important; color: #fff !important; }
-        form[data-abos-counter] .ds-credit { background: #dce8ff; padding: 0 .6rem .55rem !important; }
-        form[data-abos-counter] .ds-limit { background: #fff; border: 1px solid #c7d4ea; border-radius: 10px; padding: .3rem .7rem; }
-        form[data-abos-counter] .ds-tot-abos [data-count-tiles] { background: #fff !important; border: 0 !important; border-radius: 16px; margin-top: .5rem; padding: .4rem !important; }
-        form[data-abos-counter] .ds-tot-abos [data-tile] { border: 0 !important; border-radius: 12px !important; }
-        form[data-abos-counter] .ds-tot-abos [data-tile] > span:last-child { font-size: 1.2rem; }
-        form[data-abos-counter] .ds-tot-abos [data-tile='total_item'] { background: #dbeafe !important; }
-        form[data-abos-counter] .ds-tot-abos [data-tile='total_item'] * { color: #1e40af !important; }
-        form[data-abos-counter] .ds-tot-abos [data-tile='sales_qty'] { background: #ede9fe !important; }
-        form[data-abos-counter] .ds-tot-abos [data-tile='sales_qty'] * { color: #6d28d9 !important; }
-        form[data-abos-counter] .ds-tot-abos [data-tile='free_qty_total'] { background: #dcfce7 !important; }
-        form[data-abos-counter] .ds-tot-abos [data-tile='free_qty_total'] * { color: #15803d !important; }
-        form[data-abos-counter] .ds-tot-abos [data-tile='total_qty'] { background: #fef3c7 !important; }
-        form[data-abos-counter] .ds-tot-abos [data-tile='total_qty'] * { color: #b45309 !important; }
-        form[data-abos-counter] .ds-details { background: #fff; border-radius: 16px; margin-top: .5rem; padding: .3rem .8rem; }
-        form[data-abos-counter] .ds-det { display: flex; width: 100%; align-items: baseline; gap: .45rem; padding: .12rem 0; text-align: start; font-size: .72rem; }
-        form[data-abos-counter] .ds-det > i { width: 9px; height: 9px; flex: none; align-self: center; border-radius: 999px; }
-        form[data-abos-counter] .ds-det > b { white-space: nowrap; color: #1f2a3d; }
-        form[data-abos-counter] .ds-det > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #4b5a70; }
-        form[data-abos-counter] .ds-tot-abos > div:last-child { border: 0 !important; background: transparent !important; padding: .5rem 0 0 !important; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1 > :not([data-tone]) { padding-inline: 1rem; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1 > :first-child { display: grid !important; gap: .1rem; padding: .85rem 1rem .75rem !important;
+            background: #1e293b; border: 0 !important; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1 > :first-child > span:first-child { color: #e2e8f0 !important; opacity: .85; letter-spacing: .12em; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1 > :first-child > span:nth-child(2) { justify-self: start; background: transparent !important;
+            box-shadow: none !important; padding: 0 !important; color: #2fd3e3 !important; font-size: 2.1rem; font-weight: 800; line-height: 1.1; }
+        form[data-abos-counter] .ds-head-who { display: flex; justify-content: space-between; gap: .5rem; font-size: .75rem; color: #e2e8f0; opacity: .9; }
+        form[data-abos-counter] .ds-head-who > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        form[data-abos-counter] .ds-tot-card [data-tone] { padding: .42rem 1rem; background: #fff; }
+        form[data-abos-counter] .ds-tot-card [data-tone] + [data-tone], form[data-abos-counter] .ds-tot-card [data-tone] + .ds-dep-sub + [data-tone],
+        form[data-abos-counter] .ds-tot-card div:has(> [data-tone]) + [data-tone] { border-top: 1px solid #e3e8f0; }
+        form[data-abos-counter] .ds-tot-card [data-tone='net'] { background: #e6f8fb; }
+        form[data-abos-counter] .ds-tot-card [data-tone='net'], form[data-abos-counter] .ds-tot-card [data-tone='net'] * { color: #0b6c7a !important; font-weight: 800; }
+        form[data-abos-counter] .ds-tot-card [data-tone='due'], form[data-abos-counter] .ds-tot-card [data-tone='due'] * { color: #b45309 !important; font-weight: 700; }
+        form[data-abos-counter] .ds-dep-sub { background: #fff; padding: 0 1rem .3rem !important; margin-top: -.2rem !important; font-size: .68rem; color: #5b6b82; }
+        form[data-abos-counter] .ds-out { background: #fff; padding: .5rem .75rem .2rem !important; }
+        form[data-abos-counter] .ds-out > div { border-radius: 12px !important; padding: .5rem .9rem !important; border: 1px solid #e3e8f0; }
+        form[data-abos-counter] .ds-out > [data-sign='adv'] { background: #ecfdf3 !important; border-color: #a7e3bf; color: #15803d !important; }
+        form[data-abos-counter] .ds-out > [data-sign='due'] { background: #fef2f2 !important; border-color: #fecaca; color: #b91c1c !important; }
+        form[data-abos-counter] .ds-out > div > span:last-child { font-size: 1.1rem; }
+        form[data-abos-counter] .ds-credit { background: #fff; padding: .3rem .75rem .6rem !important; }
+        form[data-abos-counter] .ds-limit { border: 1px dashed #c3cede; border-radius: 10px; padding: .35rem .9rem; }
+        form[data-abos-counter] .ds-details { border-top: 1px solid #e3e8f0; padding: .55rem 1rem .4rem; }
+        form[data-abos-counter] .ds-sec-h { display: flex; width: 100%; justify-content: space-between; font-size: .68rem; font-weight: 800; letter-spacing: .1em;
+            text-transform: uppercase; color: #0b8a9a; margin-bottom: .3rem; }
+        form[data-abos-counter] .ds-sec-h > span:last-child { letter-spacing: 0; text-transform: none; font-weight: 700; }
+        form[data-abos-counter] .ds-tr { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr); gap: .1rem .5rem; font-size: .76rem; }
+        form[data-abos-counter] .ds-tr > :nth-child(odd) { color: #5b6b82; }
+        form[data-abos-counter] .ds-tr > :nth-child(even) { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        form[data-abos-counter] .ds-fare { display: flex; justify-content: space-between; align-items: center; margin-top: .35rem; padding: .35rem .65rem;
+            border-radius: 10px; background: #e6f8fb; font-size: .78rem; }
+        form[data-abos-counter] .ds-fare b { font-size: .95rem; }
+        form[data-abos-counter] .ds-who-pays { margin-inline-start: .35rem; font-size: .66rem; font-weight: 700; font-style: normal; border-radius: 999px;
+            padding: .05rem .5rem; background: #fff; border: 1px solid #e3e8f0; color: #5b6b82; }
+        form[data-abos-counter] .ds-veh-none { font-size: .75rem; color: #5b6b82; }
+        form[data-abos-counter] .ds-mini { border-top: 1px solid #e3e8f0; margin-top: .5rem; padding-top: .4rem; }
+        form[data-abos-counter] .ds-det { display: flex; width: 100%; gap: .5rem; padding: .1rem 0; text-align: start; font-size: .76rem; }
+        form[data-abos-counter] .ds-det > b { width: 4.6rem; flex: none; font-weight: 400; color: #5b6b82; }
+        form[data-abos-counter] .ds-det > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1f2a3d; }
+        form[data-abos-counter] .ds-tot-abos > div:last-child { border-top: 1px solid #e3e8f0 !important; background: #fff !important; padding: .6rem .75rem .75rem !important; }
+        form[data-abos-counter] .ds-tot-abos [data-overview-trigger] { background: #0b8a9a !important; border-color: #0b8a9a !important; color: #fff !important;
+            border-radius: 12px !important; font-size: .95rem; font-weight: 800; }
+        /* তালিকার নিচে সর্বমোট — ডানের চার সারাংশ-বাক্সের বদলে (মালিক, ২৬ নভেম্বর ২০২৬) */
+        form[data-abos-counter] .ds-cart-scroll tfoot td { position: sticky; bottom: 0; z-index: 2; background: #f1f4f9; border-top: 2px solid #123b86;
+            font-weight: 800; color: #0b2a66; padding-block: .6rem; }
+        form[data-abos-counter] .ds-foot-l { text-transform: uppercase; letter-spacing: .05em; font-size: .75rem; }
     </style>
 
     {{-- ⓘ `data-confirm-overview` — নিশ্চিতের আগে সারাংশের পপ-আপ (abos-2c) এই ফর্ম চেনে --}}

@@ -922,6 +922,42 @@ export default function directSale({
             return '';
         },
 
+        /** ⭐ তালিকার নিচে সর্বমোট — বিক্রয় · ফ্রি · মোট পরিমাণ (সারির, উপহার বাদে) আর সারির ছাড়ের যোগ */
+        get foot() {
+            const sales = this.lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
+            const free = this.lines.reduce((s, l) => s + (Number(l.freeQty) || 0), 0);
+            const discount = this.lines.reduce((s, l) => s + (this.lineBase(l) - this.lineAfterDiscount(l)), 0);
+
+            return { sales: this.qty(sales), free: this.qty(free), total: this.qty(sales + free), discount };
+        },
+
+        /** ⭐ গাড়ি ও ভাড়া, আলাদা লাইনে — গাড়ি (কার · নম্বর), চালক (নাম · মোবাইল), পরিবহন, ভাড়া, কে দেবে */
+        get vehicleText() {
+            const owner = this.vehicleOwner ? String((texts.owners ?? {})[this.vehicleOwner] ?? '') : '';
+
+            return [owner, this.vehicleNo].filter(Boolean).join(' · ');
+        },
+
+        get driverText() {
+            return [this.driverName, this.driverPhone].filter(Boolean).join(' · ');
+        },
+
+        get carrierText() {
+            const c = this.carriers.find(x => String(x.id) === String(this.carrierId));
+
+            return c ? String(c.label ?? '') : '';
+        },
+
+        get fareText() {
+            const fare = Number(this.transportCost) || 0;
+
+            return fare > 0 ? '৳' + this.money(fare) : '—';
+        },
+
+        get farePayText() {
+            return this.farePaidBy ? String((texts.fares ?? {})[this.farePaidBy] ?? '') : '';
+        },
+
         /** ⭐ নেওয়া টাকা কোন পথে কত — "Cash ৳2,000.00 · bKash ৳1,000.00" (মালিক, ২৬ নভেম্বর ২০২৬) */
         get depositBreakdown() {
             return this.deposits

@@ -57,6 +57,10 @@
                     <span class="num rounded-(--radius-field) bg-(--color-brand-600)
                                  px-3 py-1 text-2xl font-bold text-(--color-brand-ink) shadow-sm"
                           x-text="'৳' + money(grossTotal)"></span>
+                    @if (($abosLook ?? false))
+                        <span class="ds-head-who"><span x-text="customer.name || ''"></span>
+                            <span class="num">{{ old('challan_no', $resume['challanNo'] ?? $salePreview ?? '') }}</span></span>
+                    @endif
                 </div>
 
                 @if ($show['sub_total'])
@@ -473,6 +477,8 @@
             --}}
             {{-- ⭐ টালিতে, পাশাপাশি — মালিকের নমুনা, ৪ অক্টোবর ২০২৬ ("evabe bosiyecho?") --}}
             @if (($abosLook ?? false))</div>{{-- ds-tot-card --}}@endif
+            {{-- ⓘ ABOS-এর রূপে চার সারাংশ-বাক্স নেই — তালিকার নিচে "সর্বমোট" সারিতে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+            @unless (($abosLook ?? false))
             <div class="grid gap-1.5 border-t border-(--color-border) bg-(--color-surface-sunken) px-3 py-2"
                  style="grid-template-columns: repeat(auto-fit, minmax(0, 1fr))" data-count-tiles>
                 @foreach ([
@@ -491,25 +497,38 @@
                     @endif
                 @endforeach
             </div>
+            @endunless
 
             {{-- ⭐ গাড়ি ও ভাড়া · ডেলিভারি · মন্তব্য — বোতামের ঠিক উপরে, এক লাইনে একটা; চাপলে নিজের পপ-আপ
                  (মালিক, ২৬ নভেম্বর ২০২৬: নিচের চার কার্ডের বদলে) --}}
             @if (($abosLook ?? false))
+                {{-- ⭐ গাড়ি ও ভাড়া আলাদা আলাদা লাইনে — গাড়ি · চালক · পরিবহন · ভাড়া আর কে দেবে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
                 <div class="ds-details" data-counter-details>
                     @if ($show['transport'])
-                        <button type="button" @click="openPanel('transport')" class="ds-det" data-transport-line>
-                            <i style="background: #d97706"></i><b>{{ __('sales::field.btn_transport') }}</b>
-                            <span x-text="transportLine || @js(__('sales::field.card_nothing'))"></span>
+                        <button type="button" @click="openPanel('transport')" class="ds-sec-h" data-transport-line>
+                            <span>{{ __('sales::field.btn_transport') }}</span><span>✎ F4</span>
                         </button>
+                        <div class="ds-veh-none" x-show="! transportLine" x-cloak>{{ __('sales::field.card_nothing') }}</div>
+                        <div x-show="transportLine" x-cloak>
+                            <div class="ds-tr">
+                                <span>{{ __('sales::field.det_vehicle') }}</span><span x-text="vehicleText || '—'"></span>
+                                <span>{{ __('sales::field.det_driver') }}</span><span x-text="driverText || '—'"></span>
+                                <span>{{ __('sales::field.det_carrier') }}</span><span x-text="carrierText || '—'"></span>
+                            </div>
+                            <div class="ds-fare">
+                                <span>{{ __('sales::field.det_fare') }}<i class="ds-who-pays" x-show="farePaidBy" x-text="farePayText"></i></span>
+                                <b class="num" x-text="fareText"></b>
+                            </div>
+                        </div>
                     @endif
-                    <button type="button" @click="openPanel('delivery')" class="ds-det">
-                        <i style="background: #0891b2"></i><b>{{ __('sales::field.btn_delivery') }}</b>
-                        <span x-text="deliveryModeLabel"></span>
-                    </button>
-                    <button type="button" @click="openPanel('note')" class="ds-det">
-                        <i style="background: #2563eb"></i><b>{{ __('sales::field.note') }}</b>
-                        <span x-text="noteText || @js(__('sales::field.card_nothing'))"></span>
-                    </button>
+                    <div class="ds-mini">
+                        <button type="button" @click="openPanel('delivery')" class="ds-det">
+                            <b>{{ __('sales::field.btn_delivery') }}</b><span x-text="deliveryModeLabel"></span>
+                        </button>
+                        <button type="button" @click="openPanel('note')" class="ds-det">
+                            <b>{{ __('sales::field.note') }}</b><span x-text="noteText || @js(__('sales::field.card_nothing'))"></span>
+                        </button>
+                    </div>
                 </div>
             @endif
 
