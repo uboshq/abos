@@ -11,6 +11,17 @@
             collect(['sent', 'transient', 'permanent'])->mapWithKeys(fn ($o) => [$o => __('notification::delivery.outcomes.'.$o)])->all(), __('core.notify.any')),
         \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
     ]);
+    $columns = [
+        ['key' => 'when', 'label' => __('notification::delivery.when'), 'width' => '10rem', 'render' => fn ($a) => $a->created_at?->format('d/m/Y H:i:s')],
+        ['key' => 'recipient', 'label' => __('notification::delivery.recipient'), 'render' => fn ($a) => $a->job?->user?->name ?? __('notification::delivery.none')],
+        ['key' => 'channel', 'label' => __('notification::delivery.channel'), 'render' => fn ($a) => __('notification::channel.names.'.$a->channel)],
+        ['key' => 'provider', 'label' => __('notification::delivery.provider'), 'render' => fn ($a) => $a->provider ?? __('notification::delivery.none')],
+        ['key' => 'reference', 'label' => __('notification::delivery.reference'), 'render' => fn ($a) => $a->provider_ref ?? __('notification::delivery.none')],
+        ['key' => 'outcome', 'label' => __('notification::delivery.outcome'), 'render' => fn ($a) => new \Illuminate\Support\HtmlString(
+            e(__('notification::delivery.outcomes.'.$a->outcome)).' <span class="text-(--color-ink-muted)">#'.e((string) $a->attempt).'</span>')],
+        ['key' => 'error', 'label' => __('notification::delivery.error'), 'render' => fn ($a) => $a->error ?? __('notification::delivery.none')],
+        ['key' => 'duration', 'label' => __('notification::delivery.duration'), 'numeric' => true, 'width' => '6rem', 'render' => fn ($a) => $a->duration_ms],
+    ];
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::delivery.logs_title') }}</x-slot:title>
@@ -18,50 +29,16 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::delivery.logs_title')" :info="__('notification::delivery.logs_note')" :search="false" :export="false" :share="false" :facets="$facetPanel">
+        <x-ui.toolbar :title="__('notification::delivery.logs_title')" :info="__('notification::delivery.logs_note')" :search="false" :export="false" :share="false" :facets="$facetPanel" :columns="$columns"
+                      :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])">
         </x-ui.toolbar>
         </form>
 
         <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('notification::delivery.logs_note') }}</p>
 
-        @if ($rows->isEmpty())
-            @if (\App\Core\Support\AbosHead::on())
-                <x-ui.empty-state :message="__('notification::delivery.empty')" />
-            @else
-                <p class="text-sm text-(--color-ink-muted)">{{ __('notification::delivery.empty') }}</p>
-            @endif
-        @else
-            <div class="overflow-x-auto">
-                <table class="ui-grid">
-                    <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
-                        <tr>
-                            <th class="text-start">{{ __('notification::delivery.when') }}</th>
-                            <th class="text-start">{{ __('notification::delivery.recipient') }}</th>
-                            <th class="text-start">{{ __('notification::delivery.channel') }}</th>
-                            <th class="text-start">{{ __('notification::delivery.provider') }}</th>
-                            <th class="text-start">{{ __('notification::delivery.reference') }}</th>
-                            <th class="text-start">{{ __('notification::delivery.outcome') }}</th>
-                            <th class="text-start">{{ __('notification::delivery.error') }}</th>
-                            <th class="text-end">{{ __('notification::delivery.duration') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($rows as $attempt)
-                            <tr class="border-t border-(--color-border)" data-attempt="{{ $attempt->id }}">
-                                <td class="whitespace-nowrap text-2xs">{{ $attempt->created_at?->format('d/m/Y H:i:s') }}</td>
-                                <td class="text-2xs">{{ $attempt->job?->user?->name ?? __('notification::delivery.none') }}</td>
-                                <td class="text-2xs">{{ __('notification::channel.names.'.$attempt->channel) }}</td>
-                                <td class="text-2xs">{{ $attempt->provider ?? __('notification::delivery.none') }}</td>
-                                <td class="font-mono text-2xs">{{ $attempt->provider_ref ?? __('notification::delivery.none') }}</td>
-                                <td class="text-2xs">{{ __('notification::delivery.outcomes.'.$attempt->outcome) }} <span class="text-(--color-ink-muted)">#{{ $attempt->attempt }}</span></td>
-                                <td class="text-2xs">{{ $attempt->error ?? __('notification::delivery.none') }}</td>
-                                <td class="text-end text-2xs tabular-nums">{{ $attempt->duration_ms }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endif
+        {{-- ⭐ পুরো বার — সাধারণ টেবিল, কলাম বাছাই আর সাজানো (মালিক, ২৪ নভেম্বর ২০২৬; ২৭ নভেম্বর) --}}
+        <x-ui.table :rows="$rows" :columns="$columns" :empty="__('notification::delivery.empty')"
+                    :row-attributes="fn ($attempt) => ['data-attempt' => $attempt->id]" />
 
         <x-ui.pager :rows="$rows" />
         <x-ui.list-totals :rows="$rows" />
