@@ -166,6 +166,17 @@ class NotificationController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
+
+        /*
+         * ⭐ ঘণ্টার ভিতরের তালিকা — একই "আমার বিজ্ঞপ্তি", কেবল ঘণ্টার মাপে (`?part=bell`; তিন ABOS রূপে প্রথমবার খুললে আনা হয়,
+         * মালিকের নমুনা, ২৬ নভেম্বর ২০২৬)। ⓘ কেবল নিজের খবর আর ব্যবস্থার নোটিশ — ঘণ্টার যা দেখাত, হুবহু।
+         */
+        if ($request->query('part') === 'bell') {
+            return view('components.shell.partials.bell-list', [
+                'mine' => $this->notifications->unreadFor($user),
+                'notices' => app(\App\Core\Services\StatusNotices::class)->all(),
+            ]);
+        }
         $f = $request->validate([
             'tab' => ['nullable', Rule::in(['all', 'unread', 'read', 'archived'])],
             'category' => ['nullable', Rule::in(NotificationKinds::CATEGORIES)],
