@@ -293,6 +293,11 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $box = $this->box($this->clerk, MailAccount::OWN, 'clerk@adi.test');
         $this->as($this->clerk);
 
+        // ⛔ নিজের ফাইল নিয়ে পরে পাঠানো নয় — সময় এগোনোর আগে (এক ঘণ্টা চুপ থাকলে ABOS নিজেই সেশন বন্ধ করে)
+        $this->post("/mail/{$box->public_id}/send", ['to' => ['karim@example.com'], 'subject' => 'f', 'html' => '<p>x</p>',
+            'send_at' => now()->addHour()->format('Y-m-d H:i:s'), 'files' => [\Illuminate\Http\UploadedFile::fake()->create('a.pdf', 1, 'application/pdf')]],
+            ['Accept' => 'application/json'])->assertStatus(422);
+
         $this->postJson("/mail/{$box->public_id}/send", ['to' => ['karim@example.com'], 'subject' => 'পরে', 'html' => '<p>x</p>',
             'send_at' => now()->addHour()->format('Y-m-d H:i:s')])->assertOk();
         $this->assertSame([], $this->fake->sent);
@@ -309,10 +314,6 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->assertFalse(\App\Modules\Mail\Models\MailOutbox::query()->whereKey($row->id)->exists(), '⛔ পাঠানোর পরেও লেখা রয়ে গেল।');
         $this->assertSame(1, MailSend::query()->count());
 
-        // ⛔ নিজের ফাইল নিয়ে পরে পাঠানো নয়
-        $this->post("/mail/{$box->public_id}/send", ['to' => ['karim@example.com'], 'subject' => 'f', 'html' => '<p>x</p>',
-            'send_at' => now()->addHour()->format('Y-m-d H:i:s'), 'files' => [\Illuminate\Http\UploadedFile::fake()->create('a.pdf', 1, 'application/pdf')]],
-            ['Accept' => 'application/json'])->assertStatus(422);
     }
 
     public function test_source_auto_reply_import_html_template_and_own_signature(): void
