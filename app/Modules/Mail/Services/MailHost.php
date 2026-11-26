@@ -18,7 +18,7 @@ interface MailHost
     /** @return list<string> */
     public function domains(): array;
 
-    /** @return list<array{email: string, used_mb: float, quota_mb: ?int, login_off: bool, incoming_off: bool}> */
+    /** @return list<array{email: string, used_mb: float, quota_mb: ?int, login_off: bool, incoming_off: bool, last: ?int}> */
     public function accounts(): array;
 
     public function create(string $email, string $password, int $quotaMb): void;
@@ -36,6 +36,9 @@ interface MailHost
     public function unforward(string $email, string $to): void;
 
     public function delete(string $email): void;
+
+    /** ⓘ স্বয়ংক্রিয় উত্তর — ছুটিতে থাকলে প্রেরক নিজে থেকে উত্তর পান; `null` = বন্ধ */
+    public function autoReply(string $email, ?array $reply): void;
 
     /** @return array{mx: bool, spf: bool, dkim: bool, dmarc: bool} */
     public function dns(string $domain): array;

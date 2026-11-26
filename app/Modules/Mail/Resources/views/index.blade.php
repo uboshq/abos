@@ -12,7 +12,7 @@
         'trust' => route('mail.trust'), 'add' => route('mail.accounts.add'), 'signature' => route('mail.signature'), 'templates' => route('mail.templates'),
         'decide' => route('mail.accounts.decide', ['account' => $zero]), 'off' => route('mail.accounts.off', ['account' => $zero]),
         'folders' => route('mail.folders', ['account' => $zero]), 'list' => route('mail.list', ['account' => $zero]),
-        'read' => route('mail.read', ['account' => $zero]), 'file' => route('mail.file', ['account' => $zero]),
+        'read' => route('mail.read', ['account' => $zero]), 'file' => route('mail.file', ['account' => $zero]), 'raw' => route('mail.raw', ['account' => $zero]),
         'flag' => route('mail.flag', ['account' => $zero]), 'move' => route('mail.move', ['account' => $zero]),
         'bulk' => route('mail.bulk', ['account' => $zero]), 'link' => route('mail.link', ['account' => $zero]),
         'send' => route('mail.send', ['account' => $zero]),
@@ -84,7 +84,7 @@
                 <span><button type="button" data-act="compose-small" title="{{ __('mail::field.compose.small') }}">—</button><button type="button" data-act="compose-wide" title="{{ __('mail::field.compose.wide') }}">⤢</button><button type="button" data-act="compose-close" title="{{ __('mail::field.compose.close') }}">✕</button></span></div>
             <div data-compose-body>
                 <div class="r"><span>{{ __('mail::field.compose.from') }}</span><select name="from" data-from></select></div>
-                <div class="r"><span>{{ __('mail::field.compose.to') }}</span><input name="to" type="text" autocomplete="off" required data-to>
+                <div class="r"><span>{{ __('mail::field.compose.to') }}</span><input name="to" type="text" autocomplete="off" required data-to><span data-to-pill></span>
                     <button type="button" class="mx-chip" data-act="show-cc" style="border:0;color:var(--mx-brand)">{{ __('mail::field.compose.cc_bcc') }}</button></div>
                 <div class="r" data-cc-row hidden><span>{{ __('mail::field.compose.cc') }}</span><input name="cc" type="text" autocomplete="off"></div>
                 <div class="r" data-cc-row hidden><span>{{ __('mail::field.compose.bcc') }}</span><input name="bcc" type="text" autocomplete="off"></div>
@@ -97,7 +97,9 @@
                     <button type="button" data-fmt="underline" title="{{ __('mail::field.compose.underline') }}"><u>U</u></button>
                     <button type="button" data-fmt="insertUnorderedList">• {{ __('mail::field.compose.list') }}</button>
                     <button type="button" data-fmt="createLink">🔗 {{ __('mail::field.compose.link') }}</button>
+                    <label style="cursor:pointer">🖼 {{ __('mail::field.x_image') }}<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden data-image></label>
                     <label style="cursor:pointer">📎 {{ __('mail::field.compose.file') }}<input type="file" multiple hidden data-files></label>
+                    <button type="button" data-act="emoji" title="{{ __('mail::field.x_emoji') }}">😊</button>
                     <span class="muted" data-file-names style="font-size:11.5px"></span>
                     <select data-sig style="margin-left:auto;border:0;background:transparent;color:var(--mx-brand)" aria-label="{{ __('mail::field.compose.signature') }}">
                         <option value="new">{{ __('mail::field.compose.sig_new') }}</option>
@@ -114,6 +116,17 @@
                     <span style="flex:1"></span>
                     <span class="muted" style="font-size:12px" data-compose-msg></span>
                     <button type="submit" class="mx-btn p" data-send>{{ __('mail::field.compose.send') }} ➤</button>
+                    <span style="position:relative">
+                        <button type="button" class="mx-btn p" style="padding:0 8px" data-act="later-menu" title="{{ __('mail::field.x_later_send') }}">🕒▾</button>
+                        <div class="mx-menu" data-later-menu hidden style="right:0;bottom:38px;min-width:230px">
+                            <button type="button" data-later="1h">🕐 {{ __('mail::field.x_later_1h') }}</button>
+                            <button type="button" data-later="tomorrow">🌅 {{ __('mail::field.x_later_tomorrow') }}</button>
+                            <div class="sep"></div>
+                            <label style="display:flex;flex-direction:column;gap:4px;padding:6px 10px;font-size:12px">{{ __('mail::field.x_later_pick') }}
+                                <input type="datetime-local" class="mx-in num" data-later-at style="height:30px"></label>
+                            <button type="button" data-later="pick" style="justify-content:center;color:var(--mx-brand);font-weight:700">🕒 {{ __('mail::field.x_later_send') }}</button>
+                        </div>
+                    </span>
                 </div>
             </div>
         </form>

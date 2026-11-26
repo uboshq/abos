@@ -419,6 +419,9 @@ if (root) {
         menu.innerHTML = '<button type="button" data-act="unread">✉️ ' + esc(W.mark_unread) + '</button>'
             + '<button type="button" data-act="later">🕒 ' + esc(W.later) + '</button>'
             + '<button type="button" data-act="trust">🖼️ ' + esc(W.always_images) + '</button>'
+            + '<button type="button" data-act="print">🖨️ ' + esc(W.x_print) + '</button>'
+            + '<button type="button" data-act="spam">⚠️ ' + esc(W.x_spam) + '</button>'
+            + '<button type="button" data-act="source">🧾 ' + esc(W.x_source) + '</button>'
             + '<div class="sep"></div>' + fs.filter(f => f.path !== m.folder).map(f => '<button type="button" data-move-to="' + esc(f.path) + '">📁 ' + esc(W.move) + ' → ' + esc(W.folders[f.role] || f.name) + '</button>').join('')
         const r = anchor.getBoundingClientRect()
         const host = $('[data-reader]').getBoundingClientRect()
@@ -485,7 +488,10 @@ if (root) {
 
         if (opts.to) form.to.value = opts.to
         if (opts.subject) form.subject.value = opts.subject
+        if (mode === 'new' && ! opts.to && ! opts.paper && ! opts.template) restoreDraft()
+        $('[data-to-pill]').innerHTML = ''
         form.hidden = false
+        if (form.to.value) toPill()
 
         await loadComposeData(opts)
 
@@ -546,6 +552,7 @@ if (root) {
         fd.append('html', html)
         fd.append('signature', (opts && opts.signature) || 'new')
         if (opts && opts.template) fd.append('template', opts.template)
+        if (opts && opts.sendAt) fd.append('send_at', opts.sendAt)
         if (form.inReplyTo && form.inReplyTo.value) fd.append('inReplyTo', form.inReplyTo.value)
         ;((opts && opts.papers) || []).forEach((p, i) => {
             fd.append('papers[' + i + '][kind]', p.kind)
@@ -628,6 +635,8 @@ if (root) {
             return
         }
         if (t.dataset.moveTo) { closeMenu(); moveOpen(t.dataset.moveTo, 'mail_moved'); return }
+        if (t.dataset.later) { sendLater(t.dataset.later); return }
+        if (t.dataset.emojiPick) { insertHtml(t.dataset.emojiPick); t.closest('[data-emoji-menu]').remove(); return }
 
         const act = t.dataset.act
         const m = state.open
@@ -672,6 +681,23 @@ if (root) {
                 m.linked = true; renderKeep(); toast(M.linked)
             } catch (e) { toast(e.message, true) }
         } else if (act === 'quick-send' && m) quickSend(t)
+        else if (act === 'print' && m) {
+            closeMenu()
+            // ⓘ পাতাটাই ছাপা — ছাপার সাজে কেবল খোলা মেইলটা থাকে ([[mail.css]] .mx-printing)
+            document.body.classList.add('mx-printing')
+            window.print()
+            setTimeout(() => document.body.classList.remove('mx-printing'), 500)
+        } else if (act === 'spam' && m) {
+            closeMenu()
+            const to = roleFolder(state.openAcc, 'junk')
+            if (to) { await moveOpen(to, 'mail_moved'); toast(M.spam_done) } else toast(M.no_junk, true)
+        } else if (act === 'source' && m) {
+            closeMenu()
+            window.open(url('raw', state.openAcc, { folder: m.folder, uid: m.uid }), '_blank', 'noopener')
+        } else if (act === 'later-menu') {
+            const menu = $('[data-later-menu]')
+            menu.hidden = ! menu.hidden
+        } else if (act === 'emoji') emojiMenu(t)
     })
 
     root.addEventListener('keydown', (ev) => {
@@ -737,6 +763,7 @@ if (root) {
                 signature: $('[data-sig]').value, template: $('[data-template]').value, papers: state.compose.papers,
             })
             msg.textContent = M.sent
+            clearDraft()
             setTimeout(() => { form.hidden = true }, 700)
         } catch (e) { msg.textContent = e.message }
         btn.disabled = false
@@ -744,6 +771,7 @@ if (root) {
 
     $('[data-compose]').addEventListener('change', (ev) => {
         if (ev.target.matches('[data-files]')) $('[data-file-names]').textContent = Array.from(ev.target.files).map(f => f.name).join(', ')
+        if (ev.target.matches('[data-image]') && ev.target.files[0]) insertImage(ev.target.files[0], ev.target)
         if (ev.target.matches('[data-sig]')) showSignature()
         if (ev.target.matches('[data-from]')) loadComposeData({})
         if (ev.target.matches('[data-template]')) {
@@ -757,7 +785,7 @@ if (root) {
     })
     $('[data-compose]').addEventListener('focusout', (ev) => {
         // ⓘ প্রাপক বদলালে টেমপ্লেটের ঘর নতুন প্রাপকের তথ্যে
-        if (ev.target.matches('[data-to]') && ev.target.value) loadComposeData({})
+        if (ev.target.matches('[data-to]') && ev.target.value) { loadComposeData({}); toPill() }
     })
 
     $('[data-connect]').addEventListener('change', (ev) => { if (ev.target.name === 'kind_pick') setKind(ev.target.value) })
@@ -800,6 +828,84 @@ if (root) {
     // ⓘ নতুন মেইল — প্রতি 2 মিনিটে, পাতা লুকানো বা কিছু বাছা থাকলে নয়
     setInterval(() => { if (! document.hidden && state.view.acc && ! state.picked.size) { refreshCounts(); if (! state.open) loadList() } }, 120000)
 
+    async function sendLater (which) {
+        const form = $('[data-compose]')
+        let at = null
+        const d = new Date()
+        if (which === '1h') at = new Date(d.getTime() + 3600000)
+        else if (which === 'tomorrow') { at = new Date(d); at.setDate(d.getDate() + 1); at.setHours(9, 0, 0, 0) }
+        else { const v = $('[data-later-at]').value; if (! v) return; at = new Date(v) }
+        $('[data-later-menu]').hidden = true
+        const msg = $('[data-compose-msg]')
+        msg.textContent = W.compose.sending
+        try {
+            const j = await send(form, $('[data-editor]').innerHTML || '<p></p>', $('[data-from]').value, {
+                signature: $('[data-sig]').value, template: $('[data-template]').value, papers: state.compose.papers, sendAt: localIso(at),
+            })
+            msg.textContent = j.message
+            clearDraft()
+            setTimeout(() => { form.hidden = true }, 1200)
+        } catch (e) { msg.textContent = e.message }
+    }
+
+    // ⓘ খসড়া — এই যন্ত্রে, এই কর্মীর জন্য; পাঠালে মোছে (মেইলের লেখা সার্ভারে জমা হয় না)
+    const DRAFT = 'abos.mail.draft'
+    let draftTimer = null
+    function saveDraft () {
+        const form = $('[data-compose]')
+        if (form.hidden || state.compose.replying) return
+        try {
+            localStorage.setItem(DRAFT, JSON.stringify({ to: form.to.value, cc: form.cc.value, subject: form.subject.value, html: $('[data-editor]').innerHTML, at: Date.now() }))
+            $('[data-compose-msg]').textContent = M.draft_saved
+        } catch (e) { /* ব্যক্তিগত জানালায় জমা না হলে কিছু হয় না */ }
+    }
+    function restoreDraft () {
+        try {
+            const d = JSON.parse(localStorage.getItem(DRAFT) || 'null')
+            if (! d || Date.now() - d.at > 7 * 86400000) return
+            const form = $('[data-compose]')
+            form.to.value = d.to || ''
+            form.cc.value = d.cc || ''
+            form.subject.value = d.subject || ''
+            $('[data-editor]').innerHTML = d.html || ''
+        } catch (e) { /* কিছু নেই */ }
+    }
+    function clearDraft () { try { localStorage.removeItem(DRAFT) } catch (e) { /* কিছু নেই */ } }
+    $('[data-compose]').addEventListener('input', () => { clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 1500) })
+
+    async function toPill () {
+        const email = addrs($('[data-compose]').to.value)[0]
+        const pill = $('[data-to-pill]')
+        pill.innerHTML = ''
+        if (! email) return
+        try {
+            const p = (await get(url('party', '', { email }))).party
+            if (p) pill.innerHTML = '<span class="mx-pill t-green">' + esc(p.name) + (p.points ? ' · ⭐ ' + esc(p.points) : '') + (p.due !== null && Number(p.due) > 0 ? ' · ' + esc(W.tags.due) + ' ' + money(p.due) : '') + '</span>'
+        } catch (e) { /* চিহ্ন না এলে কিছু হয় না */ }
+    }
+
+    function insertHtml (html) {
+        const ed = $('[data-editor]')
+        ed.focus()
+        document.execCommand('insertHTML', false, html)
+    }
+    function insertImage (file, input) {
+        if (file.size > 2 * 1024 * 1024) { toast('≤ 2 MB', true); input.value = ''; return }
+        const r = new FileReader()
+        r.onload = () => { insertHtml('<img src="' + r.result + '" alt="" style="max-width:100%">'); input.value = '' }
+        r.readAsDataURL(file)
+    }
+    function emojiMenu (anchor) {
+        const old = $('[data-emoji-menu]')
+        if (old) { old.remove(); return }
+        const box = document.createElement('div')
+        box.className = 'mx-menu'
+        box.dataset.emojiMenu = '1'
+        box.style.cssText = 'display:grid;grid-template-columns:repeat(8,1fr);min-width:0;width:260px;bottom:120px;right:20px'
+        box.innerHTML = ['😊', '🙏', '👍', '🎉', '✅', '📦', '🚚', '💰', '🧾', '📎', '⭐', '🌙', '🪔', '🌺', '❤️', '😀'].map(e => '<button type="button" data-emoji-pick="' + e + '" style="justify-content:center;font-size:18px">' + e + '</button>').join('')
+        $('[data-compose]').appendChild(box)
+    }
+
     function toast (text, bad) {
         const p = document.createElement('div')
         p.textContent = text
@@ -838,6 +944,7 @@ function timeOf (iso) {
     if (d.toDateString() === t.toDateString() || d.toDateString() === y.toDateString()) return pad(d.getHours()) + ':' + pad(d.getMinutes())
     return pad(d.getDate()) + '-' + pad(d.getMonth() + 1)
 }
+function localIso (d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':00' }
 function fullTime (iso) { if (! iso) return ''; const d = new Date(iso); return pad(d.getDate()) + '-' + pad(d.getMonth() + 1) + '-' + d.getFullYear() + ' · ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) }
 function initials (s) { const p = String(s || '?').replace(/[<>"]/g, '').trim().split(/\s+/); return ((p[0] || '?')[0] + ((p[1] || '')[0] || '')).toUpperCase() }
 function colour (s) { const c = ['#0b8a9a', '#b45309', '#4338ca', '#15803d', '#be185d', '#334155', '#1d4ed8', '#7c3aed']; let h = 0; for (const ch of String(s || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return c[h % c.length] }

@@ -270,3 +270,10 @@ body:has([data-counter-strip]) .mailx.mx-inbox { height: calc(100dvh - 40px - 1r
 .mailx .mx-filter { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
 .mailx .mx-filter > label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--mx-muted); }
 .mailx .mx-filter .mx-in { height: 32px; }
+
+/* ── ছাপা — "⋯ আরও → ছাপুন": কেবল খোলা মেইলটা ─────────────────── */
+@media print {
+    body.mx-printing * { visibility: hidden !important; }
+    body.mx-printing .mailx .mx-scroll, body.mx-printing .mailx .mx-scroll * { visibility: visible !important; }
+    body.mx-printing .mailx .mx-scroll { position: absolute; left: 0; top: 0; width: 100%; overflow: visible; }
+}

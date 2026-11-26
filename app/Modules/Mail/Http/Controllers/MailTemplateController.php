@@ -51,6 +51,8 @@ final class MailTemplateController extends Controller implements HasMiddleware
             ->when($whose === 'company', fn ($c) => $c->whereNull('user_id'), fn ($c) => $whose === 'mine' ? $c->where('user_id', $user->id) : $c->where('category', $category))
             ->when($look === 'designed', fn ($c) => $c->where('format', 'designed'))
             ->when($look === 'plain', fn ($c) => $c->where('format', 'plain'))
+            ->when($look === 'bn', fn ($c) => $c->whereIn('locale', ['bn', 'both']))
+            ->when($look === 'en', fn ($c) => $c->whereIn('locale', ['en', 'both']))
             ->values();
 
         $selected = $request->query('t') ? $all->firstWhere('public_id', (string) $request->query('t')) : $list->first();
@@ -147,10 +149,11 @@ final class MailTemplateController extends Controller implements HasMiddleware
             'name' => 'required|string|max:120',
             'category' => ['required', Rule::in(MailTemplate::CATEGORIES)],
             'locale' => 'required|in:bn,en,both',
-            'format' => 'required|in:designed,plain',
+            'format' => 'required|in:designed,plain,html',
+            'html_file' => 'nullable|file|mimes:html,htm,txt|max:512',
             'colour' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'subject' => 'nullable|string|max:255',
-            'body' => 'required|string|max:20000',
+            'body' => 'required_without:html_file|nullable|string|max:200000',
             'button' => 'nullable|string|max:60',
             'attach_paper' => 'nullable|boolean',
             'auto_on' => 'nullable|boolean',
@@ -158,9 +161,13 @@ final class MailTemplateController extends Controller implements HasMiddleware
             'auto_at' => ['nullable', 'regex:/^\d{2}:\d{2}$/'],
         ]);
 
+        // ⭐ "HTML আনুন" — নিজের নকশার HTML; স্ক্রিপ্ট আর বাইরের কোড সরানো ([[MailController::safe]])
+        $html = $request->hasFile('html_file') ? (string) file_get_contents($request->file('html_file')->getRealPath()) : null;
+
         return [
-            'name' => $data['name'], 'category' => $data['category'], 'locale' => $data['locale'], 'format' => $data['format'],
-            'colour' => $data['colour'] ?? null, 'subject' => (string) ($data['subject'] ?? ''), 'body' => $data['body'],
+            'name' => $data['name'], 'category' => $data['category'], 'locale' => $data['locale'], 'format' => $html !== null ? 'html' : $data['format'],
+            'colour' => $data['colour'] ?? null, 'subject' => (string) ($data['subject'] ?? ''),
+            'body' => $html !== null ? \App\Modules\Mail\Http\Controllers\MailController::safe($html, true) : (string) $data['body'],
             'button' => $data['button'] ?? null, 'attach_paper' => $request->boolean('attach_paper'),
             'auto' => $request->has('auto_on') || $request->has('auto_day')
                 ? ['on' => $request->boolean('auto_on'), 'rule' => $data['category'] === 'festival' ? 'festival' : 'due_30', 'day' => $data['auto_day'] ?? 'mon', 'at' => $data['auto_at'] ?? '10:00']

@@ -186,6 +186,17 @@ final class ImapMailServer implements MailServer
         }
     }
 
+    public function raw(MailAccount $account, string $folder, int $uid): string
+    {
+        $stream = $this->open($account, $folder);
+
+        try {
+            return (string) imap_fetchheader($stream, $uid, FT_UID).(string) imap_body($stream, $uid, FT_UID | FT_PEEK);
+        } finally {
+            $this->close($stream);
+        }
+    }
+
     public function flag(MailAccount $account, string $folder, int $uid, string $flag, bool $on): void
     {
         // ⓘ "পরে দেখব" — মেইল সার্ভারের নিজের চিহ্ন (IMAP keyword), তাই অন্য যন্ত্রেও একই

@@ -48,4 +48,12 @@ return [
     'template_hidden' => 'Template hidden — it stays in the log.',
     'some_failed' => 'Some steps did not work — try again.',
     'no_archive' => 'This mailbox has no "Archive" folder.',
+    'schedule_no_files' => 'A scheduled mail cannot carry your own files — ABOS papers are fine; send now if it has files.',
+    'scheduled' => 'The mail will go at :at.',
+    'schedule_lost' => 'A scheduled mail did not go — at send time the sender could no longer send from this mailbox.',
+    'auto_reply_saved' => 'Auto-reply saved.',
+    'imported' => ':n addresses created, :skip skipped (reason beside each).',
+    'draft_saved' => 'Draft saved',
+    'spam_done' => 'Reported as spam — the mail is in the spam folder.',
+    'no_junk' => 'This mailbox has no spam folder.',
 ];

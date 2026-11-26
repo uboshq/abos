@@ -40,7 +40,7 @@ final class FakeMailHost implements MailHost
     public function create(string $email, string $password, int $quotaMb): void
     {
         $this->calls[] = ['create', [$email, $quotaMb]];
-        $this->boxes[$email] = ['email' => $email, 'used_mb' => 0.0, 'quota_mb' => $quotaMb, 'login_off' => false, 'incoming_off' => false];
+        $this->boxes[$email] = ['email' => $email, 'used_mb' => 0.0, 'quota_mb' => $quotaMb, 'login_off' => false, 'incoming_off' => false, 'last' => null];
     }
 
     public function quota(string $email, int $quotaMb): void
@@ -83,6 +83,11 @@ final class FakeMailHost implements MailHost
     {
         $this->calls[] = ['delete', [$email]];
         unset($this->boxes[$email]);
+    }
+
+    public function autoReply(string $email, ?array $reply): void
+    {
+        $this->calls[] = ['autoReply', [$email, $reply]];
     }
 
     public function dns(string $domain): array

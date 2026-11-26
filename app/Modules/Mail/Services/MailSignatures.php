@@ -28,6 +28,9 @@ final class MailSignatures
     /** ⓘ নকশার নাম — পর্দায় তালিকা ([[mail::field.sign.styles]]) */
     public const COUNT = 20;
 
+    /** ⓘ "নিজে বানান" — কর্মীর নিজের সই */
+    public const OWN = 21;
+
     /** @return array{name: string, title: string, phone: string, email: string, web: string, company: string, address: string, links: array<string, string>, initials: string, c1: string, c2: string, c3: string} */
     public function facts(User $user, ?string $fromEmail = null): array
     {
@@ -62,7 +65,11 @@ final class MailSignatures
     {
         $f = $this->facts($user, $fromEmail);
         $hasPhoto = $this->photoBytes($user) !== null;
-        $body = $this->design(max(1, min(self::COUNT, $style)), $f, $hasPhoto);
+        $custom = trim((string) ($this->profile($user)->custom ?? ''));
+        // ⓘ নকশা 21 = "নিজে বানান" — কর্মীর নিজের লেখা সই (নিরাপদ করা); না থাকলে 1
+        $body = $style === self::OWN && $custom !== ''
+            ? \App\Modules\Mail\Http\Controllers\MailController::safe(nl2br($custom, false), true)
+            : $this->design(max(1, min(self::COUNT, $style)), $f, $hasPhoto);
 
         if ($withFestival && $style !== 10 && $this->profile($user)->festival !== false && ($fest = $this->festivalToday()) !== null) {
             $body = '<table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="vertical-align:middle;padding-right:14px">'.$body

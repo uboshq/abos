@@ -30,6 +30,9 @@ interface MailServer
     /** @return array{name: string, mime: string, bytes: string} */
     public function attachment(MailAccount $account, string $folder, int $uid, string $part): array;
 
+    /** ⓘ মেইলের আসল রূপ — হেডার আর লেখা যেমন এসেছে ("⋯ আরও → আসল রূপ") */
+    public function raw(MailAccount $account, string $folder, int $uid): string;
+
     public function flag(MailAccount $account, string $folder, int $uid, string $flag, bool $on): void;
 
     public function move(MailAccount $account, string $folder, int $uid, string $to): void;

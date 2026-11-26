@@ -58,6 +58,14 @@
             {{ __('core.profile.title') }}
         </a>
 
+        {{-- ⭐ আমার মেইল ↗ — নিজের ট্যাবে (মেইল মডিউল, নমুনা v4 পর্দা ১) --}}
+        @if (\Illuminate\Support\Facades\Route::has('mail.index') && auth()->user()?->can('mail.use'))
+            <a href="{{ route('mail.index', ['counter' => 1]) }}" target="_blank" rel="noopener" role="menuitem" class="{{ $row }}" data-my-mail>
+                <x-ui.icon name="mail" :size="16" />
+                {{ __('mail::field.x_my_mail') }} ↗
+            </a>
+        @endif
+
         {{-- কোম্পানি বা শাখা বদল — বারের "কোম্পানি · শাখা ▾"-টাই খোলে, দ্বিতীয় কোনো তালিকা নয় --}}
         @if ($canSwitch)
             <button type="button" role="menuitem" class="{{ $row }}" data-menu-company

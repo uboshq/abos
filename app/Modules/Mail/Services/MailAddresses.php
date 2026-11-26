@@ -277,6 +277,20 @@ final class MailAddresses
         $address->account?->forceFill(['status' => MailAccount::OFF])->save();
     }
 
+    /**
+     * ⭐ স্বয়ংক্রিয় উত্তর (নমুনা v4 পর্দা ৯, ট্যাব) — সার্ভারে বসে; বন্ধ করলে সরে।
+     *
+     * @param  array{on: bool, subject?: ?string, body?: ?string, start?: ?string, stop?: ?string}  $reply
+     */
+    public function autoReply(User $by, MailAddress $address, array $reply): void
+    {
+        abort_if($address->status === MailAddress::DELETED, 409);
+        $on = (bool) $reply['on'];
+        $this->host->autoReply($address->email, $on ? ['from' => (string) ($address->display_name ?: ''), 'subject' => (string) ($reply['subject'] ?? ''),
+            'body' => (string) ($reply['body'] ?? ''), 'start' => $reply['start'] ?? null, 'stop' => $reply['stop'] ?? null] : null);
+        $address->forceFill(['auto_reply' => $on ? array_intersect_key($reply, array_flip(['on', 'subject', 'body', 'start', 'stop'])) : null])->save();
+    }
+
     /** ⓘ দিনের কাজ — নিজে আবার চালু, আর 30 দিন পেরোনো মোছা (ব্যাকআপ কপি আগে) */
     public function tidy(?callable $backup = null): array
     {

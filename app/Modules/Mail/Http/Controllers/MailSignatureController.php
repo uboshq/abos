@@ -44,6 +44,10 @@ final class MailSignatureController extends Controller implements HasMiddleware
             $previews[$n] = $this->signatures->inline($user, $this->signatures->html($user, $n, null, false), true);
         }
 
+        if (trim((string) $profile->custom) !== '') {
+            $previews[MailSignatures::OWN] = $this->signatures->inline($user, $this->signatures->html($user, MailSignatures::OWN, null, false), true);
+        }
+
         $festivals = MailFestival::query()->where('active', true)->orderBy('on_date')->get()
             ->map(fn (MailFestival $f) => ['f' => $f, 'html' => $this->signatures->inline($user,
                 '<table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="padding-right:14px">'.$this->signatures->html($user, 9, null, false)
@@ -64,8 +68,9 @@ final class MailSignatureController extends Controller implements HasMiddleware
     {
         $user = $request->user();
         $data = $request->validate([
-            'style_new' => 'required|integer|min:1|max:'.MailSignatures::COUNT,
-            'style_reply' => 'required|integer|min:1|max:'.MailSignatures::COUNT,
+            'style_new' => 'required|integer|min:1|max:'.MailSignatures::OWN,
+            'style_reply' => 'required|integer|min:1|max:'.MailSignatures::OWN,
+            'custom' => 'nullable|string|max:5000',
             'festival' => 'nullable|boolean',
             'title' => 'nullable|string|max:120',
             'phone' => 'nullable|string|max:40',
@@ -99,6 +104,7 @@ final class MailSignatureController extends Controller implements HasMiddleware
             'phone' => $data['phone'] ?? null,
             'links' => array_intersect_key(array_filter((array) ($data['links'] ?? []), fn ($v) => is_string($v) && trim($v) !== ''), array_flip(MailProfile::LINKS)),
             'photo_path' => $photo,
+            'custom' => isset($data['custom']) ? \App\Modules\Mail\Http\Controllers\MailController::safe((string) $data['custom'], true) : null,
         ])->save();
 
         if ($user->can('mail.manage') && $request->has('force')) {

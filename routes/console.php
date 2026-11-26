@@ -459,3 +459,8 @@ Schedule::command('abos:mail-daily')
 Schedule::command('abos:mail-auto')
     ->hourlyAt(5)
     ->withoutOverlapping();
+
+// ⓘ "পরে পাঠান" — সময় হলে পাঠায় ([[MailOutboxRun]])
+Schedule::command('abos:mail-outbox')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();

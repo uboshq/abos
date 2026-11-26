@@ -252,7 +252,7 @@ final class MailController extends Controller implements HasMiddleware
         ]);
     }
 
-    public function send(Request $request, string $account, MailSends $sends, MailSignatures $signatures, MailPapers $papers, MailTemplates $templates): JsonResponse
+    public function send(Request $request, string $account, \App\Modules\Mail\Services\MailSender $sender): JsonResponse
     {
         $box = $this->open($request, $account);
         abort_unless($this->access->canSendFrom($request->user(), $box), 403);
@@ -262,67 +262,60 @@ final class MailController extends Controller implements HasMiddleware
             'cc' => 'nullable|array|max:50', 'cc.*' => 'email',
             'bcc' => 'nullable|array|max:50', 'bcc.*' => 'email',
             'subject' => 'required|string|max:255',
-            'html' => 'required|string|max:200000',
+            'html' => 'required|string|max:5000000',
             'inReplyTo' => 'nullable|string|max:255',
             'files' => 'nullable|array|max:10', 'files.*' => 'file|max:20480',
             'signature' => 'nullable|in:new,reply,none',
             'template' => 'nullable|string|max:40',
             'papers' => 'nullable|array|max:5', 'papers.*.kind' => 'required_with:papers|string|max:20', 'papers.*.id' => 'required_with:papers|integer',
             'papers.*.party' => 'nullable|string|max:20',
+            // ⭐ পরে পাঠান — অন্তত 5 মিনিট পরে, 90 দিনের মধ্যে; ⛔ নিজের ফাইল নিয়ে নয় (ফাইল জমা রাখা হয় না), ABOS-এর কাগজ চলে
+            'send_at' => 'nullable|date|after:+4 minutes|before:+90 days',
         ]);
 
         $user = $request->user();
+        $mail = array_intersect_key($data, array_flip(['to', 'cc', 'bcc', 'subject', 'html', 'inReplyTo', 'signature', 'template', 'papers']));
+
+        if (! empty($data['send_at'])) {
+            if ($request->file('files', []) !== []) {
+                return response()->json(['message' => __('mail::message.schedule_no_files')], 422);
+            }
+
+            \App\Modules\Mail\Models\MailOutbox::query()->create(['mail_account_id' => $box->id, 'user_id' => $user->id, 'payload' => $mail,
+                'send_at' => \Illuminate\Support\Carbon::parse($data['send_at'])]);
+
+            return response()->json(['ok' => true, 'message' => __('mail::message.scheduled', ['at' => \Illuminate\Support\Carbon::parse($data['send_at'])->format('d-m-Y H:i')])]);
+        }
+
         $files = array_map(fn ($f) => ['name' => $f->getClientOriginalName(), 'mime' => $f->getMimeType() ?: 'application/octet-stream', 'bytes' => (string) file_get_contents($f->getRealPath())],
             $request->file('files', []));
 
-        // ⭐ ABOS থেকে সংযুক্ত — ছাপার পাতা যা দেয়, পাঠানো কর্মীর নিজের নামে ([[MailPapers]])
-        $paper = null;
         try {
-            foreach ((array) ($data['papers'] ?? []) as $p) {
-                $pdf = $papers->pdf($user, (string) $p['kind'], (int) $p['id'], (string) ($p['party'] ?? 'customer'));
-                $files[] = ['name' => $pdf['name'], 'mime' => $pdf['mime'], 'bytes' => $pdf['bytes']];
-                $paper ??= ['type' => (string) $p['kind'], 'id' => (int) $p['id'], 'no' => $pdf['no']];
-            }
+            $id = $sender->send($user, $box, $mail, $files);
         } catch (\Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $e) {
             return response()->json(['message' => $e->getMessage() ?: __('mail::message.paper_no_pdf')], 422);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['message' => collect($e->errors())->flatten()->first() ?: __('mail::message.paper_no_pdf')], 422);
-        }
-
-        $html = self::safe($data['html'], true);
-        $sig = $data['signature'] ?? 'new';
-
-        if ($sig !== 'none') {
-            $profile = $signatures->profile($user);
-            $style = $sig === 'reply' ? (int) ($profile->style_reply ?: 10) : (int) ($profile->style_new ?: 1);
-            $html .= $signatures->inline($user, $signatures->html($user, $style, $box->email), false);
-        }
-
-        $embeds = $signatures->embeds($user, $html);
-        $fromName = $box->kind === MailAccount::SHARED
-            ? trim(($box->sender_with_person ? $user->name.' · ' : '').($box->sender_name ?: $box->boxTitle()))
-            : (string) $user->name;
-
-        try {
-            $id = $this->server->send($box, [
-                'to' => $data['to'], 'cc' => $data['cc'] ?? [], 'bcc' => $data['bcc'] ?? [],
-                'subject' => $data['subject'], 'html' => $html, 'inReplyTo' => $data['inReplyTo'] ?? null,
-                'attachments' => $files, 'embeds' => $embeds, 'fromName' => $fromName,
-            ]);
         } catch (\Throwable $e) {
             return response()->json(['message' => __('mail::message.send_failed', ['why' => mb_substr($e->getMessage(), 0, 160)])], 422);
         }
 
-        $template = ! empty($data['template']) ? MailTemplate::query()->where('public_id', $data['template'])->first() : null;
+        return response()->json(['ok' => true, 'messageId' => $id, 'message' => __('mail::message.sent')]);
+    }
 
-        if ($template) {
-            $templates->used($template);
+    /** ⭐ "⋯ আরও → আসল রূপ" — হেডার আর লেখা যেমন এসেছে, কেবল পড়ার জন্য (text/plain) */
+    public function raw(Request $request, string $account): Response
+    {
+        $box = $this->open($request, $account);
+
+        try {
+            $raw = $this->server->raw($box, (string) $request->query('folder', 'INBOX'), (int) $request->query('uid'));
+        } catch (\Throwable) {
+            abort(502, __('mail::message.server_error'));
         }
 
-        $sends->record($box, $user, ['to' => $data['to'], 'cc' => $data['cc'] ?? [], 'subject' => $data['subject'], 'messageId' => $id,
-            'paper' => $paper, 'template_id' => $template?->id, 'files' => count($files)]);
-
-        return response()->json(['ok' => true, 'messageId' => $id, 'message' => __('mail::message.sent')]);
+        return response($raw, 200, ['Content-Type' => 'text/plain; charset=UTF-8', 'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "sandbox; default-src 'none'"]);
     }
 
     /**

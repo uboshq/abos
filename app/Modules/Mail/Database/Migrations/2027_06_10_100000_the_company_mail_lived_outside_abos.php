@@ -150,9 +150,25 @@ return new class extends Migration
             $table->string('phone', 40)->nullable();
             $table->json('links')->nullable();               // facebook, linkedin, youtube, whatsapp, website
             $table->json('trusted')->nullable();             // যাদের মেইলের ছবি সবসময় দেখাবেন
+            $table->text('custom')->nullable();              // "নিজে বানান" — নিজের সই (নকশা 21)
             $table->timestamps();
 
             $table->unique(['company_id', 'user_id'], 'mail_profiles_company_user');
+        });
+
+        // ⭐ পরে পাঠান — লেখা তালাবদ্ধ থাকে কেবল পাঠানো পর্যন্ত, পাঠানো হলেই সারিটা মোছে (মেইলের লেখা ABOS-এ জমা থাকে না)
+        Schema::create('mail_outbox', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('company_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('mail_account_id')->constrained('mail_accounts')->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->longText('payload');                     // encrypted — প্রাপক, বিষয়, লেখা, সই, কাগজের নাম
+            $table->timestamp('send_at');
+            $table->string('last_error', 500)->nullable();
+            $table->unsignedTinyInteger('tries')->default(0);
+            $table->timestamps();
+
+            $table->index(['send_at'], 'mail_outbox_send_at');
         });
 
         Schema::create('mail_festivals', function (Blueprint $table) {
@@ -190,6 +206,7 @@ return new class extends Migration
             $table->date('resume_on')->nullable();
             $table->date('delete_on')->nullable();           // মোছার দিন — তার আগে ফেরানো যায়
             $table->string('handed_to', 191)->nullable();    // মোছার আগে মেইল কাকে দেওয়া হলো
+            $table->json('auto_reply')->nullable();          // স্বয়ংক্রিয় উত্তর: {on, subject, body, start, stop}
             $table->foreignId('mail_account_id')->nullable()->constrained('mail_accounts')->nullOnDelete();
             $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
@@ -202,6 +219,7 @@ return new class extends Migration
     {
         Schema::dropIfExists('mail_addresses');
         Schema::dropIfExists('mail_festivals');
+        Schema::dropIfExists('mail_outbox');
         Schema::dropIfExists('mail_profiles');
         Schema::dropIfExists('mail_templates');
         Schema::dropIfExists('mail_sends');

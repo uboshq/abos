@@ -23,7 +23,7 @@ class MailProfile extends Model
 
     protected $table = 'mail_profiles';
 
-    protected $fillable = ['user_id', 'photo_path', 'style_new', 'style_reply', 'festival', 'title', 'phone', 'links', 'trusted'];
+    protected $fillable = ['user_id', 'photo_path', 'style_new', 'style_reply', 'festival', 'title', 'phone', 'links', 'trusted', 'custom'];
 
     protected function casts(): array
     {

@@ -285,6 +285,64 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->get('/mail/signature')->assertOk()->assertDontSee('data-mail-topbar', false);
     }
 
+    public function test_send_later_waits_then_goes_once_and_leaves_no_text_behind(): void
+    {
+        $box = $this->box($this->clerk, MailAccount::OWN, 'clerk@adi.test');
+        $this->as($this->clerk);
+
+        $this->postJson("/mail/{$box->public_id}/send", ['to' => ['karim@example.com'], 'subject' => 'পরে', 'html' => '<p>x</p>',
+            'send_at' => now()->addHour()->format('Y-m-d H:i:s')])->assertOk();
+        $this->assertSame([], $this->fake->sent);
+        $row = \App\Modules\Mail\Models\MailOutbox::query()->sole();
+        $this->assertStringNotContainsString('পরে', (string) \Illuminate\Support\Facades\DB::table('mail_outbox')->value('payload'), '⛔ অপেক্ষার লেখা খোলা অবস্থায় জমা।');
+
+        $this->artisan('abos:mail-outbox')->assertSuccessful();
+        $this->assertSame([], $this->fake->sent, '⛔ সময়ের আগে গেল।');
+
+        $this->travel(61)->minutes();
+        $this->artisan('abos:mail-outbox')->assertSuccessful();
+        $this->artisan('abos:mail-outbox')->assertSuccessful();
+        $this->assertCount(1, $this->fake->sent);
+        $this->assertFalse(\App\Modules\Mail\Models\MailOutbox::query()->whereKey($row->id)->exists(), '⛔ পাঠানোর পরেও লেখা রয়ে গেল।');
+        $this->assertSame(1, MailSend::query()->count());
+
+        // ⛔ নিজের ফাইল নিয়ে পরে পাঠানো নয়
+        $this->post("/mail/{$box->public_id}/send", ['to' => ['karim@example.com'], 'subject' => 'f', 'html' => '<p>x</p>',
+            'send_at' => now()->addHour()->format('Y-m-d H:i:s'), 'files' => [\Illuminate\Http\UploadedFile::fake()->create('a.txt', 1)]],
+            ['Accept' => 'application/json'])->assertStatus(422);
+    }
+
+    public function test_source_auto_reply_import_html_template_and_own_signature(): void
+    {
+        $box = $this->box($this->clerk, MailAccount::OWN, 'clerk@adi.test');
+        $this->as($this->clerk);
+        $this->get("/mail/{$box->public_id}/raw?folder=INBOX&uid=3")->assertOk()->assertHeader('Content-Type', 'text/plain; charset=UTF-8')->assertSee('Message-ID');
+
+        $this->post('/mail/signature', ['style_new' => 21, 'style_reply' => 10, 'custom' => "Mail Clerk\n<script>x()</script><b>ADI</b>"])->assertRedirect();
+        $this->postJson("/mail/{$box->public_id}/send", ['to' => ['a@example.com'], 'subject' => 's', 'html' => '<p>x</p>'])->assertOk();
+        $this->assertStringContainsString('<b>ADI</b>', $this->fake->sent[0]['html']);
+        $this->assertStringNotContainsString('<script', $this->fake->sent[0]['html']);
+
+        $this->as($this->owner);
+        $this->post('/mail/addresses', ['kind' => 'person', 'user_id' => $this->clerk->id, 'local' => 'away', 'domain' => 'adi.test', 'quota_mb' => 2048, 'deliver' => 'screen'])->assertRedirect();
+        $a = MailAddress::query()->where('email', 'away@adi.test')->firstOrFail();
+        $this->post("/mail/addresses/{$a->public_id}/auto-reply", ['on' => 1, 'subject' => 'ছুটিতে', 'body' => 'ফিরে উত্তর দেব', 'start' => now()->toDateString()])->assertRedirect();
+        $this->assertSame(1, $this->host->count('autoReply'));
+        $this->assertSame('ছুটিতে', $a->fresh()->auto_reply['subject']);
+
+        $csv = "address,kind,staff,gb\nbulk1@adi.test,person,{$this->clerk->email},2\nnobody@adi.test,person,missing@x.test,2\n";
+        $this->post('/mail/addresses/import', ['file' => \Illuminate\Http\UploadedFile::fake()->createWithContent('a.csv', $csv)])->assertRedirect();
+        $this->assertTrue(MailAddress::query()->where('email', 'bulk1@adi.test')->exists());
+        $this->assertFalse(MailAddress::query()->where('email', 'nobody@adi.test')->exists(), '⛔ অচেনা কর্মীর ঠিকানা তৈরি হলো।');
+
+        $this->post('/mail/templates', ['name' => 'নিজের নকশা', 'category' => 'offer', 'locale' => 'bn', 'format' => 'html', 'subject' => 'অফার',
+            'html_file' => \Illuminate\Http\UploadedFile::fake()->createWithContent('t.html', '<h1>{গ্রাহকের নাম}</h1><script>bad()</script>')])->assertRedirect();
+        $t = MailTemplate::query()->where('name', 'নিজের নকশা')->firstOrFail();
+        $this->assertSame('html', $t->format);
+        $this->assertStringNotContainsString('<script', $t->body);
+        $this->get('/mail/templates?look=bn')->assertOk();
+    }
+
     // ── সাহায্যকারী ─────────────────────────────────────────────────
 
     private function person(string $name, array $keys, bool $superAdmin = false): User

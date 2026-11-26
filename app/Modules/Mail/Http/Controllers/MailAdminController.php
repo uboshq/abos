@@ -202,6 +202,56 @@ final class MailAdminController extends Controller implements HasMiddleware
         return back()->with('mail_flash', __('mail::message.restored', ['email' => $row->email]));
     }
 
+    public function autoReply(Request $request, string $address): RedirectResponse
+    {
+        $row = $this->find($address);
+        $data = $request->validate(['on' => 'nullable|boolean', 'subject' => 'required_if:on,1|nullable|string|max:200', 'body' => 'required_if:on,1|nullable|string|max:5000',
+            'start' => 'nullable|date', 'stop' => 'nullable|date|after_or_equal:start']);
+        $this->addresses->autoReply($request->user(), $row, ['on' => $request->boolean('on')] + $data);
+
+        return back()->with('mail_flash', __('mail::message.auto_reply_saved'));
+    }
+
+    /**
+     * ⭐ একসাথে অনেক (Excel → CSV): ঠিকানা, ধরন, কর্মীর ABOS মেইল, জায়গা (GB)। প্রতিটা সারি একটা একটা করে তৈরি — একটা ভুলে বাকিগুলো থামে না;
+     * পাসওয়ার্ড প্রত্যেকে ABOS বার্তায় পান (কর্মী না থাকলে পর্দায় নয় — বাদ)।
+     */
+    public function import(Request $request): RedirectResponse
+    {
+        $request->validate(['file' => 'required|file|mimes:csv,txt|max:512']);
+        $lines = preg_split('/\r\n|\n|\r/', (string) file_get_contents($request->file('file')->getRealPath())) ?: [];
+        $made = 0;
+        $skipped = [];
+
+        foreach (array_slice($lines, 1) as $i => $line) {
+            $cols = array_map('trim', str_getcsv(ltrim($line, "\xEF\xBB\xBF")));
+
+            if (($cols[0] ?? '') === '') {
+                continue;
+            }
+
+            [$email, $kind, $staff, $gb] = array_pad($cols, 4, '');
+            $user = $staff !== '' ? User::query()->where('email', $staff)->first() : null;
+
+            if (! str_contains($email, '@') || ($kind !== 'shared' && ! $user)) {
+                $skipped[] = ($i + 2).': '.$email;
+
+                continue;
+            }
+
+            try {
+                $this->addresses->create($request->user(), ['kind' => $kind === 'shared' ? 'shared' : 'person', 'user_id' => $user?->id,
+                    'local' => (string) strstr($email, '@', true), 'domain' => substr((string) strrchr($email, '@'), 1), 'display_name' => $user?->name,
+                    'quota_mb' => max(256, (int) round(((float) ($gb ?: 5)) * 1024)), 'deliver' => 'messenger']);
+                $made++;
+            } catch (\Throwable $e) {
+                $skipped[] = ($i + 2).': '.$email.' — '.mb_substr($e->getMessage(), 0, 80);
+            }
+        }
+
+        return back()->with('mail_flash', __('mail::message.imported', ['n' => $made, 'skip' => count($skipped)]).($skipped ? ' '.implode(' · ', array_slice($skipped, 0, 10)) : ''));
+    }
+
     /** ⓘ Excel-এ খোলে এমন CSV — ঠিকানা, কার, ধরন, জায়গা, অবস্থা */
     public function export(): StreamedResponse
     {

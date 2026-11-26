@@ -23,6 +23,7 @@
             'password' => route('mail.addresses.password', ['address' => $zero]), 'pause' => route('mail.addresses.pause', ['address' => $zero]),
             'resume' => route('mail.addresses.resume', ['address' => $zero]), 'delete' => route('mail.addresses.delete', ['address' => $zero]),
             'restore' => route('mail.addresses.restore', ['address' => $zero]), 'history' => route('mail.history', ['type' => 'address']),
+            'auto_reply' => route('mail.addresses.auto_reply', ['address' => $zero]),
          ], JSON_UNESCAPED_SLASHES) }}">
 
         <div class="mx-head">
@@ -65,13 +66,14 @@
             <span style="flex:1"></span>
             <a class="mx-btn" href="{{ route('mail.history', ['type' => 'address']) }}">🕘 {{ $A('history') }}</a>
             <button type="button" class="mx-btn" data-open="dlg-domain">🌐 {{ $A('domain_add') }}</button>
+            <button type="button" class="mx-btn" data-open="dlg-import">⬆ {{ __('mail::field.ax_import') }}</button>
             <a class="mx-btn" href="{{ route('mail.addresses.export') }}">⬇ {{ $A('export') }}</a>
             <button type="button" class="mx-btn p" data-open="dlg-create">＋ {{ $A('new') }}</button>
         </form>
 
         <div class="mx-card" style="overflow:auto">
             <table class="mx-t">
-                <thead><tr><th>{{ $A('col_address') }}</th><th>{{ $A('col_owner') }}</th><th>{{ $A('col_kind') }}</th><th>{{ $A('col_quota') }}</th><th>{{ $A('col_2fa') }}</th><th>{{ $A('col_status') }}</th><th>{{ $A('col_on') }}</th><th></th></tr></thead>
+                <thead><tr><th>{{ $A('col_address') }}</th><th>{{ $A('col_owner') }}</th><th>{{ $A('col_kind') }}</th><th>{{ $A('col_quota') }}</th><th>{{ $A('col_2fa') }}</th><th>{{ __('mail::field.ax_col_last') }}</th><th>{{ $A('col_status') }}</th><th>{{ $A('col_on') }}</th><th></th></tr></thead>
                 <tbody>
                 @forelse ($rows as $r)
                     @php
@@ -84,7 +86,7 @@
                             'id' => $r->public_id, 'email' => $r->email, 'kind' => $r->kind, 'status' => $r->status, 'display_name' => (string) $r->display_name,
                             'quota_mb' => $r->quota_mb, 'forward_to' => (string) $r->forward_to, 'sender_with_person' => (bool) ($r->account?->sender_with_person),
                             'members' => $members->map(fn ($u) => ['user_id' => $u->id, 'name' => $u->name, 'can_send' => (bool) $u->pivot->can_send])->values(),
-                            'system' => $r->isSystem(), 'user_id' => $r->user_id,
+                            'system' => $r->isSystem(), 'user_id' => $r->user_id, 'auto_reply' => $r->auto_reply,
                         ];
                     @endphp
                     <tr @class(['off' => $r->status !== 'active']) data-row="{{ json_encode($rowJson, JSON_UNESCAPED_UNICODE) }}">
@@ -107,6 +109,7 @@
                             @elseif ($r->user?->two_factor_secret) <span class="ok">{{ $A('twofa_on') }}</span>
                             @else <span class="bad">{{ $A('twofa_off') }}</span>@endif
                         </td>
+                        <td class="num" style="white-space:nowrap">{{ ! empty($srv['last']) ? \App\Core\Support\DateFormat::spoken(\Illuminate\Support\Carbon::createFromTimestamp((int) $srv['last'])) : '—' }}</td>
                         <td>{{ $A('status_'.$r->status) }}</td>
                         <td>
                             @if ($r->isSystem() || $r->status === 'deleting')
@@ -120,7 +123,7 @@
                         <td>@if ($r->isSystem())<span class="muted" style="font-size:11px">{{ $A('never_delete') }}</span>@else<button type="button" class="mx-dots-btn" data-row-act="menu" aria-label="⋯">⋯</button>@endif</td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="mx-empty">{{ __('mail::field.history.none') }}</td></tr>
+                    <tr><td colspan="9" class="mx-empty">{{ __('mail::field.history.none') }}</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -132,6 +135,7 @@
             <button type="button" data-menu-act="people" data-only-shared>👥 {{ __('mail::field.admin.menu.people') }}</button>
             <button type="button" data-menu-act="security">🔑 {{ __('mail::field.admin.menu.reset') }}</button>
             <button type="button" data-menu-act="forward">↪ {{ __('mail::field.admin.menu.forward') }}</button>
+            <button type="button" data-menu-act="auto">🏖 {{ __('mail::field.ax_auto_tab') }}</button>
             <button type="button" data-menu-act="history">🕘 {{ __('mail::field.admin.menu.history') }}</button>
             <div class="sep"></div>
             <button type="button" data-menu-act="pause" style="color:#8a5a00;font-weight:600">⏸ {{ __('mail::field.admin.menu.pause') }}</button>
@@ -179,8 +183,8 @@
         <dialog class="mx-dlg" id="dlg-edit" style="width:min(680px,calc(100vw - 32px))">
             <div class="hd"><span data-edit-title></span><button type="button" data-close>✕</button></div>
             <div class="mx-tabs">
-                @foreach (['general', 'people', 'forward', 'security', 'log'] as $tab)
-                    <button type="button" data-tab="{{ $tab }}" @if ($tab === 'people') data-only-shared @endif>{{ __('mail::field.admin.edit.tabs.'.$tab) }}</button>
+                @foreach (['general', 'people', 'forward', 'auto', 'security', 'log'] as $tab)
+                    <button type="button" data-tab="{{ $tab }}" @if ($tab === 'people') data-only-shared @endif>{{ $tab === 'auto' ? __('mail::field.ax_auto_tab') : __('mail::field.admin.edit.tabs.'.$tab) }}</button>
                 @endforeach
             </div>
             <form method="POST" data-pane="general" data-form="update">
@@ -209,6 +213,20 @@
                 <div class="bd">
                     <div><label class="mx-lbl">{{ __('mail::field.admin.edit.forward_to') }}</label><input class="mx-in" name="forward_to" type="email" placeholder="name@domain"><div class="muted" style="font-size:12px">{{ __('mail::field.admin.edit.forward_none') }}</div></div>
                     <input type="hidden" name="display_name"><input type="hidden" name="quota_mb"><input type="hidden" name="sender_with_person">
+                </div>
+                <div class="ft"><button type="button" class="mx-btn" data-close>{{ __('mail::field.admin.edit.cancel') }}</button><button type="submit" class="mx-btn p">✓ {{ __('mail::field.admin.edit.save') }}</button></div>
+            </form>
+            <form method="POST" data-pane="auto" data-form="auto_reply" hidden>
+                @csrf
+                <div class="bd">
+                    <div class="muted">{{ __('mail::field.ax_auto_hint') }}</div>
+                    <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="on" value="1" data-auto-on> <b>{{ __('mail::field.ax_auto_on') }}</b></label>
+                    <div><label class="mx-lbl">{{ __('mail::field.ax_auto_subject') }}</label><input class="mx-in" name="subject" maxlength="200"></div>
+                    <div><label class="mx-lbl">{{ __('mail::field.ax_auto_body') }}</label><textarea class="mx-in" name="body" rows="4" maxlength="5000"></textarea></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div><label class="mx-lbl">{{ __('mail::field.ax_auto_start') }}</label><input class="mx-in num" type="date" name="start"></div>
+                        <div><label class="mx-lbl">{{ __('mail::field.ax_auto_stop') }}</label><input class="mx-in num" type="date" name="stop"></div>
+                    </div>
                 </div>
                 <div class="ft"><button type="button" class="mx-btn" data-close>{{ __('mail::field.admin.edit.cancel') }}</button><button type="submit" class="mx-btn p">✓ {{ __('mail::field.admin.edit.save') }}</button></div>
             </form>
@@ -266,6 +284,17 @@
 
         {{-- ফিরিয়ে আনা — ছোট নিশ্চিত --}}
         <form method="POST" data-form="restore" hidden>@csrf</form>
+
+        {{-- একসাথে অনেক (Excel → CSV) --}}
+        <dialog class="mx-dlg" id="dlg-import">
+            <form method="POST" action="{{ route('mail.addresses.import') }}" enctype="multipart/form-data">
+                @csrf
+                <div class="hd"><span>⬆ {{ __('mail::field.ax_import_title') }}</span><button type="button" data-close>✕</button></div>
+                <div class="bd"><p class="muted" style="margin:0">{{ __('mail::field.ax_import_hint') }}</p>
+                    <input class="mx-in" type="file" name="file" accept=".csv,text/csv" required style="padding:6px"></div>
+                <div class="ft"><button type="button" class="mx-btn" data-close>{{ __('mail::field.admin.create.cancel') }}</button><button type="submit" class="mx-btn g">✓ {{ __('mail::field.ax_import_do') }}</button></div>
+            </form>
+        </dialog>
 
         {{-- ডোমেইন যোগ — কী হয় --}}
         <dialog class="mx-dlg" id="dlg-domain">

@@ -45,12 +45,12 @@ class MailAddress extends Model
 
     protected $fillable = [
         'email', 'domain', 'kind', 'user_id', 'display_name', 'quota_mb', 'status', 'pause_mode', 'forward_to', 'pause_reason',
-        'resume_on', 'delete_on', 'handed_to', 'mail_account_id', 'created_by',
+        'resume_on', 'delete_on', 'handed_to', 'auto_reply', 'mail_account_id', 'created_by',
     ];
 
     protected function casts(): array
     {
-        return ['resume_on' => 'date', 'delete_on' => 'date', 'quota_mb' => 'integer', 'user_id' => 'integer'];
+        return ['resume_on' => 'date', 'delete_on' => 'date', 'quota_mb' => 'integer', 'user_id' => 'integer', 'auto_reply' => 'array'];
     }
 
     public function user(): BelongsTo

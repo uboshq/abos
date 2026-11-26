@@ -43,6 +43,8 @@ final class CpanelMailHost implements MailHost
             'quota_mb' => is_numeric($r['diskquota'] ?? null) ? (int) $r['diskquota'] : null,
             'login_off' => (bool) ($r['suspended_login'] ?? false),
             'incoming_off' => (bool) ($r['suspended_incoming'] ?? false),
+            // ⓘ মেইলবক্সে শেষ বদলের সময় — শেষ ব্যবহারের কাছাকাছি হিসাব
+            'last' => isset($r['mtime']) && is_numeric($r['mtime']) ? (int) $r['mtime'] : null,
         ], array_filter($rows, fn ($r) => str_contains((string) ($r['email'] ?? ''), '@'))));
     }
 
@@ -89,6 +91,24 @@ final class CpanelMailHost implements MailHost
     {
         [$user, $domain] = $this->split($email);
         $this->write('Email', 'delete_pop', ['email' => $user, 'domain' => $domain]);
+    }
+
+    public function autoReply(string $email, ?array $reply): void
+    {
+        [, $domain] = $this->split($email);
+
+        if ($reply === null) {
+            $this->write('Email', 'delete_auto_responder', ['email' => $email]);
+
+            return;
+        }
+
+        $this->write('Email', 'add_auto_responder', [
+            'email' => strstr($email, '@', true), 'domain' => $domain, 'from' => (string) ($reply['from'] ?? ''),
+            'subject' => (string) $reply['subject'], 'body' => (string) $reply['body'], 'is_html' => 0, 'interval' => 24,
+            'start' => isset($reply['start']) ? strtotime((string) $reply['start']) : time(),
+            'stop' => isset($reply['stop']) && $reply['stop'] ? strtotime((string) $reply['stop'].' 23:59:59') : '',
+        ]);
     }
 
     public function dns(string $domain): array

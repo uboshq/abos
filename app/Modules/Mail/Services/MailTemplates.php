@@ -23,6 +23,12 @@ final class MailTemplates
     public function render(MailTemplate $t, array $values, string $company = ''): array
     {
         $subject = $this->fields->fill($t->subject, $values, false);
+
+        // ⓘ নিজের HTML — লেখা যেমন, কেবল ঘর বসে (মান নিরাপদ) আর আবার নিরাপদ করা
+        if ($t->format === 'html') {
+            return ['subject' => $subject, 'html' => \App\Modules\Mail\Http\Controllers\MailController::safe($this->fields->fill($t->body, $values), true)];
+        }
+
         $paragraphs = array_filter(array_map('trim', explode("\n", $this->fields->fill(e($t->body), $values))), fn ($p) => $p !== '');
         $text = implode('', array_map(fn ($p) => '<p style="margin:0 0 8px">'.$this->highlight($p).'</p>', $paragraphs));
 

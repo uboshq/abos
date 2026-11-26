@@ -49,6 +49,8 @@ Route::middleware(['auth'])->prefix('mail')->group(function () {
     Route::post('/addresses/{address}/delete', [MailAdminController::class, 'delete'])->whereUuid('address')->name('addresses.delete');
     Route::post('/addresses/{address}/restore', [MailAdminController::class, 'restore'])->whereUuid('address')->name('addresses.restore');
     Route::get('/addresses/export', [MailAdminController::class, 'export'])->name('addresses.export');
+    Route::post('/addresses/import', [MailAdminController::class, 'import'])->name('addresses.import');
+    Route::post('/addresses/{address}/auto-reply', [MailAdminController::class, 'autoReply'])->whereUuid('address')->name('addresses.auto_reply');
 
     // ⭐ খাতা — ইতিহাস (সব বদল) আর পাঠানো মেইল
     Route::get('/history', [MailHistoryController::class, 'index'])->name('history');
@@ -58,6 +60,7 @@ Route::middleware(['auth'])->prefix('mail')->group(function () {
     Route::get('/{account}/list', [MailController::class, 'list'])->whereUuid('account')->name('list');
     Route::get('/{account}/read', [MailController::class, 'read'])->whereUuid('account')->name('read');
     Route::get('/{account}/file', [MailController::class, 'file'])->whereUuid('account')->name('file');
+    Route::get('/{account}/raw', [MailController::class, 'raw'])->whereUuid('account')->name('raw');
     Route::post('/{account}/flag', [MailController::class, 'flag'])->whereUuid('account')->name('flag');
     Route::post('/{account}/move', [MailController::class, 'move'])->whereUuid('account')->name('move');
     Route::post('/{account}/bulk', [MailController::class, 'bulk'])->whereUuid('account')->name('bulk');

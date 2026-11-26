@@ -42,10 +42,11 @@
 
             <div class="mid">
                 <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                    @foreach (['all', 'designed', 'plain'] as $l)
-                        <a class="mx-chip @if ($look === $l) on @endif" href="{{ $q(['look' => $l === 'all' ? null : $l]) }}">{{ __('mail::field.tpl.look.'.$l) }}</a>
+                    @foreach (['all', 'bn', 'en', 'designed', 'plain'] as $l)
+                        <a class="mx-chip @if ($look === $l) on @endif" href="{{ $q(['look' => $l === 'all' ? null : $l]) }}">{{ in_array($l, ['bn', 'en'], true) ? __('mail::field.tx_'.$l) : __('mail::field.tpl.look.'.$l) }}</a>
                     @endforeach
                     <span style="flex:1"></span>
+                    <button type="button" class="mx-btn" data-open="dlg-tpl-html">⬆ {{ __('mail::field.tx_html') }}</button>
                     <button type="button" class="mx-btn p" data-open="dlg-tpl-new">＋ {{ $T('new') }}</button>
                 </div>
                 <div class="g">
@@ -115,6 +116,24 @@
                 @endif
             </aside>
         </div>
+
+        {{-- ⬆ HTML আনুন — নিজের নকশা --}}
+        <dialog class="mx-dlg" id="dlg-tpl-html">
+            <form method="POST" action="{{ route('mail.templates.store') }}" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="format" value="html"><input type="hidden" name="locale" value="bn">
+                <div class="hd"><span>⬆ {{ __('mail::field.tx_html') }}</span><button type="button" data-close>✕</button></div>
+                <div class="bd">
+                    <p class="muted" style="margin:0">{{ __('mail::field.tx_html_hint') }}</p>
+                    <div><label class="mx-lbl">{{ $F('name') }}</label><input class="mx-in" name="name" required maxlength="120"></div>
+                    <div><label class="mx-lbl">{{ $F('category') }}</label><select class="mx-in" name="category">
+                        @foreach (\App\Modules\Mail\Models\MailTemplate::CATEGORIES as $c)<option value="{{ $c }}" @selected(($category ?: 'offer') === $c)>{{ __('mail::field.tpl.cats.'.$c) }}</option>@endforeach</select></div>
+                    <div><label class="mx-lbl">{{ $F('subject') }}</label><input class="mx-in" name="subject" maxlength="255"></div>
+                    <input class="mx-in" type="file" name="html_file" accept=".html,.htm,text/html" required style="padding:6px">
+                </div>
+                <div class="ft"><button type="button" class="mx-btn" data-close>{{ $F('cancel') }}</button><button type="submit" class="mx-btn p">✓ {{ $F('save') }}</button></div>
+            </form>
+        </dialog>
 
         {{-- নতুন / বদল — একই ফর্ম --}}
         @foreach (array_filter(['new' => true, 'edit' => $canEditSel]) as $mode => $_)

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Modules\Mail\Models\MailLink;
+use App\Modules\Mail\Models\MailOutbox;
 use App\Modules\Mail\Models\MailSend;
 
 /*
@@ -101,6 +102,7 @@ return [
 
     'audit_exempt' => [
         MailLink::class => 'a mail kept on a party page — the row is itself the record (who, when, which mail); no money, no state',
+        MailOutbox::class => 'a waiting scheduled mail — encrypted, deleted the moment it is sent; the send itself is logged and audited',
         MailSend::class => 'the sent-mail log — the row is itself the record and never changes; each send also writes an audit line on its mailbox',
     ],
 ];

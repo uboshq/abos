@@ -117,13 +117,23 @@ if (page) {
             else if (f.sender_with_person) f.sender_with_person.value = current.sender_with_person ? '1' : '0'
         })
         $('[data-form="members"]', d).action = action('members')
+        const ar = $('[data-form="auto_reply"]', d)
+        if (ar) {
+            const r = current.auto_reply || {}
+            ar.action = action('auto_reply')
+            ar.on.checked = !! r.on
+            ar.subject.value = r.subject || ''
+            ar.body.value = r.body || ''
+            ar.start.value = r.start || ''
+            ar.stop.value = r.stop || ''
+        }
         $('[data-form="password"]', d).action = action('password')
         const list = $('[data-members]', d)
         list.innerHTML = ''
         ;(current.members || []).forEach(m => addMember($('[data-form="members"]', d), m.user_id, m.name, m.can_send))
         $('[data-log-link]', d).href = routes.history + '&q=' + encodeURIComponent(current.email)
         $$('[data-only-shared]', d).forEach(el => { el.hidden = current.kind !== 'shared' })
-        tab({ edit: 'general', people: 'people', forward: 'forward', security: 'security' }[what] || 'general')
+        tab({ edit: 'general', people: 'people', forward: 'forward', auto: 'auto', security: 'security' }[what] || 'general')
         open('dlg-edit')
     }
 

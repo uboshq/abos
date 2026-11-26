@@ -97,6 +97,19 @@ final class FakeMailServer implements MailServer
         return ['name' => 'slip.jpg', 'mime' => 'image/jpeg', 'bytes' => 'JPEGBYTES'];
     }
 
+    public function raw(MailAccount $account, string $folder, int $uid): string
+    {
+        $this->guard();
+
+        foreach ($this->boxes[$folder] ?? [] as $m) {
+            if ($m['uid'] === $uid) {
+                return 'Message-ID: '.$m['messageId']."\r\nFrom: ".$m['fromEmail']."\r\nSubject: ".$m['subject']."\r\n\r\n".($m['html'] ?: $m['text']);
+            }
+        }
+
+        throw new RuntimeException('gone');
+    }
+
     public function flag(MailAccount $account, string $folder, int $uid, string $flag, bool $on): void
     {
         $this->guard();

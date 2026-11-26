@@ -5,7 +5,7 @@
 --}}
 @php
     $S = fn (string $k, array $r = []) => __('mail::field.sign.'.$k, $r);
-    $styles = trans('mail::field.sign.styles');
+    $styles = trans('mail::field.sign.styles') + [21 => __('mail::field.sx_custom_name')];
 @endphp
 <x-layouts.app :menu="$menu ?? []">
     <x-slot:title>{{ $S('title') }}</x-slot:title>
@@ -46,6 +46,8 @@
                         <input class="mx-in" name="links[{{ $l }}]" maxlength="191" value="{{ old('links.'.$l, $profile->links[$l] ?? '') }}" placeholder="{{ __('mail::field.sign.link_names.'.$l) }}" style="height:30px;margin-bottom:5px">
                     @endforeach
                 </div>
+                <div><label class="mx-lbl">✎ {{ __('mail::field.sx_custom') }}</label>
+                    <textarea class="mx-in" name="custom" rows="3" maxlength="5000" placeholder="{{ __('mail::field.sx_custom_hint') }}">{{ old('custom', strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", (string) $profile->custom))) }}</textarea></div>
                 <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px"><input type="checkbox" name="festival" value="1" @checked($profile->festival !== false)> {{ $S('festival_on') }}</label>
                 @if ($canForce)
                     <div><label class="mx-lbl">🔒 {{ $S('force') }}</label>
@@ -58,6 +60,7 @@
             <div class="grid">
                 @foreach ($previews as $n => $html)
                     @if ($n === 11)<div class="hdr">★ {{ $S('premium') }} <span>{{ $S('premium_sub') }}</span></div>@endif
+                    @if ($n === 21)<div class="hdr">✎ {{ __('mail::field.sx_custom_name') }}</div>@endif
                     @php $isNew = ($forced ?: $profile->style_new ?: 1) == $n; $isReply = ($profile->style_reply ?: 10) == $n; @endphp
                     <div @class(['s', 'on' => $isNew || $isReply, 'sp' => $n >= 11])>
                         <div class="t"><span>{{ $n }} · {{ $styles[$n] ?? '' }}</span>
