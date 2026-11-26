@@ -183,6 +183,9 @@
 {{-- ⭐ ক্রয়মূল্যের পপআপ — পর্দার মাঝখানে, উপর থেকে একটু নিচে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
 @if (($abosLook ?? false))
     @can('sales.cost.view')
+    {{-- ⓘ `x-teleport` — পাতার একদম উপরের স্তরে, তাই পেছনের পুরো পর্দা (ডান বাক্স আর উপরের বারসহ) ঝাপসা হয় --}}
+    <template x-teleport="body">
+    <div>
     <div x-show="costOpen" x-cloak @click="closeCost()" class="fixed inset-0 z-[70] bg-black/40"></div>
     <div x-show="costOpen" x-cloak role="dialog" aria-modal="true" class="ds-cost-pop" data-cost-popup @keydown.escape.window="closeCost()">
         <div class="ds-cost-h">
@@ -207,6 +210,8 @@
             </div>
         </div>
     </div>
+    </div>
+    </template>
     @endcan
 @endif
 
