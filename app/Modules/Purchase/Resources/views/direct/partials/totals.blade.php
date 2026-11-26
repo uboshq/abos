@@ -257,32 +257,37 @@
                  *"কতটা ফ্রি পেলাম"* দুইটা প্রশ্নের একটাই উত্তর ছিল, অথচ
                  দ্বিতীয়টাই ক্রয়ের আসল দর ঠিক করে। ⓘ ছবিতে চারটা সারি,
                  আর চারটাই আলাদা প্রশ্ন। --}}
-            {{-- ⭐ পণ্যের সারাংশ — হাইলাইট রঙে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
-            <section data-boxed class="rounded-(--radius-card) border-2 border-(--color-badge-info-ink)/30
-                            bg-(--color-badge-info-bg) px-3 py-2 text-2xs text-(--color-badge-info-ink)">
-                <div class="flex justify-between">
-                    <span>{{ __('purchase::field.total_item') }}</span>
-                    <span class="num" x-text="lines.length"></span>
-                </div>
-                <div class="mt-1 flex justify-between">
-                    <span>{{ __('purchase::field.total_bought_qty') }}</span>
-                    <span class="num" x-text="qty(boughtQty)"></span>
-                </div>
-                <div class="mt-1 flex justify-between">
-                    <span>{{ __('purchase::field.free_qty') }}</span>
-                    <span class="num" x-text="qty(freeTotal)"></span>
-                </div>
-                <div class="mt-1 flex justify-between border-t border-(--color-border) pt-1">
-                    <span>{{ __('purchase::field.total_free_plus_bought') }}</span>
-                    <span class="num" x-text="qty(totalQty)"></span>
-                </div>
-                {{-- ⭐ আনলোডিং বিল — পপআপে বসানোর পরে এখানে (মালিক, ২৬ নভেম্বর ২০২৬); বাছা না হলে লাল, চাপলে পপআপ খোলে --}}
-                <div class="mt-1 flex items-center justify-between gap-2 border-t border-(--color-border) pt-1 text-(--color-ink)">
-                    <span>{{ __('purchase::field.unload_owed') }}</span>
-                    <button type="button" @click="openUnloading()" data-unload-summary
-                            class="num text-end font-semibold hover:underline"
-                            :class="unloadMode === '' ? 'text-(--color-danger)' : ''"
-                            x-text="unloadSummary"></button>
+            {{-- ⭐ পণ্যের সারাংশ — বিলের মোটের বাক্সের মতো: নীল গোল বাক্স, ভিতরে সাদা, লাইনে লাইনে চিকন দাগ (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+            <section data-boxed class="overflow-hidden rounded-2xl border-2 border-(--color-info) bg-(--color-badge-info-bg) shadow-sm">
+                <div class="m-2 rounded-xl border border-(--color-border) bg-(--color-surface-card) px-3 py-0.5">
+                <dl class="divide-y divide-(--color-border) text-2xs [&>div]:py-1.5">
+                    <div class="flex justify-between">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.total_item') }}</dt>
+                        <dd class="num font-semibold" x-text="lines.length"></dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.total_bought_qty') }}</dt>
+                        <dd class="num font-semibold" x-text="qty(boughtQty)"></dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.free_qty') }}</dt>
+                        <dd class="num font-semibold" x-text="qty(freeTotal)"></dd>
+                    </div>
+                    <div class="flex justify-between">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.total_free_plus_bought') }}</dt>
+                        <dd class="num font-semibold" x-text="qty(totalQty)"></dd>
+                    </div>
+                    {{-- ⭐ আনলোডিং বিল — পপআপে বসানোর পরে এখানে; বাছা না হলে লাল, চাপলে পপআপ খোলে --}}
+                    <div class="flex items-center justify-between gap-2">
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.unload_owed') }}</dt>
+                        <dd>
+                            <button type="button" @click="openUnloading()" data-unload-summary
+                                    class="num text-end font-semibold hover:underline"
+                                    :class="unloadMode === '' ? 'text-(--color-danger)' : ''"
+                                    x-text="unloadSummary"></button>
+                        </dd>
+                    </div>
+                </dl>
                 </div>
             </section>
 
@@ -305,7 +310,9 @@
                      দেওয়ার পর ছকটাও বদলাতে হয়। ⚠️ **বোতাম সরালে ছক না
                      বদলানো** — এই ভুলটা চোখে পড়ে না, কারণ কিছুই ভাঙে না,
                      শুধু ফাঁকা থাকে। --}}
-                <div class="grid min-w-0 grid-cols-2 gap-1 text-center [&_button]:break-words">
+                {{-- ⭐ বোতামগুলো একটা হালকা গোল বাক্সে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+                <div class="grid min-w-0 grid-cols-2 gap-1.5 rounded-2xl border border-(--color-border) bg-(--color-surface-sunken)
+                            p-2 text-center shadow-sm [&_button]:break-words">
                 <button type="button" @click="depositOpen = ! depositOpen"
                         :aria-expanded="depositOpen"
                         class="rounded-(--radius-field) bg-(--color-success) px-1 py-2 text-2xs font-medium

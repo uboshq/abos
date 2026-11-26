@@ -4,6 +4,8 @@
 
 - Unloading bill, "Paid in cash now": first who got it (a labour contractor from the list, or a typed name), then the till and the amount on one line; the name stays on the bill and in the ledger narration.
 - Under the supplier only "Can still bill"; from bill total to total outstanding one rounded, coloured box with a thin line between rows.
+- No box around the product: the search button and the name; stock and rates right under the name, so the entry row moves up.
+- The item summary in the same style — a blue rounded box, white inside, a line between rows; the buttons below sit in one light rounded box.
 
 ## 1.3.18 — 26-11-2026
 

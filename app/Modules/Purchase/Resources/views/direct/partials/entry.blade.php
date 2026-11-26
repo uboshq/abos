@@ -1,5 +1,5 @@
             <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
-                            bg-(--color-surface-muted) p-3"
+                            bg-(--color-surface-muted) px-3 py-2"
                      style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-badge-draft-ink)">
 {{-- ⚠️ বার্তাটা সারির **নিচে**, ঘরটার ভিতরে নয়।
 
@@ -26,10 +26,10 @@
                      কাউন্টারে মাউস ধরাই যায় না, তাই ঘরটায় ফেরার একটা বড়
                      লক্ষ্য থাকা দরকার। --}}
                 {{-- ⭐ খোঁজার ঘর মোটা, ভিতরে ধূসর লেখা "এখানে পণ্য খুঁজুন" — উপরে "পণ্য" লেবেল নেই (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9) --}}
-                <div class="flex items-end gap-3">
+                {{-- ⭐ বাক্স নেই — কেবল খোঁজার বোতাম, আর তার পাশে নাম বা খোঁজার লেখা; উপরে ফাঁকা নেই (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+                <div class="flex items-start gap-3">
                 <div class="relative min-w-0 flex-1">
-                    <div class="flex min-h-12 items-center gap-2 rounded-(--radius-field) border-2 border-(--color-brand-500)
-                                bg-(--color-surface-card) px-2">
+                    <div class="flex min-h-10 items-center gap-2 border-b border-(--color-border)">
                         {{-- ⓘ চিহ্নটা এখন কেবল ফোকাস করে না, **তালিকাও খোলে**।
                              ⛔ আগে চাপলে কিছুই হত না, কারণ খালি লেখায় তালিকা
                              খালি থাকত — মালিক: *"product sarch icon o kaj kore
@@ -92,7 +92,7 @@
                                @keydown.escape="browsing = false"
                                @keydown.enter.prevent="pickFirst()"
                                :placeholder="supplierId ? @js(__('purchase::message.search_product')) : @js(__('purchase::message.pick_supplier_first'))"
-                               class="h-11 min-w-0 flex-1 border-0 bg-transparent px-1
+                               class="h-10 min-w-0 flex-1 border-0 bg-transparent px-1
                                       text-xl text-(--color-ink) placeholder:text-(--color-ink-placeholder)
                                       focus:outline-none">
 
@@ -164,6 +164,15 @@
                             </li>
                         </template>
                     </ul>
+
+                {{-- ⓘ পণ্যের খবর — নামের ঠিক নিচে, লটের বাক্সের বাঁয়ে (মালিক, ২৬ নভেম্বর ২০২৬): আলাদা সারি নয়, তাই নিচের ঘরগুলো উপরে ওঠে --}}
+                <div x-show="picked" x-cloak class="mt-0.5 flex flex-wrap gap-x-4 ps-11 text-2xs text-(--color-ink-muted)">
+                    <span>{{ __('purchase::message.on_hand') }}: <b class="num text-(--color-ink)" x-text="qty((picked && picked.on_hand))"></b></span>
+                    <span x-show="(picked && picked.last_rate) > 0" x-cloak>{{ __('purchase::message.last_rate') }}:
+                        <b class="num text-(--color-ink)" x-text="money((picked && picked.last_rate))"></b></span>
+                    <span x-show="entry.sales_price" x-cloak>{{ __('purchase::field.sales_rate') }}:
+                        <b class="num text-(--color-ink)" x-text="money(entry.sales_price)"></b></span>
+                </div>
                 </div>
 
                 {{-- ⭐ লট — পণ্যের ডানে, হলুদ বাক্সে (নমুনা v9); কেবল লট রাখা পণ্যে। লিখলে সেটাই, খালি রাখলে সংরক্ষণে কাগজের
@@ -193,14 +202,6 @@
                 </template>
                 </div>
 
-                {{-- ⓘ পণ্যের খবর — ঘরের নিচে এক লাইনে (নমুনা v9) --}}
-                <div x-show="picked" x-cloak class="mt-1 flex flex-wrap gap-x-4 text-2xs text-(--color-ink-muted)">
-                    <span>{{ __('purchase::message.on_hand') }}: <b class="num text-(--color-ink)" x-text="qty((picked && picked.on_hand))"></b></span>
-                    <span x-show="(picked && picked.last_rate) > 0" x-cloak>{{ __('purchase::message.last_rate') }}:
-                        <b class="num text-(--color-ink)" x-text="money((picked && picked.last_rate))"></b></span>
-                    <span x-show="entry.sales_price" x-cloak>{{ __('purchase::field.sales_rate') }}:
-                        <b class="num text-(--color-ink)" x-text="money(entry.sales_price)"></b></span>
-                </div>
 
                 {{-- ══ সারি ২–৩ আর "এই লাইনে" ছক — পাশাপাশি ═════════════
 
@@ -213,7 +214,7 @@
                      (`:disabled="! picked"`) — খোলা রাখলে কেউ পরিমাণ লিখে
                      ফেলতেন কোন পণ্যের জন্য তা না বলেই, আর "যোগ করুন" চাপলে
                      কিছুই হত না, কারণ ছাড়াই। --}}
-                <div class="mt-3">
+                <div class="mt-2">
                     <div class="min-w-0">
 
                         {{-- ── সারি ২: পরিমাণ ────────────────────────────
