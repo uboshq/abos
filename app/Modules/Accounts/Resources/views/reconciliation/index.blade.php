@@ -76,7 +76,7 @@
     <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :facets="$filters" :title="__('accounts::recon.title')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :facets="$filters" :title="__('accounts::recon.title')"
                 :subtitle="__('accounts::recon.subtitle')"
                 :search-placeholder="__('accounts::message.recon_search')"
                 :columns="$columns">

@@ -83,7 +83,7 @@
     <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :title="__('accounts::menu.inter_company')" :subtitle="__('accounts::message.inter_company_only_given')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest', 'amount_high', 'amount_low'])" :title="__('accounts::menu.inter_company')" :subtitle="__('accounts::message.inter_company_only_given')"
                           :facets="$filters" :columns="$columns">
                 <x-slot:actions>
                     <x-ui.button tone="primary" :href="route('accounts.inter_company.create')" icon="plus">

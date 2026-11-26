@@ -55,7 +55,7 @@
     <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :facets="$filters" :title="__('accounts::menu.asset_verifications')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :facets="$filters" :title="__('accounts::menu.asset_verifications')"
                           :subtitle="__('accounts::asset.verify_subtitle')"
                           :columns="$columns" />
         </form>

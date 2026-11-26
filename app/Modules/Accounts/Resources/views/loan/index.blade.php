@@ -62,7 +62,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :facets="$filters"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :facets="$filters"
                 :search-placeholder="__('accounts::message.loan_search')"
                 :columns="$columns" />
         </form>
