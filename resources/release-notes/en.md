@@ -1,5 +1,9 @@
 # What's new
 
+## 1.3.26 — 26-11-2026
+
+- Sales bill dues now follow the customer's ledger by themselves: money taken without naming a bill shows the older bills as settled, and the customer's balance rests only on the newest bills — no bill-by-bill matching needed. No receipt, bill or ledger row changes.
+
 ## 1.3.25 — 26-11-2026
 
 - Sign-in: Enter in the ID or password box signs in; coming back with the browser's Back no longer leaves it stuck. "ABOS Version" on its own line, a little larger and bolder, with released · updated on the line below.
