@@ -305,6 +305,9 @@
         form[data-abos-counter] .ds-head [data-customer-details] span.rounded-full * { color: #0b6c7a !important; }
         form[data-abos-counter] .ds-row2 { display: grid; grid-template-columns: minmax(0, 1fr) 17.5rem; gap: .75rem; align-items: start; }
         form[data-abos-counter] .ds-row2-empty { grid-template-columns: minmax(0, 1fr); }
+        /* ⭐ বাছা পণ্যের নাম — হলুদ মার্কারের মতো উজ্জ্বল ঘরে (মালিক, ২৬ নভেম্বর ২০২৬: "আর একটু বেশি হাইলাইট") */
+        form[data-abos-counter] .ds-picked-pill { flex: 0 1 auto !important; max-width: 100%; background: #fff1a8; border: 2px solid #f5b800 !important;
+            border-radius: 12px; color: #0b2a66 !important; font-weight: 800; padding-inline: 1rem; box-shadow: 0 2px 0 #e0a800; }
         form[data-abos-counter] .ds-row2-empty :is(.ds-rcpt, .ds-qtywrap, [data-stock-box]) { display: none !important; }
         form[data-abos-counter] .ds-pick-hint { display: none !important; }
         /* পণ্যের সারি আর তার উপরের মজুদের বাক্স — একই কলাম, সোজাসুজি (মালিক: "অ্যাভেলেবেল … পরিমাণ আর এককের ঘর পর্যন্ত") */

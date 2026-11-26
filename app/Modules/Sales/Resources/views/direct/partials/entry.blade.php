@@ -153,7 +153,7 @@
                                                    rounded-(--radius-field) border border-transparent px-3
                                                    text-start text-xl font-semibold
                                                    transition-colors hover:border-(--color-border)"
-                                            :class="picked ? 'text-(--color-ink)' : 'text-(--color-ink-muted)'"
+                                            :class="picked ? 'text-(--color-ink) ds-picked-pill' : 'text-(--color-ink-muted)'" data-picked-name
                                             x-text="(picked && picked.name) || @js(__('sales::message.type_or_pick'))">{{ __('sales::message.type_or_pick') }}</button>
 
                                     <span x-show="picked" x-cloak
