@@ -2794,7 +2794,9 @@ a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; te
 /* ⭐ নমুনা (মালিক, ২৬ নভেম্বর ২০২৬): নোটিশ উপরে, পক্ষ-পয়েন্ট মাথায়, চিপ, এক লাইনের নাম:অঙ্ক, বন্ধ করা আগের কাগজ */
 .inbox-board-notice { margin: 0; padding: 8px 16px; font-size: 13.5px; line-height: 1.45; flex: 0 0 auto;
     background: var(--color-badge-pending-bg); color: var(--color-badge-pending-ink); border-bottom: 1px solid color-mix(in srgb, var(--color-badge-pending-ink) 30%, transparent); }
-.inbox-board-who { margin: 6px 0 0; font-size: 15px; color: var(--color-ink-inverse); }
+.inbox-board-who { margin: 6px 0 0; font-size: 18px; line-height: 1.5; color: var(--color-ink-inverse); }
+.inbox-board-point { border-radius: 8px; padding: 1px 10px; font-weight: 800; background: var(--color-badge-pending-bg); }
+.inbox-board-point, .inbox-board-point a { color: var(--color-badge-pending-ink) !important; }
 .inbox-board-who > span { opacity: .8; margin-inline: 2px 4px; }
 .inbox-board-who a, .inbox-board-who b { color: var(--color-ink-inverse); font-weight: 700; }
 .inbox-board-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0 16px 8px; font-size: 12.5px; }

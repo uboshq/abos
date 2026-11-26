@@ -115,9 +115,8 @@
             {{-- ⓘ পক্ষ · পয়েন্ট (থাকলে তবেই) · শাখা --}}
             <p class="inbox-board-who">
                 <span>{{ __('approval::field.party') }}</span> {!! $link($partyName, $partyUrl) !!}
-                @if (filled($facts['point'] ?? null))
-                    <span>· {{ __('approval::field.board_point') }}</span> <b>{!! $link($facts['point'], $partyUrl) !!}</b>
-                @endif
+                {{-- ⓘ পয়েন্ট সবসময় — না থাকলে "—"; নাম হাইলাইট, মোটা (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+                <span>· {{ __('approval::field.board_point') }}</span> <b class="inbox-board-point">{!! $link($facts['point'] ?? null, $partyUrl) !!}</b>
                 @if (filled($facts['branch'] ?? null))
                     <span>· {{ __('approval::field.branch') }}</span> <b>{{ $facts['branch'] }}</b>
                 @endif
