@@ -61,7 +61,8 @@ class DepositClaimController extends Controller implements HasMiddleware
                     // ⭐ গ্রাহকের নিজের খোঁজার নিয়ম — নাম, মোবাইল, ঠিকানা, পয়েন্ট (মালিক, ২৩ নভেম্বর ২০২৬; [[PartySearch]])
                     ->orWhereHas('customer', fn ($c) => $c->search($term)),
             ))
-            ->orderByDesc('claimed_on')->orderByDesc('id');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['claimed_on', 'desc'], 'oldest' => ['claimed_on', 'asc'], 'amount_high' => ['amount', 'desc'], 'amount_low' => ['amount', 'asc']]));
 
         // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
         $filters = \App\Core\ListFilter\Columns::set([

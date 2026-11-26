@@ -60,8 +60,8 @@ class LoadingSheetController extends Controller implements HasMiddleware
         $trips = $base();
         $filters->apply($trips, $request);
         $trips = $trips->withCount('lines')
-            ->orderByDesc('trx_date')
-            ->orderByDesc('id')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['trx_date', 'desc'], 'oldest' => ['trx_date', 'asc']]))
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 

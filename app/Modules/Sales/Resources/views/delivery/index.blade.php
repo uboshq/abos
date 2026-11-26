@@ -114,7 +114,7 @@
         <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="stage" value="{{ $tab }}">
 
-            <x-ui.toolbar :title="$tab === 'open' ? __('sales::delivery.tab.open') : DeliveryStage::label($tab)"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :title="$tab === 'open' ? __('sales::delivery.tab.open') : DeliveryStage::label($tab)"
                 :quiet="['stage']"
                 :count="$abosHead ? null : __('sales::delivery.subtitle')"
                 :info="$abosHead ? __('sales::delivery.subtitle') : null"

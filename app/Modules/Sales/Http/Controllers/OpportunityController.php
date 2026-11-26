@@ -62,7 +62,8 @@ class OpportunityController extends Controller implements HasMiddleware
                     ->orWhere('document_no', 'like', $like));
             })
             ->when($request->filled('stage'), fn ($q) => $q->where('stage_id', (int) $request->query('stage')))
-            ->latest('id');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['id', 'desc'], 'oldest' => ['id', 'asc']]));
 
         return view('sales::crm.opportunity.index', [
             'menu' => $this->menu->forUser($user),
