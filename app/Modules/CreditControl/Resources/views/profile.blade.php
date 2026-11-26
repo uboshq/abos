@@ -103,24 +103,36 @@
                                 <th class="font-semibold">{{ __('credit_control::report.bill') }}</th>
                                 <th class="font-semibold">{{ __('credit_control::report.due_on') }}</th>
                                 <th class="text-right font-semibold">{{ __('credit_control::report.days_overdue') }}</th>
+                                {{-- ⭐ বয়সের ঘর — বয়সের ছকের একই সাত ধাপ ([[CreditPositionReports::bucketOf()]]; মালিকের নমুনা v2, ২৬ নভেম্বর ২০২৬) --}}
+                                <th class="font-semibold">{{ __('credit_control::profile.bucket') }}</th>
                                 <th class="text-right font-semibold">{{ __('credit_control::report.unpaid') }}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {{-- ⭐ "আগের জের (ওপেনিং)" — সবার উপরে, কোনো বিলে নেই, কেবল দেখায় (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬) --}}
+                            {{-- ⭐ "আগের জের (ওপেনিং)" কমলা, বা "অগ্রিম জমা" সবুজ বিয়োগে — সবার উপরে, কোনো বিলে নেই (মালিকের নমুনা v2, ২৬ নভেম্বর ২০২৬);
+                                 ⓘ বয়স আর ঘর জেরের প্রথম দিন থেকে; ⓘ-তে উৎস; খাতার লিংক কেবল যার জন্য খোলে --}}
                             @if ($opening)
-                                <tr class="border-t border-(--color-border) bg-(--color-badge-warning-bg)" data-opening-row>
+                                @php $isAdvance = ($opening['kind'] ?? '') === \App\Core\Support\OpeningRow::ADVANCE; @endphp
+                                <tr @class(['border-t border-(--color-border)', 'bg-(--color-badge-success-bg)' => $isAdvance, 'bg-(--color-badge-warning-bg)' => ! $isAdvance])
+                                    data-opening-row data-opening-kind="{{ $opening['kind'] }}">
                                     <td>
                                         @if ($opening['url'])
                                             <a href="{{ $opening['url'] }}" class="text-(--color-link) hover:underline">{{ $opening['no'] }}</a>
                                         @else
                                             {{ $opening['no'] }}
                                         @endif
-                                        <span class="ms-1 rounded px-1.5 py-0.5 text-2xs bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)">{{ __('core.opening_row.tag') }}</span>
+                                        <span @class(['ms-1 rounded px-1.5 py-0.5 text-2xs',
+                                            'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' => $isAdvance,
+                                            'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)' => ! $isAdvance])>{{ __($isAdvance ? 'core.opening_row.advance_tag' : 'core.opening_row.tag') }}</span>
+                                        @if (filled($opening['info'] ?? ''))
+                                            <span class="ms-1 inline-flex cursor-help align-middle text-(--color-ink-muted)" tabindex="0" data-opening-info
+                                                  title="{{ $opening['info'] }}" aria-label="{{ $opening['info'] }}"><x-ui.icon name="info" :size="13" /></span>
+                                        @endif
                                     </td>
                                     <td>{{ DateFormat::format($opening['date']) }}</td>
-                                    <td class="tabular text-right">{{ $opening['age'] }}</td>
-                                    <td class="tabular text-right">{{ Money::format($opening['outstanding']) }}</td>
+                                    <td class="tabular text-right">{{ $isAdvance ? '—' : $opening['age'] }}</td>
+                                    <td data-opening-bucket>{{ $isAdvance ? '—' : __('credit_control::report.bucket_'.\App\Modules\CreditControl\Reports\CreditPositionReports::bucketOf((int) $opening['age'])) }}</td>
+                                    <td @class(['tabular text-right', 'font-semibold text-(--color-badge-success-ink)' => $isAdvance])>{{ Money::format($opening['outstanding']) }}</td>
                                 </tr>
                             @endif
                             @forelse ($bills as $bill)
@@ -130,11 +142,12 @@
                                     <td @class(['tabular text-right', 'font-semibold text-(--color-badge-danger-ink)' => $bill['days_overdue'] > 0])>
                                         {{ $bill['days_overdue'] > 0 ? $bill['days_overdue'] : __('credit_control::report.bucket_not_due') }}
                                     </td>
+                                    <td>{{ __('credit_control::report.bucket_'.\App\Modules\CreditControl\Reports\CreditPositionReports::bucketOf((int) $bill['days_overdue'])) }}</td>
                                     <td class="tabular text-right">{{ Money::format($bill['unpaid']) }}</td>
                                 </tr>
                             @empty
                                 @unless ($opening)
-                                    <tr><td colspan="4" class="text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_open_bills') }}</td></tr>
+                                    <tr><td colspan="5" class="text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_open_bills') }}</td></tr>
                                 @endunless
                             @endforelse
                         </tbody>
@@ -142,7 +155,7 @@
                         @if ($bills !== [] || $opening)
                             <tfoot>
                                 <tr class="border-t-2 border-(--color-border) font-semibold" data-open-bills-total>
-                                    <td colspan="3">{{ __($opening ? 'credit_control::profile.open_bills_total_ledger' : 'credit_control::profile.open_bills_total', ['count' => count($bills)]) }}</td>
+                                    <td colspan="4">{{ __($opening ? 'credit_control::profile.open_bills_total_ledger' : 'credit_control::profile.open_bills_total', ['count' => count($bills)]) }}</td>
                                     <td class="tabular text-right">{{ Money::format($billsTotal) }}</td>
                                 </tr>
                             </tfoot>

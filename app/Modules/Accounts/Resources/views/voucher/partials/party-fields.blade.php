@@ -89,7 +89,7 @@
                  'billsPeek' => __('money.fold_peek.bills_'.($isReceipt ? 'in' : 'out')),
                  'bankNone' => __('money.screen.payee_bank_none'),
                  // ⭐ বিলে না-বাঁধা নোটের সারি — ধরনের নাম (a5-এর চুক্তি `kind`)
-                 'kinds' => ['credit_note' => __('money.screen.kind.credit_note'), 'debit_note' => __('money.screen.kind.debit_note'), 'opening' => __('core.opening_row.tag')],
+                 'kinds' => ['credit_note' => __('money.screen.kind.credit_note'), 'debit_note' => __('money.screen.kind.debit_note'), 'opening' => __('core.opening_row.tag'), 'advance' => __('core.opening_row.advance_tag')],
                  'remainingTotal' => __('money.screen.col.remaining_total'),
                  'remainingLedger' => __('money.screen.col.remaining_ledger'),
                  'billsPeekOpening' => __('money.fold_peek.bills_'.($isReceipt ? 'in' : 'out').'_opening'),
@@ -475,9 +475,10 @@
                         <tbody>
                             <template x-for="b in bills" :key="billKey(b)">
                                 <tr class="border-b border-(--color-border)" data-bill-row :data-opening="isOpening(b)" x-bind:class="rowTone(b)">
-                                    {{-- ⓘ নোটের সারিতে টিক আর অঙ্ক নেই — নোট এই কাগজে প্রয়োগ হয় না (আলাদা কাজ); কেবল দেখায় পক্ষের বকেয়া কত কমেছে/বেড়েছে --}}
+                                    {{-- ⓘ নোট আর অগ্রিমের সারিতে টিক আর অঙ্ক নেই — নোট এই কাগজে প্রয়োগ হয় না (আলাদা কাজ); কেবল দেখায় পক্ষের বকেয়া কত কমেছে/বেড়েছে।
+                                         ⭐ আগের জেরে টিক আছে (মালিকের নমুনা v2) — টাকাটা কোনো বিলে যায় না, পক্ষের খাতায় থাকে --}}
                                     <td>
-                                        <template x-if="isBill(b)">
+                                        <template x-if="canTick(b)">
                                             <input type="checkbox" data-bill-tick :aria-label="b.no"
                                                    :checked="isTicked(b)" x-on:change="toggle(b)">
                                         </template>
@@ -490,17 +491,22 @@
                                         <template x-if="! openingLink(b)">
                                             <span x-text="b.no"></span>
                                         </template>
-                                        <span class="mt-0.5 block w-fit whitespace-nowrap rounded px-1.5 py-0.5 text-2xs"
-                                              x-bind:class="kindTone(b)"
-                                              data-bill-kind x-show="! isBill(b)" x-text="kindText(b)"></span>
+                                        <span class="mt-0.5 flex w-fit items-center gap-1">
+                                            <span class="block w-fit whitespace-nowrap rounded px-1.5 py-0.5 text-2xs"
+                                                  x-bind:class="kindTone(b)"
+                                                  data-bill-kind x-show="! isBill(b)" x-text="kindText(b)"></span>
+                                            {{-- ⓘ উৎস আর তারিখ — আগের জের আর অগ্রিমে (নমুনা v2) --}}
+                                            <span class="inline-flex cursor-help text-(--color-ink-muted)" tabindex="0" data-opening-info
+                                                  x-show="hasInfo(b)" :title="infoText(b)" :aria-label="infoText(b)"><x-ui.icon name="info" :size="13" /></span>
+                                        </span>
                                     </td>
                                     <td class="num" x-text="dayMonth(b.date)"></td>
                                     <td class="num" data-bill-due-date x-text="dayMonth(b.due_date)"></td>
                                     <td class="num" data-bill-late x-bind:class="lateClass(b)" x-text="lateText(b)"></td>
                                     <td class="num" data-bill-total x-text="lakh(b.total)"></td>
-                                    <td class="num" data-bill-outstanding x-text="lakh(b.outstanding)"></td>
+                                    <td class="num" data-bill-outstanding x-bind:class="outstandingTone(b)" x-text="lakh(b.outstanding)"></td>
                                     <td class="num">
-                                        <template x-if="isBill(b)">
+                                        <template x-if="canTick(b)">
                                             <input type="text" inputmode="decimal" data-bill-amount aria-label="{{ $isReceipt ? __('money.screen.col.this_in') : __('money.screen.col.this_out') }}" :title="b.no"
                                                    class="h-(--spacing-field-dense) w-16 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm disabled:opacity-50"
                                                    :value="rowAmount(b)" :disabled="! isTicked(b)" x-on:change="setRow(b, $event.target.value)">

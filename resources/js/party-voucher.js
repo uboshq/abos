@@ -222,7 +222,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
              * ⛔ টিক-দেওয়া সারি থাকলেই যোগফল — `hasTicked` নয়: ওটা আগাম-বাছা একক বিলেও সত্য, তখন যোগফল ০ বসত আর বিলের বাকি
              * কখনো আসত না (fe, ২৬ অক্টোবর ২০২৬: party-voucher.test.js-এর "নির্বাচিত বিল" দাবি ০.০০ পেয়েছিল)।
              */
-            if (this.pickedRows.length > 0) {
+            if (this.pickedRows.length > 0 || this.openingTicked) {
                 this.$dispatch('fill-amount', (this.allocSumPaisa / 100).toFixed(2));
 
                 return;
@@ -236,7 +236,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         },
 
         get hasTicked() {
-            return this.pickedRows.length > 0 || this.pickedBill !== null;
+            return this.pickedRows.length > 0 || this.openingTicked || this.pickedBill !== null;
         },
 
         // ── বহু বিল ─────────────────────────────────────────────────────
@@ -246,27 +246,73 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
             return String(b?.kind ?? 'invoice') === 'invoice';
         },
 
-        /** ⭐ "আগের জের (ওপেনিং)" — কোনো বিলে নেই, কেবল দেখায় */
+        /**
+         * ⭐ "আগের জের (ওপেনিং)" — কোনো বিলে নেই; বিলের মতোই টিক দিয়ে টাকা লেখা যায় (মালিকের নমুনা v2, ২৬ নভেম্বর ২০২৬; SAP/Dynamics/Odoo-র
+         *   খোলা আইটেম)। ⓘ সেই টাকা কোনো বিলে পাঠানো হয় না ([[pickedRows]]) — পক্ষের খাতায় থাকে, জের থেকেই কমে।
+         */
         isOpening(b) {
             return String(b?.kind ?? '') === 'opening';
         },
 
+        /** ⭐ "অগ্রিম জমা" — খাতার জের বিলের চেয়ে কম; সবুজ, বিয়োগে, টিক নেই (ওটা পাওনা নয়, জমা) */
+        isAdvance(b) {
+            return String(b?.kind ?? '') === 'advance';
+        },
+
+        /** টিক আর "এখন নেওয়া" — বিলে আর আগের জেরে; নোট আর অগ্রিমে নয় */
+        canTick(b) {
+            return this.isBill(b) || this.isOpening(b);
+        },
+
+        /** আগের জের বা অগ্রিমের সারি আছে — তখন মোট = খাতার জের */
         get hasOpening() {
-            return this.bills.some((b) => this.isOpening(b));
+            return this.bills.some((b) => this.isOpening(b) || this.isAdvance(b));
         },
 
-        /** নামটা লিংক কেবল আগের জেরে, আর ঠিকানা থাকলে (হিসাব বিবরণী) */
+        get openingRow() {
+            return this.bills.find((b) => this.isOpening(b)) || null;
+        },
+
+        get openingTicked() {
+            const row = this.openingRow;
+
+            return row !== null && this.isTicked(row);
+        },
+
+        /** নামটা লিংক কেবল আগের জের/অগ্রিমে, আর ঠিকানা থাকলে (হিসাব বিবরণী — যার জন্য খোলে, কেবল তার কাছে আসে) */
         openingLink(b) {
-            return this.isOpening(b) && Boolean(b.url);
+            return (this.isOpening(b) || this.isAdvance(b)) && Boolean(b.url);
         },
 
-        /** ⓘ আগের জেরের সারি হালকা কমলা — নমুনার মতো; বাকি সারি সাদা */
+        /** ⓘ ⓘ-র লেখা — উৎস আর তারিখ (সার্ভারের `info`); বিলে নেই */
+        infoText(b) {
+            return String(b?.info ?? '');
+        },
+
+        hasInfo(b) {
+            return this.infoText(b) !== '';
+        },
+
+        /** ⓘ আগের জেরের সারি হালকা কমলা, অগ্রিম হালকা সবুজ — নমুনার মতো; বাকি সারি সাদা */
         rowTone(b) {
+            if (this.isAdvance(b)) {
+                return 'bg-(--color-badge-success-bg)';
+            }
+
             return this.isOpening(b) ? 'bg-(--color-badge-warning-bg)' : '';
         },
 
         kindTone(b) {
+            if (this.isAdvance(b)) {
+                return 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)';
+            }
+
             return this.isOpening(b) ? 'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)' : 'bg-(--color-badge-info-bg) text-(--color-badge-info-ink)';
+        },
+
+        /** অগ্রিমের বাকি সবুজ (বিয়োগ) */
+        outstandingTone(b) {
+            return this.isAdvance(b) ? 'font-semibold text-(--color-badge-success-ink)' : '';
         },
 
         get dueSumLabel() {
@@ -283,7 +329,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         },
 
         get hasNotes() {
-            return this.bills.some((b) => !this.isBill(b) && !this.isOpening(b));
+            return this.bills.some((b) => !this.isBill(b) && !this.isOpening(b) && !this.isAdvance(b));
         },
 
         billKey(b) {
@@ -296,8 +342,8 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
 
         /** টিক — পুরো বকেয়া বসে; টিক তুললে সারিটা যায় */
         toggle(b) {
-            // ⛔ নোট টিক হয় না — এই কাগজে প্রয়োগ নয়
-            if (!this.isBill(b)) {
+            // ⛔ নোট আর অগ্রিম টিক হয় না — এই কাগজে প্রয়োগ নয়
+            if (!this.canTick(b)) {
                 return;
             }
 
@@ -326,17 +372,25 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
             this.refill();
         },
 
-        /** পাঠানোর সারি — বিলের তালিকার ক্রমে (পুরনো আগে) */
+        /** পাঠানোর সারি — বিলের তালিকার ক্রমে (পুরনো আগে); ⛔ আগের জের কখনো নয় — ওটা বিল নয়, টাকাটা পক্ষের খাতায় থাকে */
         get pickedRows() {
-            return this.bills.filter((b) => this.isTicked(b)).map((b) => ({ id: String(b.public_id), amount: this.allocs[String(b.public_id)] }));
+            return this.bills.filter((b) => this.isBill(b) && this.isTicked(b)).map((b) => ({ id: String(b.public_id), amount: this.allocs[String(b.public_id)] }));
+        },
+
+        /** আগের জেরে লেখা টাকা — পয়সায় */
+        get openingPaisa() {
+            const row = this.openingRow;
+
+            return row !== null && this.isTicked(row) ? Math.round(Number(this.allocs[String(row.public_id)] || 0) * 100) : 0;
         },
 
         billField(i, key) {
             return 'bills[' + i + '][' + key + ']';
         },
 
+        /** এই রসিদে নেওয়া মোট — বিলে আর আগের জেরে */
         get allocSumPaisa() {
-            return this.pickedRows.reduce((sum, row) => sum + Math.round(Number(row.amount || 0) * 100), 0);
+            return this.pickedRows.reduce((sum, row) => sum + Math.round(Number(row.amount || 0) * 100), 0) + this.openingPaisa;
         },
 
         get allocSumText() {
@@ -346,7 +400,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         /* ⭐ ভাঁজের মাথা — "৮টা বিল · বাকি ৳… · এই রসিদে প্রয়োগ ৳…" (মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok"); নোট গোনা নয় */
         get billsPeek() {
             const open = this.bills.filter((b) => this.isBill(b));
-            const due = this.bills.filter((b) => this.isBill(b) || this.isOpening(b)).reduce((sum, b) => sum + Math.round(Number(b.outstanding || 0) * 100), 0);
+            const due = this.bills.filter((b) => this.isBill(b) || this.isOpening(b) || this.isAdvance(b)).reduce((sum, b) => sum + Math.round(Number(b.outstanding || 0) * 100), 0);
 
             return String((this.hasOpening ? this.texts?.billsPeekOpening : null) ?? this.texts?.billsPeek ?? '')
                 .replace(':n', String(open.length))

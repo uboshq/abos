@@ -33,10 +33,13 @@ interface PartyOpenBills
     /**
      * ⭐ "আগের জের (ওপেনিং)" — খাতার জেরের যে অংশ কোনো খোলা বিলে নেই ([[\App\Core\Support\OpeningRow]]); না থাকলে null।
      * ⓘ `$withNotes` হলে বিলে না-বাঁধা নোটও যোগে ধরা — [[openBills()]]-এর একই তালিকা, যাতে সারিগুলোর যোগ খাতার জেরের সমান।
+     * ⓘ `$byLedger` — কোন বাকির পাশে বসবে: রসিদের টাকা বসানোর তালিকা বিলের নিজের কাগজের বাকি দেখায় (`false`, [[openBills()]]);
+     *   বাকি নিয়ন্ত্রণের প্রোফাইল আর বয়সের ছক খাতা ধরে অটো-বসানো বাকি দেখায় (`true`, [[\App\Modules\Sales\Services\AutoDues]])।
+     *   যার পাশে বসে, সেই বাকিই বিয়োগ হয় — তাই প্রতিটা তালিকার মোট খাতার জের, এক হিসাব এক জায়গায়।
      *
      * @return array<string, mixed>|null
      */
-    public function openingRow(string $partyType, int $partyId, bool $withNotes = false): ?array;
+    public function openingRow(string $partyType, int $partyId, bool $withNotes = false, bool $byLedger = false): ?array;
 
     /** যে ধরনের পক্ষের বিল এখানে থাকে ([[PartyRegistry]]-এর ধরন); কেউ না থাকলে খালি লেখা */
     public function partyType(): string;

@@ -78,7 +78,7 @@ class CreditProfileController extends Controller
 
         $bills = $this->credit->openBills([(int) $customer->id => $customer])[(int) $customer->id] ?? [];
         // ⭐ "আগের জের (ওপেনিং)" — বিলের তালিকার সবার উপরে, কেবল দেখায় (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬)
-        $opening = app(\App\Core\Contracts\PartyOpenBills::class)->openingRow('customer', (int) $customer->id);
+        $opening = app(\App\Core\Contracts\PartyOpenBills::class)->openingRow('customer', (int) $customer->id, false, true);
 
         return view('credit_control::profile', [
             'menu' => $this->menu->forUser($request->user()),
