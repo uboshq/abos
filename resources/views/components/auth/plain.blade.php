@@ -100,7 +100,7 @@
 
         <footer class="mt-10 text-center text-xs text-(--color-ink-muted)">
             <p>{{ __('core.brand.developed_by') }}</p>
-            <p class="mt-1">{{ __('core.brand.name') }} · {{ __('core.brand.version_word') }} {{ \App\Core\Support\Release::version() }}</p>
+            <p class="mt-1">{{ __('core.brand.name') }} · {{ __('core.brand.version_word') }} {{ \App\Core\Support\Release::padded() }}</p>
         </footer>
     </div>
 </body>

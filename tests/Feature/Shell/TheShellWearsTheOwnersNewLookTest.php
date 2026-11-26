@@ -114,7 +114,7 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
         }
         // ⓘ সংস্করণ নিজের লাইনে, তারিখ দুটো নিচের লাইনে (মালিক, ২৬ নভেম্বর ২০২৬)
         $line = $this->between($page, 'data-release-line', '</p>');
-        $this->assertMatchesRegularExpression('/ABOS '.preg_quote(__('core.brand.version_word'), '/').' 1\.4\.2/u', $line, '⛔ লগইনের ঘরের নিচে সংস্করণ নেই (৫)।');
+        $this->assertMatchesRegularExpression('/ABOS '.preg_quote(__('core.brand.version_word'), '/').' 01\.04\.02/u', $line, '⛔ লগইনের ঘরের নিচে সংস্করণ নেই (৫)।');
         $dates = $this->between($page, 'data-release-dates', '</p>');
         $this->assertMatchesRegularExpression('/'.preg_quote(__('core.brand.released'), '/').' 24-10-2026\s*·\s*'.preg_quote(__('core.brand.updated'), '/').' 06-11-2026/u', $dates, '⛔ লগইনের ঘরের নিচে প্রকাশ-হালনাগাদের তারিখ নেই (৫)।');
         $this->assertStringNotContainsString('ae03a14', $line, '⛔ লগইনের ঘরে build নম্বর — মালিক চান না।');

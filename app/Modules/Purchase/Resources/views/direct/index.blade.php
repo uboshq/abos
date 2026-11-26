@@ -120,10 +120,22 @@
             <input type="hidden" name="{{ \App\Core\Support\CounterMode::PARAM }}" value="1">
         @endif
 
+        {{-- ══ বাঁ অংশ — মাথা, পণ্য, "এই লাইনে", প্যানেল আর কার্ট ══════
+
+             ⚠️ মোটের কার্ডটা এই মোড়কের **বাইরে**, আর তাই সে **একদম উপর
+             থেকে** শুরু হয় — মালিকের নির্দেশ, ৫ সেপ্টেম্বর ২০২৬।
+
+             ⛔ এক দফায় কাগজের মাথাটা পুরো চওড়ায় নেওয়া হয়েছিল
+             (`lg:col-span-2`), আর তাতে মোটের কার্ডটা এক সারি নিচে নেমে
+             গিয়েছিল। ⓘ ওটা ভুল ছিল: *"Bill total box ek dom upor thekei
+             bosbe ager moto"* — টাকার ছকটা চোখের সোজাসুজি থাকা দরকার,
+             কাগজের মাথার নিচে নয়। --}}
+        <div class="min-w-0 space-y-3">
+        {{-- ⓘ খবরের ফিতা কেবল বাঁ পাশে — ডানের মোট বিলের বাক্স একদম উপর থেকে "মাল বুঝে নিন" পর্যন্ত টানা (মালিক, ২৬ নভেম্বর ২০২৬) --}}
         {{-- ⭐ কাউন্টার মোডে জমার পরে — সবুজ খবর, ছাপুন · দেখুন; নিচে নতুন খালি বিল (মালিক, ২৬ নভেম্বর ২০২৬) --}}
         @if ($done = session('counter_done'))
             <div data-counter-done role="status"
-                 class="lg:col-span-2 flex flex-wrap items-center gap-3 rounded-(--radius-card) border border-(--color-success)/40
+                 class="flex flex-wrap items-center gap-3 rounded-(--radius-card) border border-(--color-success)/40
                         bg-(--color-badge-success-bg) px-4 py-2 text-sm text-(--color-badge-success-ink)">
                 <span>✔ <b>{{ __('core.counter.saved', ['no' => $done['no']]) }}</b> · {{ $done['party'] }} · ৳{{ $done['total'] }} · {{ __('core.counter.new_bill') }}</span>
                 <span class="ms-auto flex gap-2">
@@ -154,7 +166,7 @@
             দেখা যেত।
         --}}
         <div x-show="draftFound" x-cloak
-             class="lg:col-span-2 flex flex-wrap items-center gap-2 rounded-(--radius-card)
+             class="flex flex-wrap items-center gap-2 rounded-(--radius-card)
                     border border-(--color-border) bg-(--color-badge-warning-bg)
                     px-3 py-2 text-sm text-(--color-badge-warning-ink)">
             <span class="font-medium">{{ __('purchase::message.draft_found') }}</span>
@@ -173,17 +185,6 @@
             </span>
         </div>
 
-        {{-- ══ বাঁ অংশ — মাথা, পণ্য, "এই লাইনে", প্যানেল আর কার্ট ══════
-
-             ⚠️ মোটের কার্ডটা এই মোড়কের **বাইরে**, আর তাই সে **একদম উপর
-             থেকে** শুরু হয় — মালিকের নির্দেশ, ৫ সেপ্টেম্বর ২০২৬।
-
-             ⛔ এক দফায় কাগজের মাথাটা পুরো চওড়ায় নেওয়া হয়েছিল
-             (`lg:col-span-2`), আর তাতে মোটের কার্ডটা এক সারি নিচে নেমে
-             গিয়েছিল। ⓘ ওটা ভুল ছিল: *"Bill total box ek dom upor thekei
-             bosbe ager moto"* — টাকার ছকটা চোখের সোজাসুজি থাকা দরকার,
-             কাগজের মাথার নিচে নয়। --}}
-        <div class="min-w-0 space-y-3">
 
             {{-- ══ কাগজের মাথা — বাঁ অংশের পুরো চওড়ায় ══════════════════
 

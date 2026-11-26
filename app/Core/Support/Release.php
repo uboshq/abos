@@ -20,6 +20,12 @@ final class Release
         return (string) config('release.version', '0.0.0');
     }
 
+    /** ⭐ লগইনের পাতায় দেখানোর রূপ — প্রতিটা অংশ দুই অঙ্কে: 1.3.26 → 01.03.26 (মালিক, ২৬ নভেম্বর ২০২৬) */
+    public static function padded(): string
+    {
+        return implode('.', array_map(fn (string $p) => str_pad($p, 2, '0', STR_PAD_LEFT), explode('.', self::version())));
+    }
+
     /** YYYY-MM-DD, যেমন config-এ */
     public static function date(): string
     {

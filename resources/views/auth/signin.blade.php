@@ -213,7 +213,7 @@
                 {{-- ⭐ সংস্করণের পুরো বিবরণ ঘরের একদম নিচে — মালিক, ৬ নভেম্বর ২০২৬ (ফুটার থেকে এখানে সরল; build-এর নম্বর নয়) --}}
                 {{-- ⭐ সংস্করণ নিজের লাইনে, একটু বড় আর আধা-মোটা; প্রকাশ · হালনাগাদ নিচের লাইনে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
                 <p class="mt-1 tabular-nums text-sm font-semibold text-(--color-ink)" data-release-line>
-                    ABOS {{ __('core.brand.version_word') }} {{ \App\Core\Support\Release::version() }}
+                    ABOS {{ __('core.brand.version_word') }} {{ \App\Core\Support\Release::padded() }}
                 </p>
                 <p class="tabular-nums" data-release-dates>
                     @if (\App\Core\Support\Release::shownDate() !== '')
