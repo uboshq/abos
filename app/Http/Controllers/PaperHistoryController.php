@@ -83,7 +83,12 @@ class PaperHistoryController extends Controller
             ->where('document_type', $type)
             ->where('document_id', $id)
             ->with('user')
-            ->orderByDesc('id')
+            // ⭐ পুরো বার — কীভাবে বেরোল, কে (নাম খোঁজা), সাজানো (মালিক, ২৪ নভেম্বর ২০২৬)
+            ->when(in_array($request->query('how'), [DocumentDelivery::PRINTED, DocumentDelivery::DOWNLOADED, DocumentDelivery::SHARED, DocumentDelivery::OPENED], true),
+                fn ($q) => $q->where('how', $request->query('how')))
+            ->when(is_string($request->query('q')) && trim($request->query('q')) !== '',
+                fn ($q) => $q->whereHas('user', fn ($u) => $u->where('name', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%')))
+            ->orderBy('id', $request->query('sort') === 'oldest' ? 'asc' : 'desc')
             ->paginate(100)
             ->withQueryString();
 
@@ -91,7 +96,8 @@ class PaperHistoryController extends Controller
             'menu' => $this->menu->forUser($request->user()),
             'type' => $type,
             'id' => $id,
-            'documentNo' => $rows->first()?->document_no,
+            'documentNo' => $rows->first()?->document_no
+                ?? DocumentDelivery::query()->where('document_type', $type)->where('document_id', $id)->value('document_no'),
             'shares' => $shares,
             'rows' => $rows,
         ]);
