@@ -42,8 +42,8 @@ class GatePassController extends Controller implements HasMiddleware
             ->search($term === '' ? null : $term)
             ->when(! $showCancelled, fn ($q) => $q->where('status', GatePass::ISSUED))
             ->with(['challan.customer.location.parent', 'challan.customer.branch', 'issuer'])
-            ->orderByDesc('issued_at')
-            ->orderByDesc('id')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['issued_at', 'desc'], 'oldest' => ['issued_at', 'asc']]))
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 

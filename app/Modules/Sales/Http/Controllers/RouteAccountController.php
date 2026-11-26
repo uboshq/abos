@@ -66,7 +66,8 @@ class RouteAccountController extends Controller implements HasMiddleware
                     ->orWhere('name_en', 'like', $like)
                     ->orWhere('name_bn', 'like', $like));
             })
-            ->orderBy('code')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['code' => ['code', 'asc'], 'name_az' => ['name_en', 'asc'], 'name_za' => ['name_en', 'desc'], 'newest' => ['id', 'desc']]))
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 

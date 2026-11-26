@@ -65,8 +65,8 @@ class DeliveryStageController extends Controller implements HasMiddleware
             ->with(['challan.customer.location.parent', 'challan.customer.branch', 'challan.vehicle'])
             ->when($f['from'] ?? null, fn ($query, $d) => $query->whereDate('stage_at', '>=', $d))
             ->when($f['to'] ?? null, fn ($query, $d) => $query->whereDate('stage_at', '<=', $d))
-            ->orderByDesc('stage_at')
-            ->orderByDesc('id');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['stage_at', 'desc'], 'oldest' => ['stage_at', 'asc']]));
 
         // ⭐ সর্বমোট — ছাঁকা তালিকার সব পাতা মিলে, সারির টাকা চালানের ([[GrandTotals]])
         $grand = $this->grandTotals($list, ['total' => '(SELECT COALESCE(c.total, 0) FROM sal_challans c WHERE c.id = t.delivery_challan_id)']);

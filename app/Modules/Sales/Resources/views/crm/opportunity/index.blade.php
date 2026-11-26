@@ -56,7 +56,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                 bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :title="__('sales::crm.opportunities')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :title="__('sales::crm.opportunities')"
                           :columns="$columns"
                           :search-placeholder="__('sales::crm.opportunity_search')"
                           :export="false" :share="false" :print="false" :facets="$facetPanel">

@@ -62,7 +62,8 @@ class LeadController extends Controller implements HasMiddleware
             })
             ->when(in_array($request->query('status'), Lead::STATUSES, true),
                 fn ($q) => $q->where('status', $request->query('status')))
-            ->latest('id');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['id', 'desc'], 'oldest' => ['id', 'asc']]));
 
         return view('sales::crm.lead.index', [
             'menu' => $this->menu->forUser($user),
