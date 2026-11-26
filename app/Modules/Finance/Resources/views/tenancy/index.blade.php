@@ -47,7 +47,7 @@
                 <input type="hidden" name="tab" value="closed">
             @endif
 
-            <x-ui.toolbar :facets="$filters" :title="__('finance::tenancy.title')"
+            <x-ui.toolbar :facets="$filters" :title="__('finance::tenancy.title')" :sort="\App\Core\ListFilter\ListSort::labels(['due_soon', 'newest', 'oldest', 'amount_high', 'amount_low'])"
                 :subtitle="__('finance::tenancy.list_note')"
                 :columns="$tenancyColumns"
                 :search-placeholder="__('finance::tenancy.search')"

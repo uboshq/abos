@@ -148,7 +148,11 @@ class RentalContractController extends Controller implements HasMiddleware
                     ->orWhere('counterparty_phone', 'like', "%{$term}%")
                     ->orWhere('subject', 'like', "%{$term}%"),
             ))
-            ->orderBy('ends_on');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, [
+                'due_soon' => ['ends_on', 'asc'], 'newest' => ['id', 'desc'], 'oldest' => ['id', 'asc'],
+                'amount_high' => ['monthly_rent', 'desc'], 'amount_low' => ['monthly_rent', 'asc'],
+            ]));
 
         // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
         $filters = \App\Core\ListFilter\Columns::set([
@@ -182,7 +186,10 @@ class RentalContractController extends Controller implements HasMiddleware
             $query = RentalContract::query()->inViewedBranch()
                 ->with(['account', 'expenseAccount'])
                 ->forSubject($subject['type'], $subject['id'])
-                ->orderBy('ends_on');
+                ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, [
+                'due_soon' => ['ends_on', 'asc'], 'newest' => ['id', 'desc'], 'oldest' => ['id', 'asc'],
+                'amount_high' => ['monthly_rent', 'desc'], 'amount_low' => ['monthly_rent', 'asc'],
+            ]));
         }
 
         /*

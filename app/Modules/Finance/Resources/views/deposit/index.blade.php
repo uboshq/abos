@@ -121,7 +121,7 @@
                 <input type="hidden" name="tab" value="closed">
             @endif
 
-            <x-ui.toolbar :title="__('finance::menu.deposits')"
+            <x-ui.toolbar :title="__('finance::menu.deposits')" :sort="\App\Core\ListFilter\ListSort::labels(['due_soon', 'newest', 'oldest', 'amount_high', 'amount_low'])"
                           :subtitle="__('finance::message.deposit_note_'.$issuer)"
                           :columns="$depColumns"
                           :search-placeholder="__('finance::message.deposit_search')"
