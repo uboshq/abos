@@ -85,14 +85,14 @@
             <div x-show="supplier" x-cloak data-supplier-credit
                  class="mt-1.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-3 whitespace-nowrap border-t border-(--color-border) pt-1.5 text-sm">
                 <span class="flex min-w-0 items-baseline gap-1.5 overflow-hidden">
-                    <span class="shrink-0 text-2xs text-(--color-ink-muted)">{{ __('purchase::field.can_bill_more') }}</span>
-                    <b class="num min-w-0 truncate text-xs xl:text-sm" :class="creditRoom === null ? '' : (creditRoom >= 0 ? 'text-(--color-success)' : 'text-(--color-danger)')"
+                    <span class="min-w-0 truncate text-2xs text-(--color-ink-muted)">{{ __('purchase::field.can_bill_more') }}</span>
+                    <b class="num shrink-0 text-xs xl:text-sm" :class="creditRoom === null ? '' : (creditRoom >= 0 ? 'text-(--color-success)' : 'text-(--color-danger)')"
                        x-text="creditRoom === null ? @js(__('purchase::field.no_limit')) : money(creditRoom)"></b>
                 </span>
                 <span class="flex min-w-0 items-baseline gap-1.5 overflow-hidden">
-                    <span class="shrink-0 text-2xs text-(--color-ink-muted)"
+                    <span class="min-w-0 truncate text-2xs text-(--color-ink-muted)"
                           x-text="previousDue < 0 ? @js(__('purchase::field.previous_advance')) : @js(__('purchase::field.previous_due'))"></span>
-                    <b class="num min-w-0 truncate text-xs xl:text-sm" :class="previousDue > 0 ? 'text-(--color-danger)' : 'text-(--color-success)'"
+                    <b class="num shrink-0 text-xs xl:text-sm" :class="previousDue > 0 ? 'text-(--color-danger)' : 'text-(--color-success)'"
                        x-text="money($abs(previousDue))"></b>
                 </span>
             </div>
