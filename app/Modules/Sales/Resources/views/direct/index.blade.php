@@ -307,7 +307,12 @@
         form[data-abos-counter] .ds-row2-empty { grid-template-columns: minmax(0, 1fr); }
         /* ⭐ লটের ঘর ছোট আর একদম ডানে — নিচের "কার্ট" আর "অনেক পণ্য" বোতামের সোজা (৬.৬ + ৭rem + ফাঁক); বাকি জায়গা পণ্যের
            নামের, লম্বা নাম কাটে না (মালিক, ২৬ নভেম্বর ২০২৬) */
-        form[data-abos-counter] .ds-lot { margin-inline-start: auto; flex: 0 0 14rem; min-width: 0; max-width: 14rem; }
+        /* ⓘ চওড়া ছকের অনুপাত থেকেই — কার্ট (1.3) + অনেক পণ্য (1.4) + একটা ফাঁক; ঘরটা @container-এর ভেতরে, তাই cqw = সারির চওড়া */
+        form[data-abos-counter] .ds-lot { margin-inline-start: auto; min-width: 0; max-width: none;
+            flex: 0 0 calc((100cqw - 3rem) * 2.7 / 10.45 + .375rem); }
+        form[data-abos-counter] [data-direct-entry]:has(.ds-qtyrow.ds-nofree) .ds-lot,
+        form[data-abos-counter] section:has(.ds-qtyrow.ds-nofree) .ds-lot { flex-basis: calc((100cqw - 2.25rem) * 2.7 / 8.45 + .375rem); }
+        form[data-abos-counter] .ds-qtyrow > :is(.ds-gift-btn, button[data-cart-button]) { min-width: 0; overflow: hidden; }
         /* ⭐ বাছা পণ্যের নাম — হালকা টিল ঘরে, বাঁয়ে গাঢ় টিল দাগ; মোটের বাক্সের রঙের সাথে মেলে (মালিক, ২৬ নভেম্বর ২০২৬) */
         form[data-abos-counter] .ds-picked-pill { flex: 0 1 auto !important; max-width: 100%; background: #e6f8fb; border: 1px solid #9fdde6 !important;
             border-left: 5px solid #0b8a9a !important; border-radius: 10px; color: #0b3b5c !important; font-weight: 800; padding-inline: .9rem; }
@@ -315,9 +320,9 @@
         form[data-abos-counter] .ds-pick-hint { display: none !important; }
         /* পণ্যের সারি আর তার উপরের মজুদের বাক্স — একই কলাম, সোজাসুজি (মালিক: "অ্যাভেলেবেল … পরিমাণ আর এককের ঘর পর্যন্ত") */
         form[data-abos-counter] .ds-qtyrow, form[data-abos-counter] .ds-stockrow {
-            grid-template-columns: repeat(4, minmax(0, 1fr)) 5.5rem 7rem 6.2rem 6.6rem 7rem !important; column-gap: .375rem; }
+            grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 1.25fr) minmax(0, 1.3fr) minmax(0, 1.4fr) !important; column-gap: .375rem; }
         form[data-abos-counter] :is(.ds-qtyrow, .ds-stockrow).ds-nofree {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) 5.5rem 7rem 6.2rem 6.6rem 7rem !important; }
+            grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 1.25fr) minmax(0, 1.3fr) minmax(0, 1.4fr) !important; }
         form[data-abos-counter] .ds-stockrow { display: grid; row-gap: .4rem; margin-top: .5rem; }
         form[data-abos-counter] .ds-sb { min-width: 0; border-radius: 12px; border: 1px solid var(--sb-ink); background: var(--sb-bg); padding: .3rem .6rem; color: var(--sb-ink); }
         form[data-abos-counter] .ds-sb-l { display: block; font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
