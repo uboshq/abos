@@ -348,6 +348,8 @@ class DirectSaleController extends Controller implements HasMiddleware
                  * ([[Customer::placeName()]]); খোঁজার তালিকার সারিতেও বসে।
                  */
                 'location' => (string) ($c->placeName() ?? ''),
+                /* ⭐ কেবল পয়েন্ট — ABOS-এর রূপে নামের নিচে "পয়েন্ট: …" (মালিক, ২৬ নভেম্বর ২০২৬) */
+                'point' => (string) ($c->pointName() ?? ''),
                 // ⭐ খোঁজার লেখা — নাম, মোবাইল, ঠিকানা, পয়েন্ট ও তার দুই ধাপ উপর (মালিক, ২৩ নভেম্বর ২০২৬; [[Customer::searchText()]])
                 'find' => $c->searchText(),
             ]]),
@@ -615,7 +617,30 @@ class DirectSaleController extends Controller implements HasMiddleware
         ]);
     }
 
+    /**
+     * ⭐ কাউন্টার মোডে জমার পরে পর্দাটা কাউন্টার মোডেই ফেরে — নতুন খালি বিল, খোলস ছাড়া (মালিক, ২৬ নভেম্বর ২০২৬;
+     * [[CounterMode]])। ⓘ ছাপা আগের মতোই "নিশ্চিত করুন" চাপার মুহূর্তে নিজের ট্যাবে ([[print-tab.js]])।
+     * ⚠️ কেবল এই পর্দায় ফেরার পথেই চিহ্ন বসে — অন্য পাতায় (খসড়ার তালিকা, অনুমোদন) গেলে ঠিকানা যেমন ছিল।
+     */
     public function store(Request $request): RedirectResponse
+    {
+        $response = $this->storeNow($request);
+
+        if (! $request->boolean(\App\Core\Support\CounterMode::PARAM)) {
+            return $response;
+        }
+
+        $target = $response->getTargetUrl();
+        $home = route('sales.direct.create');
+
+        if (strtok($target, '?') === $home && ! str_contains($target, \App\Core\Support\CounterMode::PARAM.'=')) {
+            $response->setTargetUrl($target.(str_contains($target, '?') ? '&' : '?').\App\Core\Support\CounterMode::PARAM.'=1');
+        }
+
+        return $response;
+    }
+
+    private function storeNow(Request $request): RedirectResponse
     {
         $companyId = CompanyContext::id();
 

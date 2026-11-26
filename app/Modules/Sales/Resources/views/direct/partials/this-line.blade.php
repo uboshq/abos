@@ -50,6 +50,8 @@
               x-text="lines.length + ' ' + @js(__('sales::field.items')) + ' · ৳' + money(subTotal)"></span>
     </div>
 
+    {{-- ⓘ ABOS-এর রূপে "অবশিষ্ট সীমা" এখানে নেই — ডানের বাক্সে আছে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+    @unless (($abosLook ?? false))
     <template x-if="hasCustomer && hasCreditLimit">
             <div class="flex justify-between">
                 <span class="text-(--color-ink-muted)">{{ __('sales::field.credit_left') }}</span>
@@ -60,6 +62,7 @@
                       x-text="'৳' + money(creditLeft > 0 ? creditLeft : 0)"></span>
             </div>
         </template>
+    @endunless
 
     <template x-if="hasCustomer && hasCreditLimit && creditOver > 0">
             <div class="mt-0.5 flex justify-between rounded-(--radius-field) bg-(--color-danger)
@@ -112,7 +115,13 @@
      ⓘ কলামটা ১৪rem, তাই প্রতিটা বোতাম ≈৯০px — লম্বা লেখাটা
      দুই লাইনে ভাঁজ হয়, আর `leading-tight` তাতে উচ্চতা ধরে রাখে। --}}
 <div class="grid grid-cols-3 items-start gap-1">
-    @if ($show['gift'])
+    {{-- ⭐ ABOS-এর রূপে উপহারের জায়গায় "দাম দেখুন" (F3) — উপহার এখন কার্টের আগে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+    @if (($abosLook ?? false))
+        <button type="button" @click="openPanel('price')" data-counter-button="price" :class="panel === 'price' ? 'is-on' : ''"
+                class="ds-tl-price w-full rounded-(--radius-field) leading-tight px-1 py-1.5 text-2xs font-medium">
+            {{ __('sales::field.btn_price') }} <small class="opacity-75">F3</small>
+        </button>
+    @elseif ($show['gift'])
         {{-- ⚠️ এখানে `:disabled`, একটা কোলন — আর নিচে
              "নিশ্চিত করুন" বোতামে `::disabled`, দুইটা।
              **দুইটাই ঠিক**: Blade কেবল কম্পোনেন্ট ট্যাগে
@@ -138,14 +147,14 @@
          সংখ্যাটাও নিয়ামক পাঠায় না। --}}
     @can('sales.cost.view')
     <button type="button" @click="showCosting = ! showCosting"
-            class="w-full rounded-(--radius-field) leading-tight border border-(--color-border)
+            class="ds-tl-cost w-full rounded-(--radius-field) leading-tight border border-(--color-border)
                    px-1 py-1.5 text-2xs font-medium">
         {{ __('sales::field.costing') }}
     </button>
     @endcan
 
     <button type="button" @click="clearEntry()"
-            class="w-full rounded-(--radius-field) leading-tight bg-(--color-danger)/10 px-2 py-1.5
+            class="ds-tl-clear w-full rounded-(--radius-field) leading-tight bg-(--color-danger)/10 px-2 py-1.5
                    text-2xs font-medium text-(--color-danger) hover:bg-(--color-danger)/20">
         {{ __('sales::action.clear_data') }}
     </button>

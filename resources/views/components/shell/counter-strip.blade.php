@@ -13,7 +13,14 @@
     <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" style="background: var(--color-warning)">
         {{ __('core.counter.mode') }} · {{ $title }}
     </span>
-    <span class="truncate">{{ $user?->currentCompany?->name() }}@if ($user?->currentBranch) · {{ $user->currentBranch->name() }}@endif</span>
+    {{-- ⭐ কোম্পানি বড় আর মোটা, শাখা হলুদ গোল ঘরে — বেশি চোখে পড়ে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+    <span class="flex min-w-0 items-center gap-2.5">
+        <b class="truncate font-extrabold" style="font-size: 19px">{{ $user?->currentCompany?->name() }}</b>
+        @if ($user?->currentBranch)
+            <span class="shrink-0 rounded-full px-3.5 py-0.5 font-extrabold" style="background: #ffd23f; color: #0b2a66; font-size: 15px"
+                  data-counter-branch>{{ $user->currentBranch->name() }}</span>
+        @endif
+    </span>
     <span class="hidden truncate opacity-80 md:inline">{{ __('core.counter.billing_by', ['name' => $user?->name]) }}</span>
     <span class="ms-auto flex items-center gap-2">
         <x-shell.notification-bell />

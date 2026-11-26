@@ -124,7 +124,7 @@
                      `15 দিনের ব`, `06-09-20`। ⚠️ কাগজের বাক্সে চারটা **ছোট
                      ঘর**, ক্রেতার বাক্সে পাঁচ সারি **লেখা** — জায়গার দরকার
                      দুই জায়গায় সমান নয়। --}}
-                <div class="grid gap-3">
+                <div class="grid gap-3 {{ ($abosLook ?? false) ? 'ds-party' : '' }}">
                             {{-- ⓘ ক্রেতা নিজের কলামে — পরিচয়ের সারিটা নিচে
                                  নামলেও এই কলামটাই তার শুরুর রেখা। --}}
                             {{-- বাক্স ১ · ক্রেতা --}}
@@ -340,7 +340,8 @@
                                      উপরে বসে, তাই সে ক্লিক নেয় না। ⚠️ নামটা
                                      কোনো ক্লিকের লক্ষ্য নয়, তাই কিছুই হারায় না;
                                      `z-10`-এর সাথে এটা **দ্বিতীয় তালা**। --}}
-                                <div class="pointer-events-none ps-11 truncate text-xl font-semibold text-(--color-ink)"
+                                <div class="pointer-events-none ps-11 truncate text-xl font-semibold text-(--color-ink)" data-customer-name
+                                     :class="customerId ? 'ds-name-pill' : ''"
                                      :title="customer.name"
                                      x-text="customer.name || @js(__('sales::message.search_customer'))"></div>
 
@@ -390,7 +391,11 @@
                                                  border border-(--color-brand-500) bg-(--color-surface-selected)
                                                  px-2.5 py-0.5 text-sm font-medium text-(--color-ink)"
                                           :title="customer.location"
-                                          x-text="customer.location"></span>
+                                          @if (($abosLook ?? false))
+                                          x-text="customer.point ? (@js(__('sales::field.point_label')) + ': ' + customer.point) : customer.location"
+                                          @else
+                                          x-text="customer.location"
+                                          @endif></span>
 
                                     {{-- ⓘ পয়েন্টের হুবহু একই ঘর — মালিক
                                          *"সেইভাবে"* বলেছেন।
@@ -432,10 +437,12 @@
                                      ⚠️ কালিটাও এক ধাপ গাঢ় (`ink-muted` → `ink`),
                                      নাহলে বড় হরফেও ওটা ফ্যাকাশে থাকত — মাপ আর
                                      কনট্রাস্ট দুইটা আলাদা জিনিস। --}}
+                                @unless (($abosLook ?? false))
                                 <div x-show="customerId && customer.address" x-cloak
                                      class="mt-1 truncate text-sm text-(--color-ink)"
                                      :title="customer.address"
                                      x-text="customer.address"></div>
+                                @endunless
 
                                 {{-- ── সারি ৪ · মোবাইল, লেবেলসহ ──────────────────
 
@@ -468,6 +475,7 @@
                                      ⚠️ সীমা **শূন্য মানে বাকি বন্ধ**, মাল বন্ধ নয়
                                      — তাই সংখ্যার বদলে "নগদ/অগ্রিম"। ⛔ "০" লিখলে
                                      পড়া হত *"কিছুই দেওয়া যাবে না"*, যেটা ভুল। --}}
+                                @unless (($abosLook ?? false))
                                 <div x-show="customerId" x-cloak
                                      class="mt-0.5 flex flex-wrap items-center gap-x-3 text-2xs text-(--color-ink-muted)">
                                     <span class="whitespace-nowrap">
@@ -506,6 +514,7 @@
                                         </span>
                                     </template>
                                 </div>
+                                @endunless
 
                                 {{-- ⛔ খোলা খসড়া থাকলে নতুন বিল নয় — মালিকের নির্দেশ,
                                      ২৬ সেপ্টেম্বর ২০২৬: আগে খসড়াটা নিশ্চিত, বাতিল বা
@@ -602,6 +611,7 @@
                              না বসালে চালান সেভ হত ক্রেতা ছাড়াই। --}}
                         {{-- ⭐ মন্তব্য (আগের নোট যোগ) — ক্রেতার ঘরের নিচে; বিলে ছাপা হয় (মালিক, ৪ অক্টোবর ২০২৬) --}}
                         {{-- ⭐ "দাম দেখুন" মন্তব্যের লাইনের একদম ডানে — মালিক, ৪ অক্টোবর ২০২৬ (ছবিসহ) --}}
+                        @unless (($abosLook ?? false))
                         <div class="mt-1 flex items-center justify-between gap-2">
                             <button type="button" @click="openPanel('note')"
                                     class="text-2xs font-semibold text-(--color-brand-700)" data-memo>
@@ -615,6 +625,7 @@
                                 <small>F3</small>
                             </button>
                         </div>
+                        @endunless
 
                         <input type="hidden" name="customer_id" x-model="customerId">
                             </div>

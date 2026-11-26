@@ -160,6 +160,7 @@ return [
     'btn_money' => 'Take payment',
     'btn_transport' => 'Vehicle & fare',
     'btn_price' => 'Price check',
+    'point_label' => 'Point',
     'btn_return' => 'Return',
     'btn_delivery' => 'Delivery',
     'btn_drafts' => 'Open draft',

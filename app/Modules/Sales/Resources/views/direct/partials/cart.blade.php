@@ -26,7 +26,7 @@
                         </thead>
 
                         <template x-for="(line, i) in lines" :key="line.key">
-                        <tbody>
+                        <tbody :class="'ds-tone-' + (i % 6)">
                                 <tr class="border-b border-(--color-border)"
                                     :class="line.key === editingKey ? 'bg-(--color-badge-pending-bg)' : ''">
                                     <td class="cell" x-text="i + 1"></td>

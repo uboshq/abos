@@ -196,6 +196,7 @@ return [
     'btn_money' => 'টাকা নিন',
     'btn_transport' => 'গাড়ি ও ভাড়া',
     'btn_price' => 'দাম দেখুন',
+    'point_label' => 'পয়েন্ট',
     'btn_return' => 'ফেরত নিন',
     'btn_delivery' => 'ডেলিভারি',
     'btn_drafts' => 'খসড়া খুলুন',

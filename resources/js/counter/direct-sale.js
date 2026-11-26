@@ -922,6 +922,39 @@ export default function directSale({
             return '';
         },
 
+        /** ⭐ নেওয়া টাকা কোন পথে কত — "Cash ৳2,000.00 · bKash ৳1,000.00" (মালিক, ২৬ নভেম্বর ২০২৬) */
+        get depositBreakdown() {
+            return this.deposits
+                .filter(d => Number(d.amount || 0) > 0)
+                .map(d => this.depositMethodName(d.methodId) + ' ৳' + this.money(d.amount))
+                .join(' · ');
+        },
+
+        /** ⭐ মজুদ বড় এককে — "= 8 ctn 4 pcs"; বড় প্যাক না থাকলে খালি */
+        packText(n) {
+            const total = Number(n || 0);
+            const units = this.entryUnits.filter(u => Number(u.factor || 0) > 1);
+
+            if (total <= 0 || units.length === 0) return '';
+
+            const big = units.reduce((a, u) => (Number(u.factor) > Number(a.factor) ? u : a));
+            const f = Number(big.factor);
+            const whole = Math.floor(total / f);
+            const rest = Math.round((total - whole * f) * 100) / 100;
+
+            return '= ' + whole + ' ' + (big.label || big.name) + (rest > 0 ? ' ' + rest + ' ' + ((this.picked && this.picked.unit) || '') : '');
+        },
+
+        /** ⭐ পরিমাণের সারিতে Enter = কার্টে দিন — কেবল ঘর থেকে, বোতাম থেকে নয় (মালিক, ২৬ নভেম্বর ২০২৬) */
+        enterAdds(e) {
+            const t = e.target;
+
+            if (! t || (t.tagName !== 'INPUT' && t.tagName !== 'SELECT') || e.isComposing) return;
+
+            e.preventDefault();
+            this.addToCart();
+        },
+
         get deliveryModeLabel() {
             return String((texts.modes ?? {})[this.deliveryMode || 'take_now'] ?? '');
         },

@@ -160,6 +160,12 @@
     {{-- ⭐ সরাসরি বিক্রয়ের চূড়ান্ত নকশা — মালিক, ৪ অক্টোবর ২০২৬ ("ok final ekhoni eti planer 100% live daw")।
          ⓘ নিজের ছোট CSS, কারণ Tailwind-এর বান্ডেল আগে থেকে বানানো — নতুন `[...]` শ্রেণি ওতে নেই।
          ⚠️ রং কেবল থিমের টোকেন (`--color-*`), হাতে লেখা রং নয় — নয়টা থিমেই মানায়। --}}
+    {{-- ⭐ নতুন সাজ কেবল ABOS-এর তিন রূপে (ABOS · Navy · Blue) — মালিক, ২৬ নভেম্বর ২০২৬: SAP/Dynamic/Odoo নিজের ধাঁচে থাকে --}}
+    @php
+        $abosLook = in_array(
+            \App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)),
+            \App\Core\Support\Ui::FOLD_MENU_LOOKS, true);
+    @endphp
     <style @nonce>
         .ds-gold { border-left: 6px solid var(--color-brand-gold) !important; }
         .ds-top { display: grid; gap: .5rem .75rem; align-items: start; }
@@ -272,13 +278,114 @@
             .ds-side { position: sticky; top: .75rem; align-self: start; max-height: calc(100dvh - 6.4rem); }
             .ds-side > aside { min-height: 0; flex: 1 1 auto; }
         }
+        /* ════ ⭐ সরাসরি বিক্রয় — নতুন নকশা, কেবল ABOS-এর তিন রূপে (ABOS · Navy · Blue); SAP/Dynamic/Odoo আগের মতো
+           (মালিক, ২৬ নভেম্বর ২০২৬ — নমুনা sales-counter, ব্রাউজারে দেখানো)। ⓘ রংগুলো মালিকের নিজের বাছা:
+           উপরের সারি লোগোর টিল (#08b8c8, "ABOS" রং), ডানের বাক্স রং-বাছাইয়ের টকটকে গোলাপি (#ff00aa)। ════ */
+        form[data-abos-counter] .ds-head { border-radius: 18px; background: #08b8c8; padding: .55rem 1rem; margin-bottom: .6rem; }
+        form[data-abos-counter] .ds-party { grid-template-columns: minmax(0, 24rem) minmax(0, 1fr) !important; gap: 0 !important; align-items: center; }
+        form[data-abos-counter] .ds-party > div:first-child { border: 0 !important; border-right: 2px solid rgb(255 255 255 / .7) !important;
+            border-radius: 0 !important; background: transparent !important; box-shadow: none !important; padding: 0 1rem 0 0 !important; }
+        form[data-abos-counter] .ds-head .ds-paper { border-bottom: 0; padding: 0 0 0 1rem; }
+        form[data-abos-counter] .ds-head .ds-paper > label > span:first-child { color: #053b44; font-weight: 700; }
+        form[data-abos-counter] .ds-head .ds-paper :is(input, select) { background: #fff !important; border-color: #fff !important; color: #1f2a3d; }
+        form[data-abos-counter] .ds-name-pill { display: inline-block; max-width: calc(100% - 2.75rem); margin-inline-start: 2.75rem;
+            padding: .05rem .9rem !important; border-radius: 12px; background: #0b3b5c; color: #fff !important; font-weight: 800; }
+        form[data-abos-counter] .ds-head [data-customer-details] span.rounded-full { background: #fff !important; border-color: #fff !important;
+            color: #0b6c7a !important; font-weight: 600; }
+        form[data-abos-counter] .ds-head [data-customer-details] span.rounded-full * { color: #0b6c7a !important; }
+        form[data-abos-counter] .ds-row2 { display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: .75rem; align-items: start; }
+        form[data-abos-counter] .ds-row2-empty { grid-template-columns: minmax(0, 1fr); }
+        form[data-abos-counter] .ds-row2-empty :is(.ds-rcpt, .ds-qtywrap, [data-stock-box]) { display: none !important; }
+        form[data-abos-counter] .ds-pick-hint { display: none !important; }
+        /* পণ্যের সারি আর তার উপরের মজুদের বাক্স — একই কলাম, সোজাসুজি (মালিক: "অ্যাভেলেবেল … পরিমাণ আর এককের ঘর পর্যন্ত") */
+        form[data-abos-counter] .ds-qtyrow, form[data-abos-counter] .ds-stockrow {
+            grid-template-columns: repeat(4, minmax(0, 1fr)) 5.5rem 7rem auto auto auto !important; column-gap: .375rem; }
+        form[data-abos-counter] :is(.ds-qtyrow, .ds-stockrow).ds-nofree {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) 5.5rem 7rem auto auto auto !important; }
+        form[data-abos-counter] .ds-stockrow { display: grid; row-gap: .4rem; margin-top: .5rem; }
+        form[data-abos-counter] .ds-sb { min-width: 0; border-radius: 12px; border: 1px solid var(--sb-ink); background: var(--sb-bg); padding: .3rem .6rem; color: var(--sb-ink); }
+        form[data-abos-counter] .ds-sb-l { display: block; font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+        form[data-abos-counter] .ds-sb-v { display: flex; align-items: baseline; gap: .35rem; white-space: nowrap; overflow: hidden; }
+        form[data-abos-counter] .ds-sb-v b { font-size: 1.15rem; }
+        form[data-abos-counter] .ds-sb-v small { font-size: .7rem; }
+        form[data-abos-counter] .ds-sb-v .ds-sb-pack { color: #4b5a70; overflow: hidden; text-overflow: ellipsis; }
+        form[data-abos-counter] .ds-sb-blue { --sb-bg: #dbeafe; --sb-ink: #1d4ed8; }
+        form[data-abos-counter] .ds-sb-green { --sb-bg: #dcfce7; --sb-ink: #15803d; }
+        form[data-abos-counter] .ds-sb-amber { --sb-bg: #fef3c7; --sb-ink: #b45309; }
+        form[data-abos-counter] .ds-sb-red { --sb-bg: #fee2e2; --sb-ink: #b91c1c; }
+        form[data-abos-counter] .ds-sb-violet { --sb-bg: #ede9fe; --sb-ink: #6d28d9; }
+        /* পরিমাণ আর একক বড়; মাথার লেখায় রং — পরিমাণ নীল, ফ্রি সবুজ, মোট কমলা, দাম বেগুনি */
+        form[data-abos-counter] .ds-qtyrow > :nth-child(-n+2) :is(input, select) { height: 2.6rem; font-size: 1.05rem; font-weight: 700; border: 2px solid #1d4ed8; }
+        form[data-abos-counter] .ds-qtyrow > :nth-child(-n+2) > span:first-child { color: #1d4ed8; }
+        form[data-abos-counter] .ds-qtyrow:not(.ds-nofree) > :is(:nth-child(3), :nth-child(4)) :is(input, select) { height: 2.6rem; font-size: 1.05rem; font-weight: 700; border: 2px solid #15803d; }
+        form[data-abos-counter] .ds-qtyrow:not(.ds-nofree) > :is(:nth-child(3), :nth-child(4)) > span:first-child { color: #15803d; }
+        form[data-abos-counter] .ds-qtyrow [data-total-qty] { height: 2.6rem; border-color: #c2410c; }
+        form[data-abos-counter] .ds-qtyrow label:has([data-total-qty]) > span:first-child { color: #c2410c; }
+        form[data-abos-counter] .ds-qtyrow [data-price-source] { height: 2.6rem; border: 2px solid #6d28d9; }
+        form[data-abos-counter] .ds-qtyrow label:has([data-price-source]) > span:first-child { color: #6d28d9; }
+        form[data-abos-counter] .ds-gift-btn { align-self: end; display: inline-flex; align-items: center; gap: .25rem; height: var(--spacing-field-dense);
+            white-space: nowrap; border-radius: var(--radius-field); border: 1px solid #f9a8d4; background: #fdf2f8; color: #be185d; padding: 0 .6rem; font-size: .75rem; font-weight: 700; }
+        form[data-abos-counter] .ds-gift-btn:disabled { opacity: .45; }
+        /* "এই লাইন"-এর তিন বোতাম — গাঢ় রঙে সাদা লেখা */
+        form[data-abos-counter] .ds-rcpt .grid > button.ds-tl-price { background: #1e3a8a !important; color: #fff !important; font-weight: 700; }
+        form[data-abos-counter] .ds-rcpt .grid > button.ds-tl-cost { background: #d97706 !important; color: #fff !important; border-color: #d97706 !important; font-weight: 700; }
+        form[data-abos-counter] .ds-rcpt .grid > button.ds-tl-clear { background: #dc2626 !important; color: #fff !important; font-weight: 700; }
+        /* তালিকা — মাথা গাঢ় নীল, প্রতিটা পণ্য নিজের হালকা রঙে, দাগ থাকে */
+        form[data-abos-counter] .ds-cart-scroll thead th { background: #123b86 !important; color: #fff !important; }
+        form[data-abos-counter] .ds-cart-scroll tbody > tr:first-child > td { border-bottom: 1px solid #cdd7e6; }
+        form[data-abos-counter] tbody.ds-tone-0 > tr:first-child > td { background: #e3eeff; }
+        form[data-abos-counter] tbody.ds-tone-1 > tr:first-child > td { background: #e2f7e8; }
+        form[data-abos-counter] tbody.ds-tone-2 > tr:first-child > td { background: #fff3d6; }
+        form[data-abos-counter] tbody.ds-tone-3 > tr:first-child > td { background: #fce4f1; }
+        form[data-abos-counter] tbody.ds-tone-4 > tr:first-child > td { background: #ece6ff; }
+        form[data-abos-counter] tbody.ds-tone-5 > tr:first-child > td { background: #dcf5f8; }
+        /* ডান পাশ — পুরোটা টকটকে গোলাপিতে; ভিতরে সাদা গোল বাক্স; বোতাম সবসময় দেখা যায় (নিচে আটকানো) */
+        form[data-abos-counter] .ds-side > aside.ds-tot-abos { background: #ff00aa !important; border: 0 !important; border-radius: 20px !important;
+            box-shadow: none !important; padding: .55rem; }
+        form[data-abos-counter] .ds-tot-abos > div:first-child { background: transparent !important; }
+        form[data-abos-counter] .ds-tot-card { background: #fff; border-radius: 16px; overflow: hidden; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1 { padding: 0 !important; background: #fff !important; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1 > * { margin: 0 !important; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1 > :not([data-tone]) { padding-inline: .75rem; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1 > :first-child { padding: .55rem .75rem; border-bottom: 0; }
+        form[data-abos-counter] .ds-tot-card [data-tone] { padding: .3rem .75rem; }
+        form[data-abos-counter] .ds-tot-card [data-tone='w'] { background: #fff; }
+        form[data-abos-counter] .ds-tot-card [data-tone='l'] { background: #eef4ff; }
+        form[data-abos-counter] .ds-tot-card [data-tone='s'] { background: #dce8ff; }
+        form[data-abos-counter] .ds-tot-card [data-tone='net'] { background: #4338ca; color: #fff; font-weight: 700; }
+        form[data-abos-counter] .ds-tot-card [data-tone='net'] * { color: #fff !important; }
+        form[data-abos-counter] .ds-tot-card [data-tone='due'] { background: #ffedd5; color: #9a3412; font-weight: 700; }
+        form[data-abos-counter] .ds-tot-card [data-tone='due'] * { color: #9a3412 !important; }
+        form[data-abos-counter] .ds-dep-sub { background: #eef4ff; padding: 0 .75rem .25rem 1.4rem !important; font-size: .65rem; color: #4b5a70; }
+        form[data-abos-counter] .ds-out { background: #dce8ff; padding: .45rem .6rem !important; }
+        form[data-abos-counter] .ds-out > [data-sign='adv'] { background: #15803d !important; color: #fff !important; }
+        form[data-abos-counter] .ds-out > [data-sign='due'] { background: #dc2626 !important; color: #fff !important; }
+        form[data-abos-counter] .ds-credit { background: #dce8ff; padding: 0 .6rem .55rem !important; }
+        form[data-abos-counter] .ds-limit { background: #fff; border: 1px solid #c7d4ea; border-radius: 10px; padding: .3rem .7rem; }
+        form[data-abos-counter] .ds-tot-abos [data-count-tiles] { background: #fff !important; border: 0 !important; border-radius: 16px; margin-top: .5rem; padding: .4rem !important; }
+        form[data-abos-counter] .ds-tot-abos [data-tile] { border: 0 !important; border-radius: 12px !important; }
+        form[data-abos-counter] .ds-tot-abos [data-tile] > span:last-child { font-size: 1.2rem; }
+        form[data-abos-counter] .ds-tot-abos [data-tile='total_item'] { background: #dbeafe !important; }
+        form[data-abos-counter] .ds-tot-abos [data-tile='total_item'] * { color: #1e40af !important; }
+        form[data-abos-counter] .ds-tot-abos [data-tile='sales_qty'] { background: #ede9fe !important; }
+        form[data-abos-counter] .ds-tot-abos [data-tile='sales_qty'] * { color: #6d28d9 !important; }
+        form[data-abos-counter] .ds-tot-abos [data-tile='free_qty_total'] { background: #dcfce7 !important; }
+        form[data-abos-counter] .ds-tot-abos [data-tile='free_qty_total'] * { color: #15803d !important; }
+        form[data-abos-counter] .ds-tot-abos [data-tile='total_qty'] { background: #fef3c7 !important; }
+        form[data-abos-counter] .ds-tot-abos [data-tile='total_qty'] * { color: #b45309 !important; }
+        form[data-abos-counter] .ds-details { background: #fff; border-radius: 16px; margin-top: .5rem; padding: .3rem .8rem; }
+        form[data-abos-counter] .ds-det { display: flex; width: 100%; align-items: baseline; gap: .45rem; padding: .12rem 0; text-align: start; font-size: .72rem; }
+        form[data-abos-counter] .ds-det > i { width: 9px; height: 9px; flex: none; align-self: center; border-radius: 999px; }
+        form[data-abos-counter] .ds-det > b { white-space: nowrap; color: #1f2a3d; }
+        form[data-abos-counter] .ds-det > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #4b5a70; }
+        form[data-abos-counter] .ds-tot-abos > div:last-child { border: 0 !important; background: transparent !important; padding: .5rem 0 0 !important; }
     </style>
 
     {{-- ⓘ `data-confirm-overview` — নিশ্চিতের আগে সারাংশের পপ-আপ (abos-2c) এই ফর্ম চেনে --}}
     {{-- ⛔ `hasErrors` কেবল এই ফর্মের নিজের ফেরত (সাথে পাঠানো সারি, `old('lines')`) — অন্য পাতার ভুল এখানে ফিরলে (যেমন ছাপার
          দরজা) পাঠানো, হয়তো পাকা, কার্টটা আবার পর্দায় বসত (মালিক, ৫ অক্টোবর ২০২৬: "কনফার্মের পরে লিস্ট খালি")।
          `@pageshow.window` — পাঠানো পাতা ব্রাউজারের স্মৃতি থেকে ফিরলে কার্ট মুছে নতুন করে খোলে ([[direct-sale.js]] `onPageShow`)। --}}
-    <form method="POST" action="{{ route('sales.direct.store') }}" data-confirm-overview="{{ route('sales.direct.overview') }}"
+    <form method="POST" action="{{ route('sales.direct.store') }}" data-confirm-overview="{{ route('sales.direct.overview') }}" @if ($abosLook) data-abos-counter @endif
           x-data="directSale({
               catalogue: @js($products),
               margin: @js($margin),
@@ -423,6 +530,10 @@
 
           class="grid gap-3 xl:grid-cols-[1fr_17rem]">
         @csrf
+        {{-- ⭐ কাউন্টার মোড — জমার পরেও একই ট্যাবে কাউন্টার মোডে নতুন খালি বিল (মালিক, ২৬ নভেম্বর ২০২৬; [[CounterMode]]) --}}
+        @if (\App\Core\Support\CounterMode::wanted())
+            <input type="hidden" name="{{ \App\Core\Support\CounterMode::PARAM }}" value="1">
+        @endif
 
 
         {{-- ⭐ রাখা খসড়া — মালিকের নকশা, ২৬ সেপ্টেম্বর ২০২৬: "খসড়া রাখুন"
@@ -802,7 +913,15 @@
 
                  এক কলামে সব থাকলে ওরা একটার পিঠে আরেকটা বসে, আর ডান
                  পাশের উচ্চতা কিছুই টানে না। --}}
-            <div class="min-w-0 space-y-3 lg:col-start-1">
+            {{-- ⭐ ABOS-এর রূপে: গ্রাহক + তারিখের ঘর এক টিল বাক্সে, নিচে পণ্য আর "এই লাইন" পাশাপাশি; পণ্য না বাছা থাকলে
+                 শুধু খোঁজার সারি, তালিকা পুরো উচ্চতা (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+            @if ($abosLook)
+            <div class="ds-head">
+                @include('sales::direct.partials.party', ['part' => 'both'])
+            </div>
+            <div class="ds-row2" :class="(picked || editingKey !== null) ? '' : 'ds-row2-empty'">
+            @endif
+            <div class="min-w-0 space-y-3 {{ $abosLook ? '' : 'lg:col-start-1' }}">
                 {{--
                     ⚠️ সবুজ উপরের রেখাটা তুলে দেওয়া হলো (৩ সেপ্টেম্বর ২০২৬)।
 
@@ -826,7 +945,9 @@
                      ⛔ না সরালে বাক্সের ভিতরে বাক্স হত — তিনটা
                      সীমানা পাশাপাশি, আর মালিক ঠিক ঐ এলোমেলো
                      রেখাগুলোর কথাই বলছেন। --}}
-                @include('sales::direct.partials.party', ['part' => 'paper'])
+                @unless ($abosLook)
+                    @include('sales::direct.partials.party', ['part' => 'paper'])
+                @endunless
                 {{--
                     ── পণ্য খোঁজা ও লাইনের ঘর — স্ট্রিপের ঠিক নিচে ──────────
 
@@ -925,6 +1046,9 @@
                          ⭐ এখন দুইটাই এক মোড়কে, আর মোড়কটাই ছক-ঘর। ⓘ `space-y-2`
                          বোতামগুলোকে প্যানেলের ঠিক নিচে এনে বসায়, ফাঁক ছাড়া। --}}
                     @include('sales::direct.partials.this-line')
+            @if ($abosLook)
+            </div>{{-- ds-row2 --}}
+            @endif
                     {{--
                         ── ছবির ঘরটা তুলে দেওয়া হলো (৩ সেপ্টেম্বর ২০২৬) ──────
 
@@ -962,7 +1086,9 @@
              বাইরে বেরিয়ে যেত। --}}
         {{-- ⭐ ক্রেতার বাক্স বিলের মোটের ঠিক উপরে — মালিক, ৪ অক্টোবর ২০২৬। ⚠️ দুইটাই ফর্মের ভিতরে (লুকানো customer_id) --}}
         <div class="ds-side min-w-0">
-            @include('sales::direct.partials.party', ['part' => 'customer'])
+            @unless ($abosLook)
+                @include('sales::direct.partials.party', ['part' => 'customer'])
+            @endunless
             @include('sales::direct.partials.totals')
         </div>
 

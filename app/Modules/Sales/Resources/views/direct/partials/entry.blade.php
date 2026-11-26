@@ -1,5 +1,16 @@
                 {{-- ⓘ নিজের বাক্স নেই — বিলের ঘরগুলোর সাথে এক সোনালি বাক্সে (মালিক, ৪ অক্টোবর ২০২৬) --}}
-                <section data-boxed class="min-w-0">
+                {{-- ⭐ ⋯ → সম্পাদনা: এই অংশটাই পপআপ হয়ে পর্দার মাঝে বসে (মালিক, ২৬ নভেম্বর ২০২৬) — কেবল ABOS-এর রূপে --}}
+                @if (($abosLook ?? false))
+                    <div x-show="editingKey !== null" x-cloak @click="clearEntry()" class="fixed inset-0 z-50 bg-black/45"></div>
+                @endif
+                <section data-boxed class="min-w-0" @if (($abosLook ?? false)) :class="editingKey !== null ? 'entry-as-popup' : ''" @endif>
+                    @if (($abosLook ?? false))
+                        <div x-show="editingKey !== null" x-cloak class="mb-3 flex items-center justify-between border-b border-(--color-border) pb-2">
+                            <h2 class="text-base font-semibold">{{ __('purchase::action.edit_line') }}</h2>
+                            <button type="button" @click="clearEntry()" aria-label="{{ __('purchase::action.close_panel') }}"
+                                    class="rounded-(--radius-field) px-2 text-xl leading-none text-(--color-ink-muted) hover:bg-(--color-surface-hover)">&times;</button>
+                        </div>
+                    @endif
 
                     {{-- বাঁ: খোঁজা ও ঘরগুলো।
 
@@ -230,7 +241,7 @@
 
                         {{-- বাছাই করা পণ্যের মজুদ — নমুনা দাবি করে এটা পণ্য
                              বাছার সাথে সাথেই দেখা যাবে --}}
-                        <p class="mt-1 text-2xs text-(--color-ink-muted)" x-show="! picked" x-cloak>
+                        <p class="ds-pick-hint mt-1 text-2xs text-(--color-ink-muted)" x-show="! picked" x-cloak>
                             {{ __('sales::message.pick_item_to_see_stock') }}
                         </p>
 
@@ -256,6 +267,34 @@
                         --}}
                         {{-- ⭐ হাইলাইট বাক্সে — মালিক, ৬ অক্টোবর ২০২৬: *"এগুলো একটা হাইলাইট বক্সে দিয়ে দাও"*।
                              ⓘ টোকেনের রং (brand-50 / brand-400), তাই অন্ধকার থিমেও মেলে; ক্লাসগুলো বানানো CSS-এ আছে। --}}
+                        @if (($abosLook ?? false))
+                        {{-- ⭐ মজুদ — আলাদা রঙিন বাক্সে, নিচের ঘরের সোজাসুজি: "Available" পরিমাণ আর এককের উপরে, "Free" ফ্রি আর তার
+                             এককের উপরে, বাকিগুলো পরে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+                        <div class="ds-stockrow {{ $show['free_qty'] ? '' : 'ds-nofree' }}" x-show="picked" x-cloak data-stock-box>
+                            @foreach (array_values(array_filter([
+                                ['available', 'sales::field.available_short', 'ds-sb-blue', 2],
+                                $show['free_qty'] ? ['free_available', 'sales::field.free_available', 'ds-sb-green', 2] : null,
+                                ['reserved', 'sales::field.reserved_short', 'ds-sb-amber', 1],
+                                ['hold', 'sales::field.hold_short', 'ds-sb-red', 1],
+                                ['main', 'sales::field.main_stock', 'ds-sb-violet', 3],
+                            ])) as [$key, $label, $tone, $span])
+                                <div class="ds-sb {{ $tone }}" style="grid-column: span {{ $span }}" data-stock="{{ $key }}">
+                                    <span class="ds-sb-l">{{ __($label) }}</span>
+                                    <span class="ds-sb-v">
+                                        <b class="num" x-text="qty(picked && picked.{{ $key }})"></b>
+                                        <small x-text="(picked && picked.unit) || ''"></small>
+                                        @if ($span === 2)
+                                            <small class="ds-sb-pack" x-text="packText(picked && picked.{{ $key }})"></small>
+                                        @endif
+                                        @if ($key === 'main')
+                                            <small class="ds-sb-pack" x-show="freeRatio" x-cloak data-free-ratio
+                                                   x-text="@js(__('sales::field.free_ratio')) + ' ' + freeRatio"></small>
+                                        @endif
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+                        @else
                         <div class="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-(--radius-field) border border-(--color-brand-400) bg-(--color-brand-50) px-3 py-2"
                              x-show="picked" x-cloak data-stock-box>
                             @foreach ([
@@ -300,6 +339,7 @@
                                 <span class="num font-bold text-(--color-success)" x-text="freeRatio"></span>
                             </span>
                         </div>
+                        @endif
 
                         {{-- খোঁজার ফল — **ভাসমান**, প্রবাহের ভিতরে নয়।
 
@@ -444,13 +484,14 @@
                          সরু পর্দায় সারিটা ধরবে না, আর তখন **চেপে অপাঠ্য
                          হওয়ার বদলে সে স্ক্রল করবে**। ⓘ পাতার শরীর কখনো
                          আড়াআড়ি স্ক্রল করে না, কেবল এই সারিটাই। --}}
-                    <div class="mt-3 max-w-screen-2xl overflow-x-auto">
+                    <div class="ds-qtywrap mt-3 max-w-screen-2xl overflow-x-auto">
                     {{-- ⚠️ `min-w-max` নয়: ওটা দিলে নমনীয় ঘর দুইটা সবসময়
                          তাদের **সবচেয়ে বড়** মাপ নিত (মাপা: ২১৬px), আর সারিটা
                          চওড়া পর্দাতেও অকারণে স্ক্রল করত। ⓘ সর্বনিম্ন মাপই
                          যথেষ্ট — জায়গা থাকলে তারা বাড়ে, না থাকলে মোড়কটা
                          স্ক্রল করে। --}}
-                    <div class="ds-qtyrow grid items-end gap-2 grid-cols-2 sm:grid-cols-3
+                    {{-- ⭐ এই সারির যেকোনো ঘরে Enter = "কার্টে দিন" (মালিক, ২৬ নভেম্বর ২০২৬: "এন্টার দিলে … অ্যাড টু কার্ট") --}}
+                    <div @keydown.enter="enterAdds($event)" class="ds-qtyrow {{ $show['free_qty'] ? '' : 'ds-nofree' }} grid items-end gap-2 grid-cols-2 sm:grid-cols-3
                                 lg:grid-cols-[3.5rem_4rem_3.5rem_4rem_minmax(4.5rem,1fr)_minmax(5.5rem,1fr)_auto]
                                 gap-x-1.5">
                             <x-sales::entry-field label="sales::field.qty" width="w-full">
@@ -598,6 +639,12 @@
                                  ঘরগুলোর **নিচের কিনারায়** বসে, লেবেলের সারিতে
                                  উঠে না যায়। --}}
                             {{-- ⓘ কেবল-দেখার বিলে লুকানো — চাপলে কিছু হত না (63, ৪ অক্টোবর ২০২৬); সম্পাদনা ব্যানারের ✎ দিয়ে --}}
+                            {{-- ⭐ উপহার এখন কার্টের ঠিক আগে, উপহারের চিহ্নসহ (মালিক, ২৬ নভেম্বর ২০২৬) — কেবল ABOS-এর রূপে --}}
+                            @if (($abosLook ?? false) && $show['gift'])
+                                <button type="button" @click="openGift()" :disabled="! picked" x-show="! viewOnly" class="ds-gift-btn" data-gift-button>
+                                    🎁 {{ __('sales::field.gift') }}
+                                </button>
+                            @endif
                             <button type="button" @click="addToCart()" :disabled="! picked" x-show="! viewOnly"
                                     class="inline-flex h-(--spacing-field-dense) items-center gap-1 self-end whitespace-nowrap
                                            rounded-(--radius-field) bg-(--color-success) px-3 text-xs font-semibold

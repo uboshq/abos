@@ -29,6 +29,7 @@
 
 {{-- ⭐ যা যোগ হলো — চারটা ছোট কার্ড, আগের নকশার মতো (মালিক, ৪ অক্টোবর ২০২৬); চাপলে নিজের পপ-আপ।
      ⓘ গাড়ি ও ভাড়ার লাইনটা এখানে, "ফেরত"-এর জায়গায় (মালিকের ছবি)। --}}
+@unless (($abosLook ?? false))
 <div class="ds-cards" data-counter-cards>
     @if ($show['deposit'])
         <button type="button" @click="openPanel('deposit')" class="ds-card ds-b8-success">
@@ -54,6 +55,7 @@
         </button>
     @endif
 </div>
+@endunless
 
 {{--
     ── নেওয়া জমাগুলোর তালিকা — চার্টের নিচে, বাম পাশে ──────────
