@@ -35,9 +35,9 @@
             @forelse ($openBills as $n => $bill)
                 <div class="mb-1 flex items-center gap-2 text-sm">
                     <span class="flex-1">{{ $bill->document_no }} <span class="text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($bill->trx_date) }}</span></span>
-                    <span class="num text-2xs text-(--color-ink-muted)">{{ __('sales::slip.bill_due') }} {{ \App\Core\Support\Money::format($bill->dueAmount()) }}</span>
+                    <span class="num text-2xs text-(--color-ink-muted)">{{ __('sales::slip.bill_due') }} {{ \App\Core\Support\Money::format($bill->ownDue()) }}</span>
                     <input type="hidden" name="bills[{{ $n }}][invoice]" value="{{ $bill->public_id }}">
-                    <input type="number" step="0.01" min="0" max="{{ bcadd($bill->dueAmount(), '0', 2) }}"
+                    <input type="number" step="0.01" min="0" max="{{ bcadd($bill->ownDue(), '0', 2) }}"
                            name="bills[{{ $n }}][amount]" value="{{ old('bills.'.$n.'.amount') }}"
                            aria-label="{{ __('sales::slip.bill_pay') }} {{ $bill->document_no }}"
                            class="num h-(--spacing-field) w-32 shrink-0 rounded-(--radius-field) border

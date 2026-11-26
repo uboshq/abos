@@ -155,7 +155,7 @@ class DepositRequestController extends Controller implements HasMiddleware
             'no' => (string) $i->document_no,
             'date' => $i->trx_date?->toDateString(),
             'total' => bcadd((string) $i->total, '0', 2),
-            'due' => bcadd($i->dueAmount(), '0', 2),
+            'due' => bcadd($i->ownDue(), '0', 2),
         ])->values()]);
     }
 

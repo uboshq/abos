@@ -239,7 +239,7 @@ class CollectionController extends Controller implements HasMiddleware
     private function toTheReceipt(?int $customerId, ?SalesInvoice $invoice): RedirectResponse
     {
         $due = $invoice === null ? null
-            : SalesInvoice::query()->withCollected()->whereKey($invoice->id)->first()?->dueAmount();
+            : SalesInvoice::query()->withCollected()->whereKey($invoice->id)->first()?->ownDue();
 
         return redirect()
             ->route('accounts.voucher.create', array_filter([

@@ -47,10 +47,10 @@
             $chosen[] = ['id' => (string) $id, 'amount' => $amount];
         }
     } elseif ($invoice !== null) {
-        $chosen[] = ['id' => (string) $invoice->public_id, 'amount' => $invoice->dueAmount()];
+        $chosen[] = ['id' => (string) $invoice->public_id, 'amount' => $invoice->ownDue()];
     }
 
-    $amount = old('amount', $isNew ? ($invoice !== null ? $money($invoice->dueAmount()) : '') : $money($collection->amount));
+    $amount = old('amount', $isNew ? ($invoice !== null ? $money($invoice->ownDue()) : '') : $money($collection->amount));
     $differenceKind = old('difference.kind', $collection->difference_kind);
     $differenceAmount = old('difference.amount', $collection->difference_amount !== null && bccomp((string) $collection->difference_amount, '0', 4) > 0 ? $money($collection->difference_amount) : '');
 

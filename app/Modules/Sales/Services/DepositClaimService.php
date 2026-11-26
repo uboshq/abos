@@ -169,7 +169,7 @@ final class DepositClaimService
             ->withCollected()
             ->orderBy('trx_date')->orderBy('id')
             ->get()
-            ->filter(fn (SalesInvoice $invoice) => bccomp($invoice->dueAmount(), '0', 4) > 0)
+            ->filter(fn (SalesInvoice $invoice) => bccomp($invoice->ownDue(), '0', 4) > 0)
             ->take($limit)
             ->values();
     }
@@ -212,7 +212,7 @@ final class DepositClaimService
                 throw ValidationException::withMessages(['bills' => __('sales::slip.bill_twice', ['no' => $invoice->document_no])]);
             }
 
-            $due = $invoice->dueAmount();
+            $due = $invoice->ownDue();
             if (bccomp($share, $due, 4) > 0) {
                 throw ValidationException::withMessages(['bills' => __('sales::slip.bill_over_due', [
                     'no' => $invoice->document_no, 'due' => Money::format($due),
@@ -265,7 +265,7 @@ final class DepositClaimService
                 continue;
             }
 
-            $share = self::least(Money::of((string) ($bill['amount'] ?? '0')), $invoice->dueAmount(), $left);
+            $share = self::least(Money::of((string) ($bill['amount'] ?? '0')), $invoice->ownDue(), $left);
             if (bccomp($share, '0', 4) <= 0) {
                 continue;
             }
@@ -302,7 +302,7 @@ final class DepositClaimService
                 break;
             }
 
-            $share = self::least($bill->dueAmount(), $left);
+            $share = self::least($bill->ownDue(), $left);
 
             if (bccomp($share, '0', 4) <= 0) {
                 continue;

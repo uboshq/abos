@@ -150,7 +150,7 @@ final class AVoucherSettlesOnlyThePaperItFitsTest extends TestCase
         $this->assertRefused(fn () => $this->settleWith(Voucher::RECEIPT, '1500', 'sales_invoice', $invoice->id, $lines('1500'), $party), 'against_wrong_amount');
 
         $this->settleWith(Voucher::RECEIPT, '400', 'sales_invoice', $invoice->id, $lines('400'), $party);
-        $this->assertSame(0, bccomp($invoice->fresh()->dueAmount(), '600', 4), 'আংশিক আদায় বিলের বাকি কমাল না।');
+        $this->assertSame(0, bccomp($invoice->fresh()->ownDue(), '600', 4), 'আংশিক আদায় বিলের বাকি কমাল না।');
     }
 
     public function test_a_paper_that_does_not_exist_cannot_be_settled(): void

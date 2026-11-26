@@ -117,7 +117,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         $this->assertSame('250.0000', $this->dr(StandardChart::ADVANCE_INCOME_TAX, $collection), '⛔ দফা ৫: গ্রাহকের কাটা AIT ১১৩৫-এ Dr হয়নি');
         $this->assertSame('9000.0000', $this->drOn($this->bank->id, $collection), '⛔ দফা ৫: ব্যাংকে যা এল খাতায় তা Dr হয়নি');
         $this->assertSame('10000.0000', $this->customerCr($collection), '⛔ দফা ৫: গ্রাহকের পাওনা পুরো ১০,০০০ (টাকা + VDS + AIT) কমেনি');
-        $this->assertSame(0, bccomp($bill->fresh()->dueAmount(), '0', 4), '⛔ দফা ৫: কাটা অংশসহ বিলটা শোধ দেখায় না');
+        $this->assertSame(0, bccomp($bill->fresh()->ownDue(), '0', 4), '⛔ দফা ৫: কাটা অংশসহ বিলটা শোধ দেখায় না');
         $this->balanced($collection);
     }
 
@@ -582,7 +582,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
         ]]);
 
         $this->assertSame(DocumentStatus::CONFIRMED, $second->status, '⛔ দফা ৩: ক্রেডিটসহ আদায় পোস্ট হয়নি — '.json_encode($this->errors()?->all()));
-        $this->assertSame(0, bccomp($bill->fresh()->dueAmount(), '0', 4), '⛔ দফা ৩: ক্রেডিট (৫০০) আর টাকায় (৭০০) বিলটা শোধ দেখায় না');
+        $this->assertSame(0, bccomp($bill->fresh()->ownDue(), '0', 4), '⛔ দফা ৩: ক্রেডিট (৫০০) আর টাকায় (৭০০) বিলটা শোধ দেখায় না');
         $this->assertSame('700.0000', $this->customerCr($second), '⛔ দফা ৩: ক্রেডিটের কাটাকাটি নতুন টাকা হিসেবে খাতায় বসল');
         $this->assertSame(1, CollectionApplication::query()->where('collection_id', $second->id)->where('kind', 'credit')
             ->where('target_invoice_id', $bill->id)->count(), '⛔ দফা ৩: ক্রেডিটটা বিলে বসার লেখা নেই');
@@ -630,7 +630,7 @@ final class TheCollectionFormPostsWhatTheDesignSaysTest extends TestCase
 
         $collection = $this->book(['amount' => '400', 'lines_given' => '1']);
 
-        $this->assertSame(0, bccomp($bill->fresh()->dueAmount(), '400', 4), '⛔ দফা ৩: টিক না দিলেও বিলে টাকা বসল');
+        $this->assertSame(0, bccomp($bill->fresh()->ownDue(), '400', 4), '⛔ দফা ৩: টিক না দিলেও বিলে টাকা বসল');
         $this->assertSame(0, bccomp((string) $collection->unapplied, '400', 4), '⛔ দফা ৩: টিকহীন আদায় অপ্রয়োগকৃত হয়নি');
     }
 

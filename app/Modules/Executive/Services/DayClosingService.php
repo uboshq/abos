@@ -207,7 +207,7 @@ final class DayClosingService
             $delivery = (string) ($fare[$b->id] ?? '0');
             // ⓘ বাকি — [[SalesInvoice::dueSql()]]-এর হুবহু: আদায়, রসিদ, ফেরত, দাবি আর নোট বাদে
             $due = (string) $b->total;
-            foreach (['collected_total', 'voucher_total', 'returned_total', 'claimed_total', 'noted_total'] as $paid) {
+            foreach (['collected_total', 'voucher_total', 'returned_total', 'claimed_total', 'noted_total', 'auto_total'] as $paid) {
                 $due = bcsub($due, (string) ($b->getAttribute($paid) ?? '0'), 4);
             }
 
