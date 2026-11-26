@@ -26,10 +26,6 @@
             'auto_reply' => route('mail.addresses.auto_reply', ['address' => $zero]),
          ], JSON_UNESCAPED_SLASHES) }}">
 
-        <div class="mx-head">
-            <h1>✉️ {{ $A('title') }} <x-ui.page-info :text="$A('info')" /></h1>
-        </div>
-
         @if (session('mail_flash'))<div class="mx-ok">{{ session('mail_flash') }}</div>@endif
         <x-ui.errors />
         @if (! $configured)<div class="mx-card" style="padding:10px 14px;background:var(--mx-amber-bg);color:var(--mx-amber)"><x-ui.icon name="alert-triangle" :size="16" /> {{ $A('not_set') }}</div>
@@ -59,7 +55,7 @@
 
         <form method="GET" action="{{ route('mail.addresses') }}" class="mx-card" style="overflow:hidden">
             <input type="hidden" name="show" value="{{ $chip }}">
-            <x-ui.toolbar :title="$A('title')" :search-placeholder="$A('search')" :filter="false" :export="false" :print="false" :share="false" :quiet="['show']">
+            <x-ui.toolbar :title="$A('title')" :subtitle="$A('info')" :search-placeholder="$A('search')" :filter="false" :export="false" :print="false" :share="false" :quiet="['show']">
                 <x-slot:actions>
                     @foreach (['all', 'active', 'paused', 'shared'] as $c)
                         <a class="mx-chip @if ($chip === $c) on @endif" href="{{ route('mail.addresses', ['show' => $c, 'q' => $q ?: null]) }}">{{ __('mail::field.admin.chips.'.$c, ['n' => $counts[$c]]) }}</a>
@@ -111,7 +107,7 @@
                             @elseif ($r->user?->two_factor_secret) <span class="ok">{{ $A('twofa_on') }}</span>
                             @else <span class="bad">{{ $A('twofa_off') }}</span>@endif
                         </td>
-                        <td class="num" style="white-space:nowrap">{{ ! empty($srv['last']) ? \App\Core\Support\DateFormat::spoken(\Illuminate\Support\Carbon::createFromTimestamp((int) $srv['last'])) : '—' }}</td>
+                        <td class="num" style="white-space:nowrap">{{ ! empty($srv['last']) ? \App\Core\Support\DateFormat::spoken(\Illuminate\Support\Carbon::createFromTimestamp((int) $srv['last'], config('app.timezone'))) : '—' }}</td>
                         <td>{{ $A('status_'.$r->status) }}</td>
                         <td>
                             @if ($r->isSystem() || $r->status === 'deleting')

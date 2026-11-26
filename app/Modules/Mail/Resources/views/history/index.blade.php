@@ -10,13 +10,10 @@
     @endpush
 
     <div class="mailx mx-page" data-mail-history>
-        <div class="mx-head">
-            <h1>🕘 {{ $H('title') }} <x-ui.page-info :text="$H('info')" /></h1><span class="sp"></span>
-            <a class="mx-btn" href="{{ route('mail.sent') }}">📤 {{ $H('sent_title') }}</a>
-        </div>
-
         <form class="mx-card" style="overflow:hidden" method="GET" action="{{ route('mail.history') }}">
-            <x-ui.toolbar :title="$H('title')" :search-placeholder="$H('search')" :filter="false" :export="false" :print="false" :share="false" :quiet="['type', 'from', 'to']" />
+            <x-ui.toolbar :title="$H('title')" :subtitle="$H('info')" :search-placeholder="$H('search')" :filter="false" :export="false" :print="false" :share="false" :quiet="['type', 'from', 'to']">
+                <x-slot:actions><a class="mx-btn" href="{{ route('mail.sent') }}">📤 {{ $H('sent_title') }}</a></x-slot:actions>
+            </x-ui.toolbar>
             <div class="mx-filter" style="padding:10px 14px">
             <label>&nbsp;<span style="display:flex;gap:6px;flex-wrap:wrap">
                 @foreach (trans('mail::field.history.types') as $k => $label)

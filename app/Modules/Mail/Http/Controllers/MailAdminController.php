@@ -95,7 +95,7 @@ final class MailAdminController extends Controller implements HasMiddleware
             ],
             'chip' => $chip,
             'q' => $q,
-            'people' => User::query()->whereHas('companies', fn ($c) => $c->where('companies.id', CompanyContext::id()))
+            'people' => User::query()->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))
                 ->where('is_active', true)->orderBy('name')->get(['id', 'name', 'designation', 'email']),
             'configured' => $this->host->configured(),
             'writable' => $this->host->writable(),
@@ -231,7 +231,7 @@ final class MailAdminController extends Controller implements HasMiddleware
             }
 
             [$email, $kind, $staff, $gb] = array_pad($cols, 4, '');
-            $user = $staff !== '' ? User::query()->where('email', $staff)->first() : null;
+            $user = $staff !== '' ? User::query()->whereHas('companies', fn ($q) => $q->whereKey(CompanyContext::id()))->where('email', $staff)->first() : null;
 
             if (! str_contains($email, '@') || ($kind !== 'shared' && ! $user)) {
                 $skipped[] = ($i + 2).': '.$email;
