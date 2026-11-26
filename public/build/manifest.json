@@ -10,7 +10,7 @@
     "name": "preload-helper"
   },
   "resources/css/app.css": {
-    "file": "assets/app-CS8Zzkfq.css",
+    "file": "assets/app-DQDZ6FdY.css",
     "name": "app",
     "names": [
       "app.css"
@@ -19,7 +19,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-to_PPxts.js",
+    "file": "assets/app-RUrIRKPb.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
