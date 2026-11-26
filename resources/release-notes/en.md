@@ -1,5 +1,12 @@
 # What's new
 
+## 1.3.15 — 26-11-2026
+
+- Direct purchase exactly as the sample: the supplier box drops the mobile and keeps only the address; credit limit and previous balance right under the name.
+- A yellow lot box right of the product (lot number, expiry, printed price) — left blank, the lot is still numbered by date as before; stock, last rate and sales price on one line under the product.
+- The entry row in small boxes on one line, ending with Gift · Add to cart · Clear; list rows on one line with only the lot under the name, an unloading column, and actions in one small ⋯.
+- The sign-in page writes the version in full — "ABOS Version 1.3.15".
+
 ## 1.3.14 — 26-11-2026
 
 - The direct purchase screen, redrawn: the whole job on one screen and only the product list scrolls. A big product search; quantity, rate, amount and Gift · Add to cart · Clear on one row; a gift sits right under its product.
