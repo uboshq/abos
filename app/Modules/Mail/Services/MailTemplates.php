@@ -16,6 +16,9 @@ final class MailTemplates
 {
     public function __construct(private readonly MailFields $fields) {}
 
+    /** @var \Illuminate\Support\Collection<string, MailFestival>|null */
+    private ?\Illuminate\Support\Collection $festivals = null;
+
     /**
      * @param  array<string, string>  $values  [[MailFields::values]]
      * @return array{subject: string, html: string}
@@ -36,9 +39,9 @@ final class MailTemplates
             return ['subject' => $subject, 'html' => '<div style="font-family:Segoe UI,Arial,sans-serif;font-size:14px;line-height:1.7;color:#24324a">'.$text.'</div>'];
         }
 
-        $festival = str_starts_with((string) $t->key, 'fest_')
-            ? MailFestival::query()->where('key', substr((string) $t->key, 5))->first()
-            : null;
+        // ⓘ উৎসবগুলো একবারে — লেখার পর্দা প্রায় 30টা টেমপ্লেট আঁকে
+        $this->festivals ??= MailFestival::query()->get()->keyBy('key');
+        $festival = str_starts_with((string) $t->key, 'fest_') ? $this->festivals->get(substr((string) $t->key, 5)) : null;
 
         $head = $festival !== null
             ? $this->festivalHead($festival)
