@@ -1,5 +1,10 @@
 # What's new
 
+## 1.3.16 — 26-11-2026
+
+- The top of direct purchase is smaller: under the supplier's name one line with "Can still bill" and the previous balance; the six paper boxes on one line.
+- The totals on the right speak one language only — Bengali in Bengali, English in English.
+
 ## 1.3.15 — 26-11-2026
 
 - Direct purchase exactly as the sample: the supplier box drops the mobile and keeps only the address; credit limit and previous balance right under the name.

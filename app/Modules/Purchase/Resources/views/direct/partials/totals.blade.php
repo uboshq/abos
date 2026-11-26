@@ -73,7 +73,7 @@
                      বসে। --}}
                 <dl class="space-y-1 text-2xs">
                     <div class="flex justify-between">
-                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.sub_total_goods') }}@if (app()->getLocale() !== 'en')<span class="font-normal text-(--color-ink-muted)"> · {{ __('purchase::field.sub_total_goods', [], 'en') }}</span>@endif</dt>
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.sub_total_goods') }}</dt>
                         <dd class="num" x-text="money(subTotal)"></dd>
                     </div>
 
@@ -151,7 +151,7 @@
                          ⓘ চারটার তিনটা থাকলে সংখ্যাটা ভুল — তাই চারটাই
                          একসাথে, নয়তো একটাও নয়। --}}
                     <div class="flex justify-between border-t border-(--color-border) pt-1.5 font-semibold">
-                        <dt><span>{{ __('purchase::field.net_payable') }}</span>@if (app()->getLocale() !== 'en')<span class="font-normal text-(--color-ink-muted)"> · {{ __('purchase::field.net_payable', [], 'en') }}</span>@endif</dt>
+                        <dt><span>{{ __('purchase::field.net_payable') }}</span></dt>
                         <dd class="num" x-text="money(netPayable)"></dd>
                     </div>
 
@@ -160,7 +160,7 @@
                          "জমা" প্যানেলে, কিন্তু **যোগফলটা এখানে**, কারণ
                          বকেয়ার অঙ্কটা এটা বাদ দিয়েই দাঁড়ায়। --}}
                     <div class="flex justify-between">
-                        <dt class="text-(--color-ink-muted)"><span>{{ __('purchase::field.paid_total') }}</span>@if (app()->getLocale() !== 'en')<span class="font-normal text-(--color-ink-muted)"> · {{ __('purchase::field.paid_total', [], 'en') }}</span>@endif</dt>
+                        <dt class="text-(--color-ink-muted)"><span>{{ __('purchase::field.paid_total') }}</span></dt>
                         <dd class="num" x-text="paidTotal ? money(paidTotal) : '—'"></dd>
                     </div>
 
@@ -178,7 +178,7 @@
                          ছয় মাসের জমা দেনা। ⓘ দুইজন মানুষ দুইটা অর্থ করতেন,
                          আর দরাদরির টেবিলে ওই ভুলের দাম টাকা। --}}
                     <div class="flex justify-between font-semibold">
-                        <dt><span>{{ __('purchase::field.invoice_due') }}</span>@if (app()->getLocale() !== 'en')<span class="font-normal text-(--color-ink-muted)"> · {{ __('purchase::field.invoice_due', [], 'en') }}</span>@endif</dt>
+                        <dt><span>{{ __('purchase::field.invoice_due') }}</span></dt>
                         <dd class="num" :class="invoiceDue > 0 ? 'text-(--color-danger)' : ''" x-text="money(invoiceDue)"></dd>
                     </div>
 
@@ -207,7 +207,7 @@
                      :class="totalDue > 0
                          ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)'
                          : (totalDue < 0 ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' : 'bg-(--color-surface-sunken)')">
-                    <span class="font-medium"><span>{{ __('purchase::field.total_due') }}</span>@if (app()->getLocale() !== 'en')<span class="font-normal text-(--color-ink-muted)"> · {{ __('purchase::field.total_due', [], 'en') }}</span>@endif</span>
+                    <span class="font-medium"><span>{{ __('purchase::field.total_due') }}</span></span>
                     <span class="num text-sm font-bold" x-text="money($abs(totalDue))"></span>
                 </div>
                 </div>
