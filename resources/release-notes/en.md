@@ -1,5 +1,10 @@
 # What's new
 
+## 1.3.25 — 26-11-2026
+
+- Sign-in: Enter in the ID or password box signs in; coming back with the browser's Back no longer leaves it stuck. "ABOS Version" on its own line, a little larger and bolder, with released · updated on the line below.
+- Direct purchase: Enter in any box of the entry row adds to cart; the Gift · Add to cart · Clear buttons are only as wide as their words, so the other boxes are wider.
+
 ## 1.3.24 — 26-11-2026
 
 - Counter mode: "Direct purchase" in the menu opens in a new tab on large screens — only the bill, no menu, bar or footer; a thin strip with company, branch, who is billing, the bell and "✕ Close". After saving the tab stays open — "saved" on top with Print · View, and a fresh bill below.

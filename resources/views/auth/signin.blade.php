@@ -211,10 +211,13 @@
 
                 <p class="mt-2">{{ __('core.brand.developed_by') }}</p>
                 {{-- ⭐ সংস্করণের পুরো বিবরণ ঘরের একদম নিচে — মালিক, ৬ নভেম্বর ২০২৬ (ফুটার থেকে এখানে সরল; build-এর নম্বর নয়) --}}
-                <p class="mt-0.5 tabular-nums" data-release-line>
+                {{-- ⭐ সংস্করণ নিজের লাইনে, একটু বড় আর আধা-মোটা; প্রকাশ · হালনাগাদ নিচের লাইনে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+                <p class="mt-1 tabular-nums text-sm font-semibold text-(--color-ink)" data-release-line>
                     ABOS {{ __('core.brand.version_word') }} {{ \App\Core\Support\Release::version() }}
+                </p>
+                <p class="tabular-nums" data-release-dates>
                     @if (\App\Core\Support\Release::shownDate() !== '')
-                        · {{ __('core.brand.released') }} {{ \App\Core\Support\Release::shownDate() }}
+                        {{ __('core.brand.released') }} {{ \App\Core\Support\Release::shownDate() }}
                     @endif
                     @if (\App\Core\Support\Release::updatedDate())
                         · {{ __('core.brand.updated') }} {{ \App\Core\Support\Release::updatedDate() }}

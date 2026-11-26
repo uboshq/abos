@@ -45,7 +45,7 @@
                      মুহূর্তেই সেটা প্রয়োগ করত — নিষ্ক্রিয় বোতাম ফর্ম সাবমিট
                      করে না, তাই লগইন কাজই করত না। ব্রাউজারে চালিয়ে দেখতে
                      গিয়ে ধরা পড়েছে; কোড পড়ে ধরা পড়ত না। --}}
-                <form method="POST" action="{{ route('login.store') }}"
+                <form method="POST" action="{{ route('login.store') }}" data-login-form
                       x-data="{ busy: false }"
                       @submit="busy ? $event.preventDefault() : (busy = true)"
                       class="mt-6 space-y-4">
@@ -220,18 +220,23 @@
                     </button>
                 </form>
 
-                {{-- ⓘ পাতা খুলতেই একবার চাওয়া — পাসওয়ার্ড লেখার মধ্যে উত্তর এসে যায়, জমা দেওয়া অপেক্ষা করে না --}}
+                {{-- ⭐ Enter-এ লগইন — সবসময় (মালিক, ২৬ নভেম্বর ২০২৬: "এন্টারে চাপলেও লগইন হয় না")। ⓘ আইডি বা পাসওয়ার্ডের ঘরে Enter ফর্ম
+                     পাঠায়; ব্রাউজারের "পেছনে" দিয়ে ফিরলে আগের "পাঠানো হচ্ছে" অবস্থা মুছে যায় (নইলে বোতাম আর Enter দুটোই মরা থাকত) --}}
                 <script @nonce>
                     (function () {
-                        if (!('geolocation' in navigator)) { return; }
-                        navigator.geolocation.getCurrentPosition(function (p) {
-                            var put = function (k, v) {
-                                document.querySelectorAll('[data-login-geo="' + k + '"]').forEach(function (el) { el.value = v; });
-                            };
-                            put('lat', p.coords.latitude.toFixed(6));
-                            put('lng', p.coords.longitude.toFixed(6));
-                            put('acc', Math.round(p.coords.accuracy || 0));
-                        }, function () {}, { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 });
+                        var form = document.querySelector('[data-login-form]');
+                        if (!form) { return; }
+                        form.addEventListener('keydown', function (e) {
+                            if (e.key !== 'Enter' || e.isComposing) { return; }
+                            var t = e.target;
+                            if (!t || (t.id !== 'identifier' && t.id !== 'password' && t.id !== 'code')) { return; }
+                            e.preventDefault();
+                            if (form.requestSubmit) { form.requestSubmit(); } else { form.submit(); }
+                        });
+                        window.addEventListener('pageshow', function (e) {
+                            if (!e.persisted || !window.Alpine) { return; }
+                            try { window.Alpine.$data(form).busy = false; } catch (err) {}
+                        });
                     })();
                 </script>
 
@@ -249,3 +254,4 @@
                         }, function () {}, { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 });
                     })();
                 </script>
+
