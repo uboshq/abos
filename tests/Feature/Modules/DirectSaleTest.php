@@ -562,6 +562,9 @@ class DirectSaleTest extends TestCase
      */
     public function test_every_field_switch_really_hides_its_field(): void
     {
+        // ⓘ এই দাবি ক্লাসিক কাউন্টারের (SAP/Dynamic/Odoo) — ABOS রূপের কাউন্টার মালিকের ২৬ নভেম্বরের নির্দেশে আলাদা,
+        // তার দাবি [[TheAbosCounterFollowsTheOwners26NovOrdersTest]]-এ
+        $this->user->forceFill(['ui' => 'dynamic'])->save();
         $settings = app(SettingsService::class);
 
         $cases = [
@@ -743,6 +746,9 @@ class DirectSaleTest extends TestCase
      */
     public function test_the_customer_box_stands_in_four_rows(): void
     {
+        // ⓘ এই দাবি ক্লাসিক কাউন্টারের (SAP/Dynamic/Odoo) — ABOS রূপের কাউন্টার মালিকের ২৬ নভেম্বরের নির্দেশে আলাদা,
+        // তার দাবি [[TheAbosCounterFollowsTheOwners26NovOrdersTest]]-এ
+        $this->user->forceFill(['ui' => 'dynamic'])->save();
         $html = $this->actingAs($this->user)
             ->get(route('sales.direct.create'))->assertOk()->getContent();
 
