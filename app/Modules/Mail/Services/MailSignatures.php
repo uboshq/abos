@@ -264,9 +264,13 @@ final class MailSignatures
             7 => '<table cellpadding="0" cellspacing="0" role="presentation" style="border:1px solid #e2e8f0;border-radius:12px;min-width:460px"><tr><td colspan="3" style="background:'.$c1.';background-image:linear-gradient(90deg,'.$c1.','.$c2.');padding:8px 14px;border-radius:12px 12px 0 0">'
                 .'<span style="background:#fff;border-radius:6px;padding:1px 8px">'.$mark.'</span></td></tr><tr><td style="padding:10px 14px">'.$photo(64, 64).'</td><td style="padding:10px 14px 10px 0">'.$nm(17).$ds($c2).'</td><td style="padding:10px 14px 10px 0">'.$lines().$social().'</td></tr></table>',
             // ⓘ নমুনা v4: বাঁয়ে বাংলা নাম ও পদ, ডানে ইংরেজি — ⛔ আগে ডানে "Designation" শব্দটাই বসত (ডেমো, ২৭ নভেম্বর)
-            8 => $row($photo(90, 120), '<table cellpadding="0" cellspacing="0" role="presentation"><tr><td style="padding-right:14px">'
-                .'<div style="font:700 18px Segoe UI,Arial,sans-serif;color:#1d2433">'.$e('name_bn').'</div>'.($f['title_bn'] !== '' ? '<div style="color:'.$c3.';font-weight:600">'.$e('title_bn').'</div>' : '').'</td>'
-                .'<td style="border-left:2px solid '.$c3.';padding-left:14px">'.$nm(18).($f['title'] !== '' ? '<div style="color:'.$c3.';font-weight:600">'.$e('title').'</div>' : '').'</td></tr></table>'
+            // ⓘ বাংলা নাম-পদ না থাকলে একই লেখা দুবার নয় — তখন একটাই কলাম
+            8 => $row($photo(90, 120), '<table cellpadding="0" cellspacing="0" role="presentation"><tr>'
+                .($f['name_bn'] !== $f['name'] || $f['title_bn'] !== $f['title']
+                    ? '<td style="padding-right:14px"><div style="font:700 18px Segoe UI,Arial,sans-serif;color:#1d2433">'.$e('name_bn').'</div>'.($f['title_bn'] !== '' ? '<div style="color:'.$c3.';font-weight:600">'.$e('title_bn').'</div>' : '').'</td>'
+                    .'<td style="border-left:2px solid '.$c3.';padding-left:14px">'
+                    : '<td>')
+                .$nm(18).($f['title'] !== '' ? '<div style="color:'.$c3.';font-weight:600">'.$e('title').'</div>' : '').'</td></tr></table>'
                 .'<div style="height:4px;margin:6px 0;background:'.$c2.';background-image:linear-gradient(90deg,'.$c2.' 33%,'.$c3.' 33% 66%,'.$c1.' 66%)"></div>'.$lines().$social()),
             9 => $row($photo(84, 112), $nm(18).$ds('#8a5a00').$lines().$social()),
             10 => '<table cellpadding="0" cellspacing="0" role="presentation" style="border-top:2px solid #e2e8f0;padding-top:8px"><tr><td style="padding:8px 10px 0 0">'.$photo(36, 36, '50%').'</td><td style="padding-top:8px;font-size:13px"><b>'.$e('name').'</b>'
