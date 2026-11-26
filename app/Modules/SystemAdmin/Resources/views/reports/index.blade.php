@@ -12,6 +12,22 @@
         \App\Core\ListFilter\Facets::pick('state', __('system_admin::schedule.status_col'),
             ['on' => __('system_admin::schedule.active'), 'off' => __('system_admin::schedule.inactive')]),
     ]);
+    $columns = [
+        ['key' => 'report', 'label' => __('system_admin::schedule.report'), 'render' => fn ($s) => new \Illuminate\Support\HtmlString(
+            '<span class="font-medium text-(--color-ink)">'.e($reportTitles[$s->report_key] ?? $s->report_key).'</span>'
+            .'<span class="block text-2xs uppercase text-(--color-ink-muted)">'.e((string) $s->format).'</span>')],
+        ['key' => 'frequency', 'label' => __('system_admin::schedule.frequency'), 'render' => fn ($s) => __('system_admin::schedule.freq.'.$s->frequency).' · '
+            .($s->at_time ? \Illuminate\Support\Carbon::createFromFormat('H:i', substr((string) $s->at_time, 0, 5))->format(\App\Core\Support\DateFormat::time()) : '—')],
+        ['key' => 'next_run', 'label' => __('system_admin::schedule.next_run'), 'render' => fn ($s) => $s->next_run_at ? \App\Core\Support\DateFormat::spoken($s->next_run_at) : '—'],
+        ['key' => 'status', 'label' => __('system_admin::schedule.status_col'), 'render' => fn ($s) => new \Illuminate\Support\HtmlString(
+            '<span class="rounded-(--radius-badge) px-2 py-0.5 text-2xs '.($s->is_active ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' : 'bg-(--color-badge-draft-bg) text-(--color-badge-draft-ink)').'">'
+            .e(__($s->is_active ? 'system_admin::schedule.active' : 'system_admin::schedule.inactive')).'</span>')],
+        ['key' => 'act', 'label' => '', 'render' => fn ($s) => new \Illuminate\Support\HtmlString(
+            '<a href="'.e(route('system_admin.reports.schedule.edit', $s)).'" class="text-(--color-brand-600) hover:underline">'.e(__('core.action.edit')).'</a>'
+            .'<form method="POST" action="'.e(route('system_admin.reports.schedule.toggle', $s)).'" class="inline">'.csrf_field()
+            .'<button type="submit" class="ms-3 text-2xs text-(--color-ink-muted) underline hover:text-(--color-ink)">'
+            .e(__($s->is_active ? 'system_admin::schedule.deactivate' : 'system_admin::schedule.activate')).'</button></form>')],
+    ];
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('system_admin::schedule.title') }}</x-slot:title>
@@ -45,14 +61,17 @@
                 <x-ui.toolbar :title="__('system_admin::schedule.title')" :info="__('system_admin::schedule.subtitle')"
                               :count="trans_choice('core.count.records', $schedules->total(), ['count' => $schedules->total()])"
                               :search-placeholder="__('system_admin::schedule.report')" :facets="$facetPanel" :share="false" :export="false"
-                              :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest'), 'next' => __('system_admin::schedule.next_run')]">
+                              :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest'), 'next' => __('system_admin::schedule.next_run')]" :columns="$columns">
                     <x-slot:actions>
                         <x-ui.button tone="primary" icon="plus" :href="route('system_admin.reports.schedule.create')">{{ __('system_admin::schedule.add') }}</x-ui.button>
                     </x-slot:actions>
                 </x-ui.toolbar>
             </form>
         @endif
-        @if ($schedules->isEmpty())
+        @if ($abosHead && ! $schedules->isEmpty())
+            {{-- ⭐ পুরো বার — সাধারণ টেবিল, কলাম বাছাই (মালিক, ২৪ নভেম্বর ২০২৬; ২৭ নভেম্বর); বাকি রূপে আগের টেবিল --}}
+            <x-ui.table :rows="$schedules" :columns="$columns" />
+        @elseif ($schedules->isEmpty())
             {{-- ⭐ খালি অবস্থায় পরের কাজ — "প্রথম রিপোর্ট নির্ধারণ করুন" (সিস্টেম পর্দার নকশা §৫, ১০ অক্টোবর ২০২৬) --}}
             <x-ui.empty-state :message="__('system_admin::schedule.none')"
                               :action="['url' => route('system_admin.reports.schedule.create'), 'label' => __('system_admin::schedule.first')]" />
