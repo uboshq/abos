@@ -172,7 +172,6 @@ return [
         'fest_head' => 'Festival and national-day signatures — :count',
         'fest_sub' => 'They appear on the date and go away after',
         'family' => 'family',
-        'title_word' => 'Designation',
         'hours' => 'Sat–Thu, 9 am – 6 pm',
         'meeting' => 'Book a meeting',
         'styles' => [

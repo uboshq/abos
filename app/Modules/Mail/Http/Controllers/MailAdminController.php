@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Mail\Http\Controllers;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Modules\Mail\Models\MailAddress;
@@ -73,6 +74,8 @@ final class MailAdminController extends Controller implements HasMiddleware
             ->values();
 
         return view('mail::admin.index', [
+            // ⓘ রেল আর মডিউলের মেনু — না দিলে পাশের মেনু খালি থাকে (ডেমোতে ধরা, ২৭ নভেম্বর)
+            'menu' => app(MenuBuilder::class)->forUser(auth()->user()),
             'rows' => $rows,
             'server' => $server,
             'domains' => $domains,

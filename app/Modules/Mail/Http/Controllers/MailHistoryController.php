@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Mail\Http\Controllers;
 
+use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\AuditTrail;
 use App\Modules\Mail\Models\MailAccount;
@@ -60,6 +61,8 @@ final class MailHistoryController extends Controller implements HasMiddleware
             ->withQueryString();
 
         return view('mail::history.index', [
+            // ⓘ রেল আর মডিউলের মেনু — না দিলে পাশের মেনু খালি থাকে (ডেমোতে ধরা, ২৭ নভেম্বর)
+            'menu' => app(MenuBuilder::class)->forUser(auth()->user()),
             'rows' => $rows,
             'type' => $type,
             'q' => $q,
@@ -87,7 +90,7 @@ final class MailHistoryController extends Controller implements HasMiddleware
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
-        return view('mail::history.sent', ['rows' => $rows, 'q' => $q, 'from' => $from?->format('Y-m-d'), 'to' => $to?->format('Y-m-d'),
+        return view('mail::history.sent', ['menu' => app(MenuBuilder::class)->forUser(auth()->user()), 'rows' => $rows, 'q' => $q, 'from' => $from?->format('Y-m-d'), 'to' => $to?->format('Y-m-d'),
             'paper' => $request->query('paper') === 'yes']);
     }
 }

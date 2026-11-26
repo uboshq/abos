@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Mail\Http\Controllers;
 
 use App\Core\Support\CompanyContext;
+use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Modules\Customer\Models\Customer;
@@ -61,6 +62,8 @@ final class MailTemplateController extends Controller implements HasMiddleware
         $company = (string) (Company::query()->whereKey(CompanyContext::id())->value('name_en') ?? '');
 
         return view('mail::templates.index', [
+            // ⓘ রেল আর মডিউলের মেনু — না দিলে পাশের মেনু খালি থাকে (ডেমোতে ধরা, ২৭ নভেম্বর)
+            'menu' => app(MenuBuilder::class)->forUser(auth()->user()),
             'counts' => collect(MailTemplate::CATEGORIES)->mapWithKeys(fn ($c) => [$c => $all->where('category', $c)->count()]),
             'companyCount' => $all->whereNull('user_id')->count(),
             'mineCount' => $all->where('user_id', $user->id)->count(),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Modules\Mail\Http\Controllers;
 
+use App\Core\Services\MenuBuilder;
 use App\Http\Controllers\Controller;
 use App\Modules\Customer\Models\Customer;
 use App\Modules\Mail\Models\MailAccount;
@@ -54,6 +55,8 @@ final class MailController extends Controller implements HasMiddleware
         $defaults->ensure();
 
         return view('mail::index', [
+            // ⓘ রেল আর মডিউলের মেনু — না দিলে পাশের মেনু খালি থাকে (ডেমোতে ধরা, ২৭ নভেম্বর)
+            'menu' => app(MenuBuilder::class)->forUser(auth()->user()),
             'canManage' => $request->user()->can('mail.manage'),
             'canApprove' => $request->user()->can('mail.personal.approve'),
         ]);
