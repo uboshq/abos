@@ -709,6 +709,14 @@
   "payBillsTitle": "Open bills — oldest first",
   "payBillDue": "Due {amount}",
   "payBillApply": "On this bill",
+  "payAdvanceTag": "Not on any bill",
+  "@payAdvanceTag": {
+    "description": "Tag beside the green advance row (ledger below the bills) in the open bills"
+  },
+  "payOpeningKept": "Not set against any bill — it stays on the party ledger and lowers the earlier balance",
+  "@payOpeningKept": {
+    "description": "Helper under the amount typed on the earlier balance row"
+  },
   "payOpeningTag": "Not on any bill",
   "payBillsDueTotal": "Total due",
   "payBillsDueLedger": "Total due = ledger balance",

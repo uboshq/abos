@@ -144,10 +144,29 @@ class PayeeBank {
 /// `bills[i][id]`), `outstanding` বাকি (পয়সায় [outstanding]) — বিল বাছায় এটাই, ওয়েবের কার্ডের একই সংখ্যা ([[PartyOpenBills]])
 class VoucherBill {
   const VoucherBill(
-      {required this.id, required this.no, this.date = '', this.dueDate, this.daysLate, this.total = 0, required this.outstanding, this.opening = false});
+      {required this.id,
+      required this.no,
+      this.date = '',
+      this.dueDate,
+      this.daysLate,
+      this.total = 0,
+      required this.outstanding,
+      this.opening = false,
+      this.advance = false,
+      this.info = ''});
 
-  /// ⭐ "আগের জের (ওপেনিং)" — খাতার জেরের যে অংশ কোনো খোলা বিলে নেই (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬); কেবল দেখায়, টিক নয়, পাঠানো নয়
+  /// ⭐ "আগের জের (ওপেনিং)" বা "অগ্রিম" — খাতার জেরের যে অংশ কোনো খোলা বিলে নেই (মালিকের নমুনা v2, ২৬ নভেম্বর ২০২৬)। ⓘ কখনো বিলের
+  /// সারিতে পাঠানো হয় না; আগের জেরে টিক দিয়ে টাকা লেখা যায় — সেই টাকা পক্ষের খাতায় থাকে, জের থেকেই কমে
   final bool opening;
+
+  /// ⭐ "অগ্রিম" — খাতার জের বিলের চেয়ে কম (বিয়োগে); সবুজ, টিক নেই (ওটা পাওনা নয়, জমা)
+  final bool advance;
+
+  /// ⓘ উৎস আর তারিখ — আগের জের আর অগ্রিমে (সার্ভারের `info`)
+  final String info;
+
+  /// টিক দেওয়া যায় — বিলে আর আগের জেরে, অগ্রিমে নয়
+  bool get tickable => !advance;
 
   final String id;
   final String no;
@@ -176,12 +195,24 @@ class VoucherBill {
     );
   }
 
-  /// ⭐ দরজার `opening` ঘর (`label`, `date`, `outstanding`) — না থাকলে null
+  /// ⭐ টিকের চাবি — বিলের public_id নয়, তাই কখনো পাঠানো হয় না (সার্ভারের `OpeningRow::TICK_ID`)
+  static const openingId = 'opening';
+
+  /// ⭐ দরজার `opening` ঘর (`kind`, `label`, `date`, `info`, `outstanding`) — না থাকলে বা শূন্য হলে null; অগ্রিম বিয়োগে
   static VoucherBill? openingFromJson(Object? raw) {
     if (raw is! Map) return null;
     final amount = _paisa(raw['outstanding']);
-    if (amount <= 0) return null;
-    return VoucherBill(id: '', no: raw['label']?.toString() ?? '', date: raw['date']?.toString() ?? '', outstanding: amount, opening: true);
+    if (amount == 0) return null;
+    final advance = raw['kind']?.toString() == 'advance' || amount < 0;
+    return VoucherBill(
+      id: advance ? '' : openingId,
+      no: raw['label']?.toString() ?? '',
+      date: raw['date']?.toString() ?? '',
+      outstanding: amount,
+      opening: true,
+      advance: advance,
+      info: raw['info']?.toString() ?? '',
+    );
   }
 }
 

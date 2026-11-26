@@ -265,8 +265,12 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
   /// ⭐ পক্ষের খোলা বিল — পক্ষ বাছলে দরজা থেকে ([VoucherBillsSource]); দরজা নেই বা পুরনো সার্ভার হলে খালি
   List<VoucherBill> _partyBills = const [];
 
-  /// ⭐ আগের জের (ওপেনিং) — দরজা পাঠালে; কেবল দেখায়, বিলের যোগে বা পাঠানোয় নেই
+  /// ⭐ আগের জের (ওপেনিং) বা অগ্রিম — দরজা পাঠালে; আগের জেরে টিক দিয়ে টাকা লেখা যায় (মোটে ধরা), কিন্তু কখনো পাঠানো নয়
+  ///   — টাকাটা পক্ষের খাতায় থাকে, জের থেকেই কমে (মালিকের নমুনা v2, ২৬ নভেম্বর ২০২৬)
   VoucherBill? _opening;
+
+  /// আগের জেরে লেখা টাকা — অগ্রিমে কখনো নয়
+  int get _openingAmount => switch (_opening) { final o? when o.tickable => _billAmount(o), _ => 0 };
 
   List<VoucherBill> get _bills => _gross ? _partyBills : const [];
 
@@ -296,7 +300,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
 
   int _billAmount(VoucherBill b) => _ticked.contains(b.id) ? _paisa(_billText[b.id]?.text ?? '') : 0;
 
-  int get _billsSum => _bills.fold(0, (sum, b) => sum + _billAmount(b));
+  int get _billsSum => _bills.fold(_openingAmount, (sum, b) => sum + _billAmount(b));
 
   /// ⛔ বিলের যোগফল মোটের বেশি — সার্ভার ফেরায় (`bills_over_gross`); পাঠানো বন্ধ
   bool get _billsOverGross => _billsSum > _amountPaisa;
@@ -313,7 +317,9 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         _ticked.remove(b.id);
         c.text = '';
       }
-      final dues = _bills.where((x) => _ticked.contains(x.id)).fold(0, (sum, x) => sum + x.outstanding);
+      final opening = _opening;
+      final dues = _bills.where((x) => _ticked.contains(x.id)).fold(
+          opening != null && opening.tickable && _ticked.contains(opening.id) ? opening.outstanding : 0, (sum, x) => sum + x.outstanding);
       _amount.text = dues == 0 ? '' : Money.amount(dues / 100);
     });
   }
@@ -694,21 +700,61 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
     final opening = _opening;
     final dueAll = bills.fold(opening?.outstanding ?? 0, (s, b) => s + b.outstanding);
     return MoneySection(key: const ValueKey('pay-bills'), title: w.payBillsTitle, children: [
-      // ⭐ আগের জের (ওপেনিং) — সবার উপরে, কোনো বিলে নেই, টিক নেই (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬)
+      // ⭐ আগের জের (ওপেনিং) কমলা, টিক দিয়ে টাকা লেখা যায়; অগ্রিম সবুজ, বিয়োগে, টিক নেই — সবার উপরে (মালিকের নমুনা v2, ২৬ নভেম্বর ২০২৬)
       if (opening != null)
         Container(
           key: const ValueKey('pay-bill-opening'),
-          color: context.palette.warningSurface,
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-          child: Row(children: [
-            const SizedBox(width: 48),
-            Expanded(
-              child: Wrap(spacing: AppSpacing.sm, alignment: WrapAlignment.spaceBetween, children: [
-                Text(opening.no, style: const TextStyle(fontWeight: FontWeight.w600)),
-                Text(w.payOpeningTag, key: const ValueKey('pay-bill-opening-tag'), style: TextStyle(color: context.palette.warning, fontSize: 13)),
-                Text(w.payBillDue(Money.taka(opening.outstanding / 100)), key: const ValueKey('pay-bill-opening-due')),
-              ]),
-            ),
+          color: opening.advance ? context.palette.successSurface : context.palette.warningSurface,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              if (opening.tickable)
+                Checkbox(
+                  key: const ValueKey('pay-bill-opening-tick'),
+                  value: _ticked.contains(opening.id),
+                  onChanged: _busy ? null : (on) => _tickBill(opening, on ?? false),
+                )
+              else
+                const SizedBox(width: 48),
+              Expanded(
+                child: Wrap(spacing: AppSpacing.sm, alignment: WrapAlignment.spaceBetween, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                  Text(opening.no, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(opening.advance ? w.payAdvanceTag : w.payOpeningTag,
+                      key: const ValueKey('pay-bill-opening-tag'),
+                      style: TextStyle(color: opening.advance ? context.palette.success : context.palette.warning, fontSize: 13)),
+                  if (opening.info.isNotEmpty)
+                    Tooltip(
+                      key: const ValueKey('pay-bill-opening-info'),
+                      message: opening.info,
+                      triggerMode: TooltipTriggerMode.tap,
+                      child: const Icon(Icons.info_outline, size: 18),
+                    ),
+                  Text(w.payBillDue(Money.taka(opening.outstanding / 100)),
+                      key: const ValueKey('pay-bill-opening-due'),
+                      style: opening.advance ? TextStyle(color: context.palette.success, fontWeight: FontWeight.w700) : null),
+                ]),
+              ),
+            ]),
+            if (opening.tickable && _ticked.contains(opening.id))
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 48),
+                child: TextField(
+                  key: const ValueKey('pay-bill-opening-amount'),
+                  controller: _billText.putIfAbsent(opening.id, TextEditingController.new),
+                  enabled: !_busy,
+                  textAlign: TextAlign.end,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [_money('bill:${opening.id}')],
+                  onChanged: (t) => _typeBill(opening, t),
+                  decoration: InputDecoration(
+                    labelText: w.payBillApply,
+                    helperText: w.payOpeningKept,
+                    helperMaxLines: moneyNoteLines,
+                    errorText: _billError[opening.id],
+                    errorMaxLines: moneyNoteLines,
+                  ),
+                ),
+              ),
           ]),
         ),
       for (final (i, b) in bills.indexed) ...[

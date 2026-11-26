@@ -3450,6 +3450,14 @@
   "@payBillApply": {
     "description": "Payment voucher bill row: the amount set against this bill"
   },
+  "payAdvanceTag": "কোনো বিলে বসেনি",
+  "@payAdvanceTag": {
+    "description": "Tag beside the green advance row (ledger below the bills) in the open bills"
+  },
+  "payOpeningKept": "এই টাকা কোনো বিলে বসে না — পক্ষের খাতায় থাকে, আগের জের থেকে কমে",
+  "@payOpeningKept": {
+    "description": "Helper under the amount typed on the earlier balance row"
+  },
   "payOpeningTag": "কোনো বিলে নেই",
   "@payOpeningTag": {
     "description": "Earlier balance row: it sits on no bill, shown only"

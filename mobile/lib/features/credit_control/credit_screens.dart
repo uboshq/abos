@@ -430,14 +430,27 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
             if (d != null) ...[
               _SectionTitle(context.l10n.creditOpenBills),
               if (d.opening case final opening?)
+                // ⭐ আগের জের কমলা (বয়সের ঘরসহ), অগ্রিম সবুজ বিয়োগে; ⓘ চাপলে উৎস আর তারিখ (মালিকের নমুনা v2, ২৬ নভেম্বর ২০২৬)
                 Card(
                   key: const ValueKey('credit-opening'),
-                  color: context.palette.warningSurface,
+                  color: opening.advance ? context.palette.successSurface : context.palette.warningSurface,
                   margin: const EdgeInsets.only(bottom: AppSpacing.xs),
                   child: ListTile(
                     title: Text(opening.no),
-                    subtitle: Text(context.l10n.payOpeningTag),
-                    trailing: Text(Money.taka(opening.unpaid), style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text([
+                      opening.advance ? context.l10n.payAdvanceTag : context.l10n.payOpeningTag,
+                      if (opening.bucket case final band? when band.isNotEmpty) band,
+                    ].join(' · ')),
+                    leading: opening.info.isEmpty
+                        ? null
+                        : Tooltip(
+                            key: const ValueKey('credit-opening-info'),
+                            message: opening.info,
+                            triggerMode: TooltipTriggerMode.tap,
+                            child: const Icon(Icons.info_outline, size: 20),
+                          ),
+                    trailing: Text(Money.taka(opening.unpaid),
+                        style: TextStyle(fontWeight: FontWeight.w700, color: opening.advance ? context.palette.success : null)),
                   ),
                 ),
               if (d.bills.isEmpty && d.opening == null)
@@ -871,12 +884,21 @@ class CreditBlock {
 }
 
 class CreditBill {
-  const CreditBill({required this.no, required this.unpaid, this.dueOn, this.daysOverdue = 0});
+  const CreditBill({required this.no, required this.unpaid, this.dueOn, this.daysOverdue = 0, this.advance = false, this.bucket, this.info = ''});
 
   final String no;
   final String unpaid;
   final String? dueOn;
   final int daysOverdue;
+
+  /// ⭐ আগের জের/অগ্রিম কেবল — অগ্রিম বিয়োগে, সবুজ (মালিকের নমুনা v2, ২৬ নভেম্বর ২০২৬)
+  final bool advance;
+
+  /// ⓘ বয়সের ঘর — ওয়েবের একই সাত ধাপ, সার্ভার থেকে লেখা
+  final String? bucket;
+
+  /// ⓘ উৎস আর তারিখ
+  final String info;
 }
 
 class CreditRequestRow {
@@ -982,7 +1004,10 @@ class CustomerCredit {
               no: (body['opening'] as Map)['label']?.toString() ?? '',
               unpaid: (body['opening'] as Map)['unpaid']?.toString() ?? '0',
               dueOn: (body['opening'] as Map)['date']?.toString(),
-              daysOverdue: 0)
+              daysOverdue: ((body['opening'] as Map)['age'] as num?)?.toInt() ?? 0,
+              advance: (body['opening'] as Map)['kind']?.toString() == 'advance',
+              bucket: (body['opening'] as Map)['bucket']?.toString(),
+              info: (body['opening'] as Map)['info']?.toString() ?? '')
           : null,
       requests: [
         for (final x in maps(body['requests']))

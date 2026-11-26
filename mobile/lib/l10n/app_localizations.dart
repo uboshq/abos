@@ -4351,6 +4351,18 @@ abstract class AppL10n {
   /// **'এই বিলে (৳)'**
   String get payBillApply;
 
+  /// Tag beside the green advance row (ledger below the bills) in the open bills
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো বিলে বসেনি'**
+  String get payAdvanceTag;
+
+  /// Helper under the amount typed on the earlier balance row
+  ///
+  /// In bn, this message translates to:
+  /// **'এই টাকা কোনো বিলে বসে না — পক্ষের খাতায় থাকে, আগের জের থেকে কমে'**
+  String get payOpeningKept;
+
   /// Earlier balance row: it sits on no bill, shown only
   ///
   /// In bn, this message translates to:

@@ -2571,6 +2571,13 @@ class AppL10nEn extends AppL10n {
   String get payBillApply => 'On this bill';
 
   @override
+  String get payAdvanceTag => 'Not on any bill';
+
+  @override
+  String get payOpeningKept =>
+      'Not set against any bill — it stays on the party ledger and lowers the earlier balance';
+
+  @override
   String get payOpeningTag => 'Not on any bill';
 
   @override
