@@ -36,7 +36,8 @@ class NotificationAuditController extends Controller
             ->when($f['outcome'] ?? null, fn ($q, $o) => $q->where('outcome', $o))
             ->when($f['from'] ?? null, fn ($q, $d) => $q->where('created_at', '>=', $d.' 00:00:00'))
             ->when($f['to'] ?? null, fn ($q, $d) => $q->where('created_at', '<=', $d.' 23:59:59'))
-            ->orderByDesc('id')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['id', 'desc'], 'oldest' => ['id', 'asc']]))
             ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))
             ->withQueryString();
 
