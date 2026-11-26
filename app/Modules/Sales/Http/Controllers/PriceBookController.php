@@ -50,7 +50,7 @@ final class PriceBookController extends Controller implements HasMiddleware
             'active' => true,
             'inactive' => false,
             default => null,
-        });
+        }, $request->query('sort'));
 
         return view('sales::price_book.index', [
             'menu' => $this->menu->forUser($request->user()),
