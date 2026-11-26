@@ -378,7 +378,7 @@
         form[data-abos-counter] .ds-tot-card [data-tone='net'], form[data-abos-counter] .ds-tot-card [data-tone='net'] * { color: #0b6c7a !important; font-weight: 800; }
         form[data-abos-counter] .ds-tot-card [data-tone='due'], form[data-abos-counter] .ds-tot-card [data-tone='due'] * { color: #b45309 !important; font-weight: 700; }
         form[data-abos-counter] .ds-dep-sub { background: #fff; padding: 0 1rem .3rem !important; margin-top: -.2rem !important; font-size: .68rem; color: #5b6b82; }
-        form[data-abos-counter] .ds-out { background: #fff; padding: .2rem .75rem 0 !important; }
+        form[data-abos-counter] .ds-out { background: #fff; padding: .2rem .75rem .3rem !important; }
         form[data-abos-counter] .ds-out > div { border-radius: 12px !important; padding: .22rem .9rem !important; border: 1px solid #e3e8f0; }
         form[data-abos-counter] .ds-out > [data-sign='adv'] { background: #ecfdf3 !important; border-color: #a7e3bf; color: #15803d !important; }
         form[data-abos-counter] .ds-out > [data-sign='due'] { background: #fef2f2 !important; border-color: #fecaca; color: #b91c1c !important; }
@@ -398,8 +398,11 @@
         form[data-abos-counter] .ds-who-pays { margin-inline-start: .35rem; font-size: .66rem; font-weight: 700; font-style: normal; border-radius: 999px;
             padding: .05rem .5rem; background: #fff; border: 1px solid #e3e8f0; color: #5b6b82; }
         form[data-abos-counter] .ds-veh-none { font-size: .75rem; color: #5b6b82; }
-        form[data-abos-counter] .ds-mini { border-top: 1px solid #e3e8f0; margin-top: .25rem; padding-top: .2rem; }
-        form[data-abos-counter] .ds-det { display: flex; width: 100%; gap: .5rem; padding: 0; text-align: start; font-size: .75rem; line-height: 1.35; }
+        /* ⭐ ডেলিভারি আর মন্তব্য — নিজের নিজের রঙের গোল ঘরে, আলাদা চোখে পড়ে (মালিক, ২৬ নভেম্বর ২০২৬) */
+        form[data-abos-counter] .ds-mini { display: grid; gap: .25rem; margin-top: .3rem; }
+        form[data-abos-counter] .ds-det { display: flex; width: 100%; gap: .5rem; padding: .18rem .6rem; text-align: start; font-size: .75rem; line-height: 1.35;
+            border-radius: 10px; border: 1px solid #a5e3ec; background: #e6f8fb; }
+        form[data-abos-counter] .ds-det + .ds-det { border-color: #f5d08a; background: #fff8e6; }
         form[data-abos-counter] .ds-det > b { width: 4.6rem; flex: none; font-weight: 400; color: #5b6b82; }
         form[data-abos-counter] .ds-det > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1f2a3d; }
         form[data-abos-counter] .ds-tot-abos > div:last-child { border-top: 1px solid #e3e8f0 !important; background: #fff !important; padding: .4rem .75rem .5rem !important; }
