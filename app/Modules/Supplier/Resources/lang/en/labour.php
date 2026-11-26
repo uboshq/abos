@@ -50,6 +50,10 @@ return [
     'split_by_carton' => 'Split by carton',
 
     'unloading_col' => 'Unloading',
+    'paid_to_label' => 'Paid to',
+    'payee_name' => 'or type a name',
+    'paid_to' => 'paid to :name',
+    'needs_payee' => 'Who got the cash — pick from the list or type a name.',
     'pick_one' => 'Choose how the labour was paid: cash now, due to a contractor, paid by the supplier, or not needed.',
     'needs_reason' => 'Write a short reason why it was not needed.',
     'needs_amount' => 'Write the amount paid (more than zero).',

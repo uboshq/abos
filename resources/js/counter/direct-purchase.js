@@ -94,6 +94,8 @@ export default function directPurchase({
         unloadAccountId: (unloadStart && unloadStart.account) || '',
         unloadContractorId: (unloadStart && unloadStart.contractor) || '',
         unloadReason: (unloadStart && unloadStart.reason) || '',
+        /* ⭐ নগদে কাকে দিলেন — তালিকায় না থাকলে হাতে নাম (মালিক, ২৬ নভেম্বর ২০২৬) */
+        unloadPayee: (unloadStart && unloadStart.payee) || '',
         unloadSame: '',
         unloadProblem: '',
 
@@ -1219,6 +1221,7 @@ export default function directPurchase({
             this.unloadAccountId = '';
             this.unloadContractorId = '';
             this.unloadReason = '';
+            this.unloadPayee = '';
             this.unloadSame = '';
             this.unloadProblem = '';
 
@@ -1360,6 +1363,7 @@ export default function directPurchase({
             const t = texts.unload || {};
 
             if (this.unloadMode === '') return t.pick || '';
+            if (this.unloadMode === 'cash' && String(this.unloadContractorId || '') === '' && String(this.unloadPayee || '').trim() === '') return t.payee || '';
             if (this.unloadMode === 'cash' && String(this.unloadAccountId || '') === '') return t.till || '';
             if (this.unloadMode === 'due' && String(this.unloadContractorId || '') === '') return t.contractor || '';
             if (this.unloadMode === 'none' && String(this.unloadReason || '').trim().length < 3) return t.reason || '';

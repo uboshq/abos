@@ -1,5 +1,10 @@
 # What's new
 
+## 1.3.19 — 26-11-2026
+
+- Unloading bill, "Paid in cash now": first who got it (a labour contractor from the list, or a typed name), then the till and the amount on one line; the name stays on the bill and in the ledger narration.
+- Under the supplier only "Can still bill"; from bill total to total outstanding one rounded, coloured box with a thin line between rows.
+
 ## 1.3.18 — 26-11-2026
 
 - Direct purchase: the lot box is yellow as in the sample; thin, light lines between list rows; long product names no longer clip their letters.

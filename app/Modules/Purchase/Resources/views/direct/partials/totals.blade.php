@@ -31,8 +31,9 @@
              লাল দাগ দিয়ে ঠিক ওই ফাঁকাটাই দেখিয়েছেন। --}}
 
             {{-- ⭐ বিলের মোট — পুরো সবুজ (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9) --}}
-            <section data-boxed class="overflow-hidden rounded-(--radius-card) border-2 border-(--color-success)
-                            bg-(--color-surface-card)">
+            {{-- ⭐ বিলের মোট থেকে মোট বকেয়া — একটা আলাদা গোল কোণার রঙিন বাক্স, প্রতিটা লাইনের মাঝে চিকন দাগ (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+            <section data-boxed class="overflow-hidden rounded-2xl border-2 border-(--color-success)
+                            bg-(--color-badge-success-bg) shadow-sm">
 
                 {{-- ── মাথার ব্যান্ড — নাম আর বড় অঙ্ক ────────────────────
 
@@ -51,7 +52,7 @@
                     <span class="num whitespace-nowrap text-base font-bold xl:text-xl">৳<span x-text="money(netPayable)"></span></span>
                 </div>
 
-                <div class="p-3">
+                <div class="m-2 rounded-xl border border-(--color-border) bg-(--color-surface-card) px-3 py-1.5">
                 {{-- ── ছবির সারি-ক্রম, হুবহু ─────────────────────────────
 
                      ```
@@ -71,7 +72,7 @@
                      আজ আঁকা হয় না — নিচের ব্লকে কারণটা লেখা। ⓘ জায়গাটা
                      ইচ্ছে করে এখানেই রাখা, যাতে ঘরগুলো এলে ছবির ক্রমেই
                      বসে। --}}
-                <dl class="space-y-1 text-2xs">
+                <dl class="divide-y divide-(--color-border) text-2xs [&>div]:py-1.5">
                     <div class="flex justify-between">
                         <dt class="text-(--color-ink-muted)">{{ __('purchase::field.sub_total_goods') }}</dt>
                         <dd class="num" x-text="money(subTotal)"></dd>
@@ -162,7 +163,7 @@
                          ```
                          ⓘ চারটার তিনটা থাকলে সংখ্যাটা ভুল — তাই চারটাই
                          একসাথে, নয়তো একটাও নয়। --}}
-                    <div class="flex justify-between border-t border-(--color-border) pt-1.5 font-semibold">
+                    <div class="flex justify-between font-semibold">
                         <dt><span>{{ __('purchase::field.net_payable') }}</span></dt>
                         <dd class="num" x-text="money(netPayable)"></dd>
                     </div>
@@ -215,7 +216,7 @@
                      মানুষটা কাল আবার ফোন করবেন, তাই ওটাকে বাকি সারিগুলোর
                      ভিড় থেকে আলাদা করে রাখা হয়েছে। --}}
                 {{-- ⭐ মোট বকেয়া — সরবরাহকারী আমাদের কাছে পায় হলে লাল, আমরা তাঁর কাছে পাই (অগ্রিম) হলে সবুজ (মালিক, ২৬ নভেম্বর ২০২৬) --}}
-                <div class="mt-2 flex items-center justify-between rounded-(--radius-field) px-2 py-1.5 text-2xs"
+                <div class="mb-1.5 mt-1 flex items-center justify-between rounded-(--radius-field) px-2 py-1.5 text-2xs"
                      :class="totalDue > 0
                          ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)'
                          : (totalDue < 0 ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' : 'bg-(--color-surface-sunken)')">

@@ -76,6 +76,7 @@
                       'pick' => __('supplier::labour.pick_one'),
                       'till' => __('supplier::labour.needs_till'),
                       'contractor' => __('supplier::labour.needs_contractor'),
+                      'payee' => __('supplier::labour.needs_payee'),
                       'reason' => __('supplier::labour.needs_reason'),
                       'amount' => __('supplier::labour.needs_amount'),
                   ],
@@ -98,7 +99,8 @@
                   'account' => (string) old('unload_account_id', ''),
                   'contractor' => (string) old('unload_contractor_id', ''),
                   'reason' => (string) old('unload_reason', ''),
-                  'failed' => $errors->hasAny(\App\Modules\Supplier\Services\LabourCost::fields('unload_')),
+                  'payee' => (string) old('unload_payee', ''),
+                  'failed' => $errors->hasAny([...\App\Modules\Supplier\Services\LabourCost::fields('unload_'), 'unload_payee']),
               ]),
           })"
           @submit="guard($event)"
@@ -662,33 +664,56 @@
                     <input type="hidden" name="unload_mode" :value="unloadMode">
                     <input type="hidden" name="unload_amount" :value="unloadAmountSent">
 
-                    <label class="block" x-show="unloadMode === 'cash'" x-cloak>
-                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.till') }}</span>
-                        <select name="unload_account_id" x-model="unloadAccountId" class="{{ $unloadInput }}">
-                            <option value="">—</option>
-                            @foreach ($labourTills as $till)
-                                <option value="{{ $till['id'] }}">{{ $till['label'] }}</option>
-                            @endforeach
-                        </select>
-                    </label>
-
-                    <div x-show="unloadMode === 'due'" x-cloak>
-                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.contractor') }}</span>
-                        @if ($labourContractors->isEmpty())
-                            <p class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-2 py-1 text-2xs text-(--color-badge-warning-ink)">
-                                {{ __('supplier::labour.no_contractor_party') }}
-                            </p>
-                        @else
-                            <select name="unload_contractor_id" x-model="unloadContractorId" class="{{ $unloadInput }}">
-                                <option value="">—</option>
-                                @foreach ($labourContractors as $contractor)
-                                    <option value="{{ $contractor['id'] }}">{{ $contractor['label'] }}</option>
-                                @endforeach
-                            </select>
-                        @endif
+                    {{-- ⭐ কাকে দিলেন / কার কাছে বাকি — উপরে (মালিক, ২৬ নভেম্বর ২০২৬)। নগদে: তালিকা থেকে, অথবা হাতে নাম;
+                         বাকিতে: তালিকা থেকেই (দেনা কারো নামে বসতে হয়), না থাকলে "＋ নতুন ঠিকাদার"। --}}
+                    <div x-show="unloadCostsUs" x-cloak>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)"
+                              x-text="unloadMode === 'cash' ? @js(__('supplier::labour.paid_to_label')) : @js(__('supplier::labour.contractor'))"></span>
+                        <div class="grid gap-2" :class="unloadMode === 'cash' ? 'grid-cols-2' : 'grid-cols-1'">
+                            @if ($labourContractors->isEmpty())
+                                <p class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-2 py-1 text-2xs text-(--color-badge-warning-ink)">
+                                    {{ __('supplier::labour.no_contractor_party') }}
+                                </p>
+                            @else
+                                <select name="unload_contractor_id" x-model="unloadContractorId" class="{{ $unloadInput }}">
+                                    <option value="">—</option>
+                                    @foreach ($labourContractors as $contractor)
+                                        <option value="{{ $contractor['id'] }}">{{ $contractor['label'] }}</option>
+                                    @endforeach
+                                </select>
+                            @endif
+                            <input type="text" maxlength="120" x-show="unloadMode === 'cash'" x-cloak x-model="unloadPayee"
+                                   placeholder="{{ __('supplier::labour.payee_name') }}" aria-label="{{ __('supplier::labour.payee_name') }}"
+                                   class="{{ $unloadInput }}">
+                        </div>
+                        <input type="hidden" name="unload_payee" :value="unloadMode === 'cash' ? unloadPayee : ''">
                         {{-- ⓘ ঠিকাদার না থাকলে এখান থেকেই যোগ — নতুন ট্যাবে, তাই এই বিলটা হারায় না; ফিরে এসে পাতা নতুন করে খুললে তালিকায় আসে --}}
                         <a href="{{ $newContractorUrl }}" target="_blank" rel="noopener" data-new-contractor
                            class="mt-1 inline-block text-2xs font-semibold text-(--color-link)">＋ {{ __('supplier::labour.new_contractor') }}</a>
+                    </div>
+
+                    {{-- ⭐ এক লাইনে: কোন টিল থেকে (নগদে) · কত টাকা --}}
+                    <div x-show="unloadCostsUs" x-cloak class="grid gap-2" :class="unloadMode === 'cash' ? 'grid-cols-2' : 'grid-cols-1'">
+                        <label class="block" x-show="unloadMode === 'cash'" x-cloak>
+                            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.till') }}</span>
+                            <select name="unload_account_id" x-model="unloadAccountId" class="{{ $unloadInput }}">
+                                <option value="">—</option>
+                                @foreach ($labourTills as $till)
+                                    <option value="{{ $till['id'] }}">{{ $till['label'] }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <label class="block" x-show="unloadSplit === 'whole'">
+                            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.whole_amount') }}</span>
+                            <input type="number" step="0.01" min="0" inputmode="decimal" x-model="unloadAmount"
+                                   :placeholder="money(unloadSuggested)"
+                                   class="num {{ $unloadInput }} text-end font-bold">
+                        </label>
+                        <div x-show="unloadSplit === 'product'" x-cloak>
+                            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('purchase::field.amount') }}</span>
+                            <div class="num flex h-(--spacing-field) items-center justify-end rounded-(--radius-field) bg-(--color-surface-sunken) px-2 font-bold"
+                                 x-text="money(unloadProductTotal)"></div>
+                        </div>
                     </div>
 
                     <label class="block" x-show="unloadMode === 'none'" x-cloak>
@@ -698,12 +723,6 @@
 
                     {{-- ── পুরো চালানে একটা অঙ্ক — খালি রাখলে কার্টন × দর --}}
                     <div x-show="unloadCostsUs && unloadSplit === 'whole'" x-cloak>
-                        <label class="block">
-                            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.whole_amount') }}</span>
-                            <input type="number" step="0.01" min="0" inputmode="decimal" x-model="unloadAmount"
-                                   :placeholder="money(unloadSuggested)"
-                                   class="num {{ $unloadInput }} text-end text-lg font-bold">
-                        </label>
                         <p class="mt-1 text-2xs text-(--color-ink-muted)">
                             {{ __('supplier::labour.amount_hint') }} ·
                             <span class="num" x-text="qty(unloadCartons)"></span> {{ __('supplier::labour.cartons') }} ×
@@ -765,7 +784,7 @@
 
                     <p x-show="unloadProblem !== ''" x-cloak role="alert" x-text="unloadProblem"
                        class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-2xs text-(--color-badge-danger-ink)"></p>
-                    @foreach ([...\App\Modules\Supplier\Services\LabourCost::fields('unload_'), 'unload_mode'] as $field)
+                    @foreach ([...\App\Modules\Supplier\Services\LabourCost::fields('unload_'), 'unload_mode', 'unload_payee'] as $field)
                         @error($field)
                             <p class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-2xs text-(--color-badge-danger-ink)" role="alert" data-unload-error>{{ $message }}</p>
                         @enderror

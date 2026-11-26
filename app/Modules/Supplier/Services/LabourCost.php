@@ -95,6 +95,29 @@ final class LabourCost
      */
     public function read(array $data, string $prefix, array $modes, ?string $expected = null): array
     {
+        $out = $this->readChoice($data, $prefix, $modes, $expected);
+
+        /*
+         * ⭐ নগদে — কাকে দেওয়া হলো (মালিক, ২৬ নভেম্বর ২০২৬)। ⓘ কেবল যে দরজা `{prefix}payee` পাঠায় (সরাসরি ক্রয়) — অন্য দরজা
+         *   (মাল গ্রহণ, ফোন) এই ঘর পাঠায় না, তাদের কাগজে ঘরও নেই, তাই আগের মতোই চলে।
+         */
+        if (array_key_exists($prefix.'payee', $data)) {
+            $name = mb_substr(trim((string) $data[$prefix.'payee']), 0, 120);
+            $cash = ($out[$prefix.'mode'] ?? null) === self::CASH;
+
+            if ($cash && $out[$prefix.'contractor_id'] === null && $name === '') {
+                throw ValidationException::withMessages([$prefix.'payee' => __('supplier::labour.needs_payee')]);
+            }
+
+            $out[$prefix.'payee'] = $cash && $name !== '' ? $name : null;
+        }
+
+        return $out;
+    }
+
+    /** @param  list<string>  $modes  @return array<string, mixed> */
+    private function readChoice(array $data, string $prefix, array $modes, ?string $expected): array
+    {
         $mode = trim((string) ($data[$prefix.'mode'] ?? ''));
         $empty = [
             $prefix.'mode' => null, $prefix.'amount' => '0', $prefix.'account_id' => null,
@@ -162,6 +185,18 @@ final class LabourCost
 
             $out[$prefix.'account_id'] = (int) $account->id;
             $out[$prefix.'payer_id'] = auth()->id();
+
+            // ⓘ কাকে দিলেন — তালিকার ঠিকাদার হলে তার নামে (ধরন LABOUR); খাতা বদলায় না, নগদ টিল থেকেই যায়
+            $paidTo = (int) ($data[$prefix.'contractor_id'] ?? 0);
+
+            if ($paidTo > 0) {
+                if (! Supplier::query()->whereKey($paidTo)
+                    ->whereHas('partyType', fn ($q) => $q->where('code', self::CONTRACTOR_TYPE))->exists()) {
+                    throw ValidationException::withMessages([$prefix.'contractor_id' => __('supplier::labour.not_a_contractor')]);
+                }
+
+                $out[$prefix.'contractor_id'] = $paidTo;
+            }
 
             return $out;
         }
@@ -291,6 +326,16 @@ final class LabourCost
             ->values();
     }
 
+    /** নগদে কাকে দেওয়া হলো — তালিকার ঠিকাদার, নইলে হাতে লেখা নাম; না থাকলে খালি */
+    public function paidTo(Model $paper, string $prefix): string
+    {
+        if (($id = $paper->getAttribute($prefix.'contractor_id')) !== null) {
+            return (string) (Supplier::query()->find((int) $id)?->name() ?? '');
+        }
+
+        return trim((string) ($paper->getAttribute($prefix.'payee') ?? ''));
+    }
+
     /** কাগজে দেখানোর এক লাইন — "নগদ · ৫০.০০ · ১১০১ প্রধান টিল" */
     public function describe(Model $paper, string $prefix): string
     {
@@ -308,6 +353,10 @@ final class LabourCost
 
         if ($mode === self::CASH && ($id = $paper->getAttribute($prefix.'account_id')) !== null) {
             $parts[] = (string) (Account::query()->withoutGlobalScope('viewed-branch-till')->find((int) $id)?->name() ?? '');
+        }
+
+        if ($mode === self::CASH && ($to = $this->paidTo($paper, $prefix)) !== '') {
+            $parts[] = __('supplier::labour.paid_to', ['name' => $to]);
         }
 
         if ($mode === self::DUE && ($id = $paper->getAttribute($prefix.'contractor_id')) !== null) {

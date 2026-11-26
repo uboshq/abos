@@ -80,21 +80,15 @@
             </div>
 
             {{-- ⓘ মোবাইল আর "বুঝে নিলেন" নেই — মালিক, ২৬ নভেম্বর ২০২৬: "যে কিনছে সে বুঝেই দিচ্ছে"; কেবল ঠিকানা, এক লাইনে --}}
-            {{-- ⭐ নামের নিচে এক লাইনে কেবল দুটো অঙ্ক — "আর বিল করা যাবে" আর "আগের বকেয়া" (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v10 "100% এইরকম")।
+            {{-- ⭐ নামের নিচে কেবল "আর বিল করা যাবে" — আগের বকেয়া ডানের হিসাবেই আছে (মালিক, ২৬ নভেম্বর ২০২৬)। আগে ছিল দুটো: "আর বিল করা যাবে" আর "আগের বকেয়া" (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v10 "100% এইরকম")।
                  ⓘ "আর বিল করা যাবে" = লিমিট − (দেনা + বিল-না-আসা মাল), সার্ভারের মাপ; লিমিট নেই তো "সীমা নেই"; ছাড়িয়ে গেলে লাল ঋণাত্মক।
                  ⛔ লাইন ভাঙে না (`whitespace-nowrap`) — ঠিকানা, মোবাইল, লিমিটের আলাদা সারি নেই। --}}
             <div x-show="supplier" x-cloak data-supplier-credit
-                 class="mt-1 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-3 whitespace-nowrap border-t border-(--color-border) pt-1 text-xs">
+                 class="mt-1 flex whitespace-nowrap border-t border-(--color-border) pt-1 text-xs">
                 <span class="flex min-w-0 items-baseline gap-1.5 overflow-hidden">
                     <span class="min-w-0 truncate text-2xs text-(--color-ink-muted)">{{ __('purchase::field.can_bill_more') }}</span>
                     <b class="num shrink-0 text-xs" :class="creditRoom === null ? '' : (creditRoom >= 0 ? 'text-(--color-success)' : 'text-(--color-danger)')"
                        x-text="creditRoom === null ? @js(__('purchase::field.no_limit')) : money(creditRoom)"></b>
-                </span>
-                <span class="flex min-w-0 items-baseline gap-1.5 overflow-hidden">
-                    <span class="min-w-0 truncate text-2xs text-(--color-ink-muted)"
-                          x-text="previousDue < 0 ? @js(__('purchase::field.previous_advance')) : @js(__('purchase::field.previous_due'))"></span>
-                    <b class="num shrink-0 text-xs" :class="previousDue > 0 ? 'text-(--color-danger)' : 'text-(--color-success)'"
-                       x-text="money($abs(previousDue))"></b>
                 </span>
             </div>
 

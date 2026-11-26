@@ -116,7 +116,7 @@ trait ChargesUnloading
             __('supplier::labour.unloading_narration', [
                 'no' => (string) $paper->getAttribute('document_no'),
                 'cartons' => rtrim(rtrim(Money::round((string) $paper->getAttribute('unload_cartons'), 2), '0'), '.') ?: '0',
-            ]),
+            ]).(($to = app(LabourCost::class)->paidTo($paper, 'unload_')) !== '' && $paper->getAttribute('unload_mode') === LabourCost::CASH ? ' — '.$to : ''),
             $capitalised,
         );
     }

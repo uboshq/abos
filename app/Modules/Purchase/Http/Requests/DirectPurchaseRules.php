@@ -214,6 +214,7 @@ final class DirectPurchaseRules
             // ⭐ আনলোডিং — হাতের কার্টনপ্রতি দর (খালি = পণ্যের নিজের দর বা সমান ভাগ) আর বাছাই (মালিক, ১৮ নভেম্বর ২০২৬; [[LabourCost]])
             'lines.*.unload_rate' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0', 'max:99999'],
             ...\App\Modules\Supplier\Services\LabourCost::rules('unload_', \App\Modules\Supplier\Services\LabourCost::UNLOADING),
+            'unload_payee' => ['nullable', 'string', 'max:120'],
 
             /*
              * লট · মেয়াদ · ছাপা দাম — লট ধরা পণ্যে লট নম্বরটা
