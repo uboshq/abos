@@ -1,5 +1,10 @@
 # What's new
 
+## 1.3.23 — 26-11-2026
+
+- Approval inbox: party · point (when there is one) · branch in the head; the first tile shows who asked — one line less below.
+- Direct purchase: no box around the product part, only the search at first; picking a product brings the lot and the entry row, adding to cart hides them again. No per-carton suggestion for unloading — the amount is typed.
+
 ## 1.3.22 — 26-11-2026
 
 - Approval inbox (the three ABOS looks): "changed after it was asked" on top; party and point under the number; branch · date · where · transaction no. on one row, the rest as small chips; the confirmation as one-line name:value pairs; this party's earlier papers open on click; the decide buttons always in view — only the list on the left scrolls.

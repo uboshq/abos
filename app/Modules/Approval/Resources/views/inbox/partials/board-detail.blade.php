@@ -50,14 +50,14 @@
      * ⓘ [label, html, hue 1–5, span]
      */
     $tiles = [
-        [__('approval::field.branch'), e(($facts['branch'] ?? null) ?: '—'), 2, 1],
+        // ⓘ শাখা মাথায় উঠেছে (পক্ষ · পয়েন্ট · শাখা); এই ঘরে কে অনুমোদন চেয়েছেন (মালিক, ২৬ নভেম্বর ২০২৬)
+        [__('approval::field.asked_by'), e($approval->requesterName()), 2, 1],
         [__('approval::field.board_date'), e($paperDate), 3, 1],
         [__('approval::field.board_where'), e($whereShown ?: '—'), 4, 1],
         [__('approval::field.board_tx'), e($txNo ?: '—'), 5, 1],
     ];
     $chips = [
-        [__('approval::field.asked_by'), e($approval->requesterName()), false],
-        [__('core.print.prepared_by'), e($preparedBy ?: $approval->requesterName()), false],
+        ...(($preparedBy ?: $approval->requesterName()) === $approval->requesterName() ? [] : [[__('core.print.prepared_by'), e($preparedBy), false]]),
         [__('approval::field.board_waited'), e($wait).(($deadline['text'] ?? null) ? ' · '.e($deadline['text']) : ''), ($deadline['tone'] ?? null) === 'danger'],
         [__('approval::field.step'), e($step['at'].' / '.$step['of']).($step['name'] ? ' · '.e($step['name']) : ''), false],
     ];
@@ -112,9 +112,15 @@
                 @endunless
             </p>
             {{-- ⭐ নম্বরের নিচে পক্ষ আর পয়েন্ট (নমুনা) --}}
+            {{-- ⓘ পক্ষ · পয়েন্ট (থাকলে তবেই) · শাখা --}}
             <p class="inbox-board-who">
                 <span>{{ __('approval::field.party') }}</span> {!! $link($partyName, $partyUrl) !!}
-                <span>· {{ __('approval::field.board_point') }}</span> <b>{!! $link($facts['point'] ?? null, $partyUrl) !!}</b>
+                @if (filled($facts['point'] ?? null))
+                    <span>· {{ __('approval::field.board_point') }}</span> <b>{!! $link($facts['point'], $partyUrl) !!}</b>
+                @endif
+                @if (filled($facts['branch'] ?? null))
+                    <span>· {{ __('approval::field.branch') }}</span> <b>{{ $facts['branch'] }}</b>
+                @endif
             </p>
 
             @if (($prevUrl ?? null) || ($nextUrl ?? null))

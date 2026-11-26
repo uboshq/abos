@@ -1279,7 +1279,8 @@ export default function directPurchase({
         defaultUnloadRateOf(line) {
             const own = this.productOf(line)?.unload_rate;
 
-            return own === null || own === undefined || own === '' ? this.unloadRate : (Number(own) || 0);
+            /* ⓘ কেবল পণ্যের নিজের দর — নিয়ন্ত্রণ প্যানেলের সাধারণ দর আর প্রস্তাব হিসেবে বসে না (মালিক, ২৬ নভেম্বর ২০২৬) */
+            return own === null || own === undefined || own === '' ? null : (Number(own) || 0);
         },
 
         unloadLineAmount(line) {
@@ -1292,7 +1293,7 @@ export default function directPurchase({
 
         /** প্রস্তাবিত — সারির নিজের দর, নইলে সাধারণ দর; সার্ভারের [[UnloadingSplit::expected()]] */
         get unloadSuggested() {
-            return this.paisa(this.lines.reduce((s, l) => s + this.lineCartons(l) * this.defaultUnloadRateOf(l), 0));
+            return this.paisa(this.lines.reduce((s, l) => s + this.lineCartons(l) * (this.defaultUnloadRateOf(l) ?? 0), 0));
         },
 
         get unloadCostsUs() {
@@ -1302,9 +1303,10 @@ export default function directPurchase({
         get unloadTotal() {
             if (! this.unloadCostsUs) return 0;
 
+            /* ⓘ খালি অঙ্কে আর প্রস্তাব বসে না — যা দেওয়া হলো, সেটাই লিখতে হয় */
             return this.unloadSplit === 'product'
                 ? this.unloadProductTotal
-                : (Number(this.unloadAmount) > 0 ? this.paisa(Number(this.unloadAmount)) : this.unloadSuggested);
+                : (Number(this.unloadAmount) > 0 ? this.paisa(Number(this.unloadAmount)) : 0);
         },
 
         /** সার্ভারে যায় — পণ্য ধরে হলে হারগুলোর যোগফল; পুরো চালানে লেখা অঙ্ক (খালি = সার্ভার প্রস্তাব বসায়) */
@@ -1326,8 +1328,10 @@ export default function directPurchase({
 
             /* ⓘ খালি হারে পণ্যের নিজের দর বসে — মানুষ কেবল আলাদাগুলো বদলান */
             this.lines.forEach((line) => {
-                if (line.unload_rate === undefined || line.unload_rate === null || String(line.unload_rate) === '') {
-                    line.unload_rate = Number(this.defaultUnloadRateOf(line)).toFixed(2);
+                const own = this.defaultUnloadRateOf(line);
+
+                if (own !== null && (line.unload_rate === undefined || line.unload_rate === null || String(line.unload_rate) === '')) {
+                    line.unload_rate = Number(own).toFixed(2);
                 }
             });
         },

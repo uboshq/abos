@@ -1,6 +1,6 @@
-            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
-                            bg-(--color-surface-muted) px-3 py-2"
-                     style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-badge-draft-ink)">
+            {{-- ⭐ বাক্স নেই — শুধু খোঁজার বোতাম; পণ্য বাছলে লট (৩) আর পরিমাণের সারি (৪) দেখা দেয়, "কার্টে দিন"-এ আবার লুকায়
+                 (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+            <section data-direct-entry class="px-1 py-1">
 {{-- ⚠️ বার্তাটা সারির **নিচে**, ঘরটার ভিতরে নয়।
 
                      ⛔ আগে এটা গুদামের `<label>`-এর ভিতরে ছিল, আর তাতে
@@ -29,7 +29,7 @@
                 {{-- ⭐ বাক্স নেই — কেবল খোঁজার বোতাম, আর তার পাশে নাম বা খোঁজার লেখা; উপরে ফাঁকা নেই (মালিক, ২৬ নভেম্বর ২০২৬) --}}
                 <div class="flex items-start gap-3">
                 <div class="relative min-w-0 flex-1">
-                    <div class="flex min-h-10 items-center gap-2 border-b border-(--color-border)">
+                    <div class="flex min-h-10 items-center gap-2">
                         {{-- ⓘ চিহ্নটা এখন কেবল ফোকাস করে না, **তালিকাও খোলে**।
                              ⛔ আগে চাপলে কিছুই হত না, কারণ খালি লেখায় তালিকা
                              খালি থাকত — মালিক: *"product sarch icon o kaj kore
@@ -214,7 +214,9 @@
                      (`:disabled="! picked"`) — খোলা রাখলে কেউ পরিমাণ লিখে
                      ফেলতেন কোন পণ্যের জন্য তা না বলেই, আর "যোগ করুন" চাপলে
                      কিছুই হত না, কারণ ছাড়াই। --}}
-                <div class="mt-2">
+                <div class="mt-2" x-show="picked" x-cloak data-entry-row
+                     x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0 -translate-y-1"
+                     x-transition:leave="transition ease-in duration-100" x-transition:leave-end="opacity-0">
                     <div class="min-w-0">
 
                         {{-- ── সারি ২: পরিমাণ ────────────────────────────

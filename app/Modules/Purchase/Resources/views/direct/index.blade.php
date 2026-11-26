@@ -706,7 +706,6 @@
                         <label class="block" x-show="unloadSplit === 'whole'">
                             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.whole_amount') }}</span>
                             <input type="number" step="0.01" min="0" inputmode="decimal" x-model="unloadAmount"
-                                   :placeholder="money(unloadSuggested)"
                                    class="num {{ $unloadInput }} text-end font-bold">
                         </label>
                         <div x-show="unloadSplit === 'product'" x-cloak>
@@ -721,14 +720,9 @@
                         <input type="text" name="unload_reason" maxlength="255" x-model="unloadReason" class="{{ $unloadInput }}">
                     </label>
 
-                    {{-- ── পুরো চালানে একটা অঙ্ক — খালি রাখলে কার্টন × দর --}}
+                    {{-- ── পুরো চালানে একটা অঙ্ক — যা সত্যিই দেওয়া হলো, নিজে লিখতে হয়; কার্টনপ্রতি দরের প্রস্তাব দেখায় না
+                         (মালিক, ২৬ নভেম্বর ২০২৬: "৪০ পয়সার সাজেশন দিব না") --}}
                     <div x-show="unloadCostsUs && unloadSplit === 'whole'" x-cloak>
-                        <p class="mt-1 text-2xs text-(--color-ink-muted)">
-                            {{ __('supplier::labour.amount_hint') }} ·
-                            <span class="num" x-text="qty(unloadCartons)"></span> {{ __('supplier::labour.cartons') }} ×
-                            <span class="num" x-text="money(unloadRate)"></span> =
-                            <span class="num font-semibold" x-text="money(unloadSuggested)"></span>
-                        </p>
                         <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.split_hint') }}</p>
                     </div>
 
