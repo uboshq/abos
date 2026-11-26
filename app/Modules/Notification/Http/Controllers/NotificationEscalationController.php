@@ -46,7 +46,8 @@ class NotificationEscalationController extends Controller
             ->when(($f['state'] ?? null) === 'waiting', fn ($q) => $q->whereNull('escalated_at')->where('due_at', '>', now()))
             ->when(($f['state'] ?? null) === 'late', fn ($q) => $q->whereNull('escalated_at')->where('due_at', '<=', now()))
             ->when(($f['state'] ?? null) === 'escalated', fn ($q) => $q->whereNotNull('escalated_at'))
-            ->orderBy('due_at')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম (শেষ সময় আগে)
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['due_soon' => ['due_at', 'asc'], 'newest' => ['id', 'desc'], 'oldest' => ['id', 'asc']]))
             ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         $escalatedTo = User::query()->withoutGlobalScope('company')
