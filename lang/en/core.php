@@ -1632,6 +1632,7 @@ return [
         'on_behalf' => 'On behalf of :name (leave cover)',
         'mine' => 'My notifications',
         'mine_note' => 'Everything sent to you — unread, read and archived. Opening a notification marks it read.',
+        'load_failed' => 'Could not load the list — try again, or',
         'see_all' => 'All notifications',
         'search' => 'Search title or message',
         'empty' => 'Nothing here.',

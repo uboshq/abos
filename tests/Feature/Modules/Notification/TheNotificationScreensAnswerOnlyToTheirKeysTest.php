@@ -55,10 +55,14 @@ final class TheNotificationScreensAnswerOnlyToTheirKeysTest extends TestCase
         app(NotificationService::class)->send($this->clerk, 'backup.failed', 'রাতের ব্যাকআপ ব্যর্থ');
 
         $page = $this->actingAs($this->clerk)->get(route('notifications.index'))->assertOk();
-        $page->assertSee('data-critical', false)
-            ->assertSee(__('core.notify.drawer.approval'))
-            ->assertSee(route('notifications.index'), false)
+        $page->assertSee(route('notifications.index'), false)
             ->assertSee('data-poll-seconds="0"', false);
+        // ⓘ ঘণ্টার তালিকা — পাতায় সরাসরি, বা তিন ABOS রূপে খুললে আনা (`?part=bell`, ২৬ নভেম্বর ২০২৬); দুই পথেই একই কথা
+        $list = str_contains((string) $page->getContent(), 'data-bell-list')
+            ? $this->actingAs($this->clerk)->get(route('notifications.index', ['part' => 'bell']))->assertOk()
+            : $page;
+        $list->assertSee('data-critical', false)
+            ->assertSee(__('core.notify.drawer.approval'));
 
         $this->actingAs($this->owner);
         app(SettingsService::class)->set('notification.bell_polling', true);
