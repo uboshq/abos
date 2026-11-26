@@ -4,7 +4,8 @@
  *   ([[CounterMode]])। ফোন বা ছোট পর্দায় আগের মতো একই ট্যাবে। Ctrl/⌘/Shift/মাঝের বোতামে ব্রাউজারের নিজের নিয়ম।
  * ⓘ "✕ বন্ধ করুন" — নিজের খোলা ট্যাব বন্ধ করে; ব্রাউজার না দিলে মূল পাতায় ফেরে।
  */
-export const COUNTER_PATHS = ['/purchase/direct', '/sales/direct']
+// ⭐ মেইলও নিজের ট্যাবে — মালিক, ২৬ নভেম্বর ২০২৬
+export const COUNTER_PATHS = ['/purchase/direct', '/sales/direct', '/mail']
 
 export function counterUrl (href, origin) {
     const url = new URL(href, origin)
