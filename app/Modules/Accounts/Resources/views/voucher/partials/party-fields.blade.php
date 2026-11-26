@@ -504,7 +504,7 @@
                                     <td class="num" data-bill-due-date x-text="dayMonth(b.due_date)"></td>
                                     <td class="num" data-bill-late x-bind:class="lateClass(b)" x-text="lateText(b)"></td>
                                     <td class="num" data-bill-total x-text="lakh(b.total)"></td>
-                                    <td class="num" data-bill-outstanding x-bind:class="outstandingTone(b)" x-text="lakh(b.outstanding)"></td>
+                                    <td class="num" x-bind:class="outstandingTone(b)" data-bill-outstanding x-text="lakh(b.outstanding)"></td>
                                     <td class="num">
                                         <template x-if="canTick(b)">
                                             <input type="text" inputmode="decimal" data-bill-amount aria-label="{{ $isReceipt ? __('money.screen.col.this_in') : __('money.screen.col.this_out') }}" :title="b.no"
