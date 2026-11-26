@@ -2523,6 +2523,15 @@ class AppL10nBn extends AppL10n {
   String get payBillApply => 'এই বিলে (৳)';
 
   @override
+  String get payOpeningTag => 'কোনো বিলে নেই';
+
+  @override
+  String get payBillsDueTotal => 'মোট বাকি';
+
+  @override
+  String get payBillsDueLedger => 'মোট বাকি = খাতার জের';
+
+  @override
   String get payBillsApplied => 'বিলে বসল';
 
   @override

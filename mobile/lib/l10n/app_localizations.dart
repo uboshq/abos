@@ -4351,6 +4351,24 @@ abstract class AppL10n {
   /// **'এই বিলে (৳)'**
   String get payBillApply;
 
+  /// Earlier balance row: it sits on no bill, shown only
+  ///
+  /// In bn, this message translates to:
+  /// **'কোনো বিলে নেই'**
+  String get payOpeningTag;
+
+  /// Bills card: sum of what is still due on the rows shown
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট বাকি'**
+  String get payBillsDueTotal;
+
+  /// Bills card with the earlier balance row: the total equals the ledger balance
+  ///
+  /// In bn, this message translates to:
+  /// **'মোট বাকি = খাতার জের'**
+  String get payBillsDueLedger;
+
   /// Payment voucher: the sum set against the ticked bills
   ///
   /// In bn, this message translates to:

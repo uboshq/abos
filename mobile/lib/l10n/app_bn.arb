@@ -3450,6 +3450,18 @@
   "@payBillApply": {
     "description": "Payment voucher bill row: the amount set against this bill"
   },
+  "payOpeningTag": "কোনো বিলে নেই",
+  "@payOpeningTag": {
+    "description": "Earlier balance row: it sits on no bill, shown only"
+  },
+  "payBillsDueTotal": "মোট বাকি",
+  "@payBillsDueTotal": {
+    "description": "Bills card: sum of what is still due on the rows shown"
+  },
+  "payBillsDueLedger": "মোট বাকি = খাতার জের",
+  "@payBillsDueLedger": {
+    "description": "Bills card with the earlier balance row: the total equals the ledger balance"
+  },
   "payBillsApplied": "বিলে বসল",
   "@payBillsApplied": {
     "description": "Payment voucher: the sum set against the ticked bills"

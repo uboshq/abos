@@ -143,7 +143,11 @@ class PayeeBank {
 /// ⭐ পক্ষের একটা খোলা বিল — `GET /accounts/parties/{type}/{id}/open-bills` (cb, চুক্তির §৭.১): `id` বিলের public_id (চুক্তি ২-এর
 /// `bills[i][id]`), `outstanding` বাকি (পয়সায় [outstanding]) — বিল বাছায় এটাই, ওয়েবের কার্ডের একই সংখ্যা ([[PartyOpenBills]])
 class VoucherBill {
-  const VoucherBill({required this.id, required this.no, this.date = '', this.dueDate, this.daysLate, this.total = 0, required this.outstanding});
+  const VoucherBill(
+      {required this.id, required this.no, this.date = '', this.dueDate, this.daysLate, this.total = 0, required this.outstanding, this.opening = false});
+
+  /// ⭐ "আগের জের (ওপেনিং)" — খাতার জেরের যে অংশ কোনো খোলা বিলে নেই (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬); কেবল দেখায়, টিক নয়, পাঠানো নয়
+  final bool opening;
 
   final String id;
   final String no;
@@ -170,6 +174,14 @@ class VoucherBill {
       total: _paisa(raw['total']),
       outstanding: _paisa(raw['outstanding']),
     );
+  }
+
+  /// ⭐ দরজার `opening` ঘর (`label`, `date`, `outstanding`) — না থাকলে null
+  static VoucherBill? openingFromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final amount = _paisa(raw['outstanding']);
+    if (amount <= 0) return null;
+    return VoucherBill(id: '', no: raw['label']?.toString() ?? '', date: raw['date']?.toString() ?? '', outstanding: amount, opening: true);
   }
 }
 
@@ -782,6 +794,8 @@ class ServerVoucherApi implements VoucherApi, VoucherPreviewer, VoucherBillsSour
     try {
       final r = await ApiClient.dio.get<Map<String, dynamic>>('/accounts/parties/$type/$id/open-bills');
       return [
+        // ⭐ আগের জের সবার আগে — পর্দা আলাদা করে আঁকে, টিক দেয় না
+        if (VoucherBill.openingFromJson(r.data?['opening']) case final opening?) opening,
         for (final b in (r.data?['bills'] as List?) ?? const [])
           if (VoucherBill.fromJson(b) case final bill?) bill,
       ];

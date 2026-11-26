@@ -429,7 +429,18 @@ class _CustomerCreditScreenState extends State<CustomerCreditScreen> {
               ),
             if (d != null) ...[
               _SectionTitle(context.l10n.creditOpenBills),
-              if (d.bills.isEmpty)
+              if (d.opening case final opening?)
+                Card(
+                  key: const ValueKey('credit-opening'),
+                  color: context.palette.warningSurface,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.xs),
+                  child: ListTile(
+                    title: Text(opening.no),
+                    subtitle: Text(context.l10n.payOpeningTag),
+                    trailing: Text(Money.taka(opening.unpaid), style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              if (d.bills.isEmpty && d.opening == null)
                 Text(context.l10n.creditNoOpenBills, style: TextStyle(color: context.palette.onSurfaceMuted)),
               for (final b in d.bills)
                 Card(
@@ -900,6 +911,7 @@ class CustomerCredit {
     required this.risk,
     this.block,
     this.bills = const [],
+    this.opening,
     this.requests = const [],
     this.canRequest = false,
     this.mayLift = false,
@@ -913,6 +925,9 @@ class CustomerCredit {
   final CreditRiskRating risk;
   final CreditBlock? block;
   final List<CreditBill> bills;
+
+  /// ⭐ আগের জের (ওপেনিং) — কোনো বিলে নেই, কেবল দেখায়; না থাকলে null (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬)
+  final CreditBill? opening;
   final List<CreditRequestRow> requests;
   final bool canRequest;
   final bool mayLift;
@@ -962,6 +977,13 @@ class CustomerCredit {
             daysOverdue: (x['days_overdue'] as num?)?.toInt() ?? 0,
           ),
       ],
+      opening: body['opening'] is Map
+          ? CreditBill(
+              no: (body['opening'] as Map)['label']?.toString() ?? '',
+              unpaid: (body['opening'] as Map)['unpaid']?.toString() ?? '0',
+              dueOn: (body['opening'] as Map)['date']?.toString(),
+              daysOverdue: 0)
+          : null,
       requests: [
         for (final x in maps(body['requests']))
           CreditRequestRow(

@@ -265,6 +265,9 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
   /// ⭐ পক্ষের খোলা বিল — পক্ষ বাছলে দরজা থেকে ([VoucherBillsSource]); দরজা নেই বা পুরনো সার্ভার হলে খালি
   List<VoucherBill> _partyBills = const [];
 
+  /// ⭐ আগের জের (ওপেনিং) — দরজা পাঠালে; কেবল দেখায়, বিলের যোগে বা পাঠানোয় নেই
+  VoucherBill? _opening;
+
   List<VoucherBill> get _bills => _gross ? _partyBills : const [];
 
   /// ⭐ পক্ষ বাছা — বিল আর টিক নতুন করে; চুক্তি ২-এ তার খোলা বিল আনা (৪০৪/৪০৫ হলে বিল নেই)
@@ -272,6 +275,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
     setState(() {
       _party = p;
       _partyBills = const [];
+      _opening = null;
       _ticked.clear();
       _billError.clear();
     });
@@ -281,7 +285,10 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
     try {
       final bills = await source.openBills(p.type, p.id);
       if (!mounted || !identical(_party, p)) return;
-      setState(() => _partyBills = [...?bills]..sort((a, b) => a.date.compareTo(b.date)));
+      setState(() {
+        _opening = bills?.where((b) => b.opening).firstOrNull;
+        _partyBills = [...?bills?.where((b) => !b.opening)]..sort((a, b) => a.date.compareTo(b.date));
+      });
     } catch (e) {
       if (mounted && identical(_party, p)) setState(() => _error = errorMessageFor(e, fallback: context.l10n.vouchersFormSetupFailed));
     }
@@ -643,7 +650,7 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         const SizedBox(height: AppSpacing.sm),
         ..._moneyBox(context, s),
       ]),
-      if (_gross && _bills.isNotEmpty) _billsSection(context),
+      if (_gross && (_bills.isNotEmpty || _opening != null)) _billsSection(context),
       if (_gross) _summary(context),
       MoneySection(title: null, children: [
         // ⓘ সরবরাহকারী নয় এমন পক্ষ (কর্মী, ব্যক্তি …) — সার্ভার এখনো খাত চায়; সরবরাহকারীতে ঘরটাই নেই
@@ -684,7 +691,26 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
     final bills = [..._bills]..sort((a, b) => a.date.compareTo(b.date));
     final sum = _billsSum;
     final left = _amountPaisa - sum;
+    final opening = _opening;
+    final dueAll = bills.fold(opening?.outstanding ?? 0, (s, b) => s + b.outstanding);
     return MoneySection(key: const ValueKey('pay-bills'), title: w.payBillsTitle, children: [
+      // ⭐ আগের জের (ওপেনিং) — সবার উপরে, কোনো বিলে নেই, টিক নেই (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬)
+      if (opening != null)
+        Container(
+          key: const ValueKey('pay-bill-opening'),
+          color: context.palette.warningSurface,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: Row(children: [
+            const SizedBox(width: 48),
+            Expanded(
+              child: Wrap(spacing: AppSpacing.sm, alignment: WrapAlignment.spaceBetween, children: [
+                Text(opening.no, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(w.payOpeningTag, key: const ValueKey('pay-bill-opening-tag'), style: TextStyle(color: context.palette.warning, fontSize: 13)),
+                Text(w.payBillDue(Money.taka(opening.outstanding / 100)), key: const ValueKey('pay-bill-opening-due')),
+              ]),
+            ),
+          ]),
+        ),
       for (final (i, b) in bills.indexed) ...[
         if (i > 0) const Divider(height: 1),
         Padding(
@@ -732,6 +758,8 @@ class _MoneyVoucherScreenState extends State<MoneyVoucherScreen> {
         ),
       ],
       const Divider(height: AppSpacing.md),
+      // ⭐ মোট বাকি — আগের জের থাকলে খাতার জেরের সমান (নমুনার নিচের সারি)
+      MoneyAmountRow(key: const ValueKey('pay-bills-due-total'), label: opening != null ? w.payBillsDueLedger : w.payBillsDueTotal, paisa: dueAll),
       MoneyAmountRow(key: const ValueKey('pay-bills-total'), label: w.payBillsApplied, paisa: sum, strong: true),
       if (_fieldErrors['pay-bills-total'] case final e?) MoneyNote(key: const ValueKey('pay-bills-error'), text: e, tone: MoneyTone.stop),
       if (_billsOverGross)

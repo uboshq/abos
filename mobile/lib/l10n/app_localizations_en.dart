@@ -2571,6 +2571,15 @@ class AppL10nEn extends AppL10n {
   String get payBillApply => 'On this bill';
 
   @override
+  String get payOpeningTag => 'Not on any bill';
+
+  @override
+  String get payBillsDueTotal => 'Total due';
+
+  @override
+  String get payBillsDueLedger => 'Total due = ledger balance';
+
+  @override
   String get payBillsApplied => 'Set against bills';
 
   @override
