@@ -144,7 +144,7 @@ final class NobodyOpensAnotherPersonsMailTest extends TestCase
         $this->as($this->clerk);
         $m = $this->getJson("/mail/{$box->public_id}/read?folder=INBOX&uid=3")->assertOk()->json();
         $this->assertStringContainsString('data-blocked-src="https://tracker.example/p.gif"', $m['body']);
-        $this->assertStringNotContainsString('src="https://tracker', $m['body']);
+        $this->assertDoesNotMatchRegularExpression('#\ssrc="https://tracker#', $m['body'], '⛔ বাইরের ছবি খোলা — ট্র্যাকিং পিক্সেল চলবে।');
         $this->assertStringNotContainsString('<script', $m['body']);
         $this->assertStringNotContainsString('javascript:', $m['body']);
         $this->assertStringNotContainsString('onclick', $m['body']);
