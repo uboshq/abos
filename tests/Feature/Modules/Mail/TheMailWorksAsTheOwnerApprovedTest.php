@@ -262,7 +262,8 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->as($this->owner);
 
         foreach (['/mail', '/mail/signature', '/mail/templates', '/mail/templates?cat=festival', '/mail/addresses', '/mail/history', '/mail/sent'] as $page) {
-            $this->get($page)->assertOk();
+            // ⛔ পাশের রেল আর মেইলের মেনু — আগে কোনো মেইল পাতা মেনু দিত না, পাশটা খালি দেখাত (ডেমো, ২৭ নভেম্বর)
+            $this->get($page)->assertOk()->assertSee('data-active-module="mail"', false);
         }
 
         // ⓘ নতুন সারিতে অডিট কেবল "তৈরি" লেখে; বদলে আগে → পরে আসে — তাই দুবার
@@ -270,6 +271,21 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->post('/mail/signature', ['style_new' => 12, 'style_reply' => 10, 'festival' => 1, 'title' => 'Head of Sales'])->assertRedirect();
         $this->get('/mail/history?type=signature')->assertOk()->assertSee('Head of Sales');
         $this->getJson('/mail/compose?paper=nonsense&no=1')->assertStatus(422);
+    }
+
+    public function test_signature_eight_shows_the_bengali_and_english_name_and_title_side_by_side(): void
+    {
+        $this->clerk->forceFill(['name_bn' => 'মেইল কেরানি', 'designation' => 'Sales Officer', 'designation_bn' => 'বিক্রয় কর্মকর্তা'])->save();
+        $this->as($this->clerk);
+
+        $html = app(\App\Modules\Mail\Services\MailSignatures::class)->preview($this->clerk->fresh(), 8);
+
+        foreach (['মেইল কেরানি', 'বিক্রয় কর্মকর্তা', 'Mail Clerk', 'Sales Officer'] as $word) {
+            $this->assertStringContainsString($word, $html, "⛔ নকশা 8-এ «{$word}» নেই।");
+        }
+
+        // ⛔ আগে ডান পাশে পদের বদলে "Designation" শব্দটাই বসত (ডেমো, ২৭ নভেম্বর)
+        $this->assertStringNotContainsString('Designation', $html);
     }
 
     public function test_the_bar_shows_mail_with_its_unread_count_only_in_abos_looks(): void
