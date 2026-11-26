@@ -44,18 +44,22 @@
             ? __('approval::field.board_waited_hours', ['count' => $hours]) : __('approval::field.board_waited_now')));
     $paperDate = $fact(__('accounts::field.date')) ?? \App\Core\Support\DateFormat::format($approval->requested_at);
     $whereShown = collect([$facts['where'] ?? null, $fact(__('accounts::field.instrument'))])->filter()->unique()->implode(' · ');
-    // [label, html, hue 1–5, span] — the sample's order, four to a row
+    /*
+     * ⭐ মালিকের নমুনা (২৬ নভেম্বর ২০২৬, "ঠিক আছে"): পক্ষ আর পয়েন্ট মাথায় ([[dhead]]); এখানে প্রথম সারিতে চারটা ছোট ঘর —
+     *   শাখা · তারিখ · কোথায়/কী · লেনদেন নং; বাকি খবর (চেয়েছেন, অপেক্ষা, ধাপ, প্রস্তুতকারী …) এক লাইনে ছোট চিপে ([[$chips]])।
+     * ⓘ [label, html, hue 1–5, span]
+     */
     $tiles = [
-        [__('approval::field.party'), $link($partyName, $partyUrl), 1, 2],
-        [__('approval::field.board_point'), $link($facts['point'] ?? null, $partyUrl), 2, 1],
-        [__('approval::field.board_date'), e($paperDate), 3, 1],
-        [__('approval::field.board_where'), e($whereShown ?: '—'), 4, 2],
-        [__('approval::field.board_tx'), e($txNo ?: '—'), 5, 1],
         [__('approval::field.branch'), e(($facts['branch'] ?? null) ?: '—'), 2, 1],
-        [__('approval::field.asked_by'), e($approval->requesterName()), 3, 1],
-        [__('approval::field.board_waited'), e($wait).(($deadline['text'] ?? null) ? ' · '.e($deadline['text']) : ''), ($deadline['tone'] ?? null) === 'danger' ? 'late' : 5, 1],
-        [__('approval::field.step'), e($step['at'].' / '.$step['of']).($step['name'] ? ' · '.e($step['name']) : ''), 1, 1],
-        [__('core.print.prepared_by'), e($preparedBy ?: $approval->requesterName()), 4, 1],
+        [__('approval::field.board_date'), e($paperDate), 3, 1],
+        [__('approval::field.board_where'), e($whereShown ?: '—'), 4, 1],
+        [__('approval::field.board_tx'), e($txNo ?: '—'), 5, 1],
+    ];
+    $chips = [
+        [__('approval::field.asked_by'), e($approval->requesterName()), false],
+        [__('core.print.prepared_by'), e($preparedBy ?: $approval->requesterName()), false],
+        [__('approval::field.board_waited'), e($wait).(($deadline['text'] ?? null) ? ' · '.e($deadline['text']) : ''), ($deadline['tone'] ?? null) === 'danger'],
+        [__('approval::field.step'), e($step['at'].' / '.$step['of']).($step['name'] ? ' · '.e($step['name']) : ''), false],
     ];
     if ($documentHidden || $document === null) {
         $tiles[] = [__('approval::field.board_paper'), e(__($documentHidden ? 'approval::message.document_not_yours' : 'approval::message.document_gone')), 5, 4];
@@ -63,21 +67,31 @@
     if ($standInFor) {
         $tiles[] = [__('approval::field.board_stand_in'), '<span data-approval-stand-in>'.e(__('approval::message.on_behalf_of', ['name' => $standInFor])).'</span>', 5, 4];
     }
-    // ⓘ any fact of the paper no tile says yet keeps a tile of its own — nothing is lost, nothing is said twice
-    $said = collect($tiles)->map(fn ($t) => strip_tags(html_entity_decode((string) $t[1])))->implode(' | ').' | '.($facts['about'] ?? '').' | '.$workName;
+    // ⓘ any fact of the paper no tile says yet keeps a chip of its own — nothing is lost, nothing is said twice
+    $said = collect($tiles)->merge($chips)->map(fn ($t) => strip_tags(html_entity_decode((string) $t[1])))->implode(' | ')
+        .' | '.($facts['about'] ?? '').' | '.$workName.' | '.($partyName ?? '').' | '.($facts['point'] ?? '');
     $skip = [__('accounts::field.date'), __('approval::field.document'), __('approval::field.party'), __('core.company.branch'),
         __('accounts::field.instrument_no'), __('core.print.prepared_by'), __('core.table.narration')];
     foreach ($sheetFacts as $row) {
         if (! in_array($row['label'], $skip, true) && ! str_contains($said, (string) $row['value'])
             // ⓘ "1106 — QA ব্যাংক" is the same account the where-tile already names
             && ! str_contains($said, trim((string) preg_replace('/^[\d.\-]+\s*—\s*/u', '', (string) $row['value'])))) {
-            $tiles[] = [$row['label'], e($row['value']), 4, 1];
+            $chips[] = [$row['label'], e($row['value']), false];
         }
     }
     $note = collect([$narration, $facts['about'] ?? null, $approval->requested_reason])->filter()->unique()->implode(' · ');
+    // ⓘ নিশ্চিতকরণের ঘরগুলো যা উপরে আগেই বলা (পক্ষ, তারিখ, গুদাম …) তা আবার বলে না — [[sheet-body]] এটা পড়ে
+    $boardSaid = $said.' | '.$paperDate.' | '.$note;
+    $notice = $approval->payload['supersedes'] ?? null
+        ? ($was === null ? __('approval::message.supersedes_plain') : __('approval::message.supersedes', ['was' => '৳'.\App\Core\Support\Money::format($was)]))
+        : ($changedSinceAsked ? __('approval::message.changed_since_asked') : null);
 @endphp
 
 <div data-approval-detail="{{ $approval->id }}" class="inbox-board-detail" style="--k: {{ $tone }}; --kd: {{ $deep }}">
+    {{-- ⭐ "অনুমোদন চাওয়ার পরে বদলেছে" — সবার উপরে, পুরো চওড়ায়, হালকা রঙে গাঢ় লেখা (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+    @if ($notice !== null)
+        <p class="inbox-board-notice" data-board-notice role="note">⚠ <b>{{ __('approval::message.changed_since_asked_short') }} —</b> {{ $notice }}</p>
+    @endif
     {{-- ── bright head ─────────────────────────────────────────────────── --}}
     <header class="inbox-board-dhead">
         <div class="min-w-0">
@@ -90,17 +104,14 @@
                         <span class="inbox-board-dno num">{{ $paperNo }}</span>
                     @endif
                 @endif
-                @if ($changedSinceAsked)
-                    <span class="inbox-board-dflag" title="{{ __('approval::message.changed_since_asked') }}">{{ __('approval::message.changed_since_asked_short') }}</span>
-                @endif
-                @if (($approval->payload['supersedes'] ?? null) !== null)
-                    <span class="inbox-board-dflag">{{ $was === null
-                        ? __('approval::message.supersedes_plain')
-                        : __('approval::message.supersedes', ['was' => \App\Core\Support\Money::format($was)]) }}</span>
-                @endif
                 @unless ($pending)
                     @include('approval::inbox.partials.status', ['approval' => $approval])
                 @endunless
+            </p>
+            {{-- ⭐ নম্বরের নিচে পক্ষ আর পয়েন্ট (নমুনা) --}}
+            <p class="inbox-board-who">
+                <span>{{ __('approval::field.party') }}</span> {!! $link($partyName, $partyUrl) !!}
+                <span>· {{ __('approval::field.board_point') }}</span> <b>{!! $link($facts['point'] ?? null, $partyUrl) !!}</b>
             </p>
 
             @if (($prevUrl ?? null) || ($nextUrl ?? null))
@@ -141,13 +152,23 @@
                     <dd>{!! $value !!}</dd>
                 </div>
             @endforeach
-            @if ($note !== '')
+        </dl>
+
+        {{-- ⓘ বাকি খবর — এক লাইনে ছোট চিপে --}}
+        <p class="inbox-board-chips">
+            @foreach ($chips as [$label, $value, $late])
+                <span @class(['is-late' => $late])><i>{{ $label }}</i> {!! $value !!}</span>
+            @endforeach
+        </p>
+
+        @if ($note !== '')
+            <dl class="inbox-board-tiles !pt-0">
                 <div class="inbox-board-tile is-wide" data-tile="2">
                     <dt>{{ __('approval::field.board_note') }}</dt>
                     <dd>{{ $note }}</dd>
                 </div>
-            @endif
-        </dl>
+            </dl>
+        @endif
 
         @if ($timeline !== [])
             <div class="inbox-board-route">
@@ -159,9 +180,9 @@
         {{-- ── the boxes ─────────────────────────────────────────────────── --}}
         <div class="inbox-board-boxes">
             @if ($bundle !== null)
-                <section class="inbox-board-box">@include('approval::inbox.partials.bundle')</section>
+                <section class="inbox-board-box">@include('approval::inbox.partials.bundle', ['inBoard' => true, 'boardSaid' => $boardSaid])</section>
             @elseif ($sheet !== null)
-                <section class="inbox-board-box">@include('approval::inbox.partials.sheet', ['boardSheet' => true])</section>
+                <section class="inbox-board-box">@include('approval::inbox.partials.sheet', ['boardSheet' => true, 'inBoard' => true, 'boardSaid' => $boardSaid])</section>
             @endif
 
             @if ($document instanceof \App\Core\Contracts\Drillable)
@@ -169,14 +190,15 @@
             @endif
 
             @if (($partyPapers ?? []) !== [])
-                <section class="inbox-board-box" data-board-party-papers>
-                    <h3 class="inbox-board-boxhead">
-                        @if ($partyUrl)
-                            <a href="{{ $partyUrl }}" class="inbox-board-link">{{ __('approval::field.board_party_papers') }}</a>
-                        @else
-                            {{ __('approval::field.board_party_papers') }}
-                        @endif
-                    </h3>
+                {{-- ⭐ বন্ধ থাকে — কয়টা কাগজ আর কোনগুলো এক লাইনে; চাপলে খোলে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+                <details class="inbox-board-box inbox-board-fold" data-board-party-papers>
+                    <summary class="inbox-board-boxhead">
+                        <span>▸ {{ __('approval::field.board_party_papers') }} ({{ count($partyPapers) }}) — {{ __('approval::field.board_open_to_see') }}</span>
+                        <span class="num">{{ collect($partyPapers)->pluck('no')->filter()->take(4)->implode(' · ') }}</span>
+                    </summary>
+                    @if ($partyUrl)
+                        <a href="{{ $partyUrl }}" class="inbox-board-link text-xs">{{ __('approval::field.board_party_papers') }} →</a>
+                    @endif
                     <table class="ui-list inbox-board-mini">
                         <thead>
                             <tr>
@@ -195,7 +217,7 @@
                             @endforeach
                         </tbody>
                     </table>
-                </section>
+                </details>
             @endif
         </div>
 
@@ -219,7 +241,9 @@
             </div>
         @endif
 
-        {{-- ── decide — in the flow, under the boxes (not fixed) ───────────────────── --}}
+    </div>
+
+        {{-- ── decide — ডান পাশের নিচে, সবসময় চোখে (মালিক, ২৬ নভেম্বর ২০২৬); ⓘ আগে বাক্সগুলোর নিচে প্রবাহে ছিল ── --}}
         <div class="inbox-board-actions">
             @if ($pending && $canDecide)
                 @include('approval::inbox.partials.decide', ['boardActions' => true, 'boardSheetOpen' => $sheet !== null && $bundle === null])
@@ -237,5 +261,4 @@
                 </form>
             @endif
         </div>
-    </div>
 </div>

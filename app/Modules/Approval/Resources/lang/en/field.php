@@ -84,6 +84,7 @@ return [
     'what_to_fix' => 'What needs fixing',
     // The signing sheet — [[ShowsItselfForSigning]], 28 September 2026
     'sheet' => 'Lines on the paper',
+    'board_open_to_see' => 'click to open',
     'party_card' => 'About the party',
     // One sale, one page — [[ApprovalBundles]], 28 September 2026
     'bundle_title' => 'Confirmation',

@@ -1,5 +1,9 @@
 # What's new
 
+## 1.3.22 — 26-11-2026
+
+- Approval inbox (the three ABOS looks): "changed after it was asked" on top; party and point under the number; branch · date · where · transaction no. on one row, the rest as small chips; the confirmation as one-line name:value pairs; this party's earlier papers open on click; the decide buttons always in view — only the list on the left scrolls.
+
 ## 1.3.21 — 26-11-2026
 
 - Direct purchase: the ⋯ on list rows — add gift, edit and delete work again.

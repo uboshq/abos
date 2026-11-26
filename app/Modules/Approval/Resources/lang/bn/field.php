@@ -85,6 +85,7 @@ return [
     'what_to_fix' => 'কী ঠিক করতে হবে',
     // সইয়ের পাতা — [[ShowsItselfForSigning]], ২৮ সেপ্টেম্বর ২০২৬
     'sheet' => 'কাগজের সারি',
+    'board_open_to_see' => 'চাপলে খোলে',
     'party_card' => 'পক্ষের খবর',
     // এক বিক্রি, এক পাতা — [[ApprovalBundles]], ২৮ সেপ্টেম্বর ২০২৬
     'bundle_title' => 'নিশ্চিতকরণ',

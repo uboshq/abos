@@ -5,7 +5,22 @@
     নয় — আর সইকারী জানালায় যা দেখে সই দিতেন তা পাতার সাথে মিলত না।
     ⓘ তফাত কেবল কয়টা সারি (`$rows`)।
 --}}
-@if ($sheet['facts'] !== [] && ! ($hideFacts ?? false))
+@php
+    $inBoard ??= false;
+    $boardSaid ??= '';
+    // ⓘ বোর্ডে — উপরে আগেই বলা কথা (পক্ষ, তারিখ, গুদাম) আবার নয় (মালিক, ২৬ নভেম্বর ২০২৬)
+    $fresh = fn ($value) => ! $inBoard || $boardSaid === '' || ! str_contains($boardSaid, trim((string) $value));
+@endphp
+@if ($inBoard && $sheet['facts'] !== [] && ! ($hideFacts ?? false))
+    {{-- ⭐ বোর্ডে এক লাইনে নাম:অঙ্ক — বড় বড় বাক্স নয়, যাতে সব এক পর্দায় ধরে --}}
+    <p class="inbox-board-kv">
+        @foreach ($sheet['facts'] as $fact)
+            @if ($fresh($fact['value']))
+                <span><i>{{ $fact['label'] }}</i> {{ $fact['value'] }}</span>
+            @endif
+        @endforeach
+    </p>
+@elseif ($sheet['facts'] !== [] && ! ($hideFacts ?? false))
     <dl class="mt-3 grid gap-3 sm:grid-cols-3">
         @foreach ($sheet['facts'] as $fact)
             <div>
@@ -19,7 +34,15 @@
 {{-- ⓘ যার কাগজ তার খবর — ফোন, ঠিকানা, বকেয়া, বাকির সীমা। ⚠️ বাকিতে বিক্রিতে
      সইকারীর আসল প্রশ্ন "এই মানুষটা কি আরও বাকি পাওয়ার যোগ্য", আর উত্তর
      এখানেই, অন্য পাতায় নয়। --}}
-@if ($partyCard !== [])
+@if ($inBoard && $partyCard !== [])
+    <p class="inbox-board-kv">
+        @foreach ($partyCard as $fact)
+            @if ($fresh($fact->value))
+                <span><i>{{ __($fact->label) }}</i> <b class="num">{{ $fact->value }}</b></span>
+            @endif
+        @endforeach
+    </p>
+@elseif ($partyCard !== [])
     <div class="mt-3 border-t border-(--color-border) pt-3">
         <p class="text-2xs uppercase tracking-wide text-(--color-ink-muted)">{{ __('approval::field.party_card') }}</p>
         <dl class="mt-2 grid gap-3 sm:grid-cols-3">
@@ -34,7 +57,7 @@
 @endif
 
 {{-- ⓘ চওড়া কলামেও কাগজের অনেক কলাম হলে টেবিল নিজে সরে (overflow-x), পাতার বাইরে কাটা পড়ে না --}}
-<div class="mt-3 min-w-0 overflow-x-auto">
+<div @class(['min-w-0 overflow-x-auto', 'mt-3' => ! $inBoard, 'mt-1' => $inBoard])>
     <x-ui.table compact
                 :empty="__('approval::field.sheet')"
                 :rows="$rows"
