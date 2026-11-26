@@ -58,7 +58,7 @@ final class MailTemplateController extends Controller implements HasMiddleware
         $selected = $request->query('t') ? $all->firstWhere('public_id', (string) $request->query('t')) : $list->first();
         $customer = $request->query('customer') && $user->can('customer.view') ? Customer::query()->find((int) $request->query('customer')) : null;
         $values = $this->fields->values($user, null) + ($customer ? $this->fields->forCustomer($customer) : []);
-        $company = (string) (Company::query()->whereKey(CompanyContext::companyId())->value('name_en') ?? '');
+        $company = (string) (Company::query()->whereKey(CompanyContext::id())->value('name_en') ?? '');
 
         return view('mail::templates.index', [
             'counts' => collect(MailTemplate::CATEGORIES)->mapWithKeys(fn ($c) => [$c => $all->where('category', $c)->count()]),
@@ -71,7 +71,7 @@ final class MailTemplateController extends Controller implements HasMiddleware
             'selected' => $selected,
             'rendered' => $selected ? $this->templates->render($selected, $values, $company) : null,
             'customer' => $customer,
-            'customers' => $user->can('customer.view') ? Customer::query()->whereNotNull('email')->orderBy('name_en')->limit(200)->get() : collect(),
+            'customers' => $user->can('customer.view') ? Customer::query()->inViewedBranch()->with(Customer::PLACE)->whereNotNull('email')->orderBy('name_en')->limit(200)->get() : collect(),
             'fields' => MailFields::FIELDS,
             'sentCount' => $selected ? MailSend::query()->where('template_id', $selected->id)->count() : 0,
             'festivals' => $category === 'festival' ? MailFestival::query()->orderBy('on_date')->get() : collect(),

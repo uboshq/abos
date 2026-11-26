@@ -15,16 +15,18 @@
             <a class="mx-btn" href="{{ route('mail.history') }}">🕘 {{ $H('title') }}</a>
         </div>
 
-        <form class="mx-filter" method="GET" action="{{ route('mail.sent') }}">
-            <label>{{ $H('search') }}<span class="mx-q" style="min-width:280px;background:var(--mx-card)">🔍 <input type="search" name="q" value="{{ $q }}"></span></label>
-            <label>{{ $H('from') }}<input class="mx-in num" type="date" name="from" value="{{ $from }}"></label>
-            <label>{{ $H('to') }}<input class="mx-in num" type="date" name="to" value="{{ $to }}"></label>
-            <label style="flex-direction:row;align-items:center;gap:6px;height:32px"><input type="checkbox" name="paper" value="yes" @checked($paper)> {{ $H('only_papers') }}</label>
+        <form class="mx-card" style="overflow:hidden" method="GET" action="{{ route('mail.sent') }}">
+            <x-ui.toolbar :title="$H('sent_title')" :search-placeholder="$H('search')" :filter="false" :export="false" :print="false" :share="false" :quiet="['from', 'to', 'paper']" />
+            <div class="mx-filter" style="padding:10px 14px">
+            <label>{{ $H('from') }}<x-ui.date name="from" :value="$from" /></label>
+            <label>{{ $H('to') }}<x-ui.date name="to" :value="$to" /></label>
+            <label class="mx-h32" style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="paper" value="yes" @checked($paper)> {{ $H('only_papers') }}</label>
             <button type="submit" class="mx-btn p">{{ $H('show') }}</button>
+            </div>
         </form>
 
         <div class="mx-card" style="overflow:auto">
-            <table class="mx-t mx-hist">
+            <table class="mx-t mx-hist ui-list">
                 <thead><tr><th>{{ $H('col_when') }}</th><th>{{ $H('col_who') }}</th><th>{{ $H('col_from') }}</th><th>{{ $H('col_to') }}</th><th>{{ $H('col_subject') }}</th><th>{{ $H('col_paper') }}</th><th>{{ $H('col_files') }}</th></tr></thead>
                 <tbody>
                 @forelse ($rows as $r)

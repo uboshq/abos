@@ -30,6 +30,9 @@ final class AFileIsChosenInBengaliTest extends TestCase
 
     /** @var list<string> নিজের আচরণসহ ফাইল-ঘর — পাতা ধরে বদলাবে, ততদিন গোনা */
     private const KNOWN = [
+        // ⓘ মেইল (২৬ নভেম্বর ২০২৬): লেখার পর্দার লুকানো ঘর (ছবি, ফাইল) — দেখার বোতাম 🖼/📎 বাংলায়; সইয়ের ছবিও লুকানো, বোতাম "বদলান"
+        'Modules/Mail/Resources/views/index.blade.php',
+        'Modules/Mail/Resources/views/signature/edit.blade.php',
         // ⓘ স্ক্যানের আসল জমার ঘর — লুকানো, জাভাস্ক্রিপ্ট পাতাগুলো জোড়ে ([[documentScan.syncInput]]); দেখার বোতাম বাংলা
         'Modules/Documents/Resources/views/scan/create.blade.php',
         'Modules/Inventory/Resources/views/product/form.blade.php',

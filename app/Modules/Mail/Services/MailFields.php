@@ -33,7 +33,7 @@ final class MailFields
         $out = [
             '{তারিখ}' => now()->format('d-m-Y'),
             '{আমার নাম}' => (string) $user->name,
-            '{কোম্পানি}' => (string) (\App\Models\Company::query()->whereKey(\App\Core\Support\CompanyContext::companyId())->value('name_en') ?? ''),
+            '{কোম্পানি}' => (string) (\App\Models\Company::query()->whereKey(\App\Core\Support\CompanyContext::id())->value('name_en') ?? ''),
         ];
 
         $email = mb_strtolower(trim((string) $email));
@@ -61,7 +61,7 @@ final class MailFields
     /** @return array<string, string> */
     public function forCustomer(Customer $c): array
     {
-        $due = (string) (DB::table('ledger_entries')->where('company_id', $c->company_id)
+        $due = (string) (DB::table('ledger_entries')->where('company_id', \App\Core\Support\CompanyContext::id() ?? $c->company_id)
             ->where('party_type', Customer::drillSourceType())->where('party_id', $c->id)
             ->selectRaw('COALESCE(SUM(debit - credit), 0) b')->value('b') ?? '0');
 
@@ -84,7 +84,7 @@ final class MailFields
 
         if (class_exists(\App\Modules\Promotion\Services\LoyaltyLedger::class)) {
             try {
-                $out['{পয়েন্ট}'] = number_format((float) app(\App\Modules\Promotion\Services\LoyaltyLedger::class)->balance($c->id));
+                $out['{পয়েন্ট}'] = bcadd((string) app(\App\Modules\Promotion\Services\LoyaltyLedger::class)->balance($c->id), '0', 0);
             } catch (\Throwable) {
                 // ⓘ পয়েন্ট চালু না থাকলে ঘরটা যেমন ছিল তেমন থাকে
             }
@@ -101,14 +101,12 @@ final class MailFields
         return strtr($text, $safe);
     }
 
-    public static function money(string|float|int $v): string
+    public static function money(string|int $v): string
     {
-        $n = round((float) $v, 2);
-        $neg = $n < 0;
-        $n = abs($n);
-        $int = (string) (int) floor($n);
-        $dec = str_pad((string) (int) round(($n - floor($n)) * 100), 2, '0', STR_PAD_LEFT);
-        // ⓘ ভারতীয় কমা: শেষ তিন অঙ্ক, তারপর দুই-দুই
+        // ⓘ টাকা কখনো float নয় — bcmath-এ দুই ঘর, তারপর ভারতীয় কমা (শেষ তিন অঙ্ক, তারপর দুই-দুই)
+        $n = bcadd(is_numeric((string) $v) ? (string) $v : '0', '0', 2);
+        $neg = str_starts_with($n, '-');
+        [$int, $dec] = explode('.', ltrim($n, '-')) + [1 => '00'];
         $last3 = substr($int, -3);
         $rest = substr($int, 0, -3);
         $rest = $rest !== '' ? preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', $rest).',' : '';

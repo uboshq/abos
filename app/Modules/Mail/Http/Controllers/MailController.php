@@ -391,7 +391,7 @@ final class MailController extends Controller implements HasMiddleware
 
         if ($emails->isNotEmpty() && $user->can('customer.view')) {
             $customers = Customer::query()->whereIn(DB::raw('LOWER(email)'), $emails->all())->get();
-            $dues = DB::table('ledger_entries')->where('party_type', Customer::drillSourceType())->whereIn('party_id', $customers->pluck('id'))
+            $dues = DB::table('ledger_entries')->where('company_id', \App\Core\Support\CompanyContext::id())->where('party_type', Customer::drillSourceType())->whereIn('party_id', $customers->pluck('id'))
                 ->groupBy('party_id')->selectRaw('party_id, COALESCE(SUM(debit - credit), 0) b')->pluck('b', 'party_id');
 
             foreach ($customers as $c) {
@@ -489,7 +489,7 @@ final class MailController extends Controller implements HasMiddleware
     public function unread(Request $request): JsonResponse
     {
         $user = $request->user();
-        $key = 'mail.unread.'.\App\Core\Support\CompanyContext::companyId().'.'.$user->id;
+        $key = 'mail.unread.'.\App\Core\Support\CompanyContext::id().'.'.$user->id;
 
         // ⓘ 2 মিনিট জমা — প্রতিটা খোলা ট্যাব মেইল সার্ভারে আলাদা করে ঢোকে না
         $total = \Illuminate\Support\Facades\Cache::remember($key, 120, function () use ($user) {
@@ -522,7 +522,7 @@ final class MailController extends Controller implements HasMiddleware
 
     private function dueOf(Customer $c): string
     {
-        return (string) (DB::table('ledger_entries')->where('company_id', $c->company_id)
+        return (string) (DB::table('ledger_entries')->where('company_id', \App\Core\Support\CompanyContext::id())
             ->where('party_type', Customer::drillSourceType())->where('party_id', $c->id)
             ->selectRaw('COALESCE(SUM(debit - credit), 0) b')->value('b') ?? '0');
     }

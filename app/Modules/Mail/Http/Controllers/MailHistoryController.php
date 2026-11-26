@@ -56,7 +56,7 @@ final class MailHistoryController extends Controller implements HasMiddleware
                 ->orWhereHas('changes', fn (Builder $c) => $c->where('old_value', 'like', '%'.$q.'%')->orWhere('new_value', 'like', '%'.$q.'%'))))
             ->with(['user:id,name', 'changes'])
             ->latest('id')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('mail::history.index', [
@@ -84,7 +84,7 @@ final class MailHistoryController extends Controller implements HasMiddleware
                 ->orWhere('paper_no', 'like', '%'.$q.'%')->orWhereHas('sender', fn (Builder $u) => $u->where('name', 'like', '%'.$q.'%'))))
             ->with('sender:id,name')
             ->latest('sent_at')
-            ->paginate(50)
+            ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
         return view('mail::history.sent', ['rows' => $rows, 'q' => $q, 'from' => $from?->format('Y-m-d'), 'to' => $to?->format('Y-m-d'),

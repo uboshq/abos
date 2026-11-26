@@ -100,6 +100,8 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
 
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
     private const CHECKS = [
+        'app/Modules/Mail/Http/Controllers/MailController.php' => 'মেইলের প্রেরকের কার্ড আর তালিকার চিহ্নে গ্রাহকের বকেয়া — গোটা কোম্পানির পাওনা (টাকা জমা নিন বোতামের আগে আসল অঙ্ক); কেবল customer.view চাবিতে',
+        'app/Modules/Mail/Services/MailFields.php' => 'টেমপ্লেটের {বাকি টাকা} — গ্রাহককে পাঠানো চিঠিতে তার গোটা পাওনা; শাখা ধরে কাটলে চিঠিতে ভুল অঙ্ক যেত',
         'app/Modules/Sales/Services/AutoDues.php' => 'বিলের অটো বাকি — গ্রাহকের গোটা কোম্পানির জের, সব শাখার বিলে ভাগ (মালিক, ২৫ নভেম্বর ২০২৬); দেখার শাখা পরে বিলের তালিকা নিজেই মানে',
         // ⓘ শ্রম আইনের দুই পাঠক (২৫ নভেম্বর ২০২৬)
         'app/Modules/Hr/Services/HeldWages.php' => 'বাতিল ভাউচার খাতায় কখনো বসেছিল কি না — একটা ভাউচারের নিজের সারি, গোটা কোম্পানি; আধা দেখলে মজুরি দুইবার ছাড়া হত',

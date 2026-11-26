@@ -161,4 +161,11 @@ return [
     // ⭐ the payroll signer role, for one company's Managers ([[GrantPayrollSigners]], owner, 21 Oct 2026)
     'payroll_signer_made' => 'Payroll approver role made',
     'payroll_signer_given' => 'Payroll approver role given',
+    'mail_sent' => 'Mail sent',
+    'mail_deleted' => 'Mail deleted',
+    'mail_moved' => 'Mail moved',
+    'mail_archived' => 'Mail archived',
+    'mail_members_changed' => 'Mailbox members changed',
+    'mail_password_reset' => 'Mail password reset',
+    'mail_send_failed' => 'Mail send failed',
 ];

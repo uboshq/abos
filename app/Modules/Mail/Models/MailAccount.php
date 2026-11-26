@@ -33,6 +33,9 @@ class MailAccount extends Model
 
     public const KINDS = [self::OWN, self::SHARED, self::PERSONAL];
 
+    /** ⓘ অ্যাকাউন্টের রং — জোড়ার পর্দার পাঁচ বিন্দু (নমুনা v4) */
+    public const COLOURS = ['#f5121d', '#1a3fd0', '#00ab3f', '#f8a500', '#6a3fd0'];
+
     public const ACTIVE = 'active';
 
     public const PENDING = 'pending';

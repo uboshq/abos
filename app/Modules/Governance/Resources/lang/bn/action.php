@@ -181,4 +181,11 @@ return [
     // ⭐ বেতনের সইয়ের রোল — এক কোম্পানির Manager-দের হাতে ([[GrantPayrollSigners]], মালিক, ২১ অক্টোবর ২০২৬)
     'payroll_signer_made' => 'বেতনের অনুমোদনকারীর রোল তৈরি',
     'payroll_signer_given' => 'বেতনের অনুমোদনকারীর রোল দেওয়া',
+    'mail_sent' => 'মেইল পাঠানো',
+    'mail_deleted' => 'মেইল মোছা',
+    'mail_moved' => 'মেইল সরানো',
+    'mail_archived' => 'মেইল সংরক্ষণ',
+    'mail_members_changed' => 'মেইলবক্স কারা দেখবেন বদল',
+    'mail_password_reset' => 'মেইলের পাসওয়ার্ড নতুন',
+    'mail_send_failed' => 'মেইল পাঠানো যায়নি',
 ];

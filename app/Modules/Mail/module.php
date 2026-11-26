@@ -23,7 +23,8 @@ return [
     // ⓘ নিজের ঘর — বার্তার নিচে নয় (মালিক: "একদম আলাদা মডিউল")
     'nav' => ['section' => 'system', 'order' => 16],
 
-    'depends_on' => [],
+    // ⓘ গ্রাহক/সরবরাহকারীর কার্ড ও ঘর, বিক্রয়-হিসাব-ক্রয়ের কাগজ সংযুক্ত, পয়েন্ট, পাসওয়ার্ড বার্তায়
+    'depends_on' => ['customer', 'supplier', 'sales', 'accounts', 'purchase', 'promotion', 'messaging'],
 
     'menu' => [
         'transactions' => [

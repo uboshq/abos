@@ -15,21 +15,23 @@
             <a class="mx-btn" href="{{ route('mail.sent') }}">📤 {{ $H('sent_title') }}</a>
         </div>
 
-        <form class="mx-filter" method="GET" action="{{ route('mail.history') }}">
-            <label>{{ $H('search') }}<span class="mx-q" style="min-width:280px;background:var(--mx-card)">🔍 <input type="search" name="q" value="{{ $q }}"></span></label>
+        <form class="mx-card" style="overflow:hidden" method="GET" action="{{ route('mail.history') }}">
+            <x-ui.toolbar :title="$H('title')" :search-placeholder="$H('search')" :filter="false" :export="false" :print="false" :share="false" :quiet="['type', 'from', 'to']" />
+            <div class="mx-filter" style="padding:10px 14px">
             <label>&nbsp;<span style="display:flex;gap:6px;flex-wrap:wrap">
                 @foreach (trans('mail::field.history.types') as $k => $label)
                     <a class="mx-chip @if ($type === $k) on @endif" href="{{ route('mail.history', array_filter(['type' => $k ?: null, 'q' => $q ?: null, 'from' => $from, 'to' => $to])) }}">{{ $label }}</a>
                 @endforeach
             </span></label>
             <input type="hidden" name="type" value="{{ $type }}">
-            <label>{{ $H('from') }}<input class="mx-in num" type="date" name="from" value="{{ $from }}"></label>
-            <label>{{ $H('to') }}<input class="mx-in num" type="date" name="to" value="{{ $to }}"></label>
+            <label>{{ $H('from') }}<x-ui.date name="from" :value="$from" /></label>
+            <label>{{ $H('to') }}<x-ui.date name="to" :value="$to" /></label>
             <button type="submit" class="mx-btn p">{{ $H('show') }}</button>
+            </div>
         </form>
 
         <div class="mx-card" style="overflow:auto">
-            <table class="mx-t mx-hist">
+            <table class="mx-t mx-hist ui-list">
                 <thead><tr><th>{{ $H('col_when') }}</th><th>{{ $H('col_who') }}</th><th>{{ $H('col_what') }}</th><th>{{ $H('col_item') }}</th><th>{{ $H('col_change') }}</th></tr></thead>
                 <tbody>
                 @forelse ($rows as $r)

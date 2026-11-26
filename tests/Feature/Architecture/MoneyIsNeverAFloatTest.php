@@ -237,6 +237,8 @@ class MoneyIsNeverAFloatTest extends TestCase
     private const BOARD_FIGURES = 'বোর্ডের দেখানো অঙ্ক — ভাগ, বৃদ্ধি %, চার্টের মাপ, ছোট করে দেখানো টাকা (৳ লাখ/কোটি); জমা বা পোস্ট হয় না, সমান-কিনা মেলানো হয় না';
 
     private const FLOAT_IS_DELIBERATE = [
+        'app/Modules/Mail/Services/CpanelMailHost.php' => 'মেইলবক্সের ব্যবহৃত জায়গা (MB) — সার্ভারের মাপ, টাকা নয়',
+        'app/Modules/Mail/Resources/views/admin/index.blade.php' => 'মেইলবক্সের জায়গা GB-তে আর ভরা % — দেখানোর মাপ, টাকা নয়',
         // ⭐ বার্তা ও কল (মালিক "ok", ২১ নভেম্বর ২০২৬) — টাকা বা পরিমাণ নয়; কোথাও জমা, খাতা বা মেলানোয় যায় না
         'app/Modules/Messaging/Services/MessengerService.php' => 'ভয়েস বার্তার ঢেউয়ের দাগ — ০ থেকে ১-এর মাঝে, বড়জোর ৬৪টা, কেবল আঁকার মাপ',
         'app/Modules/Messaging/Services/MessengerPresenter.php' => 'পাঠানো অবস্থানের অক্ষাংশ/দ্রাঘিমাংশ — মানচিত্রের বিন্দু, টাকা নয়',

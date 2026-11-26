@@ -5,16 +5,16 @@
     "src": "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs",
     "isDynamicEntry": true
   },
-  "_mail-FPUrpYNF.css": {
-    "file": "assets/mail-FPUrpYNF.css",
-    "src": "_mail-FPUrpYNF.css"
+  "_mail-CBxZb2qg.css": {
+    "file": "assets/mail-CBxZb2qg.css",
+    "src": "_mail-CBxZb2qg.css"
   },
   "_preload-helper-B6JZccWF.js": {
     "file": "assets/preload-helper-B6JZccWF.js",
     "name": "preload-helper"
   },
   "resources/css/app.css": {
-    "file": "assets/app-CS8Zzkfq.css",
+    "file": "assets/app-CRVMKHZ9.css",
     "name": "app",
     "names": [
       "app.css"
@@ -37,12 +37,12 @@
     ]
   },
   "resources/js/mail-admin.js": {
-    "file": "assets/mail-admin-BvJs0wAR.js",
+    "file": "assets/mail-admin-6xxTVcq6.js",
     "name": "mail-admin",
     "src": "resources/js/mail-admin.js",
     "isEntry": true,
     "css": [
-      "assets/mail-FPUrpYNF.css"
+      "assets/mail-CBxZb2qg.css"
     ]
   },
   "resources/js/mail-badge.js": {
@@ -52,12 +52,12 @@
     "isEntry": true
   },
   "resources/js/mail-page.js": {
-    "file": "assets/mail-page-C29Uu4Gr.js",
+    "file": "assets/mail-page-BFAZ5hE7.js",
     "name": "mail-page",
     "src": "resources/js/mail-page.js",
     "isEntry": true,
     "css": [
-      "assets/mail-FPUrpYNF.css"
+      "assets/mail-CBxZb2qg.css"
     ]
   },
   "resources/js/meeting-page.js": {

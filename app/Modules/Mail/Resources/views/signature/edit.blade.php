@@ -34,7 +34,7 @@
                     <div class="mx-photo">
                         @if ($hasPhoto)<span class="ini" style="background:var(--mx-green)">✓</span>@else<span class="ini">{{ $facts['initials'] }}</span>@endif
                         <div style="flex:1;min-width:0;font-size:12px">{{ $hasPhoto ? '✓' : $S('photo_none') }}</div>
-                        <label class="mx-btn" style="height:28px">{{ $S('photo_change') }}<input type="file" name="photo" accept="image/jpeg,image/png" hidden data-auto-submit></label>
+                        <label class="mx-btn mx-h28">{{ $S('photo_change') }}<input type="file" name="photo" accept="image/jpeg,image/png" hidden data-auto-submit></label>
                     </div>
                     @if ($hasPhoto)<label style="font-size:12px;display:flex;gap:6px;margin-top:4px"><input type="checkbox" name="remove_photo" value="1"> {{ $S('photo_remove') }}</label>@endif</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -43,7 +43,7 @@
                 </div>
                 <div><label class="mx-lbl">{{ $S('links') }}</label>
                     @foreach (\App\Modules\Mail\Models\MailProfile::LINKS as $l)
-                        <input class="mx-in" name="links[{{ $l }}]" maxlength="191" value="{{ old('links.'.$l, $profile->links[$l] ?? '') }}" placeholder="{{ __('mail::field.sign.link_names.'.$l) }}" style="height:30px;margin-bottom:5px">
+                        <input class="mx-in" name="links[{{ $l }}]" maxlength="191" value="{{ old('links.'.$l, $profile->links[$l] ?? '') }}" placeholder="{{ __('mail::field.sign.link_names.'.$l) }}" class="mx-h30" style="margin-bottom:5px">
                     @endforeach
                 </div>
                 <div><label class="mx-lbl">✎ {{ __('mail::field.sx_custom') }}</label>
@@ -53,7 +53,7 @@
                     <div><label class="mx-lbl">🔒 {{ $S('force') }}</label>
                         <select class="mx-in" name="force"><option value="0">{{ $S('force_none') }}</option>@foreach ($styles as $n => $name)<option value="{{ $n }}" @selected($forced == $n)>{{ $n }} · {{ $name }}</option>@endforeach</select></div>
                 @endif
-                <div class="mx-card" style="padding:9px 11px;line-height:1.65;font-size:12px;background:#f4f6fb;color:#5b6688">{{ $S('hr_note') }}</div>
+                <div class="mx-card mx-softcard">{{ $S('hr_note') }}</div>
                 <div style="margin-top:auto"><button type="submit" class="mx-btn p" style="width:100%;justify-content:center">✓ {{ $S('save') }}</button></div>
             </form>
 

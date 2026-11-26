@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Mail\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
 use App\Core\Concerns\IsAudited;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MailProfile extends Model
 {
     use BelongsToCompany;
+    use HasPublicId;
     use IsAudited;
 
     public const LINKS = ['facebook', 'linkedin', 'youtube', 'whatsapp', 'website'];

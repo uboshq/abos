@@ -33,6 +33,11 @@ final class EveryNewPaperFormCarriesItsBranchTest extends TestCase
      * এই তালিকায় নেই। ⚠️ নতুন প্যারামিটারহীন POST এলে এখানে বা CREATE_DOORS-এ বসাতেই হবে, নইলে দাবি লাল।
      */
     private const EXCLUDED = [
+        'mail.accounts.add' => 'adds a mailbox (company or approved personal); no paper, no money, no branch — mail is per person and company',
+        'mail.parties' => 'reads which senders are customers/suppliers for the list tags; changes nothing',
+        'mail.signature.update' => 'the person\'s own mail signature and photo; no paper, no money, no branch',
+        'mail.trust' => 'remembers "always show this sender\'s pictures" for the person; no paper, no money',
+        'mail.addresses.import' => 'creates own-domain mail addresses from a CSV, behind mail.manage; no paper, no money, no branch',
         'assistant.draft.dunning.send' => 'Copilot dunning SMS the person ticked — queues text messages on the office phone and logs them per party; no paper, no money (claimed: CopilotSeesOnlyWhatItsPersonMaySeeTest)',
         'assistant.quick' => 'Copilot quick ask from the top bar — a question in, an answer out as JSON; writes only the audit row, no paper, no money (claimed: CopilotSeesOnlyWhatItsPersonMaySeeTest)',
         'assistant.chat.ask' => 'Copilot full-screen page ask — the same question-in, answer-out as assistant.quick, kept as the person\'s own talk (AssistantConversation, company + person wall); no paper, no money, no branch',

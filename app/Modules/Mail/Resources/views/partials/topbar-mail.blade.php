@@ -7,7 +7,7 @@
    data-mail-topbar data-unread-url="{{ route('mail.unread') }}"
    class="relative flex size-(--spacing-touch) items-center justify-center rounded-(--radius-field) transition-colors hover:bg-(--color-surface-hover)"
    title="{{ __('mail::field.title') }}" aria-label="{{ __('mail::field.title') }}">
-    <span class="grid size-8 place-items-center" data-topbar-icon="mail"><x-ui.icon name="mail" :size="24" /></span>
+    <span class="grid size-8 place-items-center" data-topbar-icon="mail"><x-ui.icon name="mail" :size="24" :drawn="true" /></span>
     <span class="msgr-topbar__badge" data-mail-badge hidden></span>
 </a>
 @vite('resources/js/mail-badge.js')

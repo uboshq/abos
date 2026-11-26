@@ -63,6 +63,7 @@ return new class extends Migration
 
         Schema::create('mail_account_members', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('mail_account_id')->constrained('mail_accounts')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->boolean('can_send')->default(true);
@@ -91,6 +92,7 @@ return new class extends Migration
 
         Schema::create('mail_sends', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('mail_account_id')->nullable()->constrained('mail_accounts')->nullOnDelete();
             $table->string('from_email', 191);
@@ -140,6 +142,7 @@ return new class extends Migration
         // ⭐ কর্মীর সই — নিজের ছবি, নতুন মেইল আর উত্তরের নকশা আলাদা, লিংক
         Schema::create('mail_profiles', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('photo_path', 255)->nullable();
@@ -159,6 +162,7 @@ return new class extends Migration
         // ⭐ পরে পাঠান — লেখা তালাবদ্ধ থাকে কেবল পাঠানো পর্যন্ত, পাঠানো হলেই সারিটা মোছে (মেইলের লেখা ABOS-এ জমা থাকে না)
         Schema::create('mail_outbox', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('mail_account_id')->constrained('mail_accounts')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -173,6 +177,7 @@ return new class extends Migration
 
         Schema::create('mail_festivals', function (Blueprint $table) {
             $table->id();
+            $table->publicId();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('key', 40);
             $table->string('name', 80);

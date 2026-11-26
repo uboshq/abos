@@ -22,6 +22,9 @@ final class EveryPartyListFollowsTheViewedBranchTest extends TestCase
 {
     /** @var array<string, string> ফাইল => কারণ (ফাইলের প্রতিটা ছাড়-পাওয়া বাক্যের জন্য একবার) */
     private const EXCUSED = [
+        'app/Modules/Mail/Http/Controllers/MailController.php' => 'মেইলের প্রেরক বা প্রাপককে মেইল ঠিকানা ধরে খোঁজা (first / whereIn ঠিকানা) — তালিকা নয়; চাবি ছাড়া কিছুই নয়',
+        'app/Modules/Mail/Services/MailFields.php' => 'টেমপ্লেটের ঘরের জন্য একজন গ্রাহক মেইল ঠিকানা ধরে — তালিকা নয়',
+        'app/Console/Commands/MailAuto.php' => 'নিজে থেকে পাঠানো (কমান্ড) — কোনো দর্শক নেই, প্রশাসক চালু করলে গোটা কোম্পানির মেইল থাকা গ্রাহক',
         'app/Modules/Sales/Http/Controllers/PortalController.php' => 'গ্রাহক-পোর্টালের লগইন — গ্রাহক নিজে ঢুকছেন, কর্মীর হেডার নেই',
         'app/Modules/Sales/Http/Controllers/SalesOrderController.php' => 'একজনকে নাম ধরে খোঁজা (find) — তালিকা নয়',
         'app/Modules/Supplier/Http/Controllers/SupplierController.php' => 'একজন সরবরাহকারীর ধরন আছে কি না (exists) — তালিকা নয়',

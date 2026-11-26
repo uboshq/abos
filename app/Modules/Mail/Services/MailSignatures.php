@@ -35,7 +35,7 @@ final class MailSignatures
     public function facts(User $user, ?string $fromEmail = null): array
     {
         $profile = $this->profile($user);
-        $company = Company::query()->find(CompanyContext::companyId());
+        $company = Company::query()->find(CompanyContext::id());
         $name = (string) $user->name;
         $parts = preg_split('/\s+/u', trim($name)) ?: [''];
 
@@ -163,7 +163,7 @@ final class MailSignatures
     /** @return array{bytes: string, mime: string, ext: string}|null */
     public function logoBytes(): ?array
     {
-        $company = Company::query()->find(CompanyContext::companyId());
+        $company = Company::query()->find(CompanyContext::id());
 
         if (! $company?->logo_path || ! Storage::disk('public')->exists($company->logo_path)) {
             return null;

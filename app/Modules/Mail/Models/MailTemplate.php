@@ -23,6 +23,9 @@ class MailTemplate extends Model
     use HasPublicId;
     use IsAudited;
 
+    /** ⓘ নতুন টেমপ্লেটের মাথার রং */
+    public const COLOUR = '#1a3fd0';
+
     public const CATEGORIES = ['collect', 'sales', 'delivery', 'purchase', 'hr', 'festival', 'offer', 'papers', 'reply'];
 
     protected $table = 'mail_templates';

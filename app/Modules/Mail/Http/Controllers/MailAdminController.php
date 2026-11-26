@@ -95,7 +95,7 @@ final class MailAdminController extends Controller implements HasMiddleware
             ],
             'chip' => $chip,
             'q' => $q,
-            'people' => User::query()->whereHas('companies', fn ($c) => $c->where('companies.id', CompanyContext::companyId()))
+            'people' => User::query()->whereHas('companies', fn ($c) => $c->where('companies.id', CompanyContext::id()))
                 ->where('is_active', true)->orderBy('name')->get(['id', 'name', 'designation', 'email']),
             'configured' => $this->host->configured(),
             'writable' => $this->host->writable(),

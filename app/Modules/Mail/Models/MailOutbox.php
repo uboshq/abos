@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Modules\Mail\Models;
 
 use App\Core\Concerns\BelongsToCompany;
+use App\Core\Concerns\HasPublicId;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class MailOutbox extends Model
 {
     use BelongsToCompany;
+    use HasPublicId;
 
     protected $table = 'mail_outbox';
 

@@ -161,6 +161,8 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
 
     public function test_the_admin_creates_pauses_deletes_after_thirty_days_and_never_touches_a_system_address(): void
     {
+        // ⓘ পাসওয়ার্ড আগে — বদলালে ABOS পুরনো সেশন বন্ধ করে (নিরাপত্তা), তাই ঢোকার আগেই বসানো
+        $this->owner->forceFill(['password' => Hash::make('owner-pass-1')])->save();
         $this->as($this->owner);
         $this->post('/mail/addresses', ['kind' => 'person', 'user_id' => $this->clerk->id, 'local' => 'najma', 'domain' => 'adi.test',
             'display_name' => 'Najma', 'quota_mb' => 5120, 'deliver' => 'screen'])->assertRedirect()->assertSessionHas('mail_password');
@@ -179,7 +181,6 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->assertSame(MailAccount::OFF, $address->fresh()->account->status);
 
         // ⛔ ভুল ঠিকানা বা ভুল পাসওয়ার্ডে মোছা নয়
-        $this->owner->forceFill(['password' => Hash::make('owner-pass-1')])->save();
         $this->post("/mail/addresses/{$address->public_id}/delete", ['typed' => 'wrong@adi.test', 'password' => 'owner-pass-1'])->assertSessionHasErrors('typed');
         $this->post("/mail/addresses/{$address->public_id}/delete", ['typed' => 'najma@adi.test', 'password' => 'nope'])->assertSessionHasErrors('password');
 

@@ -277,3 +277,20 @@ body:has([data-counter-strip]) .mailx.mx-inbox { height: calc(100dvh - 40px - 1r
     body.mx-printing .mailx .mx-scroll, body.mx-printing .mailx .mx-scroll * { visibility: visible !important; }
     body.mx-printing .mailx .mx-scroll { position: absolute; left: 0; top: 0; width: 100%; overflow: visible; }
 }
+
+/* ── পাতার রং ও মাপ — Blade-এ হাতে লেখা নয় (ABOS-এর থিম পাহারা) ──── */
+.mailx .mx-kpi.k1 { background: linear-gradient(135deg, #1a3fd0, #3a5ef0); }
+.mailx .mx-kpi.k2 { background: linear-gradient(135deg, #00ab3f, #22c45e); }
+.mailx .mx-kpi.k3 { background: linear-gradient(135deg, #6b7594, #8f98b3); }
+.mailx .mx-kpi.k4 { background: linear-gradient(135deg, #0b7a70, #14a597); }
+.mailx .mx-kpi.k5 { background: linear-gradient(135deg, #c40d16, #f5121d); }
+.mailx .mx-use i.lo { background: #00ab3f; } .mailx .mx-use i.mid { background: #f8a500; } .mailx .mx-use i.hi { background: #f5121d; }
+.mailx .tone-amber { color: #8a5a00; font-weight: 600; } .mailx .tone-red { color: var(--mx-red); font-weight: 600; } .mailx .tone-green { color: var(--mx-green-ink); font-weight: 600; }
+.mailx .mx-lockcard { padding: 14px 18px; line-height: 1.8; background: var(--mx-green-bg); border-color: #bfe9cd; }
+.mailx .mx-warncard { padding: 9px 12px; font-size: 12px; line-height: 1.7; background: #fffaf0; border-color: var(--mx-amber-line); }
+:root[data-theme='dark'] .mailx .mx-warncard { background: var(--mx-amber-bg); }
+.mailx .mx-softcard { padding: 9px 11px; line-height: 1.65; font-size: 12px; background: #f4f6fb; color: #5b6688; }
+:root[data-theme='dark'] .mailx .mx-softcard { background: var(--mx-soft); color: var(--mx-muted); }
+.mailx .mx-h26 { height: 26px; } .mailx .mx-h28 { height: 28px; } .mailx .mx-h30 { height: 30px; } .mailx .mx-h32 { height: 32px; } .mailx .mx-h36 { height: 36px; }
+.mailx .mx-dot-c1 { background: #f5121d; } .mailx .mx-dot-c2 { background: #1a3fd0; } .mailx .mx-dot-c3 { background: #00ab3f; } .mailx .mx-dot-c4 { background: #f8a500; } .mailx .mx-dot-c5 { background: #6a3fd0; }
+.mailx .mx-ic-g { background: var(--mx-green-bg); } .mailx .mx-ic-r { background: var(--mx-red-bg); } .mailx .mx-ic-b { background: var(--mx-brand-100); } .mailx .mx-ic-a { background: var(--mx-amber-bg); }

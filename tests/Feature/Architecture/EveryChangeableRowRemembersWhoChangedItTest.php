@@ -48,6 +48,10 @@ class EveryChangeableRowRemembersWhoChangedItTest extends TestCase
      * @var array<string, string>
      */
     private const EXEMPT = [
+        // ⓘ মেইল (২৬ নভেম্বর ২০২৬) — দুই জায়গায়: এখানে আর `app/Modules/Mail/module.php`-এর `audit_exempt`-এ
+        'App\Modules\Mail\Models\MailLink' => 'মেইলকে গ্রাহকের পাতায় রাখার সারি — সারিটাই খাতা (কে, কবে, কোন মেইল); টাকা নেই, অবস্থা নেই',
+        'App\Modules\Mail\Models\MailSend' => 'পাঠানো মেইলের খাতা — সারিটা নিজেই রেকর্ড, কখনো বদলায় না; প্রতিটা পাঠানো মেইলবক্সের অডিটেও এক লাইন',
+        'App\Modules\Mail\Models\MailOutbox' => 'পরে পাঠানোর অপেক্ষার মেইল — তালাবদ্ধ, পাঠানো হলেই মোছে; পাঠানোটা খাতা আর অডিটে ওঠে',
         // ── খাতাটা নিজে ─────────────────────────────────────────────
         'App\Models\AuditTrail' => 'অডিটের খাতা নিজেকে অডিট করলে প্রতিটা সারি অসীম সারি জন্ম দিত',
         'App\Models\AuditFieldChange' => 'একই কারণ — এটা অডিট সারির ঘর-ধরে-ধরে অংশ',

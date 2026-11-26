@@ -61,7 +61,7 @@
         {{-- ⭐ আমার মেইল ↗ — নিজের ট্যাবে (মেইল মডিউল, নমুনা v4 পর্দা ১) --}}
         @if (\Illuminate\Support\Facades\Route::has('mail.index') && auth()->user()?->can('mail.use'))
             <a href="{{ route('mail.index', ['counter' => 1]) }}" target="_blank" rel="noopener" role="menuitem" class="{{ $row }}" data-my-mail>
-                <x-ui.icon name="mail" :size="16" />
+                <x-ui.icon name="mail" :size="16" :drawn="true" />
                 {{ __('mail::field.x_my_mail') }} ↗
             </a>
         @endif

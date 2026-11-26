@@ -37,7 +37,7 @@
                 <div class="h">{{ $T('by_whom') }}</div>
                 <a href="{{ route('mail.templates', ['whose' => 'company']) }}" @class(['on' => $whose === 'company'])><span>🏢 {{ $T('company') }}</span><span class="num">{{ $companyCount }}</span></a>
                 <a href="{{ route('mail.templates', ['whose' => 'mine']) }}" @class(['on' => $whose === 'mine'])><span>👤 {{ $T('mine') }}</span><span class="num">{{ $mineCount }}</span></a>
-                <div style="margin-top:auto" class="mx-card"><div style="padding:10px;font-size:12px;line-height:1.6;color:#5b6688">{{ $T('note') }}</div></div>
+                <div style="margin-top:auto" class="mx-card mx-softcard">{{ $T('note') }}</div>
             </nav>
 
             <div class="mid">
@@ -69,9 +69,9 @@
                             <form class="mx-fest-row" method="POST" action="{{ route('mail.festivals.update', $f->id) }}">
                                 @csrf
                                 <span><span style="font-size:18px">{{ $f->mark }}</span> <b>{{ $f->name }}</b> <span class="muted" style="font-size:11.5px">{{ $f->when }}@if ($f->quiet) · {{ $T('quiet') }}@endif</span></span>
-                                <input class="mx-in num" type="date" name="on_date" value="{{ $f->on_date?->format('Y-m-d') }}" aria-label="{{ $T('fest_date') }}" @disabled(! $canManage)>
+                                <x-ui.date name="on_date" :value="$f->on_date?->format('Y-m-d')" :readonly="! $canManage" />
                                 <label style="display:flex;gap:4px;align-items:center;font-size:12px"><input type="checkbox" name="active" value="1" @checked($f->active) @disabled(! $canManage)> {{ $T('fest_active') }}</label>
-                                @if ($canManage)<button type="submit" class="mx-btn" style="height:28px">{{ $T('fest_save') }}</button>@endif
+                                @if ($canManage)<button type="submit" class="mx-btn mx-h28">{{ $T('fest_save') }}</button>@endif
                             </form>
                         @endforeach
                     </div>
@@ -87,22 +87,22 @@
                     <form method="GET" action="{{ route('mail.templates') }}" class="muted" style="font-size:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
                         <input type="hidden" name="t" value="{{ $sel->public_id }}">@if ($category)<input type="hidden" name="cat" value="{{ $category }}">@endif
                         {{ $T('see_as') }}
-                        <select name="customer" class="mx-in" style="height:28px;width:auto;max-width:260px" data-auto-submit>
+                        <select name="customer" class="mx-in mx-h28" style="width:auto;max-width:260px" data-auto-submit>
                             <option value="">{{ $T('see_none') }}</option>
-                            @foreach ($customers as $c)<option value="{{ $c->id }}" @selected($customer?->id === $c->id)>{{ $c->name() }}</option>@endforeach
+                            @foreach ($customers as $c)<option value="{{ $c->id }}" @selected($customer?->id === $c->id)>{{ $c->nameWithPoint() }}</option>@endforeach
                         </select>
                         @if ($customer)<span>{{ $T('see_hint') }}</span>@endif
                     </form>
                     @if ($rendered['subject'] !== '')<div><span class="muted">{{ __('mail::field.compose.subject') }}:</span> <b>{{ $rendered['subject'] }}</b></div>@endif
                     <div class="mail">{!! $rendered['html'] !!}</div>
                     @if ($auto)
-                        <div class="mx-card" style="padding:10px 12px;font-size:12px;line-height:1.75;background:#f4f6fb;color:#2c3655">
-                            ⚙️ <b>{{ $T('auto_title') }}</b>
+                        <div class="mx-card mx-softcard">
+                            🛠️ <b>{{ $T('auto_title') }}</b>
                             {{ ($auto['rule'] ?? '') === 'festival' ? $T('auto_fest', ['at' => $auto['at'] ?? '09:00']) : $T('auto_due', ['day' => __('mail::field.tpl.days.'.($auto['day'] ?? 'mon')), 'at' => $auto['at'] ?? '10:00']) }}
                             <b style="color:{{ ($auto['on'] ?? false) ? 'var(--mx-green-ink)' : 'var(--mx-muted)' }}">({{ ($auto['on'] ?? false) ? $T('auto_now_on') : $T('auto_now_off') }})</b>
                         </div>
                     @endif
-                    <div class="muted" style="font-size:12px">📊 {{ $T('stats', ['count' => $sentCount]) }}</div>
+                    <div class="muted" style="font-size:12px">📈 {{ $T('stats', ['count' => $sentCount]) }}</div>
                     <div style="margin-top:auto;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
                         @if ($canEditSel)
                             <button type="button" class="mx-btn" data-open="dlg-tpl-edit">✎ {{ $T('edit') }}</button>
@@ -129,7 +129,7 @@
                     <div><label class="mx-lbl">{{ $F('category') }}</label><select class="mx-in" name="category">
                         @foreach (\App\Modules\Mail\Models\MailTemplate::CATEGORIES as $c)<option value="{{ $c }}" @selected(($category ?: 'offer') === $c)>{{ __('mail::field.tpl.cats.'.$c) }}</option>@endforeach</select></div>
                     <div><label class="mx-lbl">{{ $F('subject') }}</label><input class="mx-in" name="subject" maxlength="255"></div>
-                    <input class="mx-in" type="file" name="html_file" accept=".html,.htm,text/html" required style="padding:6px">
+                    <x-ui.file-input name="html_file" accept=".html,.htm,text/html" :required="true" />
                 </div>
                 <div class="ft"><button type="button" class="mx-btn" data-close>{{ $F('cancel') }}</button><button type="submit" class="mx-btn p">✓ {{ $F('save') }}</button></div>
             </form>
@@ -151,7 +151,7 @@
                         <div><label class="mx-lbl">{{ $F('format') }}</label><div class="mx-seg">
                             <label><input type="radio" name="format" value="designed" @checked(($t?->format ?? 'designed') === 'designed')> {{ __('mail::field.tpl.look.designed') }}</label>
                             <label><input type="radio" name="format" value="plain" @checked($t?->format === 'plain')> {{ __('mail::field.tpl.look.plain') }}</label></div></div>
-                        <div><label class="mx-lbl">{{ $F('colour') }}</label><input class="mx-in" type="color" name="colour" value="{{ $t?->colour ?? '#1a3fd0' }}" style="padding:2px;width:80px"></div>
+                        <div><label class="mx-lbl">{{ $F('colour') }}</label><input class="mx-in" type="color" name="colour" value="{{ $t?->colour ?? \App\Modules\Mail\Models\MailTemplate::COLOUR }}" style="padding:2px;width:80px"></div>
                         <div><label class="mx-lbl">{{ $F('button') }}</label><input class="mx-in" name="button" maxlength="60" value="{{ $t?->button }}"></div>
                         <div class="w"><label class="mx-lbl">{{ $F('subject') }}</label><input class="mx-in" name="subject" maxlength="255" value="{{ $t?->subject }}"></div>
                         <div class="w"><label class="mx-lbl">{{ $F('body') }}</label>
@@ -161,9 +161,9 @@
                         @if (! $t && $canManage)<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="mine" value="1"> {{ $F('mine_only') }}</label>@endif
                         @if ($canManage && ($t === null || $t->user_id === null))
                             <div class="w mx-card" style="padding:10px 12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-                                <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="auto_on" value="1" @checked($ta['on'] ?? false)> ⚙️ {{ $F('auto_on') }}</label>
-                                <label>{{ $F('auto_day') }} <select class="mx-in" name="auto_day" style="width:auto;height:30px">@foreach (trans('mail::field.tpl.days') as $k => $d)<option value="{{ $k }}" @selected(($ta['day'] ?? 'mon') === $k)>{{ $d }}</option>@endforeach</select></label>
-                                <label>{{ $F('auto_at') }} <input class="mx-in num" type="time" name="auto_at" value="{{ $ta['at'] ?? '10:00' }}" style="width:auto;height:30px"></label>
+                                <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" name="auto_on" value="1" @checked($ta['on'] ?? false)> 🛠️ {{ $F('auto_on') }}</label>
+                                <label>{{ $F('auto_day') }} <select class="mx-in mx-h30" name="auto_day" style="width:auto">@foreach (trans('mail::field.tpl.days') as $k => $d)<option value="{{ $k }}" @selected(($ta['day'] ?? 'mon') === $k)>{{ $d }}</option>@endforeach</select></label>
+                                <label>{{ $F('auto_at') }} <input class="mx-in num mx-h30" type="time" name="auto_at" value="{{ $ta['at'] ?? '10:00' }}" style="width:auto"></label>
                             </div>
                         @endif
                     </div>

@@ -51,7 +51,7 @@
         {{-- মেইলের তালিকা --}}
         <section class="mx-list" aria-label="{{ __('mail::field.folders.inbox') }}">
             <div class="mx-bar">
-                <label class="mx-q">🔍 <input type="search" data-q autocomplete="off" placeholder="{{ __('mail::field.search_folder') }}" aria-label="{{ __('mail::field.search_folder') }}"></label>
+                <label class="mx-q"><x-ui.icon name="search" :size="16" /> <input type="search" data-q autocomplete="off" placeholder="{{ __('mail::field.search_folder') }}" aria-label="{{ __('mail::field.search_folder') }}"></label>
                 <button type="button" class="mx-btn" data-act="refresh" title="{{ __('mail::field.refresh') }}">⟳</button>
                 <div data-chips style="display:flex;gap:6px;flex-wrap:wrap"></div>
             </div>
@@ -123,7 +123,7 @@
                             <button type="button" data-later="tomorrow">🌅 {{ __('mail::field.x_later_tomorrow') }}</button>
                             <div class="sep"></div>
                             <label style="display:flex;flex-direction:column;gap:4px;padding:6px 10px;font-size:12px">{{ __('mail::field.x_later_pick') }}
-                                <input type="datetime-local" class="mx-in num" data-later-at style="height:30px"></label>
+                                <input type="datetime-local" class="mx-in num mx-h30" data-later-at></label>
                             <button type="button" data-later="pick" style="justify-content:center;color:var(--mx-brand);font-weight:700">🕒 {{ __('mail::field.x_later_send') }}</button>
                         </div>
                     </span>
@@ -137,17 +137,17 @@
                 <div style="display:flex;align-items:center;gap:10px"><b style="font-size:20px">{{ __('mail::field.add.title') }}</b><span style="flex:1"></span>
                     <button type="button" class="mx-btn" data-act="connect-close">✕ {{ __('mail::field.add.cancel') }}</button></div>
                 <div class="cards">
-                    <button type="button" class="c on" data-provider="company"><span class="ic" style="background:var(--mx-green-bg)">🏢</span><span><h3>{{ __('mail::field.add.company') }}</h3><p>{{ __('mail::field.add.company_sub') }}</p></span></button>
-                    <button type="button" class="c" data-provider="gmail"><span class="ic" style="background:var(--mx-red-bg)">✉️</span><span><h3>{{ __('mail::field.add.gmail') }} <span class="mx-pill t-amber">{{ __('mail::field.add.needs_ok') }}</span></h3><p>{{ __('mail::field.add.gmail_sub') }}</p></span></button>
-                    <button type="button" class="c" data-provider="outlook"><span class="ic" style="background:var(--mx-brand-100)">📨</span><span><h3>{{ __('mail::field.add.outlook') }} <span class="mx-pill t-amber">{{ __('mail::field.add.needs_ok') }}</span></h3><p>{{ __('mail::field.add.outlook_sub') }}</p></span></button>
-                    <button type="button" class="c" data-provider="imap"><span class="ic" style="background:var(--mx-amber-bg)">⚙️</span><span><h3>{{ __('mail::field.add.imap') }}</h3><p>{{ __('mail::field.add.imap_sub') }}</p></span></button>
+                    <button type="button" class="c on" data-provider="company"><span class="ic mx-ic-g">🏢</span><span><h3>{{ __('mail::field.add.company') }}</h3><p>{{ __('mail::field.add.company_sub') }}</p></span></button>
+                    <button type="button" class="c" data-provider="gmail"><span class="ic mx-ic-r">✉️</span><span><h3>{{ __('mail::field.add.gmail') }} <span class="mx-pill t-amber">{{ __('mail::field.add.needs_ok') }}</span></h3><p>{{ __('mail::field.add.gmail_sub') }}</p></span></button>
+                    <button type="button" class="c" data-provider="outlook"><span class="ic mx-ic-b">📨</span><span><h3>{{ __('mail::field.add.outlook') }} <span class="mx-pill t-amber">{{ __('mail::field.add.needs_ok') }}</span></h3><p>{{ __('mail::field.add.outlook_sub') }}</p></span></button>
+                    <button type="button" class="c" data-provider="imap"><span class="ic mx-ic-a">🔧</span><span><h3>{{ __('mail::field.add.imap') }}</h3><p>{{ __('mail::field.add.imap_sub') }}</p></span></button>
                 </div>
-                <div class="mx-card" style="padding:14px 18px;line-height:1.8;background:var(--mx-green-bg);border-color:#bfe9cd"><b>🔒 {{ __('mail::field.add.lock_title') }}</b><br>{{ __('mail::field.add.lock_body') }}</div>
+                <div class="mx-card mx-lockcard"><b>🔒 {{ __('mail::field.add.lock_title') }}</b><br>{{ __('mail::field.add.lock_body') }}</div>
             </div>
             <div class="r">
                 <div style="font-size:18px;font-weight:700" data-connect-title></div>
                 <div data-connect-steps style="display:flex;flex-direction:column;gap:10px"></div>
-                <input type="hidden" name="provider" value="company"><input type="hidden" name="kind" value="own"><input type="hidden" name="colour" value="#f5121d">
+                <input type="hidden" name="provider" value="company"><input type="hidden" name="kind" value="own"><input type="hidden" name="colour" value="{{ \App\Modules\Mail\Models\MailAccount::COLOURS[0] }}">
                 <div data-kind-row style="display:flex;gap:6px;flex-wrap:wrap">
                     <label class="mx-chip"><input type="radio" name="kind_pick" value="own" checked hidden> {{ __('mail::field.add.work') }}</label>
                     @if ($canManage)<label class="mx-chip"><input type="radio" name="kind_pick" value="shared" hidden> {{ __('mail::field.add.shared') }}</label>@endif
@@ -161,8 +161,8 @@
                 </div>
                 <div><label class="mx-lbl">{{ __('mail::field.add.label') }}</label>
                     <div class="mx-dots"><input class="mx-in" name="label" type="text" maxlength="80" placeholder="{{ __('mail::field.add.label_ph') }}" style="flex:1">
-                        @foreach (['#f5121d', '#1a3fd0', '#00ab3f', '#f8a500', '#6a3fd0'] as $c)
-                            <button type="button" data-colour="{{ $c }}" style="background:{{ $c }}" @class(['on' => $loop->first]) aria-label="{{ $c }}"></button>
+                        @foreach (\App\Modules\Mail\Models\MailAccount::COLOURS as $i => $c)
+                            <button type="button" data-colour="{{ $c }}" class="mx-dot-c{{ $i + 1 }} @if ($loop->first) on @endif" aria-label="{{ $c }}"></button>
                         @endforeach
                     </div></div>
                 <div data-only="personal" hidden style="display:grid;grid-template-columns:1fr 150px;gap:10px">
@@ -171,7 +171,7 @@
                         @foreach ([1, 3, 6, 12, 24] as $m)<option value="{{ $m }}" @selected($m === 6)>{{ __('mail::field.add.months_n', ['n' => $m]) }}</option>@endforeach
                     </select></div>
                 </div>
-                <div data-only="personal" hidden class="mx-card" style="padding:9px 12px;font-size:12px;line-height:1.7;background:#fffaf0;border-color:var(--mx-amber-line)">{{ __('mail::field.add.approver_note') }}</div>
+                <div data-only="personal" hidden class="mx-card mx-warncard">{{ __('mail::field.add.approver_note') }}</div>
                 <div class="muted" style="line-height:1.7">{{ __('mail::field.add.check_note') }}</div>
                 <div class="muted" data-connect-msg style="font-weight:600"></div>
                 <div style="margin-top:auto;display:flex;gap:10px;justify-content:flex-end">
