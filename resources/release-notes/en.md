@@ -1,5 +1,12 @@
 # What's new
 
+## 1.3.28 — 26-11-2026
+
+- Direct purchase: the bill total box on the right fits the screen — the figures scroll inside it when needed, the buttons and Receive goods always stay visible, at 1080p or zoomed.
+- Direct sale: with the menu open the quantity, unit and free boxes were squeezed — every box now gets its share. The lot box is smaller and sits at the far right over the Cart button, so long product names are no longer cut.
+- Blue look: with the menu folded, the tab row covered the top of the page — it now sits at the top of the panel with the page below.
+- ABOS looks: tab-row dropdowns (e.g. Reports) went under the list toolbar — they now open above it, in full.
+
 ## 1.3.27 — 26-11-2026
 
 - Direct sale — the new counter (ABOS, Navy and Blue looks; SAP, Dynamic and Odoo unchanged): customer and the bill's date and number in one teal box, point and mobile under the name; stock in coloured boxes right above their own fields; Gift before Cart; Enter in the quantity row adds to cart; with nothing picked the list takes the whole screen; editing opens as a popup.
