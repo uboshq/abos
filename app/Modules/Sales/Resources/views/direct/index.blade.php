@@ -349,28 +349,28 @@
         form[data-abos-counter] .ds-tot-card > .space-y-1 { padding: 0 !important; background: #fff !important; font-size: .8rem; }
         form[data-abos-counter] .ds-tot-card > .space-y-1 > * { margin: 0 !important; }
         form[data-abos-counter] .ds-tot-card > .space-y-1 > :not([data-tone]) { padding-inline: 1rem; }
-        form[data-abos-counter] .ds-tot-card > .space-y-1 > :first-child { display: grid !important; gap: .1rem; padding: .85rem 1rem .75rem !important;
+        form[data-abos-counter] .ds-tot-card > .space-y-1:first-child > :first-child { display: grid !important; gap: 0; padding: .6rem 1rem .55rem !important;
             background: #1e293b; border: 0 !important; }
-        form[data-abos-counter] .ds-tot-card > .space-y-1 > :first-child > span:first-child { color: #e2e8f0 !important; opacity: .85; letter-spacing: .12em; }
-        form[data-abos-counter] .ds-tot-card > .space-y-1 > :first-child > span:nth-child(2) { justify-self: start; background: transparent !important;
-            box-shadow: none !important; padding: 0 !important; color: #2fd3e3 !important; font-size: 2.1rem; font-weight: 800; line-height: 1.1; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1:first-child > :first-child > span:first-child { color: #e2e8f0 !important; opacity: .85; letter-spacing: .12em; }
+        form[data-abos-counter] .ds-tot-card > .space-y-1:first-child > :first-child > span:nth-child(2) { justify-self: start; background: transparent !important;
+            box-shadow: none !important; padding: 0 !important; color: #2fd3e3 !important; font-size: 1.9rem; font-weight: 800; line-height: 1.1; }
         form[data-abos-counter] .ds-head-who { display: flex; justify-content: space-between; gap: .5rem; font-size: .75rem; color: #e2e8f0; opacity: .9; }
         form[data-abos-counter] .ds-head-who > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        form[data-abos-counter] .ds-tot-card [data-tone] { padding: .42rem 1rem; background: #fff; }
+        form[data-abos-counter] .ds-tot-card [data-tone] { padding: .3rem 1rem; background: #fff; }
         form[data-abos-counter] .ds-tot-card [data-tone] + [data-tone], form[data-abos-counter] .ds-tot-card [data-tone] + .ds-dep-sub + [data-tone],
         form[data-abos-counter] .ds-tot-card div:has(> [data-tone]) + [data-tone] { border-top: 1px solid #e3e8f0; }
         form[data-abos-counter] .ds-tot-card [data-tone='net'] { background: #e6f8fb; }
         form[data-abos-counter] .ds-tot-card [data-tone='net'], form[data-abos-counter] .ds-tot-card [data-tone='net'] * { color: #0b6c7a !important; font-weight: 800; }
         form[data-abos-counter] .ds-tot-card [data-tone='due'], form[data-abos-counter] .ds-tot-card [data-tone='due'] * { color: #b45309 !important; font-weight: 700; }
         form[data-abos-counter] .ds-dep-sub { background: #fff; padding: 0 1rem .3rem !important; margin-top: -.2rem !important; font-size: .68rem; color: #5b6b82; }
-        form[data-abos-counter] .ds-out { background: #fff; padding: .5rem .75rem .2rem !important; }
-        form[data-abos-counter] .ds-out > div { border-radius: 12px !important; padding: .5rem .9rem !important; border: 1px solid #e3e8f0; }
+        form[data-abos-counter] .ds-out { background: #fff; padding: .35rem .75rem .15rem !important; }
+        form[data-abos-counter] .ds-out > div { border-radius: 12px !important; padding: .35rem .9rem !important; border: 1px solid #e3e8f0; }
         form[data-abos-counter] .ds-out > [data-sign='adv'] { background: #ecfdf3 !important; border-color: #a7e3bf; color: #15803d !important; }
         form[data-abos-counter] .ds-out > [data-sign='due'] { background: #fef2f2 !important; border-color: #fecaca; color: #b91c1c !important; }
         form[data-abos-counter] .ds-out > div > span:last-child { font-size: 1.1rem; }
-        form[data-abos-counter] .ds-credit { background: #fff; padding: .3rem .75rem .6rem !important; }
+        form[data-abos-counter] .ds-credit { background: #fff; padding: .25rem .75rem .45rem !important; }
         form[data-abos-counter] .ds-limit { border: 1px dashed #c3cede; border-radius: 10px; padding: .35rem .9rem; }
-        form[data-abos-counter] .ds-details { border-top: 1px solid #e3e8f0; padding: .55rem 1rem .4rem; }
+        form[data-abos-counter] .ds-details { border-top: 1px solid #e3e8f0; padding: .4rem 1rem .3rem; }
         form[data-abos-counter] .ds-sec-h { display: flex; width: 100%; justify-content: space-between; font-size: .68rem; font-weight: 800; letter-spacing: .1em;
             text-transform: uppercase; color: #0b8a9a; margin-bottom: .3rem; }
         form[data-abos-counter] .ds-sec-h > span:last-child { letter-spacing: 0; text-transform: none; font-weight: 700; }
@@ -383,11 +383,11 @@
         form[data-abos-counter] .ds-who-pays { margin-inline-start: .35rem; font-size: .66rem; font-weight: 700; font-style: normal; border-radius: 999px;
             padding: .05rem .5rem; background: #fff; border: 1px solid #e3e8f0; color: #5b6b82; }
         form[data-abos-counter] .ds-veh-none { font-size: .75rem; color: #5b6b82; }
-        form[data-abos-counter] .ds-mini { border-top: 1px solid #e3e8f0; margin-top: .5rem; padding-top: .4rem; }
+        form[data-abos-counter] .ds-mini { border-top: 1px solid #e3e8f0; margin-top: .35rem; padding-top: .3rem; }
         form[data-abos-counter] .ds-det { display: flex; width: 100%; gap: .5rem; padding: .1rem 0; text-align: start; font-size: .76rem; }
         form[data-abos-counter] .ds-det > b { width: 4.6rem; flex: none; font-weight: 400; color: #5b6b82; }
         form[data-abos-counter] .ds-det > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1f2a3d; }
-        form[data-abos-counter] .ds-tot-abos > div:last-child { border-top: 1px solid #e3e8f0 !important; background: #fff !important; padding: .6rem .75rem .75rem !important; }
+        form[data-abos-counter] .ds-tot-abos > div:last-child { border-top: 1px solid #e3e8f0 !important; background: #fff !important; padding: .5rem .75rem .6rem !important; }
         form[data-abos-counter] .ds-tot-abos [data-overview-trigger] { background: #0b8a9a !important; border-color: #0b8a9a !important; color: #fff !important;
             border-radius: 12px !important; font-size: .95rem; font-weight: 800; }
         /* তালিকার নিচে সর্বমোট — ডানের চার সারাংশ-বাক্সের বদলে (মালিক, ২৬ নভেম্বর ২০২৬) */
