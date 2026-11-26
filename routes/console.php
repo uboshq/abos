@@ -444,3 +444,18 @@ Schedule::command('abos:documents-retention')
     ->onFailure(function () {
         logger()->critical('ডকুমেন্টের রাখার নিয়ম চালানো ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
     });
+
+/*
+ * ⭐ মেইল (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v4): দিনের কাজ — মেয়াদ শেষের ব্যক্তিগত মেইল বন্ধ, বন্ধ ঠিকানা নিজে চালু, 30 দিন পেরোনো ঠিকানা
+ * ব্যাকআপ রেখে মোছা ([[MailDaily]]); আর ঘণ্টায় একবার — প্রশাসকের চালু করা নিজে থেকে পাঠানো মেইল ([[MailAuto]], প্রথমে সব বন্ধ)।
+ */
+Schedule::command('abos:mail-daily')
+    ->dailyAt('03:10')
+    ->withoutOverlapping()
+    ->onFailure(function () {
+        logger()->critical('মেইলের দিনের কাজ ব্যর্থ হয়েছে — হাতে দেখতে হবে।');
+    });
+
+Schedule::command('abos:mail-auto')
+    ->hourlyAt(5)
+    ->withoutOverlapping();

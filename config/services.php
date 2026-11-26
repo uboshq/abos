@@ -47,6 +47,18 @@ return [
         'secret' => env('LIVEKIT_API_SECRET'),
     ],
 
+    /*
+     * Mail module - the hosting's cPanel UAPI for own-domain addresses ([[CpanelMailHost]]). Empty = admin page reads ABOS rows only.
+     * CPANEL_WRITE=true only on live: demo never creates, pauses or deletes a real address.
+     */
+    'cpanel' => [
+        'url' => env('CPANEL_URL', ''),
+        'user' => env('CPANEL_USER', ''),
+        'token' => env('CPANEL_TOKEN', ''),
+        'write' => (bool) env('CPANEL_WRITE', false),
+        'verify' => (bool) env('CPANEL_VERIFY_TLS', false),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -46,6 +46,7 @@ final class MailAccounts
             'provider' => $data['provider'],
             'email' => mb_strtolower(trim($data['email'])),
             'label' => $data['label'] ?? null,
+            'colour' => $data['colour'] ?? null,
             'username' => $data['username'] ?? null,
             'secret' => $data['secret'],
             'user_id' => $kind === MailAccount::SHARED ? null : ($data['user_id'] ?? $by->id),

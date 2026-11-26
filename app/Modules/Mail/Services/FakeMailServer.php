@@ -55,7 +55,15 @@ final class FakeMailServer implements MailServer
     public function list(MailAccount $account, string $folder, int $page, int $perPage, string $search = ''): array
     {
         $this->guard();
-        $all = array_values(array_filter($this->boxes[$folder] ?? [], fn ($m) => $search === '' || str_contains($m['subject'].$m['fromName'], $search)));
+        $want = [];
+        foreach (['is:unread' => ['seen', false], 'is:flagged' => ['flagged', true], 'is:later' => ['later', true]] as $k => $v) {
+            if (str_contains($search, $k)) {
+                $want[] = $v;
+                $search = trim(str_replace($k, '', $search));
+            }
+        }
+        $all = array_values(array_filter($this->boxes[$folder] ?? [], fn ($m) => ($search === '' || str_contains($m['subject'].$m['fromName'], $search))
+            && collect($want)->every(fn ($w) => (bool) ($m[$w[0]] ?? false) === $w[1])));
         $items = array_map(fn ($m) => array_diff_key($m, ['html' => 1, 'text' => 1, 'files' => 1]), array_slice($all, ($page - 1) * $perPage, $perPage));
 
         return ['items' => $items, 'total' => count($all)];
@@ -90,7 +98,7 @@ final class FakeMailServer implements MailServer
         $this->guard();
 
         foreach ($this->boxes[$folder] ?? [] as $i => $m) {
-            if ($m['uid'] === $uid && in_array($flag, ['seen', 'flagged'], true)) {
+            if ($m['uid'] === $uid && in_array($flag, ['seen', 'flagged', 'later'], true)) {
                 $this->boxes[$folder][$i][$flag] = $on;
             }
         }

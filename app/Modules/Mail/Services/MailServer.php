@@ -35,7 +35,8 @@ interface MailServer
     public function move(MailAccount $account, string $folder, int $uid, string $to): void;
 
     /**
-     * @param  array{to: list<string>, cc?: list<string>, bcc?: list<string>, subject: string, html: string, inReplyTo?: string,
+     * @param  array{to: list<string>, cc?: list<string>, bcc?: list<string>, subject: string, html: string, inReplyTo?: string, fromName?: string,
+     *               embeds?: list<array{cid: string, name: string, mime: string, bytes: string}>,
      *               attachments?: list<array{name: string, mime: string, bytes: string}>}  $mail
      * @return string  পাঠানো মেইলের Message-ID
      */

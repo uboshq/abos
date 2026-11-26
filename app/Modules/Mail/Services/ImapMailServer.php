@@ -188,7 +188,8 @@ final class ImapMailServer implements MailServer
 
     public function flag(MailAccount $account, string $folder, int $uid, string $flag, bool $on): void
     {
-        $name = ['seen' => '\\Seen', 'flagged' => '\\Flagged'][$flag] ?? null;
+        // ⓘ "পরে দেখব" — মেইল সার্ভারের নিজের চিহ্ন (IMAP keyword), তাই অন্য যন্ত্রেও একই
+        $name = ['seen' => '\\Seen', 'flagged' => '\\Flagged', 'later' => '$Later'][$flag] ?? null;
 
         if ($name === null) {
             return;
@@ -221,7 +222,7 @@ final class ImapMailServer implements MailServer
     public function send(MailAccount $account, array $mail): string
     {
         $email = (new Email())
-            ->from(new Address($account->email, (string) ($account->label ?? '')))
+            ->from(new Address($account->email, (string) ($mail['fromName'] ?? $account->label ?? '')))
             ->to(...$mail['to'])
             ->subject($mail['subject'])
             ->html($mail['html'])
@@ -235,6 +236,10 @@ final class ImapMailServer implements MailServer
         }
         foreach (($mail['attachments'] ?? []) as $file) {
             $email->attach($file['bytes'], $file['name'], $file['mime']);
+        }
+        // ⓘ সইয়ের ছবি আর লোগো মেইলের ভিতরে (cid) — বাইরের ঠিকানা থেকে টানা নয়
+        foreach (($mail['embeds'] ?? []) as $file) {
+            $email->embed($file['bytes'], $file['cid'], $file['mime']);
         }
         if (! empty($mail['inReplyTo'])) {
             $email->getHeaders()->addIdHeader('In-Reply-To', trim($mail['inReplyTo'], '<>'));
@@ -320,7 +325,7 @@ final class ImapMailServer implements MailServer
         }
 
         $flags = [];
-        foreach (['is:unread' => 'UNSEEN', 'is:flagged' => 'FLAGGED'] as $k => $v) {
+        foreach (['is:unread' => 'UNSEEN', 'is:flagged' => 'FLAGGED', 'is:later' => 'KEYWORD $Later'] as $k => $v) {
             if (str_contains($search, $k)) {
                 $flags[] = $v;
                 $search = trim(str_replace($k, '', $search));

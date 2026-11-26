@@ -55,9 +55,9 @@ class MailAccount extends Model
     protected $table = 'mail_accounts';
 
     protected $fillable = [
-        'user_id', 'kind', 'provider', 'label', 'email',
+        'user_id', 'kind', 'provider', 'label', 'colour', 'email', 'sender_name', 'sender_with_person',
         'imap_host', 'imap_port', 'imap_secure', 'smtp_host', 'smtp_port', 'smtp_secure',
-        'username', 'secret', 'oauth', 'signature', 'status', 'reason', 'expires_on',
+        'username', 'secret', 'oauth', 'status', 'reason', 'expires_on',
         'decided_by', 'decided_at', 'decision_note', 'checked_at', 'last_error', 'created_by',
     ];
 
@@ -74,7 +74,14 @@ class MailAccount extends Model
             'decided_at' => 'datetime',
             'checked_at' => 'datetime',
             'user_id' => 'integer',
+            'sender_with_person' => 'boolean',
         ];
+    }
+
+    /** ⓘ সংযোগের সময় আর শেষ ভুল যন্ত্রের হিসাব — খাতায় নয় */
+    public function auditIgnores(): array
+    {
+        return ['checked_at', 'last_error'];
     }
 
     public function user(): BelongsTo
@@ -109,5 +116,11 @@ class MailAccount extends Model
     public function boxTitle(): string
     {
         return (string) ($this->label ?: $this->email);
+    }
+
+    /** ⓘ খাতায় চেনার নাম ([[AuditEngine]] এটাই পড়ে) */
+    public function name(): string
+    {
+        return (string) $this->email;
     }
 }
