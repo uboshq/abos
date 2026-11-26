@@ -53,7 +53,12 @@ class LookController extends Controller implements HasMiddleware
     {
         return view('system_admin::looks.index', [
             'menu' => $this->menu->forUser($request->user()),
-            'skins' => LookSkin::query()->orderBy('name')->orderBy('id')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
+            // ⭐ পুরো বার — খোঁজা, কার উপর দাঁড়ানো, সাজানো (মালিক, ২৪ নভেম্বর ২০২৬)
+            'skins' => LookSkin::query()
+                ->when(is_string($request->query('q')) && trim($request->query('q')) !== '', fn ($q) => $q->where('name', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%'))
+                ->when(is_string($request->query('parent')) && $request->query('parent') !== '', fn ($q) => $q->where('parent', $request->query('parent')))
+                ->when($request->query('sort') === 'newest', fn ($q) => $q->orderByDesc('id'))
+                ->orderBy('name')->orderBy('id')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'parents' => $this->parentChoices(new LookSkin),
             'previewing' => LookPreview::skin(),
         ]);

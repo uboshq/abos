@@ -10,9 +10,17 @@
       · **অপ্রকাশিত বদল আছে কি না** — সবচেয়ে জরুরিটা, কারণ এটাই সেই
         অবস্থা যেখানে মানুষ ভাবেন কাজটা সবাই দেখছেন, অথচ দেখছেন না
 --}}
+@php
+    // ⭐ এক সারির পুরো বার কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('parent', __('core.look.parent'), collect($parents)->all()),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('core.look.title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('core.look.title')"
                           :subtitle="__('core.look.subtitle')">
@@ -65,6 +73,7 @@
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -86,6 +95,28 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
+    @if ($abosHead)
+        {{-- ⓘ আমদানির ফর্ম তালিকার ফর্মের বাইরে (ফর্মের ভিতরে ফর্ম হয় না) — বারের বোতাম `form=` দিয়ে এটাকেই পাঠায় --}}
+        <form id="look-import" method="POST" action="{{ route('system_admin.look.import') }}" enctype="multipart/form-data" class="hidden">@csrf</form>
+        <div data-boxed class="mb-3 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :title="__('core.look.title')" :info="__('core.look.subtitle')"
+                              :count="trans_choice('core.count.records', $skins->total(), ['count' => $skins->total()])"
+                              :search-placeholder="__('core.table.name')" :facets="$facetPanel" :share="false" :export="false"
+                              :sort="['name' => __('core.table.name'), 'newest' => __('core.notify.sort.newest')]">
+                    <x-slot:actions>
+                        <label class="inline-flex min-h-(--spacing-touch) cursor-pointer items-center rounded-(--radius-field) border border-(--color-border)
+                                      bg-(--color-surface-card) px-3 text-sm font-medium hover:bg-(--color-surface-hover)">
+                            {{ __('core.look.import') }}
+                            <input type="file" name="file" form="look-import" accept=".json,application/json" required data-action="submit-form" class="sr-only">
+                        </label>
+                        <x-ui.button :href="route('system_admin.look.create')" tone="primary" icon="plus">{{ __('core.look.new') }}</x-ui.button>
+                    </x-slot:actions>
+                </x-ui.toolbar>
+            </form>
+        </div>
+    @endif
     @forelse ($skins as $skin)
         <section data-boxed
                  class="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card)
@@ -130,4 +161,5 @@
 
     <x-ui.pager :rows="$skins" />
     <x-ui.list-totals :rows="$skins" />
+    </x-ui.filter-layout>
 </x-layouts.app>
