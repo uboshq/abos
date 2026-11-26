@@ -42,13 +42,13 @@
                      যেটা নিয়ে সরবরাহকারীর সাথে কথা হয়। --}}
                 <div class="m-2 mb-0 flex items-center justify-between gap-2 rounded-(--radius-field) px-3 py-2.5
                             text-(--color-ink-inverse)" style="background: var(--color-success)">
-                    <span class="shrink-0 whitespace-nowrap text-sm font-semibold">{{ __('purchase::field.bill_total') }}</span>
+                    <span class="shrink-0 whitespace-nowrap text-xs font-semibold xl:text-sm">{{ __('purchase::field.bill_total') }}</span>
 
                     {{-- ⭐ অঙ্কটা একটা নীল চিপের ভিতরে, ছবির মতো — গোটা
                          চওড়ায় ব্যান্ড নয়। ⓘ পার্থক্যটা ছোট মনে হয়, কিন্তু
                          ব্যান্ড পুরো কার্ডটাকে "শিরোনাম" বানিয়ে দেয়, আর
                          চিপ কেবল **সংখ্যাটাকে** আলাদা করে। --}}
-                    <span class="num whitespace-nowrap text-lg font-bold xl:text-xl">৳<span x-text="money(netPayable)"></span></span>
+                    <span class="num whitespace-nowrap text-base font-bold xl:text-xl">৳<span x-text="money(netPayable)"></span></span>
                 </div>
 
                 <div class="p-3">
