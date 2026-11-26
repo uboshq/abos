@@ -45,7 +45,8 @@
                          কলামে ওটা `PBL-2026-2027-` হয়ে কেটে যেত, আর
                          **কাগজের পরিচয় অর্ধেক দেখা যাওয়া** এই রিপোর পুরনো
                          ফাঁদ (৩ সেপ্টেম্বর ২০২৬)। --}}
-                    <div class="grid gap-2 content-start sm:grid-cols-2 lg:grid-cols-3
+                    {{-- ⭐ ছয়টা ঘর এক লাইনে, ছোট (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v10) --}}
+                    <div class="grid gap-2 content-start sm:grid-cols-3 lg:grid-cols-[1.1fr_1fr_1.2fr_1.1fr_1.1fr_1.2fr]
                             [&>label>span]:truncate">
                     {{-- ⭐ যেদিন মাল এল — মজুদ এই তারিখেই বসে।
 
@@ -224,9 +225,11 @@
                          বসে, আর ধরনটা `payment_term`-এ। --}}
                     {{-- ⓘ `relative` — নিচের ভাসমান তারিখটা এই ঘরের সাপেক্ষে বসে। --}}
                     <label class="relative block">
-                        <span class="mb-0.5 block text-2xs text-(--color-ink-muted)"
+                        <span class="mb-0.5 flex justify-between gap-1 whitespace-nowrap text-2xs text-(--color-ink-muted)"
                               title="{{ __('purchase::field.terms') }}">
-                            {{ __('purchase::field.terms') }}
+                            <span class="truncate">{{ __('purchase::field.terms') }}</span>
+                            {{-- ⓘ দেয় তারিখ লেবেলের সারিতে — ঘরগুলো এক লাইনে থাকে (নমুনা v10) --}}
+                            <span x-show="termKind !== 'fixed'" x-cloak class="num" title="{{ __('purchase::field.due_on') }}">→ <span x-text="dueOnShown || '—'"></span></span>
                         </span>
 
                         <select x-model="termChoice" @change="termPicked()"
@@ -272,19 +275,7 @@
                                  ⚠️ `absolute` বলে সে আর জায়গা নেয় না; ঘরটার
                                  নিচের কিনারায় ভেসে বসে। ⓘ লেবেলের সারিতে
                                  ডান পাশটা খালিই ছিল, তাই সেখানেই। --}}
-                            <div x-show="termKind !== 'fixed'" x-cloak
-                                 {{-- ⛔ একবার এটা `absolute` করে লেবেলের সারিতে
-                                      ভাসানো হয়েছিল — উচ্চতা বাঁচাতে। ⚠️ সরু
-                                      কলামে তখন ওটা *"Terms"* লেখার **উপরে**
-                                      উঠে যেত, আর দুইটা লেখা একটার উপরে আরেকটা
-                                      পড়ে কোনোটাই পড়া যেত না।
-
-                                      ⓘ ২০px উচ্চতা বাঁচানোর চেয়ে দুইটা লেখা
-                                      আলাদা থাকা বেশি জরুরি। --}}
-                                 class="text-2xs text-(--color-ink-muted)"
-                                 title="{{ __('purchase::field.due_on') }}">
-                                → <span class="num" x-text="dueOnShown || '—'"></span>
-                            </div>
+                            {{-- ⓘ দেয় তারিখ এখন লেবেলের সারিতে (উপরে) --}}
 
                             <div x-show="termKind === 'fixed'" x-cloak>
                                 <x-ui.date dense name="due_on_picked"

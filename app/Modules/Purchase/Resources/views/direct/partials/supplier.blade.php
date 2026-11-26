@@ -1,5 +1,5 @@
         <section data-boxed class="relative h-full rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-surface-selected) p-3"
+                        bg-(--color-surface-selected) px-3 py-2"
                  style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-brand-500)">
 
             {{-- ── সরবরাহকারী — মালিকের ক্রমের সাত নম্বর ────────────
@@ -79,30 +79,23 @@
             </div>
 
             {{-- ⓘ মোবাইল আর "বুঝে নিলেন" নেই — মালিক, ২৬ নভেম্বর ২০২৬: "যে কিনছে সে বুঝেই দিচ্ছে"; কেবল ঠিকানা, এক লাইনে --}}
-            <div x-show="supplier" x-cloak class="mt-0.5 truncate text-2xs text-(--color-ink-muted)"
-                 :title="(supplier && supplier.address)"
-                 x-text="(supplier && supplier.address) || ''"></div>
-
-            {{-- ⭐ ক্রেডিট লিমিট · আগের বকেয়া · আর বিল করা যাবে — মালিক, ২৬ নভেম্বর ২০২৬ (নমুনা v8)।
-                 ⓘ "আর বিল করা যাবে" = লিমিট − (দেনা + বিল-না-আসা মাল), সার্ভারের মাপ; লিমিট না থাকলে "সীমা নেই" আর শেষ সারি নেই। --}}
-            <dl x-show="supplier" x-cloak data-supplier-credit class="mt-1.5 space-y-0 border-t border-(--color-border) pt-1.5 text-sm leading-6">
-                <div class="flex justify-between gap-2">
-                    <dt class="text-(--color-ink-muted)">{{ __('purchase::field.credit_limit') }}</dt>
-                    <dd class="num font-semibold" x-text="creditLimit > 0 ? money(creditLimit) : @js(__('purchase::field.no_limit'))"></dd>
-                </div>
-                <div class="flex justify-between gap-2">
-                    <dt class="text-(--color-ink-muted)"
-                        x-text="previousDue < 0 ? @js(__('purchase::field.previous_advance')) : @js(__('purchase::field.previous_due'))"></dt>
-                    <dd class="num font-semibold" :class="previousDue > 0 ? 'text-(--color-danger)' : ''"
-                        x-text="money($abs(previousDue))"></dd>
-                </div>
-                <div x-show="creditRoom !== null" x-cloak class="flex justify-between gap-2">
-                    <dt class="text-(--color-ink-muted)"
-                        x-text="creditRoom >= 0 ? @js(__('purchase::field.can_bill_more')) : @js(__('purchase::field.over_limit'))"></dt>
-                    <dd class="num font-semibold" :class="creditRoom >= 0 ? 'text-(--color-success)' : 'text-(--color-danger)'"
-                        x-text="money($abs(creditRoom))"></dd>
-                </div>
-            </dl>
+            {{-- ⭐ নামের নিচে এক লাইনে কেবল দুটো অঙ্ক — "আর বিল করা যাবে" আর "আগের বকেয়া" (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v10 "100% এইরকম")।
+                 ⓘ "আর বিল করা যাবে" = লিমিট − (দেনা + বিল-না-আসা মাল), সার্ভারের মাপ; লিমিট নেই তো "সীমা নেই"; ছাড়িয়ে গেলে লাল ঋণাত্মক।
+                 ⛔ লাইন ভাঙে না (`whitespace-nowrap`) — ঠিকানা, মোবাইল, লিমিটের আলাদা সারি নেই। --}}
+            <div x-show="supplier" x-cloak data-supplier-credit
+                 class="mt-1.5 flex items-baseline gap-4 overflow-hidden whitespace-nowrap border-t border-(--color-border) pt-1.5 text-sm">
+                <span class="min-w-0">
+                    <span class="text-(--color-ink-muted)">{{ __('purchase::field.can_bill_more') }}</span>
+                    <b class="num" :class="creditRoom === null ? '' : (creditRoom >= 0 ? 'text-(--color-success)' : 'text-(--color-danger)')"
+                       x-text="creditRoom === null ? @js(__('purchase::field.no_limit')) : money(creditRoom)"></b>
+                </span>
+                <span class="min-w-0">
+                    <span class="text-(--color-ink-muted)"
+                          x-text="previousDue < 0 ? @js(__('purchase::field.previous_advance')) : @js(__('purchase::field.previous_due'))"></span>
+                    <b class="num" :class="previousDue > 0 ? 'text-(--color-danger)' : 'text-(--color-success)'"
+                       x-text="money($abs(previousDue))"></b>
+                </span>
+            </div>
 
             <input type="hidden" name="supplier_id" x-model="supplierId">
 
