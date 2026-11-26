@@ -1,5 +1,13 @@
 # What's new
 
+## 1.3.14 — 26-11-2026
+
+- The direct purchase screen, redrawn: the whole job on one screen and only the product list scrolls. A big product search; quantity, rate, amount and Gift · Add to cart · Clear on one row; a gift sits right under its product.
+- The unloading bill is now one button that opens a popup in the middle of the screen: one amount for the lorry, or a rate per carton for each product (one rate on all in one click); who pays — cash, owed to the contractor, the supplier, or not needed; "New contractor" right there when there is none.
+- On the right the bill total is green; the bill discount is one box — type taka or %, the amount shows beside it; standard names (amount paid, balance due, previous balance, total outstanding); total outstanding is red when the supplier is owed, green when we are.
+- The supplier box shows the credit limit, the previous balance and how much more can be billed.
+- When a bill cannot be saved, the reason shows in red right above "Receive goods".
+
 ## 1.3.13 — 25-11-2026
 
 - Profit and loss in the international statement order (IAS 1): gross, operating and pre-tax results beside the same period last year; the bottom bar is green for a profit and red for a loss, with the amount in words; "By account" keeps the old list.
