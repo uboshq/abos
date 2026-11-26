@@ -1,5 +1,9 @@
 # What's new
 
+## 1.3.29 — 26-11-2026
+
+- Direct sale: Cost price in "This line" opens a popup in the middle of the screen — the last posted purchase rate, discount, unloading per unit, total cost per unit, cost counting free goods, the cost in the books now, which bill · when · which supplier, and notes. Only for people allowed to see cost.
+
 ## 1.3.28 — 26-11-2026
 
 - Direct purchase: the bill total box on the right fits the screen — the figures scroll inside it when needed, the buttons and Receive goods always stay visible, at 1080p or zoomed.
