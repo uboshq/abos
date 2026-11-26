@@ -117,7 +117,7 @@
     <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :title="__('sales::counter_source.title')" :count="__('sales::counter_source.subtitle')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['oldest', 'newest'])" :title="__('sales::counter_source.title')" :count="__('sales::counter_source.subtitle')"
                           :search-placeholder="__('sales::counter_source.search')" :columns="$columns" :facets="$filters" />
         </form>
 

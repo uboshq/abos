@@ -101,7 +101,7 @@
             @if ($tab !== 'drafts')
                 <input type="hidden" name="tab" value="{{ $tab }}">
             @endif
-            <x-ui.toolbar :title="__('sales::menu.direct_drafts')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest', 'amount_high', 'amount_low'])" :title="__('sales::menu.direct_drafts')"
                           :columns="$columns" :search-placeholder="__('sales::message.invoice_search')" :facets="$facetPanel" :quiet="['tab']">
                 @if ($abosHead)
                     <x-slot:actions>
