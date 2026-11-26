@@ -409,10 +409,10 @@
         form[data-abos-counter] .ds-tot-abos [data-counter-buttons] { gap: .25rem; }
         /* ⓘ কাউন্টার মোডে নিচে স্ট্যাটাস বার নেই — বাক্স আর তালিকা পর্দার নিচ পর্যন্ত */
         @media (min-width: 1280px) {
-            body:has([data-counter-strip]) form[data-abos-counter] .ds-side { max-height: calc(100dvh - 5.6rem); }
-            body:has([data-counter-strip]) form[data-abos-counter] .ds-left { height: calc(100dvh - 5.6rem); }
+            body:has([data-counter-strip]) form[data-abos-counter] .ds-side { max-height: calc(100dvh - 6.3rem); }
+            body:has([data-counter-strip]) form[data-abos-counter] .ds-left { height: calc(100dvh - 6.3rem); }
             /* ⭐ বাক্সটা পর্দার নিচ পর্যন্ত — জায়গা থাকলে সারিগুলো ছড়িয়ে বসে, না থাকলে চাপা; বোতাম সবসময় নিচে (মালিক, ২৬ নভেম্বর ২০২৬) */
-            body:has([data-counter-strip]) form[data-abos-counter] .ds-side { height: calc(100dvh - 5.6rem); }
+            body:has([data-counter-strip]) form[data-abos-counter] .ds-side { height: calc(100dvh - 6.3rem); }
             form[data-abos-counter] .ds-side > aside.ds-tot-abos { height: 100%; }
             form[data-abos-counter] .ds-tot-abos > div:first-child { display: flex; flex-direction: column; }
             form[data-abos-counter] .ds-tot-card { flex: 1 0 auto; display: flex; flex-direction: column; }
