@@ -85,6 +85,10 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->assertCount(1, $this->fake->sent);
         $this->assertStringContainsString('abos-signature', $this->fake->sent[0]['html'], '⛔ সই বসেনি।');
         $this->assertSame('Mail Clerk', $this->fake->sent[0]['fromName']);
+        // ⛔ কোম্পানির লোগো নেই → সইয়ে ভাঙা ছবি নয় (ডেমোতে "Demo Company" লেখা ভাঙা ছবি দেখা গিয়েছিল, ২৭ নভেম্বর)
+        $this->assertNull(Company::query()->find($this->co->id)?->logo_path, 'পরীক্ষার কোম্পানির লোগো থাকার কথা নয়।');
+        $this->assertStringNotContainsString('src=""', $this->fake->sent[0]['html'], '⛔ লোগো ছাড়া সইয়ে ফাঁকা ছবি বসেছে।');
+        $this->assertStringNotContainsString('{{SIG_', $this->fake->sent[0]['html'], '⛔ সইয়ের চিহ্ন বদলায়নি।');
 
         $row = MailSend::query()->sole();
         $this->assertSame('clerk@adi.test', $row->from_email);
