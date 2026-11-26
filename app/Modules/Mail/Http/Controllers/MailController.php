@@ -221,15 +221,17 @@ final class MailController extends Controller implements HasMiddleware
         $values = $fields->values($user, $to);
         $paper = null;
 
-        if ($request->query('paper') && $request->query('id')) {
+        if ($request->query('paper') && ($request->query('id') || $request->query('no'))) {
             $kind = (string) $request->query('paper');
-            abort_unless(isset(MailPapers::KINDS[$kind]), 422);
-            $no = $papers->numberOf($kind, (int) $request->query('id'));
-            $paper = ['kind' => $kind, 'id' => (int) $request->query('id'), 'no' => $no, 'label' => __('mail::field.papers.'.$kind),
+            abort_unless(isset(MailPapers::KINDS[$kind]), 422, __('mail::message.paper_unknown'));
+            $id = $request->query('id') ? (int) $request->query('id') : $papers->idOf($kind, (string) $request->query('no'));
+            abort_if($id === null, 404, __('mail::message.paper_unknown'));
+            $no = $papers->numberOf($kind, $id) ?: (string) $request->query('no', '');
+            $paper = ['kind' => $kind, 'id' => $id, 'no' => $no, 'label' => __('mail::field.papers.'.$kind),
                 'party' => (string) $request->query('party', 'customer')];
             $values['{বিল নম্বর}'] = $no;
 
-            if ($kind === 'invoice' && ($inv = SalesInvoice::query()->find((int) $request->query('id')))) {
+            if ($kind === 'invoice' && ($inv = SalesInvoice::query()->find($id))) {
                 $values['{বিলের টাকা}'] = MailFields::money((string) $inv->total);
             }
         }

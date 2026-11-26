@@ -5,6 +5,10 @@
     "src": "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs",
     "isDynamicEntry": true
   },
+  "_mail-jBVr1jVa.css": {
+    "file": "assets/mail-jBVr1jVa.css",
+    "src": "_mail-jBVr1jVa.css"
+  },
   "_preload-helper-B6JZccWF.js": {
     "file": "assets/preload-helper-B6JZccWF.js",
     "name": "preload-helper"
@@ -32,13 +36,22 @@
       "resources/js/messenger-meeting.js"
     ]
   },
+  "resources/js/mail-admin.js": {
+    "file": "assets/mail-admin-CJZRddva.js",
+    "name": "mail-admin",
+    "src": "resources/js/mail-admin.js",
+    "isEntry": true,
+    "css": [
+      "assets/mail-jBVr1jVa.css"
+    ]
+  },
   "resources/js/mail-page.js": {
-    "file": "assets/mail-page-2GFB-Uki.js",
+    "file": "assets/mail-page-CyUwv2ao.js",
     "name": "mail-page",
     "src": "resources/js/mail-page.js",
     "isEntry": true,
     "css": [
-      "assets/mail-page-d7XNBYXk.css"
+      "assets/mail-jBVr1jVa.css"
     ]
   },
   "resources/js/meeting-page.js": {

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'mailed' => 'Mailed',
     'title' => 'Mail',
     'new_mail' => 'New mail',
     'search' => 'Search mail, sender, subject…',

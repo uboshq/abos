@@ -104,11 +104,31 @@
                            (মালিক, ২৫ সেপ্টেম্বর) আর পাকা বিল (পুনঃঅডিট ছাপা ১৭) দুইটাই ফেরায়; বাকি থাকত কেবল বাতিল বিল,
                            যেখানে «খসড়া» লেখা ভুল — বাতিল বিল আসল দরজাতেই «বাতিল» হয়ে ছাপে। */
                     ]" />
+                    {{-- ⭐ বিল থেকে মেইল (মেইল মডিউল, নমুনা v4 "ok"): মেইলের ট্যাবে লেখা খোলে, PDF নিজে বসে; পাঠালে নিচে "মেইলে পাঠানো" --}}
+                    @if (\Illuminate\Support\Facades\Route::has('mail.index') && auth()->user()?->can('mail.use') && ! $invoice->isNotFinalYet())
+                        <x-ui.button tone="secondary" target="_blank" rel="noopener" data-mail-paper
+                                     :href="route('mail.index', array_filter(['counter' => 1, 'compose' => 1, 'paper' => 'invoice', 'id' => $invoice->id, 'to' => $invoice->customer?->email]))">
+                            ✉ {{ __('mail::field.compose.send') }}
+                        </x-ui.button>
+                    @endif
                     @endunless
                 @endunless
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+
+    {{-- ⓘ এই বিল কবে কাকে মেইলে গেছে — পাঠানো মেইলের খাতা থেকে ([[MailSends::forPaper]]) --}}
+    @if (class_exists(\App\Modules\Mail\Services\MailSends::class) && \Illuminate\Support\Facades\Schema::hasTable('mail_sends'))
+        @php $mailed = app(\App\Modules\Mail\Services\MailSends::class)->forPaper('invoice', $invoice->id); @endphp
+        @if ($mailed->isNotEmpty())
+            <div data-mailed class="mb-3 rounded-(--radius-field) bg-(--color-badge-info-bg) px-3 py-2 text-xs text-(--color-badge-info-ink)">
+                ✉ {{ __('mail::field.mailed') }}:
+                @foreach ($mailed->take(3) as $m)
+                    <span class="tabular">{{ $m->sent_at?->format('d-m-Y H:i') }}</span> → {{ $m->to }} ({{ $m->sender?->name }})@if (! $loop->last) · @endif
+                @endforeach
+            </div>
+        @endif
+    @endif
 
     @if (session('saved'))
         <div role="status"

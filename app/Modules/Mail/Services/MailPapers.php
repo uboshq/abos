@@ -65,6 +65,20 @@ final class MailPapers
         return ['name' => ($no !== '' ? $no : $kind.'-'.$id).'.pdf', 'mime' => 'application/pdf', 'bytes' => $bytes, 'no' => $no];
     }
 
+    /** ⓘ পর্দায় লেখা নম্বর থেকে কাগজ — কোম্পানির ভিতরে, ঠিক মিল */
+    public function idOf(string $kind, string $no): ?int
+    {
+        $model = self::KINDS[$kind]['model'] ?? null;
+
+        if ($model === null || ! class_exists($model) || trim($no) === '') {
+            return null;
+        }
+
+        $id = $model::query()->where('document_no', trim($no))->value('id');
+
+        return $id !== null ? (int) $id : null;
+    }
+
     public function numberOf(string $kind, int $id): string
     {
         $model = self::KINDS[$kind]['model'] ?? null;
