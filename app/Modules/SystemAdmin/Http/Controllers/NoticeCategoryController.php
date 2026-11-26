@@ -40,7 +40,14 @@ final class NoticeCategoryController extends Controller implements HasMiddleware
     {
         return view('system_admin::notice.categories', [
             'menu' => $this->menu->forUser($request->user()),
-            'categories' => NoticeCategory::query()->orderBy('code')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
+            'categories' => NoticeCategory::query()
+                // ⭐ পুরো বার — খোঁজা, অগ্রাধিকার, সাজানো (মালিক, ২৪ নভেম্বর ২০২৬)
+                ->when(is_string($request->query('q')) && trim($request->query('q')) !== '', fn ($q) => $q->where(fn ($w) => $w
+                    ->where('code', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%')
+                    ->orWhere('name_en', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%')
+                    ->orWhere('name_bn', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%')))
+                ->when(NoticePriority::tryFrom((string) $request->query('priority')), fn ($q, $p) => $q->where('default_priority', $p->value))
+                ->orderBy($request->query('sort') === 'name' ? 'name_en' : 'code')->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'priorities' => collect(NoticePriority::cases())
                 ->mapWithKeys(fn (NoticePriority $p) => [$p->value => $p->label()]),
         ]);

@@ -40,12 +40,26 @@ final class ReportScheduleController extends Controller implements HasMiddleware
 
     public function index(): View
     {
+        $request = request();
+        $titles = $this->reportTitles();
+        $find = is_string($request->query('q')) ? mb_strtolower(trim($request->query('q'))) : '';
+        // ⓘ খোঁজা রিপোর্টের নামে (দেখানো নাম) আর চাবিতে
+        $keys = $find === '' ? [] : array_keys(array_filter($titles, fn ($t, $k) => str_contains(mb_strtolower((string) $t.' '.$k), $find), ARRAY_FILTER_USE_BOTH));
+
         return view('system_admin::reports.index', [
             'menu' => $this->menu->forUser(request()->user()),
             // ⓘ সূচি জমে প্রতিষ্ঠান যত রিপোর্ট নির্ধারণ করে — পাতা ভাগ (EveryListScreenPaginatesTest-এর STILL_BEING_DONE থেকে সরানো, ২৩ নভেম্বর ২০২৬)
-            'schedules' => ReportSchedule::query()->latest()->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
+            // ⭐ পুরো বার — খোঁজা, কত দিন পরপর, অবস্থা, সাজানো (মালিক, ২৪ নভেম্বর ২০২৬)
+            'schedules' => ReportSchedule::query()
+                ->when($find !== '', fn ($q) => $q->where(fn ($w) => $w->whereIn('report_key', $keys)->orWhere('report_key', 'like', '%'.addcslashes($find, '%_\\').'%')))
+                ->when(in_array($request->query('frequency'), ['daily', 'weekly', 'monthly'], true), fn ($q) => $q->where('frequency', $request->query('frequency')))
+                ->when(in_array($request->query('state'), ['on', 'off'], true), fn ($q) => $q->where('is_active', $request->query('state') === 'on'))
+                ->when($request->query('sort') === 'next', fn ($q) => $q->orderByRaw('next_run_at IS NULL')->orderBy('next_run_at'),
+                    fn ($q) => $q->orderBy('created_at', $request->query('sort') === 'oldest' ? 'asc' : 'desc'))
+                ->orderBy('id')
+                ->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             'runs' => ReportRun::query()->latest('ran_at')->limit(20)->get(),
-            'reportTitles' => $this->reportTitles(),
+            'reportTitles' => $titles,
         ]);
     }
 

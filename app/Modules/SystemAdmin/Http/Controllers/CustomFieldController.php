@@ -42,7 +42,16 @@ class CustomFieldController extends Controller implements HasMiddleware
         return view('system_admin::custom_fields.index', [
             'menu' => $this->menu->forUser($request->user()),
             'entities' => $this->fields->entities(),
+            // ⭐ পুরো বার — খোঁজা, জিনিস, ধরন, অবস্থা, সাজানো (মালিক, ২৪ নভেম্বর ২০২৬)
             'fields' => CustomField::query()
+                ->when(is_string($request->query('q')) && trim($request->query('q')) !== '', fn ($q) => $q->where(fn ($w) => $w
+                    ->where('key', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%')
+                    ->orWhere('label_bn', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%')
+                    ->orWhere('label_en', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%')))
+                ->when(array_key_exists((string) $request->query('entity'), $this->fields->entities()), fn ($q) => $q->where('entity', $request->query('entity')))
+                ->when(in_array($request->query('type'), \App\Core\Services\CustomFieldService::TYPES, true), fn ($q) => $q->where('type', $request->query('type')))
+                ->when(in_array($request->query('state'), ['on', 'off'], true), fn ($q) => $q->where('is_active', $request->query('state') === 'on'))
+                ->when($request->query('sort') === 'newest', fn ($q) => $q->orderByDesc('id'))
                 ->orderBy('entity')
                 ->orderBy('sort')
                 ->orderBy('id')

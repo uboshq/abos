@@ -11,10 +11,33 @@
     অফিসের ভিতরের IP কোনো তথ্য নয়, কিন্তু লিংক কোথা থেকে খোলা হল সেটা
     "সত্যিই তিনি খুলেছেন কি না" প্রশ্নের একমাত্র সূত্র।
 --}}
+@php
+    // ⭐ এক সারির পুরো বার কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো — কাগজের নম্বর বারের গোনার জায়গায়, জীবিত লিংক বারের নিচে
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('how', __('core.print.history_how'), [
+            \App\Models\DocumentDelivery::PRINTED => __('core.print.way_printed'), \App\Models\DocumentDelivery::DOWNLOADED => __('core.print.way_downloaded'),
+            \App\Models\DocumentDelivery::SHARED => __('core.print.way_shared'), \App\Models\DocumentDelivery::OPENED => __('core.print.way_opened'),
+        ]),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('core.print.history_title') }}</x-slot:title>
 
-    <div class="mb-3">
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
+    @if ($abosHead)
+        <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <form id="list-form" method="GET" class="contents">
+                <input type="hidden" name="type" value="{{ $type }}">
+                <input type="hidden" name="id" value="{{ $id }}">
+                <x-ui.toolbar :title="__('core.print.history_title')" :count="__('core.print.history_of', ['no' => $documentNo ?? '—'])" :quiet="['type', 'id']"
+                              :search-placeholder="__('core.print.history_who')" :facets="$facetPanel" :share="false" :export="false"
+                              :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]" />
+            </form>
+        </div>
+    @endif
+
+    <div class="mb-3" @if ($abosHead) hidden @endif>
         <p class="text-sm text-(--color-ink-muted)">
             {{ __('core.print.history_of', ['no' => $documentNo ?? '—']) }}
         </p>
@@ -104,4 +127,5 @@
 
     <x-ui.pager :rows="$rows" />
     <x-ui.list-totals :rows="$rows" />
+    </x-ui.filter-layout>
 </x-layouts.app>
