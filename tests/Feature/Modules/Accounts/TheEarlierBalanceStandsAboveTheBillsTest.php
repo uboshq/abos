@@ -95,16 +95,18 @@ final class TheEarlierBalanceStandsAboveTheBillsTest extends TestCase
         $this->customerWithOpening('5000');
         $before = [Voucher::query()->count(), \App\Models\LedgerEntry::query()->count()];
 
-        $this->from(route('accounts.voucher.create', ['type' => Voucher::RECEIPT]))
-            ->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [
-                'type' => Voucher::RECEIPT, 'trx_date' => now()->toDateString(), 'narration' => 'আগের জেরে বসানোর চেষ্টা', 'amount' => '100',
-                'party_type' => 'customer', 'party_id' => $this->customer->id, 'instrument' => 'cash',
-                'to_account_id' => Account::query()->where('money_kind', Account::CASH)->where('is_group', false)->orderBy('code')->firstOrFail()->id,
-                'bills' => [['id' => '', 'amount' => '100'], ['id' => OpeningRow::TICK_ID, 'amount' => '100']],
-            ]);
+        // ⓘ দুই চাবি আলাদা চেষ্টায় — যাচাই প্রথম ভুলেই থামতে পারে, তখন দ্বিতীয়টা কখনো মাপা হত না
+        foreach (['' => '⛔ ফাঁকা চাবিতে টাকা বসানো গেল', OpeningRow::TICK_ID => '⛔ আগের জের বিল হিসেবে টাকা নিল — ওটা বিল নয়'] as $id => $why) {
+            $this->from(route('accounts.voucher.create', ['type' => Voucher::RECEIPT]))
+                ->post(route('accounts.voucher.store', ['type' => Voucher::RECEIPT]), [
+                    'type' => Voucher::RECEIPT, 'trx_date' => now()->toDateString(), 'narration' => 'আগের জেরে বসানোর চেষ্টা', 'amount' => '100',
+                    'party_type' => 'customer', 'party_id' => $this->customer->id, 'instrument' => 'cash',
+                    'to_account_id' => Account::query()->where('money_kind', Account::CASH)->where('is_group', false)->orderBy('code')->firstOrFail()->id,
+                    'bills' => [['id' => (string) $id, 'amount' => '100']],
+                ]);
 
-        $this->assertNotNull($this->refusalOn('bills.0.id'), '⛔ ফাঁকা চাবিতে টাকা বসানো গেল');
-        $this->assertNotNull($this->refusalOn('bills.1.id'), '⛔ আগের জের বিল হিসেবে টাকা নিল — ওটা বিল নয়');
+            $this->assertNotNull($this->refusalOn('bills.0.id') ?? $this->refusalOn('bills'), $why);
+        }
         $this->assertSame($before, [Voucher::query()->count(), \App\Models\LedgerEntry::query()->count()], '⛔ দেখানোর সারি কিছু লিখল');
     }
 
