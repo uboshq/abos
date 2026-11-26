@@ -196,7 +196,7 @@
 
         {{-- ⓘ খোঁজা কেবল লেনদেনে — মালিকের ট্যাবটা খাতা থেকে গোনা হিসাব,
              ওখানে খোঁজার ঘর কিছুই ছাঁকত না (মৃত বোতাম) --}}
-        <x-ui.toolbar :title="__('finance::menu.capital')"
+        <x-ui.toolbar :title="__('finance::menu.capital')" :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest', 'amount_high', 'amount_low'])"
             :subtitle="__('finance::message.capital_note')"
             :columns="$columns"
             :search="$tab === 'entries'"

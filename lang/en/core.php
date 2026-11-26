@@ -43,6 +43,8 @@ return [
     ],
 
     // ⭐ খাতার জেরের যে অংশ কোনো খোলা বিলে নেই — বিলের তালিকার সবার উপরে, কেবল দেখায় ([[OpeningRow]], ২৬ নভেম্বর ২০২৬)
+    'list_sort' => ['newest' => 'Newest first', 'oldest' => 'Oldest first', 'amount_high' => 'Largest amount first', 'amount_low' => 'Smallest amount first',
+        'name_az' => 'Name A → Z', 'name_za' => 'Name Z → A', 'code' => 'By code', 'due_soon' => 'Due soonest first'],
     'opening_row' => [
         'label' => 'Earlier balance (opening)',
         'tag' => 'Not on any bill',

@@ -108,7 +108,7 @@
             @if ($kind)
                 <input type="hidden" name="kind" value="{{ $kind }}">
             @endif
-            <x-ui.toolbar :title="$abosHead ? __('finance::institution.title') : null" :info="$abosHead ? __('finance::institution.subtitle') : null"
+            <x-ui.toolbar :title="$abosHead ? __('finance::institution.title') : null" :sort="\App\Core\ListFilter\ListSort::labels(['name_az', 'name_za', 'newest', 'oldest'])" :info="$abosHead ? __('finance::institution.subtitle') : null"
                           :count="trans_choice('core.count.records', $institutions->total(), ['count' => $institutions->total()])"
                           :columns="$columns" :search-placeholder="__('finance::institution.name_en')" :quiet="['kind']" :facets="$facetPanel">
                 @if ($abosHead)

@@ -115,7 +115,7 @@
         {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe") — ট্যাবটা লুকানো ঘরে --}}
         <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
-            <x-ui.toolbar :title="__('finance::insurance.title')" :info="$abosHead ? __('finance::insurance.subtitle').' '.__('finance::insurance.prepaid_note') : null"
+            <x-ui.toolbar :title="__('finance::insurance.title')" :sort="\App\Core\ListFilter\ListSort::labels(['due_soon', 'newest', 'amount_high', 'amount_low'])" :info="$abosHead ? __('finance::insurance.subtitle').' '.__('finance::insurance.prepaid_note') : null"
                           :columns="$columns" :search-placeholder="__('finance::insurance.policy_no')" :quiet="['tab']" :facets="$facetPanel"
                           :count="trans_choice('core.count.records', $policies->total(), ['count' => $policies->total()])">
                 @if ($abosHead)

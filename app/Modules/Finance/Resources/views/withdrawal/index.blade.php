@@ -127,7 +127,7 @@
 
             {{-- ⓘ খোঁজা কেবল তালিকার ট্যাবে — "কে কোথায়" খাতা থেকে গোনা হিসাব,
                  ওখানে খোঁজার ঘর কিছুই ছাঁকত না (মৃত বোতাম) --}}
-            <x-ui.toolbar :title="__('finance::menu.withdrawal')"
+            <x-ui.toolbar :title="__('finance::menu.withdrawal')" :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest', 'amount_high', 'amount_low'])"
                 :subtitle="__('finance::message.withdrawal_note')"
                 :columns="$columns"
                 :search="$tab === 'rows'"

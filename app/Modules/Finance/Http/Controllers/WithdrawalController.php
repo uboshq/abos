@@ -101,7 +101,9 @@ class WithdrawalController extends Controller implements HasMiddleware
                             ->orWhere('mobile', 'like', "%{$term}%")),
                 ))
                 // ⓘ পাতা বদলালে খোঁজা আর ট্যাব হারায় না
-                ->orderByDesc('trx_date')->orderByDesc('id'), ['amount' => 't.amount']),
+                // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+                ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['trx_date', 'desc'], 'oldest' => ['trx_date', 'asc'],
+                    'amount_high' => ['amount', 'desc'], 'amount_low' => ['amount', 'asc']])), ['amount' => 't.amount']),
             'rows' => $list->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
 
             // ⓘ ট্যাবের পাশের গোনা — খোঁজায় ছাঁকা নয়, মোট কয়টা
