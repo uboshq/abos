@@ -81,6 +81,8 @@ final class MailAccounts
     {
         abort_unless($by->can('mail.personal.approve'), 403);
         abort_unless($account->isPersonal() && $account->status === MailAccount::PENDING, 409);
+        abort_if((int) $account->user_id === (int) $by->id
+            && ! $by->roles->contains('name', \App\Core\Services\PermissionSyncer::SUPER_ADMIN_ROLE), 403);
 
         $account->forceFill([
             'status' => $yes ? MailAccount::ACTIVE : MailAccount::REJECTED,
