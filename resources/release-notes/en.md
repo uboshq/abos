@@ -1,5 +1,9 @@
 # What's new
 
+## 1.3.21 — 26-11-2026
+
+- Direct purchase: the ⋯ on list rows — add gift, edit and delete work again.
+
 ## 1.3.20 — 26-11-2026
 
 - Direct purchase: the bill discount box now reads "Amount or %".

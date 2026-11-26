@@ -176,15 +176,17 @@
                                                     aria-label="{{ __('core.table.actions') }}"
                                                     class="rounded-(--radius-field) border border-(--color-border) px-2 leading-6 text-(--color-ink-muted)
                                                            hover:bg-(--color-surface-hover)">⋯</button>
-                                            <div x-show="acts" x-cloak @click.outside="acts = false"
+                                            {{-- ⛔ CSP-র Alpine এক হ্যান্ডলারে দুই কাজ (`a(); b = c`) চালায় না — তাই বোতাম কেবল কাজটা করে, আর তালিকাটা
+                                                 নিজের ক্লিকে বন্ধ হয় (বোতামের ক্লিক এখানে উঠে আসে) — মালিক, ২৬ নভেম্বর ২০২৬: "মুছতেছে না" --}}
+                                            <div x-show="acts" x-cloak @click.outside="acts = false" @click="acts = false"
                                                  class="absolute end-0 z-20 mt-1 w-40 rounded-(--radius-field) border border-(--color-border)
                                                         bg-(--color-surface-card) py-1 text-start text-sm shadow-lg">
                                                 {{-- উপহার যোগ — এই সারির সাথে বাঁধা --}}
-                                                <button type="button" @click="addGift(line); acts = false"
+                                                <button type="button" @click="addGift(line)"
                                                         class="block w-full px-3 py-1.5 text-start hover:bg-(--color-surface-hover)">🎁 {{ __('purchase::action.add_gift') }}</button>
-                                                <button type="button" @click="editLine(index); acts = false" data-edit-line
+                                                <button type="button" @click="editLine(index)" data-edit-line
                                                         class="block w-full px-3 py-1.5 text-start hover:bg-(--color-surface-hover)">✎ {{ __('purchase::action.edit_line') }}</button>
-                                                <button type="button" @click="dropLine(index); acts = false"
+                                                <button type="button" @click="dropLine(index)"
                                                         class="block w-full px-3 py-1.5 text-start text-(--color-danger) hover:bg-(--color-surface-hover)">✕ {{ __('purchase::action.clear_line') }}</button>
                                             </div>
                                         </div>
