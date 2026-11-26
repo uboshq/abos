@@ -73,6 +73,35 @@ export function matches (label, query) {
     return q === '' || String(label).toLocaleLowerCase().includes(q)
 }
 
+/**
+ * ⭐ পাশে খোলা তালিকা — প্রথমবার মাউস রাখলে (বা কি-বোর্ডে ঢুকলে) তৈরি, তারপর থেকে যায় (মালিকের নমুনা, ঘণ্টা ও রেল দ্রুত, ২৬ নভেম্বর ২০২৬)।
+ * ⓘ সারির গড়ন ব্লেডের আগের আঁকার হুবহু: চলতি সারি মোটা, ঠিকানাহীন সারি ধূসর আর চাপা যায় না। লেখা `textContent`-এ — HTML নয়।
+ *
+ * @param {HTMLElement} box `[data-rail-items]`
+ * @param {Array<{label: string, url: ?string, active: boolean}>} items
+ * @returns {boolean} এখন ভরা হলো কি না
+ */
+export function fillFlyout (box, items) {
+    if (! box || box.dataset.filled === '1' || ! Array.isArray(items)) return false
+
+    for (const item of items) {
+        const a = box.ownerDocument.createElement('a')
+        if (item.url) a.setAttribute('href', item.url)
+        a.className = 'flex items-center px-3 py-1.5 text-sm ' + (item.active
+            ? 'font-semibold text-(--color-brand-700)'
+            : (item.url ? 'text-(--color-ink-body) hover:bg-(--color-surface-hover)' : 'cursor-not-allowed text-(--color-ink-disabled)'))
+        const span = box.ownerDocument.createElement('span')
+        span.className = 'truncate'
+        span.textContent = String(item.label ?? '')
+        a.append(span)
+        box.append(a)
+    }
+
+    box.dataset.filled = '1'
+
+    return true
+}
+
 /** Alpine কম্পোনেন্ট — রেলের <nav x-data="railFit"> */
 export function railFit () {
     return {
@@ -84,9 +113,16 @@ export function railFit () {
         dragFrom: null,
         // ⛔ রেলের <nav> — পদ্ধতির ভিতরে `this.$el` মানে যে ঘরের নির্দেশ চলছে (যেমন "রাখুন" বোতাম), রেল নয়; তাই init-এ ধরে রাখা
         root: null,
+        // ⓘ পাশের তালিকার সারি — তিন ABOS রূপে পাতার JSON থেকে ([[fillFlyout]]); না থাকলে খালি (বাকি রূপে আঁকাই আছে)
+        menu: {},
 
         init () {
             this.root = this.$el
+            try {
+                this.menu = JSON.parse(this.root.querySelector('[data-rail-menu]')?.textContent || '{}')
+            } catch (e) {
+                this.menu = {}
+            }
             this.rows = [...this.root.querySelectorAll('[data-rail-module]')].map(el => ({
                 code: el.dataset.railModule,
                 label: el.dataset.label ?? '',
@@ -129,6 +165,8 @@ export function railFit () {
         place (module) {
             const fly = module?.querySelector?.('.rail-flyout')
             if (! fly) return
+            const box = fly.querySelector('[data-rail-items]')
+            if (box) fillFlyout(box, this.menu[box.dataset.railItems])
             const tile = module.getBoundingClientRect()
             const rail = this.root.getBoundingClientRect()
             const room = window.innerHeight - (fly.offsetHeight || 0) - 8

@@ -5,12 +5,30 @@
     না"। ⚠️ ডিফল্টটা বসানোর মূল কারণ ভুলে যাওয়া: "নিরাপত্তা সতর্কতা"
     লিখতে গিয়ে প্রতিবার হাতে জরুরি বাছতে হলে কোনো একদিন কেউ ভুলতেন।
 --}}
+@php
+    $columns = [
+        ['key' => 'code', 'label' => __('core.table.code'), 'width' => '8rem'],
+        ['key' => 'name', 'label' => __('core.table.name'),
+         'render' => fn ($r) => $r->name()],
+        ['key' => 'default_priority', 'label' => __('core.notice.priority_label'), 'width' => '9rem',
+         'render' => fn ($r) => $r->default_priority?->label() ?? '—'],
+        ['key' => 'needs_approval', 'label' => __('core.notice.needs_approval'), 'width' => '9rem',
+         'render' => fn ($r) => $r->needs_approval ? __('core.yes') : __('core.no')],
+    ];
+    // ⭐ এক সারির পুরো বার কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('priority', __('core.notice.priority_label'), $priorities->all()),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('core.notice.categories_title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('core.notice.categories_title')" />
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -32,6 +50,7 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div class="grid gap-4 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
 
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
@@ -63,22 +82,22 @@
         </section>
 
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            @if ($abosHead)
+                <form id="list-form" method="GET" class="contents">
+                    <x-ui.toolbar :title="__('core.notice.categories_title')" :count="trans_choice('core.count.records', $categories->total(), ['count' => $categories->total()])"
+                                  :search-placeholder="__('core.table.code').', '.__('core.table.name')" :columns="$columns" :facets="$facetPanel" :share="false"
+                                  :sort="['code' => __('core.table.code'), 'name' => __('core.table.name')]" />
+                </form>
+            @endif
             <x-ui.table
                 :empty="__('core.notice.no_categories')"
                 :rows="$categories"
                 compact
-                :columns="[
-                    ['key' => 'code', 'label' => __('core.table.code'), 'width' => '8rem'],
-                    ['key' => 'name', 'label' => __('core.table.name'),
-                     'render' => fn ($r) => $r->name()],
-                    ['key' => 'default_priority', 'label' => __('core.notice.priority_label'), 'width' => '9rem',
-                     'render' => fn ($r) => $r->default_priority?->label() ?? '—'],
-                    ['key' => 'needs_approval', 'label' => __('core.notice.needs_approval'), 'width' => '9rem',
-                     'render' => fn ($r) => $r->needs_approval ? __('core.yes') : __('core.no')],
-                ]" />
+                :columns="$columns" />
 
             <x-ui.pager :rows="$categories" />
             <x-ui.list-totals :rows="$categories" />
         </section>
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>

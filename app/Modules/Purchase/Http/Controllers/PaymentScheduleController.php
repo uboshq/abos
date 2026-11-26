@@ -105,9 +105,19 @@ class PaymentScheduleController extends Controller implements HasMiddleware
         $tab = in_array($request->query('tab'), self::TABS, true) ? (string) $request->query('tab') : 'all';
         $today = Carbon::today();
 
+        $find = is_string($request->query('q')) ? trim($request->query('q')) : '';
+        $like = '%'.addcslashes($find, '%_\\').'%';
+
         $list = $this->outstanding($tab, $today)
             ->with('supplier')
             ->withPaid()
+            // ⭐ পুরো বার — বিলের নম্বর বা সরবরাহকারী খোঁজা, শেষ দিনের পরিসর, সাজানো (মালিক, ২৪ নভেম্বর ২০২৬)
+            ->when($find !== '', fn ($q) => $q->where(fn ($w) => $w->where('pur_bills.document_no', 'like', $like)
+                ->orWhere('pur_bills.supplier_bill_no', 'like', $like)
+                ->orWhereHas('supplier', fn ($s) => $s->where('name_en', 'like', $like)->orWhere('name_bn', 'like', $like)->orWhere('code', 'like', $like))))
+            ->when(\App\Core\Support\DateFormat::plainDay($request->query('from')), fn ($q, $d) => $q->whereRaw(self::WHEN.' >= ?', [$d]))
+            ->when(\App\Core\Support\DateFormat::plainDay($request->query('to')), fn ($q, $d) => $q->whereRaw(self::WHEN.' <= ?', [$d]))
+            ->when($request->query('sort') === 'largest', fn ($q) => $q->orderByDesc('pur_bills.total'))
             ->orderByRaw(self::WHEN)
             ->orderBy('pur_bills.id');
 

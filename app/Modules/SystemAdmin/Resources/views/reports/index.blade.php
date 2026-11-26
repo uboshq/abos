@@ -4,9 +4,19 @@
     প্রতিটা সারি একটা সূচি; নিচে সাম্প্রতিক তৈরি হওয়া ফাইলগুলো, download-রুট
     দিয়ে (private ডিস্ক, অনুমতি যাচাই করা)।
 --}}
+@php
+    // ⭐ এক সারির পুরো বার কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('frequency', __('system_admin::schedule.frequency'), __('system_admin::schedule.freq')),
+        \App\Core\ListFilter\Facets::pick('state', __('system_admin::schedule.status_col'),
+            ['on' => __('system_admin::schedule.active'), 'off' => __('system_admin::schedule.inactive')]),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('system_admin::schedule.title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('system_admin::schedule.title')"
                           :subtitle="__('system_admin::schedule.subtitle')">
@@ -17,6 +27,7 @@
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -27,7 +38,20 @@
     @endif
 
     {{-- সূচিগুলো --}}
-    <section class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
+    <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+        @if ($abosHead)
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :title="__('system_admin::schedule.title')" :info="__('system_admin::schedule.subtitle')"
+                              :count="trans_choice('core.count.records', $schedules->total(), ['count' => $schedules->total()])"
+                              :search-placeholder="__('system_admin::schedule.report')" :facets="$facetPanel" :share="false" :export="false"
+                              :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest'), 'next' => __('system_admin::schedule.next_run')]">
+                    <x-slot:actions>
+                        <x-ui.button tone="primary" icon="plus" :href="route('system_admin.reports.schedule.create')">{{ __('system_admin::schedule.add') }}</x-ui.button>
+                    </x-slot:actions>
+                </x-ui.toolbar>
+            </form>
+        @endif
         @if ($schedules->isEmpty())
             {{-- ⭐ খালি অবস্থায় পরের কাজ — "প্রথম রিপোর্ট নির্ধারণ করুন" (সিস্টেম পর্দার নকশা §৫, ১০ অক্টোবর ২০২৬) --}}
             <x-ui.empty-state :message="__('system_admin::schedule.none')"
@@ -85,6 +109,7 @@
     </section>
     <x-ui.pager :rows="$schedules" />
     <x-ui.list-totals :rows="$schedules" />
+    </x-ui.filter-layout>
 
     {{-- সাম্প্রতিক ফাইল --}}
     @if ($runs->isNotEmpty())

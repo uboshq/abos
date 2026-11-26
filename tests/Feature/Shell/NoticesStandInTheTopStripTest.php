@@ -165,7 +165,12 @@ final class NoticesStandInTheTopStripTest extends TestCase
     private function bell(string $html): string
     {
         // ⓘ ঘণ্টা বারের ভেতরে, ফিতার আগে — বারের শেষেই থামা, নইলে ফিতার লেখাও "ঘণ্টায়" গোনা হত
-        return $this->part($html, 'data-notification-bell', '</header>');
+        $bell = $this->part($html, 'data-notification-bell', '</header>');
+
+        // ⓘ তিন ABOS রূপে তালিকা খুললে আনা হয় (`?part=bell`, ২৬ নভেম্বর ২০২৬) — তখন ঘণ্টার কথা সেই উত্তরে
+        return str_contains($bell, 'data-bell-list')
+            ? $bell.$this->get(route('notifications.index', ['part' => 'bell']))->assertOk()->getContent()
+            : $bell;
     }
 
     /** পাতার একটা টুকরো — শুরুর চিহ্ন থেকে শেষের চিহ্ন পর্যন্ত */

@@ -99,6 +99,7 @@ class DepositController extends Controller implements HasMiddleware
         return view('finance::deposit.all', [
             'menu' => $this->menu->forUser($request->user()),
             'kind' => $kind,
+            'kinds' => DepositKind::query()->orderBy('name_en')->get(),
 
             /*
              * ⚠️ নিজে থেকে কোনো ছাঁকনি বসে না, ইচ্ছাকৃতভাবে — টালির
@@ -112,6 +113,12 @@ class DepositController extends Controller implements HasMiddleware
             'deposits' => Deposit::query()->inViewedBranch()
                 ->with(['kind', 'movements'])
                 ->when($kind !== null, fn ($q) => $q->where('kind_id', $kind->id))
+                // ⭐ পুরো বার — নম্বর খোঁজা, ইস্যুকারী, অবস্থা, সাজানো (মালিক, ২৪ নভেম্বর ২০২৬); কিছু না বাছলে আগের মতোই সব
+                ->when(is_string($request->query('q')) && trim($request->query('q')) !== '', fn ($q) => $q->where('document_no', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%'))
+                ->when(in_array($request->query('issuer'), DepositKind::ISSUERS, true), fn ($q) => $q->whereHas('kind', fn ($k) => $k->where('issuer', $request->query('issuer'))))
+                ->when(in_array($request->query('status'), [Deposit::ACTIVE, Deposit::AWAITING, Deposit::CLOSED, Deposit::CANCELLED], true), fn ($q) => $q->where('status', $request->query('status')))
+                ->when($request->query('sort') === 'largest', fn ($q) => $q->orderByDesc('principal'))
+                ->when($request->query('sort') === 'newest', fn ($q) => $q->orderByDesc('id'))
                 ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [Deposit::ACTIVE])
                 ->orderByRaw('matures_on IS NULL')
                 ->orderBy('matures_on')
