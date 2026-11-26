@@ -176,11 +176,14 @@
              ⓘ "বিলে যোগ" হলে ভাড়াটা বিলের মোটে ওঠে (`freightOnBill`), "ক্রেতা চালককে" হলে মোট বদলায় না। --}}
         <div class="sm:col-span-3" x-show="carriesGoods">
             <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.fare_paid_by') }}</span>
+            {{-- ⭐ পাঁচটা পছন্দ, এই ক্রমে — আমরা এখনই দেব · আমরা পরে দেব · আমরা দিয়ে বিলে যোগ · ক্রেতা চালককে দেবেন · ভাড়া নেই
+                 (মালিক, ২৬ নভেম্বর ২০২৬); "কখন" আর আলাদা সারিতে নেই। ⓘ একটা চাপেই কে আর কখন দুটো বসে ([[fareChoose()]]) --}}
             <div class="ds-seg" role="radiogroup">
-                <button type="button" @click="farePaidBy = 'us'" :class="farePaidBy === 'us' ? 'is-on' : ''">{{ __('sales::field.fare_us') }}</button>
-                <button type="button" @click="farePaidBy = 'us_add_to_bill'" :class="farePaidBy === 'us_add_to_bill' ? 'is-on' : ''">{{ __('sales::field.fare_us_add_to_bill') }}</button>
-                <button type="button" @click="farePaidBy = 'customer'" :class="farePaidBy === 'customer' ? 'is-on' : ''">{{ __('sales::field.fare_customer') }}</button>
-                <button type="button" @click="farePaidBy = 'none'" :class="farePaidBy === 'none' ? 'is-on' : ''">{{ __('sales::field.fare_none') }}</button>
+                <button type="button" @click="fareChoose('us_now')" :class="fareIs('us_now') ? 'is-on' : ''" data-fare-choice="us_now">{{ __('sales::field.fare_us_now') }}</button>
+                <button type="button" @click="fareChoose('us_later')" :class="fareIs('us_later') ? 'is-on' : ''" data-fare-choice="us_later">{{ __('sales::field.fare_us_later') }}</button>
+                <button type="button" @click="fareChoose('add')" :class="fareIs('add') ? 'is-on' : ''" data-fare-choice="add">{{ __('sales::field.fare_us_add_to_bill') }}</button>
+                <button type="button" @click="fareChoose('customer')" :class="fareIs('customer') ? 'is-on' : ''" data-fare-choice="customer">{{ __('sales::field.fare_customer') }}</button>
+                <button type="button" @click="fareChoose('none')" :class="fareIs('none') ? 'is-on' : ''" data-fare-choice="none">{{ __('sales::field.fare_none') }}</button>
             </div>
             <input type="hidden" name="fare_paid_by" value="{{ old('fare_paid_by', $resume['fields']['fare_paid_by'] ?? '') }}"
                    x-init="seedDriver($el, 'farePaidBy')" :value="farePaidBy">
@@ -213,15 +216,10 @@
             </label>
             <div class="min-w-0" x-show="fareIsOurs">
                 <input type="hidden" value="{{ (string) old('fare_account_id', '') }}" x-init="seedDriver($el, 'fareAccount')">
-                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.when') }}</span>
-                <div class="ds-seg" role="radiogroup">
-                    <button type="button" @click="fareWhen = 'now'" :class="fareWhen === 'now' ? 'is-on' : ''">{{ __('sales::fare.now') }}</button>
-                    <button type="button" @click="fareWhen = 'later'" :class="fareWhen === 'later' ? 'is-on' : ''">{{ __('sales::fare.later') }}</button>
-                </div>
                 <input type="hidden" name="fare_when" value="{{ (string) old('fare_when', 'now') }}"
                        x-init="seedDriver($el, 'fareWhen')" :value="fareWhen">
 
-                <div class="mt-2 grid gap-2 sm:grid-cols-3" x-show="fareWhen !== 'later'">
+                <div class="grid gap-2 sm:grid-cols-3" x-show="fareWhen !== 'later'">
                     <label class="block">
                         <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.account') }}</span>
                         <select name="fare_account_id" x-model="fareAccount" :disabled="fareWhen === 'later'" @change="fareWhen = 'now'"

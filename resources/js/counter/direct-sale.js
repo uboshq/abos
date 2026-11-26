@@ -922,6 +922,30 @@ export default function directSale({
             return '';
         },
 
+        /**
+         * ⭐ ভাড়া কে দেবে আর কখন — এক চাপে (মালিক, ২৬ নভেম্বর ২০২৬): "আমরা এখনই দেব", "আমরা পরে দেব", "বিলে যোগ"
+         * (আমরা এখনই দিয়ে), "ক্রেতা চালককে", "ভাড়া নেই"। ⛔ CSP-Alpine-এ এক হ্যান্ডলারে দুই কাজ চলে না, তাই মেথড।
+         */
+        fareChoose(k) {
+            const map = { us_now: ['us', 'now'], us_later: ['us', 'later'], add: ['us_add_to_bill', 'now'], customer: ['customer', ''], none: ['none', ''] };
+            const m = map[k];
+
+            if (! m) return;
+
+            this.farePaidBy = m[0];
+            if (m[1]) this.fareWhen = m[1];
+        },
+
+        fareIs(k) {
+            const later = this.fareWhen === 'later';
+
+            if (k === 'us_now') return this.farePaidBy === 'us' && ! later;
+            if (k === 'us_later') return this.farePaidBy === 'us' && later;
+            if (k === 'add') return this.farePaidBy === 'us_add_to_bill';
+
+            return this.farePaidBy === k;
+        },
+
         /** ⭐ তালিকার নিচে সর্বমোট — বিক্রয় · ফ্রি · মোট পরিমাণ (সারির, উপহার বাদে) আর সারির ছাড়ের যোগ */
         get foot() {
             const sales = this.lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
@@ -955,6 +979,8 @@ export default function directSale({
         },
 
         get farePayText() {
+            if (this.farePaidBy === 'us') return String((texts.fareWhen ?? {})[this.fareWhen === 'later' ? 'later' : 'now'] ?? '');
+
             return this.farePaidBy ? String((texts.fares ?? {})[this.farePaidBy] ?? '') : '';
         },
 

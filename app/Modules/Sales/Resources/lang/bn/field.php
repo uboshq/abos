@@ -199,6 +199,8 @@ return [
     'point_label' => 'পয়েন্ট',
     'cost_short' => 'ক্রয়মূল্য',
     'clear_short' => 'মুছুন',
+    'fare_us_now' => 'আমরা এখনই দেব',
+    'fare_us_later' => 'আমরা পরে দেব',
     'loading_fold' => '+ লোডিং খরচ (দরকার হলে চাপুন)',
     'det_vehicle' => 'গাড়ি',
     'det_driver' => 'চালক',
