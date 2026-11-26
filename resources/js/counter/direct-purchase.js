@@ -516,7 +516,8 @@ export default function directPurchase({
         },
 
         closeActs() {
-            this.$root.querySelectorAll('[data-acts-menu]').forEach((m) => { m.hidden = true; });
+            /* ⓘ বাইরের ক্লিকের শ্রোতা থেকে ডাকলে `$root` থাকে না — তখন গোটা পাতা */
+            (this.$root || document).querySelectorAll('[data-acts-menu]').forEach((m) => { m.hidden = true; });
         },
 
         /* ⭐ পণ্যের তালিকা পর্দার নিচ পর্যন্ত — ফাঁকা থাকে না (মালিক, ২৬ নভেম্বর ২০২৬); উপরের অংশ বড়-ছোট হলেও মেলে */
