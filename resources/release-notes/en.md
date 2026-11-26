@@ -1,5 +1,12 @@
 # What's new
 
+## 1.3.30 — 27-11-2026
+
+- Earlier balance (opening): the open bills on receipts, the credit profile and the phone now start with "Earlier balance" — what the ledger owes that sits on no bill. It can be ticked and given an amount; when the ledger is below the bills a green "Advance received" row shows. The list always totals the ledger. The info mark tells where it came from and since when; the profile shows its age band.
+- Bell and left rail (the three ABOS looks): every page is lighter — the bell list loads when first opened, the rail's side menu on first hover; the red count stays instant.
+- The full bar on more pages: notices, notice kinds and templates, scheduled reports, custom fields, looks, payment schedule, all deposits, paper history, exchange rates — search, filter and sort in one row.
+- Direct sale: the cost-price door is guarded more strictly; the counter colours follow the theme rules.
+
 ## 1.3.29 — 26-11-2026
 
 - Direct sale: Cost price in "This line" opens a popup in the middle of the screen — the last posted purchase rate, discount, unloading per unit, total cost per unit, cost counting free goods, the cost in the books now, which bill · when · which supplier, and notes. Only for people allowed to see cost.
