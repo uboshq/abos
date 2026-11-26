@@ -371,7 +371,7 @@
             box-shadow: none !important; padding: 0 !important; color: #2fd3e3 !important; font-size: 1.75rem; font-weight: 800; line-height: 1.1; }
         form[data-abos-counter] .ds-head-who { display: flex; justify-content: space-between; gap: .5rem; font-size: .75rem; color: #e2e8f0; opacity: .9; }
         form[data-abos-counter] .ds-head-who > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        form[data-abos-counter] .ds-tot-card [data-tone] { padding: .2rem 1rem; background: #fff; }
+        form[data-abos-counter] .ds-tot-card [data-tone] { padding: .14rem 1rem; background: #fff; }
         form[data-abos-counter] .ds-tot-card [data-tone] + [data-tone], form[data-abos-counter] .ds-tot-card [data-tone] + .ds-dep-sub + [data-tone],
         form[data-abos-counter] .ds-tot-card div:has(> [data-tone]) + [data-tone] { border-top: 1px solid #e3e8f0; }
         form[data-abos-counter] .ds-tot-card [data-tone='net'] { background: #e6f8fb; }
@@ -398,14 +398,20 @@
         form[data-abos-counter] .ds-who-pays { margin-inline-start: .35rem; font-size: .66rem; font-weight: 700; font-style: normal; border-radius: 999px;
             padding: .05rem .5rem; background: #fff; border: 1px solid #e3e8f0; color: #5b6b82; }
         form[data-abos-counter] .ds-veh-none { font-size: .75rem; color: #5b6b82; }
-        form[data-abos-counter] .ds-mini { border-top: 1px solid #e3e8f0; margin-top: .25rem; padding-top: .2rem; }
+        form[data-abos-counter] .ds-mini { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: .75rem;
+            border-top: 1px solid #e3e8f0; margin-top: .25rem; padding-top: .2rem; }
         form[data-abos-counter] .ds-det { display: flex; width: 100%; gap: .5rem; padding: 0; text-align: start; font-size: .75rem; line-height: 1.35; }
-        form[data-abos-counter] .ds-det > b { width: 4.6rem; flex: none; font-weight: 400; color: #5b6b82; }
+        form[data-abos-counter] .ds-det > b { flex: none; font-weight: 400; color: #5b6b82; }
         form[data-abos-counter] .ds-det > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1f2a3d; }
         form[data-abos-counter] .ds-tot-abos > div:last-child { border-top: 1px solid #e3e8f0 !important; background: #fff !important; padding: .4rem .75rem .5rem !important; }
         /* ⓘ পুরো বাক্স এক পর্দায়, স্ক্রল ছাড়া (মালিক, ২৬ নভেম্বর ২০২৬) — বোতামগুলো একটু চাপা */
-        form[data-abos-counter] .ds-tot-abos .ds-b8 { min-height: 2.05rem; }
+        form[data-abos-counter] .ds-tot-abos .ds-b8 { min-height: 1.9rem; padding-block: .1rem; }
         form[data-abos-counter] .ds-tot-abos [data-counter-buttons] { gap: .25rem; }
+        /* ⓘ কাউন্টার মোডে নিচে স্ট্যাটাস বার নেই — বাক্স আর তালিকা পর্দার নিচ পর্যন্ত */
+        @media (min-width: 1280px) {
+            body:has([data-counter-strip]) form[data-abos-counter] .ds-side { max-height: calc(100dvh - 3.6rem); }
+            body:has([data-counter-strip]) form[data-abos-counter] .ds-left { height: calc(100dvh - 3.6rem); }
+        }
         form[data-abos-counter] .ds-tot-abos .mt-2.grid { margin-top: .4rem; }
         form[data-abos-counter] .ds-tot-abos [data-overview-trigger] { background: #0b8a9a !important; border-color: #0b8a9a !important; color: #fff !important;
             border-radius: 12px !important; font-size: .95rem; font-weight: 800; }

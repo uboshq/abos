@@ -522,7 +522,7 @@
                             <b>{{ __('sales::field.btn_delivery') }}</b><span x-text="deliveryModeLabel"></span>
                         </button>
                         <button type="button" @click="openPanel('note')" class="ds-det">
-                            <b>{{ __('sales::field.note') }}</b><span x-text="noteText || @js(__('sales::field.card_nothing'))"></span>
+                            <b>{{ __('sales::field.note') }}</b><span :title="noteText" x-text="noteText || @js(__('sales::field.card_nothing'))"></span>
                         </button>
                     </div>
                 </div>
