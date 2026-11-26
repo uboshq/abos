@@ -34,6 +34,8 @@ final class FakeMailServer implements MailServer
                     'html' => '', 'text' => "১ ডিসেম্বর থেকে নতুন দর।", 'files' => []],
             ],
             'Sent' => [],
+            'Archive' => [],
+            'Trash' => [],
         ];
     }
 
@@ -49,6 +51,8 @@ final class FakeMailServer implements MailServer
         return [
             ['path' => 'INBOX', 'name' => 'INBOX', 'role' => 'inbox', 'unread' => count(array_filter($this->boxes['INBOX'], fn ($m) => ! $m['seen'])), 'total' => count($this->boxes['INBOX'])],
             ['path' => 'Sent', 'name' => 'Sent', 'role' => 'sent', 'unread' => 0, 'total' => count($this->boxes['Sent'])],
+            ['path' => 'Archive', 'name' => 'Archive', 'role' => 'archive', 'unread' => 0, 'total' => count($this->boxes['Archive'] ?? [])],
+            ['path' => 'Trash', 'name' => 'Trash', 'role' => 'trash', 'unread' => 0, 'total' => count($this->boxes['Trash'] ?? [])],
         ];
     }
 
