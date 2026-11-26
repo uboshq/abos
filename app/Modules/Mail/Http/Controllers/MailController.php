@@ -51,7 +51,7 @@ final class MailController extends Controller implements HasMiddleware
             'kind' => $a->kind,
             'provider' => $a->provider,
             'email' => $a->email,
-            'title' => $a->title(),
+            'title' => $a->boxTitle(),
             'status' => $a->status,
             'usable' => $a->isUsable(),
             'expires' => $a->expires_on?->format('d-m-Y'),

@@ -106,7 +106,7 @@ class MailAccount extends Model
     }
 
     /** ⓘ দেখানোর নাম — লেবেল, নাহলে ঠিকানা */
-    public function title(): string
+    public function boxTitle(): string
     {
         return (string) ($this->label ?: $this->email);
     }

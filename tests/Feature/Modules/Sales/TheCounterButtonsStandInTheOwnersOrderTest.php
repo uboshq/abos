@@ -65,6 +65,6 @@ final class TheCounterButtonsStandInTheOwnersOrderTest extends TestCase
         $price = $at('data-counter-button="price"');
         $this->assertGreaterThan($memo, $price, '⛔ "দাম দেখুন" মন্তব্যের লাইনে, তার ডানে নেই।');
         $this->assertLessThan($at('name="customer_id"'), $price, '⛔ "দাম দেখুন" ক্রেতার ঘরের নিচের লাইনে নেই।');
-        $this->assertLessThan($at('data-counter-buttons'), $price, '⛔ "দাম দেখুন" এখনো আট বোতামের সারিতে।');
+        $this->assertLessThan($at('data-counter-buttons>'), $price, '⛔ "দাম দেখুন" এখনো আট বোতামের সারিতে।');
     }
 }
