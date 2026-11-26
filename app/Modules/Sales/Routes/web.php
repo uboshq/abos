@@ -157,6 +157,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
         Route::post('/', [DirectSaleController::class, 'store'])->name('store');
         // ⭐ নিশ্চিতের আগে সারাংশ — পপ-আপের ভিতর ([[DirectSaleOverviewController]], ৪ অক্টোবর ২০২৬)
         Route::post('/overview', \App\Modules\Sales\Http\Controllers\DirectSaleOverviewController::class)->name('overview');
+        // ⭐ "ক্রয়মূল্য"-এর পপআপ — শেষ ক্রয়ের দর, আনলোডিং, মোট খরচ (মালিক, ২৬ নভেম্বর ২০২৬); চাবি নিয়ামকের ভিতরে (`sales.cost.view`)
+        Route::get('/cost/{product}', \App\Modules\Sales\Http\Controllers\DirectSaleCostController::class)->whereNumber('product')->name('cost');
 
         /*
          * ⭐ রাখা খসড়া বাতিল — মালিকের নির্দেশ, ২৬ সেপ্টেম্বর ২০২৬: খোলা খসড়া

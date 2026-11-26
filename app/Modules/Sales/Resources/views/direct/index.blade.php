@@ -305,6 +305,19 @@
         form[data-abos-counter] .ds-head [data-customer-details] span.rounded-full * { color: #0b6c7a !important; }
         form[data-abos-counter] .ds-row2 { display: grid; grid-template-columns: minmax(0, 1fr) 17.5rem; gap: .75rem; align-items: start; }
         form[data-abos-counter] .ds-row2-empty { grid-template-columns: minmax(0, 1fr); }
+        /* ⭐ ক্রয়মূল্যের পপআপ — পর্দার মাঝ বরাবর, উপর থেকে একটু নিচে */
+        form[data-abos-counter] .ds-cost-pop { position: fixed; left: 50%; top: 18vh; transform: translateX(-50%); z-index: 71; width: min(30rem, 92vw);
+            max-height: 70vh; overflow-y: auto; background: #fff; color: #1f2a3d; border-radius: 16px; box-shadow: 0 24px 70px rgb(0 0 0 / .35); padding: 1rem 1.2rem; }
+        form[data-abos-counter] .ds-cost-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; border-bottom: 1px solid #e3e8f0; padding-bottom: .6rem; margin-bottom: .4rem; }
+        form[data-abos-counter] .ds-cost-k { font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #0b8a9a; }
+        form[data-abos-counter] .ds-cost-n { font-size: 1.05rem; font-weight: 800; color: #0b3b5c; }
+        form[data-abos-counter] .ds-cost-x { font-size: 1.6rem; line-height: 1; color: #5b6b82; padding: 0 .3rem; border-radius: 8px; }
+        form[data-abos-counter] .ds-cost-msg { padding: .6rem 0; color: #5b6b82; font-size: .85rem; }
+        form[data-abos-counter] .ds-cost-row { display: flex; justify-content: space-between; gap: 1rem; padding: .4rem .2rem; border-bottom: 1px solid #eef2f7; font-size: .9rem; }
+        form[data-abos-counter] .ds-cost-row.is-strong { background: #e6f8fb; border-radius: 10px; padding-inline: .6rem; border: 0; color: #0b6c7a; font-weight: 800; font-size: 1rem; margin-block: .2rem; }
+        form[data-abos-counter] .ds-cost-row.is-soft { color: #5b6b82; }
+        form[data-abos-counter] .ds-cost-src { margin-top: .6rem; font-size: .78rem; color: #5b6b82; }
+        form[data-abos-counter] .ds-cost-notes { margin-top: .6rem; padding: .5rem .7rem; border-radius: 10px; background: #fff8e6; border: 1px solid #f5d08a; font-size: .82rem; }
         /* ⭐ লটের ঘর ছোট আর একদম ডানে — নিচের "কার্ট" আর "অনেক পণ্য" বোতামের সোজা (৬.৬ + ৭rem + ফাঁক); বাকি জায়গা পণ্যের
            নামের, লম্বা নাম কাটে না (মালিক, ২৬ নভেম্বর ২০২৬) */
         /* ⓘ চওড়া ছকের অনুপাত থেকেই — কার্ট (1.3) + অনেক পণ্য (1.4) + একটা ফাঁক; ঘরটা @container-এর ভেতরে, তাই cqw = সারির চওড়া */
@@ -479,6 +492,8 @@
                   'owners' => ['own' => __('sales::field.owner_own'), 'hired' => __('sales::field.owner_hired'), 'customer' => __('sales::field.owner_customer'), 'none' => __('sales::field.owner_none')],
                   'fares' => ['us' => __('sales::field.fare_us'), 'us_add_to_bill' => __('sales::field.fare_us_add_to_bill'), 'customer' => __('sales::field.fare_customer'), 'none' => __('sales::field.fare_none')],
                   'fareWhen' => ['now' => __('sales::field.fare_us_now'), 'later' => __('sales::field.fare_us_later')],
+                  'cost' => ['rate' => __('sales::field.cost_rate'), 'discount' => __('sales::field.cost_discount'), 'unload' => __('sales::field.cost_unload'),
+                      'total' => __('sales::field.cost_total'), 'withFree' => __('sales::field.cost_with_free'), 'book' => __('sales::field.cost_book'), 'from' => __('sales::field.cost_from')],
                   // ⭐ ভাড়ার ঘর না লাগলে এক লাইন (মালিক, ৭ নভেম্বর ২০২৬)
                   'noFare' => ['customer' => __('sales::fare.no_fare_customer_vehicle'), 'none' => __('sales::fare.no_fare_no_vehicle'),
                       'customerPays' => __('sales::fare.no_fare_customer_pays'), 'nothing' => __('sales::fare.no_fare_nothing')],

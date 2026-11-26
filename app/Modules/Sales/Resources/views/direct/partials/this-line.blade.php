@@ -146,7 +146,8 @@
          ⛔ চাবি (`sales.cost.view`) না থাকলে বোতামটাই নেই —
          সংখ্যাটাও নিয়ামক পাঠায় না। --}}
     @can('sales.cost.view')
-    <button type="button" @click="showCosting = ! showCosting"
+    {{-- ⭐ ABOS-এর রূপে চাপলে পর্দার মাঝে পপআপ — দর, আনলোডিং, মোট খরচ, নোট (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+    <button type="button" @if ($abosLook ?? false) @click="openCost($event)" data-cost-url="{{ route('sales.direct.cost', ['product' => 0]) }}" @else @click="showCosting = ! showCosting" @endif
             class="ds-tl-cost w-full rounded-(--radius-field) leading-tight border border-(--color-border)
                    px-1 py-1.5 text-2xs font-medium">
         {{ ($abosLook ?? false) ? __('sales::field.cost_short') : __('sales::field.costing') }}
@@ -178,6 +179,37 @@
 {{-- ⓘ সীমার সতর্কতা এখন পপ-আপ (উপরে, `credit-warning`) — মালিকের ছবি,
      ২৭ সেপ্টেম্বর ২০২৬ (সন্ধ্যা)। এখানের লেখাটা সরানো হলো। --}}
 </div>{{-- ডান কলামের মোড়ক শেষ --}}
+
+{{-- ⭐ ক্রয়মূল্যের পপআপ — পর্দার মাঝখানে, উপর থেকে একটু নিচে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+@if (($abosLook ?? false))
+    @can('sales.cost.view')
+    <div x-show="costOpen" x-cloak @click="closeCost()" class="fixed inset-0 z-[70] bg-black/40"></div>
+    <div x-show="costOpen" x-cloak role="dialog" aria-modal="true" class="ds-cost-pop" data-cost-popup @keydown.escape.window="closeCost()">
+        <div class="ds-cost-h">
+            <div>
+                <p class="ds-cost-k">{{ __('sales::field.cost_title') }}</p>
+                <p class="ds-cost-n" x-text="(picked && picked.name) || ''"></p>
+            </div>
+            <button type="button" @click="closeCost()" aria-label="{{ __('core.action.close') }}" class="ds-cost-x">&times;</button>
+        </div>
+        <p class="ds-cost-msg" x-show="costLoading">{{ __('sales::field.cost_loading') }}</p>
+        <p class="ds-cost-msg" x-show="costNone">{{ __('sales::field.cost_none') }}</p>
+        <div x-show="costRows.length > 0">
+            <template x-for="r in costRows" :key="r.k">
+                <div class="ds-cost-row" :class="r.strong ? 'is-strong' : (r.soft ? 'is-soft' : '')">
+                    <span x-text="r.label"></span><b class="num" x-text="r.value"></b>
+                </div>
+            </template>
+            <p class="ds-cost-src" x-show="costSource" x-text="costSource"></p>
+            <div class="ds-cost-notes" x-show="costNotes.length > 0">
+                <b>{{ __('sales::field.cost_notes') }}</b>
+                <template x-for="(n, i) in costNotes" :key="i"><p x-text="n"></p></template>
+            </div>
+        </div>
+    </div>
+    @endcan
+@endif
+
 
 {{-- ⭐ বার্তা তিনটা বাক্সের নিচে, পুরো প্রস্থে — মালিক, ৪ অক্টোবর ২০২৬: ⛔ পরিমাণের সারির ভিতরে থাকলে
      "এই লাইন" বাক্সটা লম্বা হত। ⓘ "আর N নিলে ফ্রি" কেবল অনুপাত না মিললে ([[fillFreeFromTheRatio()]])। --}}

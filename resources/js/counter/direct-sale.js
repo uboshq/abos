@@ -946,6 +946,60 @@ export default function directSale({
             return this.farePaidBy === k;
         },
 
+        /* ⭐ ক্রয়মূল্যের পপআপ (মালিক, ২৬ নভেম্বর ২০২৬) — চাপলে সার্ভার থেকে শেষ ক্রয়ের হিসাব আনে */
+        costOpen: false,
+        costLoading: false,
+        costNone: false,
+        costRows: [],
+        costSource: '',
+        costNotes: [],
+
+        async openCost(e) {
+            if (! this.picked) return;
+
+            const base = String((e && e.currentTarget && e.currentTarget.dataset.costUrl) || '');
+
+            if (base === '') return;
+
+            this.costOpen = true;
+            this.costLoading = true;
+            this.costNone = false;
+            this.costRows = [];
+            this.costSource = '';
+            this.costNotes = [];
+
+            try {
+                const answer = await fetch(base.replace(/\/0$/, '/' + encodeURIComponent(this.picked.id)), { headers: { Accept: 'application/json' } });
+                const d = answer.ok ? await answer.json() : null;
+                const w = texts.cost ?? {};
+                const unit = d && d.unit ? ' / ' + d.unit : '';
+                const tk = v => '৳' + this.money(Number(v || 0));
+
+                if (! d || ! d.found) {
+                    this.costNone = true;
+                    if (d) this.costRows = [{ k: 'book', label: String(w.book ?? ''), value: tk(d.book) + unit, soft: true }];
+                } else {
+                    const rows = [{ k: 'rate', label: String(w.rate ?? ''), value: tk(d.rate) + unit }];
+                    if (Number(d.discount) > 0) rows.push({ k: 'disc', label: String(w.discount ?? ''), value: '− ' + tk(d.discount) });
+                    rows.push({ k: 'unload', label: String(w.unload ?? ''), value: tk(d.unload) });
+                    rows.push({ k: 'total', label: String(w.total ?? ''), value: tk(d.total) + unit, strong: true });
+                    if (d.withFree !== null && d.withFree !== undefined) rows.push({ k: 'free', label: String(w.withFree ?? ''), value: tk(d.withFree) + unit });
+                    rows.push({ k: 'book', label: String(w.book ?? ''), value: tk(d.book) + unit, soft: true });
+                    this.costRows = rows;
+                    this.costSource = [String(w.from ?? ''), d.billNo, d.supplierBillNo, d.date, d.supplier].filter(Boolean).join(' · ');
+                    this.costNotes = Array.isArray(d.notes) ? d.notes : [];
+                }
+            } catch (err) {
+                this.costNone = true;
+            }
+
+            this.costLoading = false;
+        },
+
+        closeCost() {
+            this.costOpen = false;
+        },
+
         /** ⭐ তালিকার নিচে সর্বমোট — বিক্রয় · ফ্রি · মোট পরিমাণ (সারির, উপহার বাদে) আর সারির ছাড়ের যোগ */
         get foot() {
             const sales = this.lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
