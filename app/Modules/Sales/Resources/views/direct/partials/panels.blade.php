@@ -202,60 +202,68 @@
                :class="fareMissing ? 'text-(--color-badge-danger-ink)' : (fareSet ? 'text-(--color-badge-success-ink)' : 'text-(--color-kind-expense-deep)')">
                 <x-ui.icon name="supplier" :size="16" /> {{ __('sales::fare.box_title') }} <span class="text-(--color-badge-danger-ink)">*</span>
             </p>
-            <label class="block max-w-64">
+            {{-- ⭐ অঙ্ক, কখন দিলাম আর কোন হিসাব থেকে — এক বাক্সে, পাশাপাশি (মালিক, ২৬ নভেম্বর ২০২৬: "এই টাকাটা কোন অ্যাকাউন্ট থেকে
+                 দিচ্ছি এটা তো আগে বাছাই করতে হবে") --}}
+            <div class="grid items-start gap-3 sm:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+            <label class="block">
                 <span class="mb-1 block text-xs font-semibold">{{ __('sales::field.transport_cost') }}</span>
                 <input type="number" step="0.01" min="0" name="transport_cost" value="{{ old('transport_cost', $resume['fields']['transport_cost'] ?? '') }}"
                        x-model="transportCost" x-init="seedDriver($el, 'transportCost')" :disabled="! fareIsOurs" data-fare-amount
                        class="num h-(--spacing-field) w-full rounded-(--radius-field) border-2 border-(--color-border) bg-(--color-surface-card) px-3 text-end text-lg font-bold">
             </label>
+            <div class="min-w-0" x-show="fareIsOurs">
+                <input type="hidden" value="{{ (string) old('fare_account_id', '') }}" x-init="seedDriver($el, 'fareAccount')">
+                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.when') }}</span>
+                <div class="ds-seg" role="radiogroup">
+                    <button type="button" @click="fareWhen = 'now'" :class="fareWhen === 'now' ? 'is-on' : ''">{{ __('sales::fare.now') }}</button>
+                    <button type="button" @click="fareWhen = 'later'" :class="fareWhen === 'later' ? 'is-on' : ''">{{ __('sales::fare.later') }}</button>
+                </div>
+                <input type="hidden" name="fare_when" value="{{ (string) old('fare_when', 'now') }}"
+                       x-init="seedDriver($el, 'fareWhen')" :value="fareWhen">
+
+                <div class="mt-2 grid gap-2 sm:grid-cols-3" x-show="fareWhen === 'now'">
+                    <label class="block">
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.account') }}</span>
+                        <select name="fare_account_id" x-model="fareAccount" :disabled="fareWhen !== 'now'"
+                                class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
+                            <option value="">{{ __('sales::fare.pick_account') }}</option>
+                            <template x-for="a in moneyAccounts" :key="a.id">
+                                <option :value="a.id" x-text="a.label" :selected="a.id === fareAccount"></option>
+                            </template>
+                        </select>
+                    </label>
+                    <label class="block" x-show="fareByBank">
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.reference') }}</span>
+                        <input type="text" name="fare_reference" maxlength="64" value="{{ old('fare_reference') }}" :disabled="! fareByBank || fareWhen !== 'now'"
+                               class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
+                    </label>
+                    <label class="block">
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.payer') }}</span>
+                        <span class="block text-2xs" x-show="! fareByBank">{{ auth()->user()?->name }} · {{ __('sales::fare.payer_cash_is_you') }}</span>
+                        <select name="fare_payer_id" x-show="fareByBank" :disabled="! fareByBank || fareWhen !== 'now'"
+                                class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
+                            @foreach ($farePayers as $payer)
+                                <option value="{{ $payer['id'] }}" @selected((string) old('fare_payer_id', (string) auth()->id()) === $payer['id'])>{{ $payer['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                </div>
+                <p class="mt-1 text-2xs text-(--color-ink-muted)" x-show="fareWhen === 'later'">{{ __('sales::fare.later_hint') }}</p>
+            </div>
+            </div>
             <p class="text-xs font-semibold text-(--color-badge-danger-ink)" x-show="fareMissing" data-fare-missing>{{ __('sales::fare.needs_amount_vehicle') }}</p>
             <p class="text-xs font-semibold text-(--color-badge-success-ink)" x-show="fareSet">✓ {{ __('sales::fare.box_done') }}</p>
         </div>
 
-        <div class="sm:col-span-3" x-show="fareIsOurs">
-            <input type="hidden" value="{{ (string) old('fare_account_id', '') }}" x-init="seedDriver($el, 'fareAccount')">
-            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.when') }}</span>
-            <div class="ds-seg" role="radiogroup">
-                <button type="button" @click="fareWhen = 'now'" :class="fareWhen === 'now' ? 'is-on' : ''">{{ __('sales::fare.now') }}</button>
-                <button type="button" @click="fareWhen = 'later'" :class="fareWhen === 'later' ? 'is-on' : ''">{{ __('sales::fare.later') }}</button>
-            </div>
-            <input type="hidden" name="fare_when" value="{{ (string) old('fare_when', 'now') }}"
-                   x-init="seedDriver($el, 'fareWhen')" :value="fareWhen">
-
-            <div class="mt-2 grid gap-2 sm:grid-cols-3" x-show="fareWhen === 'now'">
-                <label class="block">
-                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.account') }}</span>
-                    <select name="fare_account_id" x-model="fareAccount" :disabled="fareWhen !== 'now'"
-                            class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
-                        <option value="">{{ __('sales::fare.pick_account') }}</option>
-                        <template x-for="a in moneyAccounts" :key="a.id">
-                            <option :value="a.id" x-text="a.label" :selected="a.id === fareAccount"></option>
-                        </template>
-                    </select>
-                </label>
-                <label class="block" x-show="fareByBank">
-                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.reference') }}</span>
-                    <input type="text" name="fare_reference" maxlength="64" value="{{ old('fare_reference') }}" :disabled="! fareByBank || fareWhen !== 'now'"
-                           class="num h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
-                </label>
-                <label class="block">
-                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.payer') }}</span>
-                    <span class="block text-2xs" x-show="! fareByBank">{{ auth()->user()?->name }} · {{ __('sales::fare.payer_cash_is_you') }}</span>
-                    <select name="fare_payer_id" x-show="fareByBank" :disabled="! fareByBank || fareWhen !== 'now'"
-                            class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
-                        @foreach ($farePayers as $payer)
-                            <option value="{{ $payer['id'] }}" @selected((string) old('fare_payer_id', (string) auth()->id()) === $payer['id'])>{{ $payer['label'] }}</option>
-                        @endforeach
-                    </select>
-                </label>
-            </div>
-            <p class="mt-1 text-2xs text-(--color-ink-muted)" x-show="fareWhen === 'later'">{{ __('sales::fare.later_hint') }}</p>
-        </div>
 
         {{-- ⭐ লোডিং খরচ — অফিসের চালানের একই ঘর (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[DirectSaleService::stampExtras()]] →
              [[ChallanLoading::stamp()]])। ⓘ গাড়ি যারই হোক, মাল তোলার লোক লাগতে পারে — তাই `carriesGoods`-এ বাঁধা নয়।
              ⓘ ঘরগুলো বিলের ফর্মের ভেতরে নামসহ, সাধারণ জমায় যায় — জাভাস্ক্রিপ্টে কিছু লাগে না। --}}
-        <div class="sm:col-span-3 rounded-(--radius-card) border border-(--color-border) p-3" data-counter-loading>
+        {{-- ⭐ ভাঁজ করা থাকে, দরকার হলে চাপলে খোলে (মালিক, ২৬ নভেম্বর ২০২৬); আগে বসানো থাকলে খোলা --}}
+        <details class="sm:col-span-3 rounded-(--radius-card) border border-(--color-border) p-3" data-counter-loading
+                 @if ((string) old('loading_mode', $resume['fields']['loading_mode'] ?? '') !== '') open @endif>
+            <summary class="cursor-pointer text-sm font-semibold text-(--color-brand-700)">{{ __('sales::field.loading_fold') }}</summary>
+            <div class="mt-2">
             @include('sales::challan.partials.loading-fields', ['compact' => true, 'loadingValues' => [
                 'mode' => $resume['fields']['loading_mode'] ?? '',
                 'amount' => $resume['fields']['loading_amount'] ?? '',
@@ -263,7 +271,8 @@
                 'contractor_id' => $resume['fields']['loading_contractor_id'] ?? '',
                 'reason' => $resume['fields']['loading_reason'] ?? '',
             ]])
-        </div>
+            </div>
+        </details>
 
         {{-- ⓘ পুরনো "পরিবহন লাগবে না" চেকবক্স উঠে গেছে — গাড়ি "ক্রেতার নিজের" বা "নেই" থেকেই বোঝা যায় (af) --}}
         <input type="hidden" name="own_transport" :value="ownTransport">

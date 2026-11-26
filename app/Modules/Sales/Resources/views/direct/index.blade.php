@@ -398,10 +398,9 @@
         form[data-abos-counter] .ds-who-pays { margin-inline-start: .35rem; font-size: .66rem; font-weight: 700; font-style: normal; border-radius: 999px;
             padding: .05rem .5rem; background: #fff; border: 1px solid #e3e8f0; color: #5b6b82; }
         form[data-abos-counter] .ds-veh-none { font-size: .75rem; color: #5b6b82; }
-        form[data-abos-counter] .ds-mini { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: .75rem;
-            border-top: 1px solid #e3e8f0; margin-top: .25rem; padding-top: .2rem; }
+        form[data-abos-counter] .ds-mini { border-top: 1px solid #e3e8f0; margin-top: .25rem; padding-top: .2rem; }
         form[data-abos-counter] .ds-det { display: flex; width: 100%; gap: .5rem; padding: 0; text-align: start; font-size: .75rem; line-height: 1.35; }
-        form[data-abos-counter] .ds-det > b { flex: none; font-weight: 400; color: #5b6b82; }
+        form[data-abos-counter] .ds-det > b { width: 4.6rem; flex: none; font-weight: 400; color: #5b6b82; }
         form[data-abos-counter] .ds-det > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #1f2a3d; }
         form[data-abos-counter] .ds-tot-abos > div:last-child { border-top: 1px solid #e3e8f0 !important; background: #fff !important; padding: .4rem .75rem .5rem !important; }
         /* ⓘ পুরো বাক্স এক পর্দায়, স্ক্রল ছাড়া (মালিক, ২৬ নভেম্বর ২০২৬) — বোতামগুলো একটু চাপা */

@@ -163,6 +163,7 @@ return [
     'point_label' => 'Point',
     'cost_short' => 'Cost price',
     'clear_short' => 'Clear',
+    'loading_fold' => '+ Loading cost (press if needed)',
     'det_vehicle' => 'Vehicle',
     'det_driver' => 'Driver',
     'det_carrier' => 'Transport',
