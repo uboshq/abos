@@ -93,7 +93,7 @@
 <div data-approval-detail="{{ $approval->id }}" class="inbox-board-detail" style="--k: {{ $tone }}; --kd: {{ $deep }}">
     {{-- ⭐ "অনুমোদন চাওয়ার পরে বদলেছে" — সবার উপরে, পুরো চওড়ায়, হালকা রঙে গাঢ় লেখা (মালিক, ২৬ নভেম্বর ২০২৬) --}}
     @if ($notice !== null)
-        <p class="inbox-board-notice" data-board-notice role="note">⚠ <b>{{ __('approval::message.changed_since_asked_short') }} —</b> {{ $notice }}</p>
+        <p class="inbox-board-notice" data-board-notice role="note"><x-ui.icon name="alert-triangle" :size="14" class="inline-block align-text-bottom" /> <b>{{ __('approval::message.changed_since_asked_short') }} —</b> {{ $notice }}</p>
     @endif
     {{-- ── bright head ─────────────────────────────────────────────────── --}}
     <header class="inbox-board-dhead">
