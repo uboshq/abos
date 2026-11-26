@@ -83,14 +83,14 @@
                  ⓘ "আর বিল করা যাবে" = লিমিট − (দেনা + বিল-না-আসা মাল), সার্ভারের মাপ; লিমিট নেই তো "সীমা নেই"; ছাড়িয়ে গেলে লাল ঋণাত্মক।
                  ⛔ লাইন ভাঙে না (`whitespace-nowrap`) — ঠিকানা, মোবাইল, লিমিটের আলাদা সারি নেই। --}}
             <div x-show="supplier" x-cloak data-supplier-credit
-                 class="mt-1.5 flex items-baseline gap-4 overflow-hidden whitespace-nowrap border-t border-(--color-border) pt-1.5 text-sm">
-                <span class="min-w-0">
-                    <span class="text-(--color-ink-muted)">{{ __('purchase::field.can_bill_more') }}</span>
+                 class="mt-1.5 grid grid-cols-2 gap-x-3 whitespace-nowrap border-t border-(--color-border) pt-1.5 text-sm">
+                <span class="flex min-w-0 items-baseline gap-1.5">
+                    <span class="text-2xs text-(--color-ink-muted)">{{ __('purchase::field.can_bill_more') }}</span>
                     <b class="num" :class="creditRoom === null ? '' : (creditRoom >= 0 ? 'text-(--color-success)' : 'text-(--color-danger)')"
                        x-text="creditRoom === null ? @js(__('purchase::field.no_limit')) : money(creditRoom)"></b>
                 </span>
-                <span class="min-w-0">
-                    <span class="text-(--color-ink-muted)"
+                <span class="flex min-w-0 items-baseline gap-1.5">
+                    <span class="text-2xs text-(--color-ink-muted)"
                           x-text="previousDue < 0 ? @js(__('purchase::field.previous_advance')) : @js(__('purchase::field.previous_due'))"></span>
                     <b class="num" :class="previousDue > 0 ? 'text-(--color-danger)' : 'text-(--color-success)'"
                        x-text="money($abs(previousDue))"></b>

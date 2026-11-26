@@ -48,7 +48,7 @@
                          চওড়ায় ব্যান্ড নয়। ⓘ পার্থক্যটা ছোট মনে হয়, কিন্তু
                          ব্যান্ড পুরো কার্ডটাকে "শিরোনাম" বানিয়ে দেয়, আর
                          চিপ কেবল **সংখ্যাটাকে** আলাদা করে। --}}
-                    <span class="num whitespace-nowrap text-xl font-bold">৳<span x-text="money(netPayable)"></span></span>
+                    <span class="num whitespace-nowrap text-lg font-bold xl:text-xl">৳<span x-text="money(netPayable)"></span></span>
                 </div>
 
                 <div class="p-3">

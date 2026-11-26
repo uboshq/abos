@@ -218,7 +218,7 @@
 
                  ⓘ সরবরাহকারী বাছলে ভিতরে চারটা সারি নামে, আর তখন
                  উচ্চতাটা এমনিতেই মিলে যায়। --}}
-                class="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,2.15fr)]">
+                class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.1fr)]">
             <div class="min-w-0">
         {{-- ⓘ শিরোনামটা নেই — মালিক: *"Supplier details likte hobe na"*।
 
