@@ -156,7 +156,7 @@
     <button type="button" @click="clearEntry()"
             class="ds-tl-clear w-full rounded-(--radius-field) leading-tight bg-(--color-danger)/10 px-2 py-1.5
                    text-2xs font-medium text-(--color-danger) hover:bg-(--color-danger)/20">
-        {{ __('sales::action.clear_data') }}
+        {{ ($abosLook ?? false) ? __('sales::field.clear_short') : __('sales::action.clear_data') }}
     </button>
 
     {{-- ⓘ ক্রয়মূল্যের সংখ্যাটা তিন কলাম জুড়ে, বোতামের সারির নিচে।

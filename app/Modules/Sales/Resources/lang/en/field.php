@@ -162,6 +162,7 @@ return [
     'btn_price' => 'Price check',
     'point_label' => 'Point',
     'cost_short' => 'Cost price',
+    'clear_short' => 'Clear',
     'det_vehicle' => 'Vehicle',
     'det_driver' => 'Driver',
     'det_carrier' => 'Transport',
