@@ -34,7 +34,7 @@ final class TheCounterStockSitsInAHighlightBoxTest extends TestCase
 
         $this->assertMatchesRegularExpression('/<div class="[^"]*border-\(--color-brand-400\)[^"]*bg-\(--color-brand-50\)[^"]*"\s+x-show="picked" x-cloak data-stock-box>/', $html, '⛔ মজুদের সংখ্যাগুলোর হাইলাইট বাক্স নেই।');
 
-        $box = substr($html, (int) strpos($html, 'data-stock-box'), 6000);
+        $box = substr($html, (int) strpos($html, 'data-stock-box>'), 6000);
         foreach (['available', 'free_available', 'reserved', 'hold', 'main'] as $key) {
             $this->assertStringContainsString("picked.{$key})", $box, "⛔ {$key} বাক্সের বাইরে।");
         }
