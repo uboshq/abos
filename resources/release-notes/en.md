@@ -1,5 +1,13 @@
 # What's new
 
+## 1.3.27 — 26-11-2026
+
+- Direct sale — the new counter (ABOS, Navy and Blue looks; SAP, Dynamic and Odoo unchanged): customer and the bill's date and number in one teal box, point and mobile under the name; stock in coloured boxes right above their own fields; Gift before Cart; Enter in the quantity row adds to cart; with nothing picked the list takes the whole screen; editing opens as a popup.
+- The bill total on the right: slate head, teal figure; how the money came (cash, bKash…) written under it; vehicle, driver, transport and fare on their own lines; delivery and note in their own coloured boxes; nine buttons (Note added); one screen, no scrolling. A Grand Total row under the product list.
+- Vehicle & fare: five buttons — we pay now · we pay later · we pay and add to the bill · customer pays the driver · no fare; who paid, from which account, then the fare; 'later' shows whose name it is owed to; loading cost folded.
+- Counter mode (sales): after confirming, the same tab opens a new blank bill; the top bar shows the company bold and the branch in a yellow pill.
+- Direct purchase: a product never bought from this supplier says so again when you hover on its name.
+
 ## 1.3.26 — 26-11-2026
 
 - Sales bill dues now follow the customer's ledger by themselves: money taken without naming a bill shows the older bills as settled, and the customer's balance rests only on the newest bills — no bill-by-bill matching needed. No receipt, bill or ledger row changes.
