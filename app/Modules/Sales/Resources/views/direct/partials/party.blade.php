@@ -384,15 +384,15 @@
                                      পাশাপাশি ধরে না, তখন ফোনটা নিচে নামে।
                                      ⓘ `truncate` ছাড়া লম্বা পয়েন্টের নাম
                                      ফোনটাকে ঠেলে বের করে দিত। --}}
-                                <div x-show="customerId && (customer.location || customer.phone)"
+                                <div x-show="customerId && (customer.location || customer.point || customer.phone)"
                                      x-cloak class="mt-1 flex flex-wrap items-center gap-1.5">
-                                    <span x-show="customer.location"
+                                    <span @if (($abosLook ?? false)) x-show="customer.point" @else x-show="customer.location" @endif
                                           class="inline-flex min-w-0 items-center truncate rounded-full
                                                  border border-(--color-brand-500) bg-(--color-surface-selected)
                                                  px-2.5 py-0.5 text-sm font-medium text-(--color-ink)"
                                           :title="customer.location"
                                           @if (($abosLook ?? false))
-                                          x-text="customer.point ? (@js(__('sales::field.point_label')) + ': ' + customer.point) : customer.location"
+                                          x-text="@js(__('sales::field.point_label')) + ': ' + customer.point"
                                           @else
                                           x-text="customer.location"
                                           @endif></span>

@@ -281,6 +281,7 @@
         /* ════ ⭐ সরাসরি বিক্রয় — নতুন নকশা, কেবল ABOS-এর তিন রূপে (ABOS · Navy · Blue); SAP/Dynamic/Odoo আগের মতো
            (মালিক, ২৬ নভেম্বর ২০২৬ — নমুনা sales-counter, ব্রাউজারে দেখানো)। ⓘ রংগুলো মালিকের নিজের বাছা:
            উপরের সারি লোগোর টিল (#08b8c8, "ABOS" রং), ডানের বাক্স রং-বাছাইয়ের টকটকে গোলাপি (#ff00aa)। ════ */
+        form[data-abos-counter] .ds-top { display: block; }
         form[data-abos-counter] .ds-head { border-radius: 18px; background: #08b8c8; padding: .55rem 1rem; margin-bottom: .6rem; }
         form[data-abos-counter] .ds-party { grid-template-columns: minmax(0, 24rem) minmax(0, 1fr) !important; gap: 0 !important; align-items: center; }
         form[data-abos-counter] .ds-party > div:first-child { border: 0 !important; border-right: 2px solid rgb(255 255 255 / .7) !important;
