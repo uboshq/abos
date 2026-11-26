@@ -378,7 +378,7 @@
         form[data-abos-counter] .ds-tot-card [data-tone='net'], form[data-abos-counter] .ds-tot-card [data-tone='net'] * { color: #0b6c7a !important; font-weight: 800; }
         form[data-abos-counter] .ds-tot-card [data-tone='due'], form[data-abos-counter] .ds-tot-card [data-tone='due'] * { color: #b45309 !important; font-weight: 700; }
         form[data-abos-counter] .ds-dep-sub { background: #fff; padding: 0 1rem .3rem !important; margin-top: -.2rem !important; font-size: .68rem; color: #5b6b82; }
-        form[data-abos-counter] .ds-out { background: #fff; padding: .25rem .75rem .1rem !important; }
+        form[data-abos-counter] .ds-out { background: #fff; padding: .2rem .75rem 0 !important; }
         form[data-abos-counter] .ds-out > div { border-radius: 12px !important; padding: .22rem .9rem !important; border: 1px solid #e3e8f0; }
         form[data-abos-counter] .ds-out > [data-sign='adv'] { background: #ecfdf3 !important; border-color: #a7e3bf; color: #15803d !important; }
         form[data-abos-counter] .ds-out > [data-sign='due'] { background: #fef2f2 !important; border-color: #fecaca; color: #b91c1c !important; }
