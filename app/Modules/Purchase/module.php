@@ -99,6 +99,8 @@ return [
         CapitalisesABillLine::class => BillLinesForAssets::class,
         // ⭐ পরিশোধ ভাউচারের খোলা বিল — সরবরাহকারীর বিল, ক্রয়ের নিজের বাকিতে (cb-ma-5)
         \App\Core\Contracts\PayableOpenBills::class => \App\Modules\Purchase\Services\PurchasePayableOpenBills::class,
+        // ⭐ সরাসরি বিক্রয়ের "ক্রয়মূল্য" — শেষ পোস্ট হওয়া ক্রয়ের খরচ, ক্রয়ের নিজের বিল থেকে ([[\App\Core\Contracts\LastPurchaseCost]], ২৬ নভেম্বর ২০২৬)
+        \App\Core\Contracts\LastPurchaseCost::class => \App\Modules\Purchase\Services\PurchaseLastCost::class,
         // ⭐ মজুদের ড্যাশবোর্ডের "পথে আছে" আর "বিল ছাড়া মাল" ([[StockSupply]])
         \App\Core\Contracts\StockSupply::class => \App\Modules\Purchase\Services\PurchaseStockSupply::class,
     ],

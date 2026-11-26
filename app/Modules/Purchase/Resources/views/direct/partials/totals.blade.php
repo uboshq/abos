@@ -1,6 +1,6 @@
         {{-- ⭐ ডান পাশ পর্দায় আটকে — অঙ্কগুলো দরকার হলে নিজের ভিতরে স্ক্রল করে, বোতাম আর "মাল নিন" সবসময় নিচে দেখা যায়;
              ১০৮০-তে বা জুম করলেও হারায় না (মালিক, ২৬ নভেম্বর ২০২৬) --}}
-        <aside class="pur-tot flex flex-col gap-2" data-purchase-totals>
+        <aside class="flex flex-col gap-2" data-purchase-totals>
             <div class="pur-tot-scroll space-y-2">
             {{-- ── "এই লাইন" — ডান পাশে, বিলের মোটের উপরে ────────────
 

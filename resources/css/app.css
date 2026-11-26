@@ -3190,3 +3190,14 @@ html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .stag
 
 /* ⓘ সরু বাক্সের বারেও এক সারি — খোঁজার ঘর আগে ছোট হয় */
 html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .toolbar-view label:has(> input[type='search']) { min-width: 7rem; }
+
+/* ⭐ মডিউলের আড়াআড়ি সারির ড্রপডাউন (যেমন "প্রতিবেদন") তালিকার টুলবারের নিচে চাপা পড়ত — দুটোই z-20, টুলবার পরে আসে বলে উপরে
+   (মালিকের ছবি, Navy, ক্রয় ফেরত, ২৬ নভেম্বর ২০২৬)। ⓘ ABOS-এর তিন রূপেই সারিটা উপরের স্তরে, আর তালিকাটা পর্দার মাপে লম্বা।
+   ⓘ তিন রূপের নিয়ম বলে এখানে — blue-look.css কেবল Blue-এর, abos-look.css কেবল Smart-এর ([[TheBlueLookHasNoOuterFrameTest]]) */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-module-bar] {
+    z-index: 30;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-modulebar-fold] {
+    max-height: min(70dvh, 34rem);
+}
