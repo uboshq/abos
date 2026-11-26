@@ -18,7 +18,7 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('notification::archive.title')" :info="($archiveDays > 0 ? __('notification::archive.policy_archive', ['days' => $archiveDays]) : __('notification::archive.policy_no_archive')).' '.($retentionDays > 0 ? __('notification::archive.policy_retention', ['days' => max(\App\Core\Notifications\RetentionService::MIN_RETENTION_DAYS, $retentionDays)]) : __('notification::archive.policy_keep'))" :search-placeholder="__('notification::archive.search')" :export="$canExport" :share="false" :facets="$facetPanel">
+        <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :title="__('notification::archive.title')" :info="($archiveDays > 0 ? __('notification::archive.policy_archive', ['days' => $archiveDays]) : __('notification::archive.policy_no_archive')).' '.($retentionDays > 0 ? __('notification::archive.policy_retention', ['days' => max(\App\Core\Notifications\RetentionService::MIN_RETENTION_DAYS, $retentionDays)]) : __('notification::archive.policy_keep'))" :search-placeholder="__('notification::archive.search')" :export="$canExport" :share="false" :facets="$facetPanel">
         </x-ui.toolbar>
         </form>
 

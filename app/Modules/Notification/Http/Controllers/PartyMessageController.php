@@ -131,7 +131,8 @@ class PartyMessageController extends Controller
             $query->whereIn('status', self::TABS[$tab]);
         }
 
-        $rows = $query->orderByDesc('id')->paginate(PerPage::of(self::PER_PAGE))->withQueryString();
+        // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+        $rows = \App\Core\ListFilter\ListSort::apply($query, $request, ['newest' => ['id', 'desc'], 'oldest' => ['id', 'asc']])->paginate(PerPage::of(self::PER_PAGE))->withQueryString();
         $items = collect($rows->items());
 
         $title = (string) __('notification::party_log.title');

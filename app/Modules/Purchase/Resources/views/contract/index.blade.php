@@ -60,7 +60,7 @@
     <div data-boxed
          class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :facets="$filters" :title="__('purchase::menu.contracts')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['due_soon', 'newest', 'oldest'])" :facets="$filters" :title="__('purchase::menu.contracts')"
                           :count="trans_choice('core.count.records', $contracts->total(), ['count' => $contracts->total()])"
                           :columns="$columns">
                 <x-slot:actions>

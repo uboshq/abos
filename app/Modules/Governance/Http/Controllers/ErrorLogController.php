@@ -60,7 +60,8 @@ class ErrorLogController extends Controller implements HasMiddleware
         $rows = $this->companyless->errors($request->user())
             ->with(['user', 'acknowledger'])
             ->when($request->query('only') !== 'all', fn (Builder $q) => $q->open())
-            ->recentFirst()
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['last_seen_at', 'desc'], 'oldest' => ['last_seen_at', 'asc']]))
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 

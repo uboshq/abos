@@ -120,7 +120,8 @@ class LocationController extends Controller implements HasMiddleware
              * বাড়তি কোয়েরি — আর পাতাটা ধীরে খোলা ছাড়া কোনো লক্ষণ থাকত না।
              */
             ->with('assignee')
-            ->orderBy('code');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['code' => ['code', 'asc'], 'name_az' => ['name_en', 'asc'], 'name_za' => ['name_en', 'desc'], 'newest' => ['id', 'desc']]));
 
         $total = (clone $query)->count();
         $searching = filled($q);

@@ -113,7 +113,7 @@
                 @if ($tab !== 'all')
                     <input type="hidden" name="tab" value="{{ $tab }}">
                 @endif
-                <x-ui.toolbar :title="$title" :columns="$columns" :facets="$filters" :quiet="['tab']" :share="false"
+                <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :title="$title" :columns="$columns" :facets="$filters" :quiet="['tab']" :share="false"
                               :search-placeholder="__('notification::party_log.search')" />
             </form>
 
