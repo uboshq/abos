@@ -58,8 +58,8 @@ final class AnUnpointedCollectionPaysTheOldestBillFirstTest extends TestCase
 
         $this->assertSame(0, bccomp((string) $paid->get($this->old->id), '300', 4), '⛔ পুরনো বিলটা পুরো শোধ হয়নি');
         $this->assertSame(0, bccomp((string) $paid->get($this->newer->id), '500', 4), '⛔ পরের বিলটা পুরো শোধ হয়নি');
-        $this->assertSame(0, bccomp($this->old->fresh()->dueAmount(), '0', 4));
-        $this->assertSame(0, bccomp($this->newer->fresh()->dueAmount(), '0', 4));
+        $this->assertSame(0, bccomp($this->old->fresh()->ownDue(), '0', 4));
+        $this->assertSame(0, bccomp($this->newer->fresh()->ownDue(), '0', 4));
     }
 
     public function test_short_money_stops_at_the_oldest_bills(): void
@@ -70,7 +70,7 @@ final class AnUnpointedCollectionPaysTheOldestBillFirstTest extends TestCase
 
         $this->assertSame(0, bccomp((string) $paid->get($this->old->id), '300', 4), '⛔ পুরনো বিল আগে নয়');
         $this->assertSame(0, bccomp((string) $paid->get($this->newer->id), '100', 4), '⛔ বাকি ১০০ পরের বিলে বসেনি');
-        $this->assertSame(0, bccomp($this->newer->fresh()->dueAmount(), '400', 4));
+        $this->assertSame(0, bccomp($this->newer->fresh()->ownDue(), '400', 4));
     }
 
     public function test_a_named_bill_is_kept_as_named(): void
@@ -79,7 +79,7 @@ final class AnUnpointedCollectionPaysTheOldestBillFirstTest extends TestCase
 
         $this->assertSame([(int) $this->newer->id], $collection->lines->pluck('sales_invoice_id')->map(fn ($i) => (int) $i)->all(),
             '⛔ বাছা বিল থাকতেও টাকা অন্য বিলে গেল');
-        $this->assertSame(0, bccomp($this->old->fresh()->dueAmount(), '300', 4));
+        $this->assertSame(0, bccomp($this->old->fresh()->ownDue(), '300', 4));
     }
 
     private function bill(string $no, int $daysAgo, string $total): SalesInvoice

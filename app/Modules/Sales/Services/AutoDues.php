@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\DB;
  * ২৫,০০০ এসেছে → জের ৫,০০০ → নতুন বিলে বাকি ৫,০০০, আগের দুটো শোধ। ⓘ বিলে বাঁধা টাকা (কাউন্টার) আগের মতোই সেই বিলের; এখানে কেবল নাম-ছাড়া
  * টাকার ভাগ। ⓘ বয়সের রিপোর্ট ([[PartyReports]]) আগে থেকেই এই নিয়মে।
  *
+ * ⛔ বিল ধরে টাকা বসানোর যন্ত্র (আদায়, রসিদের বিল, জমার খবর, কাউন্টার) বিলের নিজের কাগজের বাকি পড়ে ([[SalesInvoice::ownDue()]]) — এই ভাগ
+ *   কেবল দেখানোর; বসানোর পরে খাতা বদলায়, আর ভাগ নিজে থেকে আবার গোনা হয়।
  * ⛔ রসিদ, বিল বা খাতায় কিছু লেখা হয় না — `sal_auto_dues` গোনা অঙ্ক, খাতা বদলালে আবার গোনা ([[refresh()]]); কোনো কাগজের কাজ (বাতিল, ফেরত) একে
  *   দেখে না, কেবল "বাকি" ([[SalesInvoice::dueAmount()]], [[SalesInvoice::dueSql()]])।
  */
@@ -45,7 +47,7 @@ final class AutoDues
 
             foreach (array_chunk($rows, 500, true) as $chunk) {
                 DB::table('sal_auto_dues')->insert(array_map(
-                    fn (int $id, string $settled) => ['sales_invoice_id' => $id, 'company_id' => $companyId, 'customer_id' => $customerId, 'settled' => $settled],
+                    fn (int $id, string $settled) => ['public_id' => (string) \Illuminate\Support\Str::uuid7(), 'sales_invoice_id' => $id, 'company_id' => $companyId, 'customer_id' => $customerId, 'settled' => $settled],
                     array_keys($chunk), $chunk));
             }
         });

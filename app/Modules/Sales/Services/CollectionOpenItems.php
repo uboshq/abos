@@ -143,7 +143,7 @@ final class CollectionOpenItems
             ->get();
 
         foreach ($bills as $bill) {
-            $open = $bill->dueAmount();
+            $open = $bill->ownDue();
 
             if (bccomp($open, '0', 4) <= 0) {
                 continue;

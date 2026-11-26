@@ -647,7 +647,7 @@ final class CollectionService
                     }
 
                     $onThisBill = bcadd($perBill[$invoice->id] ?? '0', $amount, 4);
-                    $due = $invoice->dueAmount();
+                    $due = $invoice->ownDue();
 
                     if (bccomp($onThisBill, $due, 4) > 0) {
                         throw ValidationException::withMessages([
@@ -845,7 +845,7 @@ final class CollectionService
                 break;
             }
 
-            $due = $bill->dueAmount();
+            $due = $bill->ownDue();
             $share = bccomp($due, $left, 4) < 0 ? $due : $left;
 
             if (bccomp($share, '0', 4) > 0) {
@@ -1471,7 +1471,7 @@ final class CollectionService
                 ]);
             }
 
-            $due = $invoice->dueAmount();
+            $due = $invoice->ownDue();
 
             if (bccomp($amount, $due, 4) > 0) {
                 throw ValidationException::withMessages([
@@ -1518,7 +1518,7 @@ final class CollectionService
                 break;
             }
 
-            $due = $bill->dueAmount();
+            $due = $bill->ownDue();
             $share = bccomp($due, $left, 4) < 0 ? $due : $left;
 
             if (bccomp($share, '0', 4) <= 0) {
@@ -1573,7 +1573,7 @@ final class CollectionService
              * যেত, অথচ মোট মিলে যেত — ভুলটা মোটে ধরা পড়ত না, শুধু
              * তাগাদার তালিকায় ভুল বিল উঠত।
              */
-            $due = $invoice->dueAmount();
+            $due = $invoice->ownDue();
             $onThisBill = bcadd($perInvoice[$invoice->id] ?? '0', $amount, 4);
 
             if (bccomp($onThisBill, $due, 4) > 0) {

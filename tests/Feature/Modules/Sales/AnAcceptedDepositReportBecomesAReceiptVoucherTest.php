@@ -109,7 +109,7 @@ final class AnAcceptedDepositReportBecomesAReceiptVoucherTest extends TestCase
         $this->assertSame(SalesInvoice::drillSourceType(), $shares[0]->against_type);
         $this->assertSame((int) $bill->id, (int) $shares[0]->against_id);
         $this->assertSame(0, bccomp((string) $shares[0]->amount, '20000', 4), '⛔ বিলে পুরো পাঠানো টাকা বসেনি');
-        $this->assertSame(0, bccomp(SalesInvoice::query()->withCollected()->findOrFail($bill->id)->dueAmount(), '10000', 4),
+        $this->assertSame(0, bccomp(SalesInvoice::query()->withCollected()->findOrFail($bill->id)->ownDue(), '10000', 4),
             '⛔ রসিদের পরে বিলের বাকি কমেনি');
     }
 

@@ -17,7 +17,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('sal_auto_dues', function (Blueprint $table) {
-            $table->foreignId('sales_invoice_id')->primary()->constrained('sal_invoices', 'id', 'sal_ad_invoice_fk')->cascadeOnDelete();
+            $table->id();
+            $table->publicId();
+            $table->foreignId('sales_invoice_id')->unique('sal_ad_invoice_once')->constrained('sal_invoices', 'id', 'sal_ad_invoice_fk')->cascadeOnDelete();
             $table->foreignId('company_id')->constrained('companies', 'id', 'sal_ad_company_fk')->cascadeOnDelete();
             $table->foreignId('customer_id')->constrained('customers', 'id', 'sal_ad_customer_fk')->cascadeOnDelete();
             $table->decimal('settled', 18, 4)->default(0);

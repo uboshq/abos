@@ -44,7 +44,7 @@ final class SalesPartyOpenBills implements PartyOpenBills
             ->cursor();
 
         foreach ($invoices as $invoice) {
-            $due = $invoice->dueAmount();
+            $due = $invoice->ownDue();
 
             if (bccomp($due, '0', 4) <= 0) {
                 continue;

@@ -74,13 +74,13 @@ final class ACreditNoteLeftTheBillOwingTheFullAmountTest extends TestCase
         $expected = bcadd(bcsub(bcsub($total, '100', 4), '50', 4), '30', 4);
         $fresh = SalesInvoice::query()->findOrFail($invoice->id);
 
-        $this->assertSame(0, bccomp($fresh->dueAmount(), $expected, 4),
-            "⛔ ক্রেডিট নোট (100) আর ডেবিট নোট (30) বিলের বাকিতে পড়েনি: বাকি {$fresh->dueAmount()}, হওয়ার কথা {$expected}।");
-        $this->assertSame(0, bccomp($fresh->dueAmount(), $this->customer->fresh()->outstanding(), 4),
-            '⛔ বিলের বাকি আর খাতায় গ্রাহকের পাওনা দুই কথা বলে: '.$fresh->dueAmount().' বনাম '.$this->customer->fresh()->outstanding());
+        $this->assertSame(0, bccomp($fresh->ownDue(), $expected, 4),
+            "⛔ ক্রেডিট নোট (100) আর ডেবিট নোট (30) বিলের বাকিতে পড়েনি: বাকি {$fresh->ownDue()}, হওয়ার কথা {$expected}।");
+        $this->assertSame(0, bccomp($fresh->ownDue(), $this->customer->fresh()->outstanding(), 4),
+            '⛔ বিলের বাকি আর খাতায় গ্রাহকের পাওনা দুই কথা বলে: '.$fresh->ownDue().' বনাম '.$this->customer->fresh()->outstanding());
 
         $listed = SalesInvoice::query()->withCollected()->whereKey($invoice->id)->firstOrFail();
-        $this->assertSame(0, bccomp($listed->dueAmount(), $expected, 4), '⛔ তালিকার বাকি (withCollected) একক বিলের সাথে মেলে না।');
+        $this->assertSame(0, bccomp($listed->ownDue(), $expected, 4), '⛔ তালিকার বাকি (withCollected) একক বিলের সাথে মেলে না।');
 
         $sql = (string) DB::query()->fromSub(SalesInvoice::query()->withCollected()->whereKey($invoice->id), 'i')
             ->selectRaw(SalesInvoice::dueSql('i').' as due')->value('due');
@@ -98,7 +98,7 @@ final class ACreditNoteLeftTheBillOwingTheFullAmountTest extends TestCase
     {
         $other = $this->newCustomer('Somebody Else');
         $theirs = $this->confirmedInvoice($other, '2', '100');
-        $before = $theirs->dueAmount();
+        $before = $theirs->ownDue();
 
         $note = app(NoteService::class)->create($this->noteData((int) $this->customer->id, Note::CREDIT, '150') + [
             'against_type' => SalesInvoice::drillSourceType(),
@@ -107,21 +107,21 @@ final class ACreditNoteLeftTheBillOwingTheFullAmountTest extends TestCase
         app(NoteService::class)->confirm($note);
 
         $this->assertNull($note->fresh()->against_id, '⛔ পাঠানো against_id নোটে বসে গেল — বিল খোঁজা ছাড়াই বাঁধন।');
-        $this->assertSame(0, bccomp(SalesInvoice::query()->findOrFail($theirs->id)->dueAmount(), $before, 4),
+        $this->assertSame(0, bccomp(SalesInvoice::query()->findOrFail($theirs->id)->ownDue(), $before, 4),
             '⛔ অন্য গ্রাহকের বিলের বাকি একটা পাঠানো আইডিতেই কমে গেল।');
     }
 
     public function test_an_untied_note_lowers_no_bill_and_gets_its_own_row_only_where_asked(): void
     {
         $invoice = $this->confirmedInvoice($this->customer, '2', '100');
-        $before = $invoice->dueAmount();
+        $before = $invoice->ownDue();
 
         $note = app(NoteService::class)->create($this->noteData((int) $this->customer->id, Note::CREDIT, '80'));
         app(NoteService::class)->confirm($note);
         // ⓘ লাইভের পুরনো নোটের মতো — নম্বরের ঘরে মুক্ত লেখা, বাঁধন নেই
         $note->forceFill(['against_no' => 'Damage Bill', 'against_type' => null, 'against_id' => null])->save();
 
-        $this->assertSame(0, bccomp(SalesInvoice::query()->findOrFail($invoice->id)->dueAmount(), $before, 4),
+        $this->assertSame(0, bccomp(SalesInvoice::query()->findOrFail($invoice->id)->ownDue(), $before, 4),
             '⛔ কোনো বিলে না-বাঁধা নোট একটা বিলের বাকি কমাল।');
 
         $plain = app(PartyOpenBills::class)->openBills('customer', (int) $this->customer->id);
