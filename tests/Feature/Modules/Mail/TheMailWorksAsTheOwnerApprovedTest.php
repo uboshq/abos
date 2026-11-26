@@ -261,6 +261,8 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
             $this->get($page)->assertOk();
         }
 
+        // ⓘ নতুন সারিতে অডিট কেবল "তৈরি" লেখে; বদলে আগে → পরে আসে — তাই দুবার
+        $this->post('/mail/signature', ['style_new' => 12, 'style_reply' => 10, 'festival' => 1, 'title' => 'Sales'])->assertRedirect();
         $this->post('/mail/signature', ['style_new' => 12, 'style_reply' => 10, 'festival' => 1, 'title' => 'Head of Sales'])->assertRedirect();
         $this->get('/mail/history?type=signature')->assertOk()->assertSee('Head of Sales');
         $this->getJson('/mail/compose?paper=nonsense&no=1')->assertStatus(422);
@@ -309,7 +311,7 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
 
         // ⛔ নিজের ফাইল নিয়ে পরে পাঠানো নয়
         $this->post("/mail/{$box->public_id}/send", ['to' => ['karim@example.com'], 'subject' => 'f', 'html' => '<p>x</p>',
-            'send_at' => now()->addHour()->format('Y-m-d H:i:s'), 'files' => [\Illuminate\Http\UploadedFile::fake()->create('a.txt', 1)]],
+            'send_at' => now()->addHour()->format('Y-m-d H:i:s'), 'files' => [\Illuminate\Http\UploadedFile::fake()->create('a.pdf', 1, 'application/pdf')]],
             ['Accept' => 'application/json'])->assertStatus(422);
     }
 
