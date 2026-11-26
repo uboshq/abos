@@ -21,4 +21,10 @@ return [
     'empty_box' => 'No mail in this folder.',
     'pick_mail' => 'Pick a mail on the left to read it.',
     'no_accounts' => 'No mailbox yet — press "Add mailbox".',
+    'due_word' => 'Due',
+    'limit_word' => 'Credit limit',
+    'take_money' => 'Take money',
+    'open_party' => 'Open page',
+    'new_bill' => 'New bill',
+    'open_bills' => 'Open bills',
 ];

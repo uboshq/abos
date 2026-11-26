@@ -1,0 +1,168 @@
+/*
+ * ⭐ মেইলের পাতা — মালিকের অনুমোদিত নমুনা v3 (২৬ নভেম্বর ২০২৬)।
+ * ⛔ সব নিয়ম `.mailx`-এর ভিতরে — মেইলের বাইরে কোনো চেহারায় কিছু বদলায় না (SAP, Dynamic, Odoo নিজের মতো)।
+ * ⓘ আলোর রং নমুনার; অন্ধকার ঘরের থিম মেনে (data-theme dark, বা system + অন্ধকার যন্ত্র)।
+ */
+.mailx {
+    --mx-brand: #1d4ed8; --mx-brand-50: #eef4ff; --mx-navy: #0f2d6b; --mx-teal: #0b8a9a;
+    --mx-ink: #172033; --mx-ink2: #3b4a63; --mx-muted: #64748b; --mx-line: #e5e9f0; --mx-line2: #eef1f6;
+    --mx-page: #f1f4f9; --mx-card: #fff; --mx-soft: #fbfcfe; --mx-hover: #f6f8fc; --mx-sel: #e9f0ff; --mx-strong: #0b1f4d;
+    --mx-warn-bg: #fffbeb; --mx-warn-line: #fde68a; --mx-warn: #854d0e; --mx-red: #b91c1c; --mx-green: #15803d; --mx-green-bg: #ecfdf3;
+    display: grid; grid-template-rows: auto minmax(0, 1fr);
+    height: calc(100dvh - 7.4rem); min-height: 30rem;
+    background: var(--mx-page); color: var(--mx-ink);
+    border: 1px solid var(--mx-line); border-radius: 14px; overflow: hidden;
+    font-size: 14px;
+}
+:root[data-theme='dark'] .mailx {
+    --mx-brand: #6ea0ff; --mx-brand-50: #172443; --mx-navy: #c7d7ff; --mx-teal: #38bcc9;
+    --mx-ink: #e5ebf5; --mx-ink2: #c2cbdb; --mx-muted: #8c99ae; --mx-line: #2a3446; --mx-line2: #222b3b;
+    --mx-page: #0f1522; --mx-card: #151d2c; --mx-soft: #121a28; --mx-hover: #1b2536; --mx-sel: #1c2c4d; --mx-strong: #eef3ff;
+    --mx-warn-bg: #2d2410; --mx-warn-line: #5c4714; --mx-warn: #f5d58a; --mx-red: #ff8a8a; --mx-green: #4ade80; --mx-green-bg: #10291b;
+    color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']):not([data-theme='dark']) .mailx {
+        --mx-brand: #6ea0ff; --mx-brand-50: #172443; --mx-navy: #c7d7ff; --mx-teal: #38bcc9;
+        --mx-ink: #e5ebf5; --mx-ink2: #c2cbdb; --mx-muted: #8c99ae; --mx-line: #2a3446; --mx-line2: #222b3b;
+        --mx-page: #0f1522; --mx-card: #151d2c; --mx-soft: #121a28; --mx-hover: #1b2536; --mx-sel: #1c2c4d; --mx-strong: #eef3ff;
+        --mx-warn-bg: #2d2410; --mx-warn-line: #5c4714; --mx-warn: #f5d58a; --mx-red: #ff8a8a; --mx-green: #4ade80; --mx-green-bg: #10291b;
+        color-scheme: dark;
+    }
+}
+/* নিজের ট্যাবে (counter মোড) — পাতা জুড়ে */
+body:has([data-counter-strip]) .mailx { height: calc(100dvh - 40px - 1rem); border-radius: 0; }
+
+.mailx * { box-sizing: border-box; }
+.mailx button { font-family: inherit; cursor: pointer; }
+.mailx .num { font-family: Inter, sans-serif; font-variant-numeric: tabular-nums; }
+.mailx [hidden] { display: none !important; }
+
+/* উপরের সারি */
+.mailx .mx-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--mx-card); border-bottom: 1px solid var(--mx-line); }
+.mailx .mx-bar h1 { margin: 0 6px 0 2px; font-size: 20px; font-weight: 700; color: var(--mx-navy); white-space: nowrap; }
+.mailx .mx-new { display: flex; align-items: center; gap: 8px; background: var(--mx-brand); color: #fff; border: 0; border-radius: 12px; padding: 9px 16px; font-weight: 700; font-size: 14px; box-shadow: 0 2px 6px rgb(29 78 216 / .25); white-space: nowrap; }
+.mailx .mx-search { flex: 1; display: flex; align-items: center; gap: 8px; background: var(--mx-page); border: 1px solid var(--mx-line); border-radius: 12px; padding: 0 12px; color: var(--mx-muted); }
+.mailx .mx-search input { flex: 1; border: 0; background: transparent; padding: 8px 0; color: var(--mx-ink); font: inherit; outline: none; box-shadow: none; }
+.mailx .mx-ib { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--mx-line); background: var(--mx-card); color: var(--mx-ink2); font-size: 17px; }
+
+.mailx .mx-panes { display: grid; grid-template-columns: 232px minmax(300px, 410px) minmax(0, 1fr) 296px; min-height: 0; }
+.mailx .mx-panes > * { min-height: 0; overflow: auto; background: var(--mx-card); border-right: 1px solid var(--mx-line); }
+@media (max-width: 1400px) { .mailx .mx-panes { grid-template-columns: 210px minmax(280px, 360px) minmax(0, 1fr); } .mailx .mx-ctx { display: none; } }
+
+/* ফোল্ডার */
+.mailx .mx-folders { padding: 10px 8px; background: var(--mx-soft); }
+.mailx .mx-cap { font-size: 11px; font-weight: 800; color: var(--mx-muted); letter-spacing: .07em; text-transform: uppercase; padding: 10px 12px 4px; }
+.mailx .mx-acct { display: flex; align-items: center; gap: 8px; padding: 8px 10px; color: var(--mx-ink); }
+.mailx .mx-acct > div { min-width: 0; }
+.mailx .mx-acct b { display: block; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailx .mx-acct small { display: block; color: var(--mx-muted); font-size: 11.5px; font-family: Inter, sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailx .mx-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; background: var(--mx-brand); }
+.mailx .mx-dot-shared { background: var(--mx-green); } .mailx .mx-dot-personal { background: #b45309; }
+.mailx .mx-share, .mailx .mx-pend { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 0 7px; margin-left: auto; white-space: nowrap; }
+.mailx .mx-share { color: var(--mx-green); background: var(--mx-green-bg); }
+.mailx .mx-pend { color: var(--mx-warn); background: var(--mx-warn-bg); }
+.mailx .mx-fl { display: flex; width: 100%; align-items: center; gap: 10px; padding: 7px 10px 7px 14px; border: 0; background: transparent; border-radius: 10px; color: var(--mx-ink2); text-align: left; font-size: 14px; }
+.mailx .mx-fl:hover { background: var(--mx-hover); }
+.mailx .mx-fl.on { background: var(--mx-sel); color: var(--mx-brand); font-weight: 700; }
+.mailx .mx-fl .num { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--mx-brand); font-style: normal; }
+.mailx .mx-ic { width: 18px; text-align: center; font-size: 14px; }
+.mailx .mx-addbox { margin: 12px 8px 0; display: flex; width: calc(100% - 16px); align-items: center; gap: 8px; color: var(--mx-brand); background: transparent; font-weight: 700; padding: 8px 10px; border: 1.5px dashed #c3cede; border-radius: 12px; font-size: 13px; }
+.mailx .mx-req { margin: 4px 6px 8px; border: 1px solid var(--mx-warn-line); background: var(--mx-warn-bg); border-radius: 12px; padding: 8px 10px; font-size: 12.5px; }
+.mailx .mx-req small { display: block; color: var(--mx-muted); }
+.mailx .mx-req p { margin: 4px 0 6px; color: var(--mx-ink2); }
+.mailx .mx-req div { display: flex; gap: 6px; }
+.mailx .mx-req button { border: 1px solid var(--mx-line); background: var(--mx-card); color: var(--mx-ink2); border-radius: 8px; padding: 3px 10px; font-weight: 600; font-size: 12.5px; }
+.mailx .mx-req button.mx-ok { background: var(--mx-green); border-color: var(--mx-green); color: #fff; }
+
+/* তালিকা */
+.mailx .mx-lt { display: flex; align-items: center; gap: 6px; padding: 11px 12px; border-bottom: 1px solid var(--mx-line); position: sticky; top: 0; background: var(--mx-card); z-index: 2; }
+.mailx .mx-lt b { color: var(--mx-strong); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailx .mx-pager { margin-left: auto; display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--mx-muted); white-space: nowrap; }
+.mailx .mx-pager button { width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--mx-line); background: var(--mx-card); color: var(--mx-ink2); }
+.mailx .mx-pager button:disabled { opacity: .4; cursor: default; }
+.mailx .mx-day { font-size: 11.5px; font-weight: 800; color: var(--mx-muted); padding: 10px 14px 4px; letter-spacing: .04em; }
+.mailx .mx-it { display: grid; width: 100%; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px; border: 0; border-left: 4px solid transparent; border-bottom: 1px solid var(--mx-line2); background: transparent; text-align: left; color: var(--mx-ink2); font-size: 14px; }
+.mailx .mx-it:hover { background: var(--mx-hover); }
+.mailx .mx-it.sel { background: var(--mx-sel); }
+.mailx .mx-it.un { border-left-color: var(--mx-brand); }
+.mailx .mx-av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; font-family: Inter, sans-serif; flex: none; }
+.mailx .mx-mid { min-width: 0; display: grid; gap: 2px; }
+.mailx .mx-mid b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mailx .mx-s { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--mx-muted); }
+.mailx .mx-it.un .mx-mid b, .mailx .mx-it.un .mx-s { color: var(--mx-strong); font-weight: 800; }
+.mailx .mx-meta { display: grid; justify-items: end; gap: 4px; font-size: 12px; color: var(--mx-muted); }
+.mailx .mx-flag { color: #dc2626; font-style: normal; margin-left: 4px; }
+
+/* পড়া */
+.mailx .mx-reader { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden !important; }
+.mailx .mx-reader > .mx-empty, .mailx .mx-reader > .mx-err { grid-row: 1 / -1; }
+.mailx .mx-tool { display: flex; align-items: center; gap: 4px; padding: 8px 14px; border-bottom: 1px solid var(--mx-line); flex-wrap: wrap; }
+.mailx .mx-sp { flex: 1; }
+.mailx .mx-tb { border: 0; background: transparent; color: var(--mx-ink2); padding: 6px 10px; border-radius: 9px; font-weight: 600; font-size: 13px; }
+.mailx .mx-tb:hover { background: var(--mx-hover); }
+.mailx .mx-rbody { overflow: auto; padding: 18px 26px; min-height: 0; }
+.mailx .mx-rbody h2 { margin: 0; font-size: 21px; line-height: 1.35; color: var(--mx-strong); text-wrap: balance; }
+.mailx .mx-ext { background: var(--mx-warn-bg); border: 1px solid var(--mx-warn-line); color: var(--mx-warn); border-radius: 10px; padding: 8px 12px; font-size: 12.5px; margin: 12px 0; }
+.mailx .mx-mh { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--mx-line2); }
+.mailx .mx-mh .mx-av { width: 40px; height: 40px; }
+.mailx .mx-mail { color: var(--mx-muted); font-family: Inter, sans-serif; font-size: 12.5px; }
+.mailx .mx-to, .mailx .mx-when { font-size: 12.5px; color: var(--mx-muted); }
+.mailx .mx-img { margin: 10px 0 0; font-size: 12.5px; color: var(--mx-muted); background: var(--mx-hover); border-radius: 10px; padding: 7px 12px; }
+.mailx .mx-img button { border: 0; background: transparent; color: var(--mx-brand); font-weight: 700; }
+.mailx .mx-frame { width: 100%; min-height: 160px; border: 0; margin-top: 12px; background: #fff; border-radius: 8px; }
+.mailx .mx-files-list { display: flex; gap: 10px; flex-wrap: wrap; padding: 10px 0; }
+.mailx .mx-file { display: flex; align-items: center; gap: 10px; border: 1px solid var(--mx-line); border-radius: 12px; padding: 8px 12px 8px 8px; min-width: 220px; color: var(--mx-ink); text-decoration: none; }
+.mailx .mx-file small { display: block; color: var(--mx-muted); }
+.mailx .mx-ft { width: 40px; height: 40px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; font-size: 11px; font-family: Inter, sans-serif; background: var(--mx-brand-50); color: var(--mx-brand); }
+.mailx .mx-quick { border-top: 1px solid var(--mx-line); padding: 10px 18px 14px; display: flex; gap: 10px; align-items: flex-end; }
+.mailx .mx-quick textarea { flex: 1; border: 1px solid var(--mx-line); border-radius: 12px; padding: 9px 12px; resize: vertical; font: inherit; color: var(--mx-ink); background: var(--mx-card); }
+.mailx .mx-send { background: var(--mx-brand); color: #fff; border: 0; border-radius: 10px; padding: 9px 18px; font-weight: 700; font-size: 14px; }
+.mailx .mx-send:disabled { opacity: .6; }
+
+/* প্রেরকের কার্ড */
+.mailx .mx-ctx { background: var(--mx-soft); padding: 14px; border-right: 0 !important; }
+.mailx .mx-card { background: var(--mx-card); border: 1px solid var(--mx-line); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+.mailx .mx-card > b { display: block; color: var(--mx-strong); margin-bottom: 4px; }
+.mailx .mx-cn { font-size: 15px; }
+.mailx .mx-card small { display: block; color: var(--mx-muted); font-size: 12px; margin-bottom: 6px; }
+.mailx .mx-kv { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--mx-line2); font-size: 13px; }
+.mailx .mx-kv b { color: var(--mx-red); }
+.mailx .mx-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.mailx .mx-acts a { border: 1px solid var(--mx-line); background: var(--mx-card); border-radius: 10px; padding: 7px 6px; font-weight: 600; font-size: 12.5px; color: var(--mx-ink2); text-align: center; text-decoration: none; }
+.mailx .mx-acts a.mx-ok { background: var(--mx-green); color: #fff; border-color: var(--mx-green); grid-column: 1 / -1; }
+.mailx .mx-bl { display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid var(--mx-line2); }
+.mailx .mx-bl b { color: var(--mx-red); }
+.mailx .mx-lock { font-size: 11.5px; color: var(--mx-muted); padding: 4px 2px; margin: 0; line-height: 1.6; }
+
+.mailx .mx-empty { padding: 40px 20px; text-align: center; color: var(--mx-muted); }
+.mailx .mx-err { margin: 10px; padding: 8px 12px; border-radius: 10px; background: #fef2f2; color: #b91c1c; font-size: 12.5px; }
+.mailx .mx-okmsg { margin: 6px 0 0; color: var(--mx-green); font-size: 12.5px; font-weight: 600; }
+
+/* ভাসমান জানালা — নতুন মেইল ও মেইলবক্স যোগ */
+.mailx .mx-ov { position: fixed; inset: 0; background: rgb(15 23 42 / .38); z-index: 60; overflow: auto; }
+.mailx .mx-win { position: relative; margin: 6vh auto 4vh; width: min(880px, 92vw); background: var(--mx-card); border-radius: 18px; box-shadow: 0 30px 80px rgb(0 0 0 / .35); overflow: hidden; }
+.mailx .mx-wh { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--mx-line); font-size: 16px; color: var(--mx-strong); }
+.mailx .mx-x { margin-left: auto; border: 0; background: transparent; color: var(--mx-muted); font-size: 18px; }
+.mailx .mx-f { display: grid; grid-template-columns: 90px minmax(0, 1fr); align-items: center; gap: 10px; padding: 7px 18px; border-bottom: 1px solid var(--mx-line2); margin: 0; }
+.mailx .mx-f > span { color: var(--mx-muted); font-size: 13px; }
+.mailx .mx-f input, .mailx .mx-f select { width: 100%; border: 1px solid transparent; background: transparent; padding: 6px 8px; border-radius: 8px; font: inherit; color: var(--mx-ink); box-shadow: none; }
+.mailx .mx-f input:focus, .mailx .mx-f select:focus { border-color: var(--mx-brand); outline: none; }
+.mailx .mx-editor { padding: 16px 20px; min-height: 240px; max-height: 50vh; overflow: auto; line-height: 1.8; font-size: 15px; color: var(--mx-ink); outline: none; }
+.mailx .mx-editor blockquote { border-left: 3px solid var(--mx-line); margin: 8px 0; padding-left: 10px; color: var(--mx-muted); }
+.mailx .mx-wf { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-top: 1px solid var(--mx-line); background: var(--mx-soft); flex-wrap: wrap; }
+.mailx .mx-attach { color: var(--mx-ink2); font-weight: 600; cursor: pointer; }
+.mailx .mx-files { font-size: 12px; color: var(--mx-muted); }
+.mailx .mx-hint { margin-left: auto; font-size: 12.5px; color: var(--mx-muted); }
+
+.mailx .mx-prov { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 16px 18px 10px; }
+.mailx .mx-prov button { border: 1.5px solid var(--mx-line); background: var(--mx-card); color: var(--mx-ink); border-radius: 12px; padding: 10px 8px; font-weight: 700; font-size: 13px; }
+.mailx .mx-prov button.on { border-color: var(--mx-brand); background: var(--mx-brand-50); box-shadow: 0 0 0 3px rgb(29 78 216 / .12); }
+.mailx .mx-kind { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; padding: 0 18px 12px; }
+.mailx .mx-kind button { border: 1.5px solid var(--mx-line); background: var(--mx-card); color: var(--mx-ink); border-radius: 14px; padding: 10px 14px; text-align: left; }
+.mailx .mx-kind button.on { border-color: #b45309; background: var(--mx-warn-bg); }
+.mailx .mx-kind b { display: block; margin-bottom: 2px; }
+.mailx .mx-kind small { color: var(--mx-muted); font-size: 12.5px; }
+.mailx .mx-grid2 { display: grid; grid-template-columns: 1fr 1fr; }
+.mailx .mx-small { margin: 8px 18px; font-size: 12px; color: var(--mx-muted); }
+.mailx .mx-policy { margin: 0 18px 12px; border-radius: 12px; background: var(--mx-warn-bg); border: 1px solid var(--mx-warn-line); padding: 10px 14px; font-size: 13px; color: var(--mx-warn); line-height: 1.65; }

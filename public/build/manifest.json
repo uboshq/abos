@@ -19,7 +19,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-to_PPxts.js",
+    "file": "assets/app-CqH_6XlP.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -30,6 +30,15 @@
       "resources/js/messenger-call.js",
       "resources/js/messenger-share.js",
       "resources/js/messenger-meeting.js"
+    ]
+  },
+  "resources/js/mail-page.js": {
+    "file": "assets/mail-page-2GFB-Uki.js",
+    "name": "mail-page",
+    "src": "resources/js/mail-page.js",
+    "isEntry": true,
+    "css": [
+      "assets/mail-page-d7XNBYXk.css"
     ]
   },
   "resources/js/meeting-page.js": {
