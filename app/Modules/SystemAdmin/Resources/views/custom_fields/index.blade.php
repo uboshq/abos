@@ -6,14 +6,26 @@
     সাতটা পর্দা ঘুরে দেখতে হত তিনি কী কী বানিয়েছেন। এক জায়গায় থাকলে
     পুরো ছবিটা এক নজরে।
 --}}
+@php
+    // ⭐ এক সারির পুরো বার কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো। "নতুন ঘর" ব্রাউজারের নিজের পপআপে, ভুল ফিরলে খোলা
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('entity', __('core.custom_field.entity'), collect($entities)->mapWithKeys(fn ($label, $key) => [$key => __('core.source.'.$key)])->all()),
+        \App\Core\ListFilter\Facets::pick('type', __('core.custom_field.type'), collect(\App\Core\Services\CustomFieldService::TYPES)->mapWithKeys(fn ($t) => [$t => __('core.custom_field.types.'.$t)])->all()),
+        \App\Core\ListFilter\Facets::pick('state', __('core.custom_field.active'), ['on' => __('core.yes'), 'off' => __('core.no')]),
+    ]);
+    $addOpen = $errors->any();
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('core.custom_field.title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header
             :title="__('core.custom_field.title')"
             :subtitle="__('core.custom_field.subtitle')" />
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -35,8 +47,27 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
+    @if ($abosHead)
+        <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :title="__('core.custom_field.title')" :info="__('core.custom_field.subtitle')"
+                              :count="trans_choice('core.count.records', $fields->total(), ['count' => $fields->total()])"
+                              :search-placeholder="__('core.custom_field.key').', '.__('core.custom_field.label_bn')" :facets="$facetPanel" :share="false" :export="false"
+                              :sort="['entity' => __('core.custom_field.entity'), 'newest' => __('core.notify.sort.newest')]">
+                    <x-slot:actions>
+                        <x-ui.button type="button" tone="primary" icon="plus" popovertarget="pop-field">{{ __('core.custom_field.add') }}</x-ui.button>
+                    </x-slot:actions>
+                </x-ui.toolbar>
+            </form>
+        </div>
+    @endif
     <div class="space-y-4">
         {{-- নতুন ঘর --}}
+        @if ($abosHead)
+        <div id="pop-field" @unless ($addOpen) popover="auto" @endunless role="dialog"
+             @class(['fixed inset-0 m-auto h-fit max-h-[90vh] w-[56rem] max-w-[94vw] overflow-auto rounded-(--radius-card) shadow-lg', 'z-50' => $addOpen])>
+        @endif
         <form method="POST" action="{{ route('system_admin.custom_field.store') }}"
               class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
             @csrf
@@ -92,6 +123,9 @@
 
             <x-ui.button type="submit" tone="primary" class="mt-3">{{ __('core.action.save') }}</x-ui.button>
         </form>
+        @if ($abosHead)
+        </div>
+        @endif
 
         {{-- যা আছে --}}
         @forelse ($fields->getCollection()->groupBy('entity') as $entity => $rows)
@@ -163,4 +197,5 @@
         <x-ui.pager :rows="$fields" />
         <x-ui.list-totals :rows="$fields" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
