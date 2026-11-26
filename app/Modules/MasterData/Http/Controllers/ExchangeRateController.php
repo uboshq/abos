@@ -63,6 +63,11 @@ class ExchangeRateController extends Controller implements HasMiddleware
              */
             'rates' => $currency->rates()
                 ->with('creator')
+                // ⭐ পুরো বার — কার্যকর তারিখের পরিসর, উৎস খোঁজা, পুরনো আগে (মালিক, ২৪ নভেম্বর ২০২৬)
+                ->when(\App\Core\Support\DateFormat::plainDay($request->query('from')), fn ($q, $d) => $q->whereDate('effective_from', '>=', $d))
+                ->when(\App\Core\Support\DateFormat::plainDay($request->query('to')), fn ($q, $d) => $q->whereDate('effective_from', '<=', $d))
+                ->when(is_string($request->query('q')) && trim($request->query('q')) !== '', fn ($q) => $q->where('source', 'like', '%'.addcslashes(trim($request->query('q')), '%_\\').'%'))
+                ->when($request->query('sort') === 'oldest', fn ($q) => $q->reorder()->orderBy('effective_from')->orderBy('id'))
                 ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString(),
             'today' => $currency->rateOn(),

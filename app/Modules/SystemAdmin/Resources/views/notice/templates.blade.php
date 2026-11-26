@@ -6,12 +6,37 @@
     প্রতিবার হাতে জরুরি বাছতে হলে কোনো একদিন কেউ ভুলতেন, আর ঐ নোটিশটা
     বারেই যেত না — অথচ ঠিক ওটাই বারে সবচেয়ে বেশি দরকার।
 --}}
+@php
+    $columns = [
+        ['key' => 'code', 'label' => __('core.table.code'), 'width' => '8rem'],
+        ['key' => 'name', 'label' => __('core.table.name'),
+         'render' => fn ($r) => $r->name()],
+        ['key' => 'priority', 'label' => __('core.notice.priority_label'), 'width' => '9rem',
+         'render' => fn ($r) => $r->priority?->label() ?? '—'],
+
+        /*
+         * শুরু করার বোতাম — ছাঁচটার একমাত্র কাজ।
+         *
+         * ⛔ এটা না থাকলে ছাঁচগুলো কেবল একটা তালিকা হয়ে পড়ে
+         * থাকত — লেখা হয়েছে, জোড়া লাগেনি।
+         */
+        ['key' => 'use', 'label' => '', 'width' => '9rem',
+         'render' => fn ($r) => view('system_admin::notice.template-use', ['row' => $r])],
+    ];
+    // ⭐ এক সারির পুরো বার কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('priority', __('core.notice.priority_label'), $priorities->all()),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('core.notice.templates_title') }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header :title="__('core.notice.templates_title')" />
     </x-slot:header>
+    @endunless
 
     @if (session('saved'))
         <div role="status"
@@ -33,6 +58,7 @@
         </div>
     @endif
 
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
     <div class="grid gap-4 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
 
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
@@ -66,29 +92,22 @@
         </section>
 
         <section data-boxed class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            @if ($abosHead)
+                <form id="list-form" method="GET" class="contents">
+                    <x-ui.toolbar :title="__('core.notice.templates_title')" :count="trans_choice('core.count.records', $templates->total(), ['count' => $templates->total()])"
+                                  :search-placeholder="__('core.table.code').', '.__('core.table.name')" :columns="$columns" :facets="$facetPanel" :share="false"
+                                  :sort="['code' => __('core.table.code'), 'name' => __('core.table.name')]" />
+                </form>
+            @endif
             <x-ui.table
                 :empty="__('core.notice.no_templates')"
                 :rows="$templates"
                 compact
-                :columns="[
-                    ['key' => 'code', 'label' => __('core.table.code'), 'width' => '8rem'],
-                    ['key' => 'name', 'label' => __('core.table.name'),
-                     'render' => fn ($r) => $r->name()],
-                    ['key' => 'priority', 'label' => __('core.notice.priority_label'), 'width' => '9rem',
-                     'render' => fn ($r) => $r->priority?->label() ?? '—'],
-
-                    /*
-                     * শুরু করার বোতাম — ছাঁচটার একমাত্র কাজ।
-                     *
-                     * ⛔ এটা না থাকলে ছাঁচগুলো কেবল একটা তালিকা হয়ে পড়ে
-                     * থাকত — লেখা হয়েছে, জোড়া লাগেনি।
-                     */
-                    ['key' => 'use', 'label' => '', 'width' => '9rem',
-                     'render' => fn ($r) => view('system_admin::notice.template-use', ['row' => $r])],
-                ]" />
+                :columns="$columns" />
 
             <x-ui.pager :rows="$templates" />
             <x-ui.list-totals :rows="$templates" />
         </section>
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
