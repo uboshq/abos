@@ -1,4 +1,7 @@
-        <aside class="space-y-2">
+        {{-- ⭐ ডান পাশ পর্দায় আটকে — অঙ্কগুলো দরকার হলে নিজের ভিতরে স্ক্রল করে, বোতাম আর "মাল নিন" সবসময় নিচে দেখা যায়;
+             ১০৮০-তে বা জুম করলেও হারায় না (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+        <aside class="pur-tot flex flex-col gap-2" data-purchase-totals>
+            <div class="pur-tot-scroll space-y-2">
             {{-- ── "এই লাইন" — ডান পাশে, বিলের মোটের উপরে ────────────
 
                  মালিক (৬ সেপ্টেম্বর ২০২৬): *"This Line Box Upore utaw"*
@@ -291,6 +294,8 @@
                 </div>
             </section>
 
+            </div>{{-- pur-tot-scroll --}}
+            <div class="pur-tot-foot space-y-2">
             {{-- ── ছয়টা বোতাম, ২×৩ ছকে — মালিকের স্ক্রিনশট ─────────────
 
                  ⭐ প্রতিটা বোতাম একটা প্যানেল খোলে, আর প্রতিটা প্যানেল
@@ -379,4 +384,5 @@
                 {{ __('purchase::action.receive_goods') }} ·
                 <span class="num">৳<span x-text="money(netPayable)"></span></span>
             </x-ui.button>
+            </div>{{-- pur-tot-foot --}}
         </aside>

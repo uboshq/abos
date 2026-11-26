@@ -2811,6 +2811,13 @@ a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; te
 .inbox-board-fold > summary::-webkit-details-marker { display: none; }
 .inbox-board-fold > summary > .num { font-weight: 500; color: var(--color-ink-muted); font-size: 12.5px; }
 .inbox-board-fold:not([open]) { padding-block: 7px !important; }
+/* ⭐ সরাসরি ক্রয় — ডান পাশ পর্দার মাপে; অঙ্কের অংশ নিজে স্ক্রল করে, বোতাম আর "মাল নিন" নিচে আটকানো (মালিক, ২৬ নভেম্বর ২০২৬) */
+@media (min-width: 1024px) {
+    [data-purchase-totals] { align-self: start; max-height: calc(100dvh - 7.4rem); }
+    body:has([data-counter-strip]) [data-purchase-totals] { max-height: calc(100dvh - 4.2rem); }
+    [data-purchase-totals] > .pur-tot-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    [data-purchase-totals] > .pur-tot-foot { flex: none; }
+}
 /* ⭐ কাউন্টার মোড — পেছনের রূপের নীল নিচে দেখা যায় না, পাতা পুরো হালকা (মালিক, ২৬ নভেম্বর ২০২৬) */
 body:has([data-counter-strip]) { background: var(--color-surface-app) !important; }
 body:has([data-counter-strip]) #main { border-radius: 0 !important; margin: 0 !important; min-height: calc(100dvh - 40px); }
