@@ -240,7 +240,8 @@ class TheDueOnTheBuyingScreenSaysWhoseDebtItIsTest extends TestCase
 
         /* ⓘ আর প্রতিটা সারির নিজের অঙ্ক — নইলে তিনটা নাম একটাই সংখ্যা
            দেখাত, আর ভুলটা পড়ে ধরা যেত না। */
-        foreach (['money(invoiceDue)', 'money(totalDue)'] as $sum) {
+        // ⓘ মোট বকেয়া চিহ্ন ছাড়া — রং বলে কে পাবে (লাল: সরবরাহকারী, সবুজ: আমরা; মালিক, ২৬ নভেম্বর ২০২৬)
+        foreach (['money(invoiceDue)', 'money($abs(totalDue))'] as $sum) {
             $this->assertStringContainsString($sum, $html, "সারিটার নিজের অঙ্ক নেই: {$sum}");
         }
     }

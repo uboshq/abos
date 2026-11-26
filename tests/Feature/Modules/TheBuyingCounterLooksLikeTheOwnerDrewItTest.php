@@ -221,12 +221,10 @@ class TheBuyingCounterLooksLikeTheOwnerDrewItTest extends TestCase
         $screen = $this->screen();
 
         foreach ([
-            'purchase::field.total_amount',
+            // ⓘ ২৬ নভেম্বর ২০২৬ (নমুনা v9): "এই লাইনে" বাক্স নেই — ছাড়, ভ্যাট আর টাকা পরিমাণের সারিতেই
             'purchase::field.discount_on_line',
             'purchase::field.vat_mode',
-            'purchase::field.net_value',
-            'purchase::field.in_cart',
-            'purchase::field.running_total',
+            'purchase::field.amount',
         ] as $key) {
             $this->assertScreenSays($screen, $key);
         }
@@ -256,7 +254,8 @@ class TheBuyingCounterLooksLikeTheOwnerDrewItTest extends TestCase
             'purchase::action.clear_data',
             // মোটের কার্ডে
             'purchase::action.add_deposit_panel',
-            'purchase::action.add_note',
+            // ⓘ "মন্তব্য"-র জায়গায় "আনলোডিং বিল" (মালিক, ২৬ নভেম্বর ২০২৬)
+            'purchase::field.unloading_bill',
             'purchase::action.rate_chart',
             'purchase::action.transportation',
             'purchase::action.shipment',

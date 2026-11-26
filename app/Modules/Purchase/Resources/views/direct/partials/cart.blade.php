@@ -37,6 +37,7 @@
                                     <th class="text-end">{{ __('purchase::field.tax') }}</th>
                                 @endif
                                 <th class="text-end">{{ __('purchase::field.amount') }}</th>
+                                <th class="text-end bg-(--color-badge-danger-bg)/60">{{ __('supplier::labour.unloading_col') }}</th>
                                 <th><span class="sr-only">{{ __('core.table.actions') }}</span></th>
                             </tr>
                         </thead>
@@ -50,115 +51,32 @@
                                     :class="line.key === editingKey ? 'bg-(--color-badge-pending-bg)' : ''">
                                     <td class="num" x-text="index + 1"></td>
                                     <td>
-                                        <span :id="'dc-' + index + '-product'" class="whitespace-normal break-words" x-text="line.name"></span>
+                                        {{-- ⓘ গতবারের দর (এই সরবরাহকারীর) — নামের উপর মাউস রাখলে; সারিতে আলাদা লাইন নয় (নমুনা v9) --}}
+                                        <span :id="'dc-' + index + '-product'" class="whitespace-normal break-words font-medium"
+                                              :title="lastRateFor(line) ? (@js(__('purchase::message.last_from_supplier')) + ': ' + money(lastRateFor(line).rate) + ' · ' + lastRateFor(line).on) : ''"
+                                              x-text="line.name"></span>
                                         <input type="hidden" :name="'lines[' + (index) + '][product_id]'" :value="line.id">
                                         <input type="hidden" :name="'lines[' + (index) + '][sales_price]'"
                                                :value="line.sales_price">
 
-                                        {{-- ── লট · মেয়াদ · ছাপা দাম — কেবল লট ধরা সারিতে ──
-
-                                             ⛔ ২৭ সেপ্টেম্বর ২০২৬ পর্যন্ত এই পর্দায় ঘরগুলো ছিলই না,
-                                             অথচ নতুন পণ্য লট ধরে চলে — তাই ঐ পণ্য কাউন্টার দিয়ে
-                                             কেনাই যেত না (সার্ভার বলত "লট নম্বর লাগবে")।
-
-                                             ⓘ পণ্যের ঘরের **ভিতরেই**, নতুন কলাম নয়: কলাম যোগ
-                                             হলে নিচের উপহার-সারির `colspan` গোনা বদলাত, আর লট
-                                             না-ধরা সারিতে তিনটা ফাঁকা কলাম পড়ে থাকত।
-
-                                             ⭐ মান আগে থেকে বসানো (`lotSeed`): কার্টে এই পণ্যের
-                                             আগের সারি, নইলে খালি — খালি লট সংরক্ষণে নিজে বসে,
-                                             কাগজের তারিখে (`051026/01-LOT`, মালিক, ৫ অক্টোবর ২০২৬);
-                                             ঘরে পরের নম্বরটা কেবল দেখায় (`lotHint`)। Enter —
-                                             পরের ঘর; শেষ ঘরের পর পরের পণ্য খোঁজা (`lotNext`)।
-
-                                             ⚠️ `required` নেই, ইচ্ছে করে: ব্রাউজারের ভাসমান ইশারা
-                                             নয়, বার্তা সারির নিচেই (`lotProblem`) — আর সার্ভারও
-                                             ঠিক এই সারির নামে বলে (`lines.{i}.batch_no`)। --}}
+                                        {{-- ⭐ লট — উপরের হলুদ বাক্সে লেখা হয় (নমুনা v9); এখানে কেবল এক ছোট লাইন, আর ঘরগুলো লুকানো।
+                                             ⓘ খালি লট সংরক্ষণে কাগজের তারিখে নিজে বসে ([[PurchaseLots]]) — আগের মতোই। বদলাতে ⋯ → সম্পাদনা। --}}
                                         <template x-if="tracksLot(line)">
-                                            <div data-lot-fields class="mt-1 flex flex-wrap items-end gap-1">
-                                                <label class="block">
-                                                    <span class="block text-2xs text-(--color-ink-muted)">
-                                                        {{ __('inventory::field.batch_no') }}
-                                                    </span>
-                                                    <input type="text" maxlength="60" autocomplete="off" data-lot-field
-                                                           :name="'lines[' + (index) + '][batch_no]'" x-model="line.batch_no"
-                                                           :placeholder="lotHint"
-                                                           @keydown.enter.prevent="lotNext($event)"
-                                                           :aria-invalid="lotProblem(line, index) ? 'true' : 'false'"
-                                                           :class="lotProblem(line, index) ? 'border-(--color-danger)' : 'border-(--color-border)'"
-                                                           class="h-(--spacing-field-dense) w-28 rounded-(--radius-field) border
-                                                                  bg-(--color-surface-card) px-1 text-xs">
-                                                </label>
-
-                                                {{-- ⓘ কোম্পানির ছকের তারিখ-ঘর, সারির ক্রম ধরে বাঁধা নামসহ —
-                                                     লাইন-এডিটরের হুবহু ডাক। --}}
-                                                <div class="w-32">
-                                                    <span class="block text-2xs text-(--color-ink-muted)">
-                                                        {{ __('inventory::field.expiry_date') }}
-                                                    </span>
-                                                    <x-ui.date dense name="expiry_date"
-                                                               bind-name="'lines[' + (index) + '][expiry_date]'"
-                                                               bind-iso="line.expiry_date"
-                                                               bind-model="line.expiry_date"
-                                                               data-lot-field
-                                                               x-on:keydown.enter.prevent="lotNext($event)"
-                                                               class="text-xs" />
-                                                </div>
-
-                                                <label class="block">
-                                                    <span class="block text-2xs text-(--color-ink-muted)">
-                                                        {{ __('inventory::field.mrp') }}
-                                                    </span>
-                                                    <input type="number" step="0.01" min="0" inputmode="decimal" data-lot-field
-                                                           :name="'lines[' + (index) + '][mrp]'" x-model="line.mrp"
-                                                           @keydown.enter.prevent="lotNext($event)"
-                                                           class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
-                                                                  border-(--color-border) bg-(--color-surface-card) px-1 text-end text-xs">
-                                                </label>
-                                            </div>
+                                            <span data-lot-line class="block text-2xs text-(--color-ink-muted)">
+                                                <span x-show="line.batch_no" x-text="@js(__('inventory::field.batch_no')) + ' ' + line.batch_no"></span>
+                                                <span x-show="! line.batch_no">{{ __('purchase::lot.auto_short') }} · <span x-text="lotHint"></span></span>
+                                                <span x-show="line.expiry_date" x-cloak x-text="' · ' + @js(__('inventory::field.expiry_date')) + ' ' + line.expiry_date"></span>
+                                                <input type="hidden" :name="'lines[' + (index) + '][batch_no]'" :value="line.batch_no || ''">
+                                                <input type="hidden" :name="'lines[' + (index) + '][expiry_date]'" :value="line.expiry_date || ''">
+                                                <input type="hidden" :name="'lines[' + (index) + '][mrp]'" :value="line.mrp || ''">
+                                            </span>
                                         </template>
 
-                                        {{-- ⓘ বার্তাটা পাতায়, সারির ঠিক নিচে — পর্দার পাহারা বা সার্ভারের
-                                             ফেরত, যেটাই হোক। লট লিখলেই সরে যায়। --}}
+                                        {{-- ⓘ সার্ভারের লট-বার্তা — সারির ঠিক নিচে --}}
                                         <p x-show="lotProblem(line, index)" x-cloak role="alert"
                                            class="mt-1 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-2 py-0.5
                                                   text-2xs text-(--color-badge-danger-ink)"
                                            x-text="lotProblem(line, index)"></p>
-
-                                        <span x-show="lotAutoHint(line, index)" x-cloak
-                                              class="block text-2xs text-(--color-ink-muted)">
-                                            {{ __('purchase::lot.auto', ['number' => $lotHint]) }}
-                                        </span>
-
-                                        {{-- ⭐ গতবারের দর — সারিতেই, ভাসমান নয়।
-
-                                             এন্ট্রি স্ট্রিপেও একটা "শেষ ক্রয়দর" আছে, কিন্তু
-                                             সেটা সারিটা কার্টে যাওয়ামাত্র মিলিয়ে যায়। বারো
-                                             লাইন পরে, তিনটা গতবারের চেয়ে দামি — আর যিনি
-                                             চূড়ান্ত বোতাম চাপতে যাচ্ছেন তিনি জানতেই পারতেন না।
-
-                                             ⚠️ দুইটা সংখ্যা দুইটা আলাদা প্রশ্নের উত্তর:
-                                               স্ট্রিপেরটা  কোম্পানি-ব্যাপী শেষ দর, যে কারো কাছ থেকে
-                                               এইটা         **এই সরবরাহকারীর** কাছ থেকে — দরাদরির সংখ্যা
-                                             তাই লেবেল দুইটাও আলাদা। --}}
-                                        <template x-if="lastRateFor(line)">
-                                            <span class="block text-2xs text-(--color-ink-muted)">
-                                                {{ __('purchase::message.last_from_supplier') }}:
-                                                <span class="num" x-text="money(lastRateFor(line).rate)"></span>
-                                                <span x-text="'· ' + (lastRateFor(line).on)"></span>
-                                            </span>
-                                        </template>
-
-                                        {{-- ⛔ শূন্য লেখা হয় না।
-
-                                             "গতবারের দর" শিরোনামের নিচে ০.০০ মানে "ফ্রি
-                                             দিয়েছিল", আর সেটা মিথ্যা। আগে কখনো না কেনা থাকলে
-                                             কথাটা সরাসরি লেখা থাকে। --}}
-                                        <template x-if="supplierChosen && ! lastRateFor(line)">
-                                            <span class="block text-2xs text-(--color-ink-muted)">
-                                                {{ __('purchase::message.first_from_supplier') }}
-                                            </span>
-                                        </template>
 
                                         {{-- ⭐ হাতে বসানো আনলোডিং দর, কার্টনপ্রতি — এখন "আনলোডিং বিল" পপআপে, "পণ্য ধরে" বাছলে (মালিক, ২৬ নভেম্বর ২০২৬)।
                                              ⓘ "পুরো চালানে একটা" হলে খালি যায় — তখন সার্ভার পণ্যের নিজের দর বা সমান ভাগ ধরে ([[UnloadingSplit]])। --}}
@@ -182,10 +100,9 @@
                                          ভুলটার দাম একশো গুণ। --}}
                                     <td class="num text-end">
                                         <span x-text="qty(line.qty)"></span>
+                                        <span class="text-2xs text-(--color-ink-muted)" x-text="unitName(line.unit_id, line)"></span>
                                         <input type="hidden" :name="'lines[' + (index) + '][qty]'" :value="line.qty">
                                         <input type="hidden" :name="'lines[' + (index) + '][unit_id]'" :value="line.unit_id">
-                                        <span class="block text-end text-2xs text-(--color-ink-muted)"
-                                              x-text="unitName(line.unit_id, line)"></span>
                                     </td>
 
                                     @if ($show['free_qty'])
@@ -195,7 +112,7 @@
                                                    :value="line.free_qty || ''">
                                             <input type="hidden" :name="'lines[' + (index) + '][free_unit_id]'"
                                                    :value="line.free_unit_id">
-                                            <span class="block text-end text-2xs text-(--color-ink-muted)"
+                                            <span x-show="line.free_qty" class="text-2xs text-(--color-ink-muted)"
                                                   x-text="unitName(line.free_unit_id, line)"></span>
                                         </td>
                                     @endif
@@ -250,28 +167,25 @@
                                     @endif
 
                                     <td class="num font-medium" x-text="money(lineNet(line))"></td>
+                                    {{-- ⭐ এই সারির আনলোডিংয়ের ভাগ — পপআপে বসানোর পরে (নমুনা v9) --}}
+                                    <td class="num bg-(--color-badge-danger-bg)/40" x-text="unloadShareOf(line) > 0 ? money(unloadShareOf(line)) : '—'"></td>
                                     <td class="text-end">
-                                        <div class="flex items-center justify-end gap-1">
-                                            {{-- উপহার যোগ — এই সারির সাথে বাঁধা --}}
-                                            <button type="button" @click="addGift(line)"
-                                                    class="rounded-(--radius-field) border border-(--color-border)
-                                                           px-2 py-0.5 text-2xs text-(--color-ink-muted)
-                                                           hover:text-(--color-ink)">
-                                                {{ __('purchase::action.add_gift') }}
-                                            </button>
-
-                                            {{-- ⭐ সম্পাদনা — উপহার আর ✕-এর মাঝে; ধ্বংসাত্মকটা শেষে থাকে --}}
-                                            <button type="button" @click="editLine(index)" data-edit-line
-                                                    aria-label="{{ __('purchase::action.edit_line') }}"
-                                                    title="{{ __('purchase::action.edit_line') }}"
-                                                    class="rounded-(--radius-field) px-2 py-1 text-(--color-ink-muted)
-                                                           hover:bg-(--color-surface-hover)">
-                                                <x-ui.icon name="edit" class="size-4" />
-                                            </button>
-
-                                            <button type="button" @click="dropLine(index)"
-                                                    class="rounded-(--radius-field) px-2 py-1 text-(--color-danger)"
-                                                    aria-label="{{ __('purchase::action.clear_line') }}">&times;</button>
+                                        <div x-data="{ acts: false }" class="relative inline-block">
+                                            <button type="button" @click="acts = ! acts" data-row-acts
+                                                    aria-label="{{ __('core.table.actions') }}"
+                                                    class="rounded-(--radius-field) border border-(--color-border) px-2 leading-6 text-(--color-ink-muted)
+                                                           hover:bg-(--color-surface-hover)">⋯</button>
+                                            <div x-show="acts" x-cloak @click.outside="acts = false"
+                                                 class="absolute end-0 z-20 mt-1 w-40 rounded-(--radius-field) border border-(--color-border)
+                                                        bg-(--color-surface-card) py-1 text-start text-sm shadow-lg">
+                                                {{-- উপহার যোগ — এই সারির সাথে বাঁধা --}}
+                                                <button type="button" @click="addGift(line); acts = false"
+                                                        class="block w-full px-3 py-1.5 text-start hover:bg-(--color-surface-hover)">🎁 {{ __('purchase::action.add_gift') }}</button>
+                                                <button type="button" @click="editLine(index); acts = false" data-edit-line
+                                                        class="block w-full px-3 py-1.5 text-start hover:bg-(--color-surface-hover)">✎ {{ __('purchase::action.edit_line') }}</button>
+                                                <button type="button" @click="dropLine(index); acts = false"
+                                                        class="block w-full px-3 py-1.5 text-start text-(--color-danger) hover:bg-(--color-surface-hover)">✕ {{ __('purchase::action.clear_line') }}</button>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -402,7 +316,7 @@
                                              পণ্যের ঘরটা ৩, আর শেষে মোছার ঘর ১ —
                                              বাকিটা এখানে। ⓘ ভুল হলে সারিটা এক
                                              কলাম সরে বসত, আর ছকটা এলোমেলো দেখাত। --}}
-                                        <td colspan="{{ 3
+                                        <td colspan="{{ 4
                                             + ($show['free_qty'] ? 1 : 0)
                                             + ($show['line_discount'] ? 1 : 0)
                                             + ($show['vat'] ? 1 : 0) }}"></td>
@@ -418,7 +332,7 @@
 
                         <tbody>
                             <tr x-show="lines.length === 0" x-cloak>
-                                <td colspan="{{ 8
+                                <td colspan="{{ 9
                                         + ($show['free_qty'] ? 1 : 0)
                                         + ($show['line_discount'] ? 1 : 0)
                                         + ($show['vat'] ? 1 : 0) }}"

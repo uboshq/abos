@@ -49,6 +49,7 @@ return [
     'new_contractor' => 'New contractor',
     'split_by_carton' => 'Split by carton',
 
+    'unloading_col' => 'Unloading',
     'pick_one' => 'Choose how the labour was paid: cash now, due to a contractor, paid by the supplier, or not needed.',
     'needs_reason' => 'Write a short reason why it was not needed.',
     'needs_amount' => 'Write the amount paid (more than zero).',

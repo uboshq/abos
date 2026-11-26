@@ -84,7 +84,7 @@ final class Release
     /** "v1.0.0 · 24-10-2026 · 2c026a3" — যা জানা আছে কেবল সেটুকু */
     public static function label(): string
     {
-        return implode(' · ', array_filter(['v'.self::version(), self::shownDate(), self::sha()], fn ($part) => $part !== null && $part !== ''));
+        return implode(' · ', array_filter([__('core.brand.version_word').' '.self::version(), self::shownDate(), self::sha()], fn ($part) => $part !== null && $part !== ''));
     }
 
     /** @return array{version: string, date: string, sha: string|null} — ফোনের API-র জন্য */

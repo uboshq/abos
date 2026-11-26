@@ -78,23 +78,14 @@
                       x-text="(supplier && supplier.name) || @js(__('purchase::message.search_supplier'))"></span>
             </div>
 
-            <div x-show="supplier" x-cloak class="mt-1 truncate text-sm text-(--color-ink)">
-                <span class="text-(--color-ink-muted)">{{ __('purchase::field.mobile') }}:</span>
-                <span class="num font-semibold" x-text="(supplier && supplier.phone) || '—'"></span>
-            </div>
-
-            <div x-show="supplier" x-cloak class="mt-1 truncate text-sm text-(--color-ink)"
+            {{-- ⓘ মোবাইল আর "বুঝে নিলেন" নেই — মালিক, ২৬ নভেম্বর ২০২৬: "যে কিনছে সে বুঝেই দিচ্ছে"; কেবল ঠিকানা, এক লাইনে --}}
+            <div x-show="supplier" x-cloak class="mt-0.5 truncate text-2xs text-(--color-ink-muted)"
                  :title="(supplier && supplier.address)"
-                 x-text="(supplier && supplier.address) || '—'"></div>
-
-            <div x-show="supplier" x-cloak class="mt-1 truncate text-2xs text-(--color-ink-muted)">
-                {{ __('purchase::field.received_by') }}:
-                <span class="font-semibold text-(--color-ink)">{{ $receivedBy }}</span>
-            </div>
+                 x-text="(supplier && supplier.address) || ''"></div>
 
             {{-- ⭐ ক্রেডিট লিমিট · আগের বকেয়া · আর বিল করা যাবে — মালিক, ২৬ নভেম্বর ২০২৬ (নমুনা v8)।
                  ⓘ "আর বিল করা যাবে" = লিমিট − (দেনা + বিল-না-আসা মাল), সার্ভারের মাপ; লিমিট না থাকলে "সীমা নেই" আর শেষ সারি নেই। --}}
-            <dl x-show="supplier" x-cloak data-supplier-credit class="mt-2 space-y-0.5 border-t border-(--color-border) pt-2 text-sm">
+            <dl x-show="supplier" x-cloak data-supplier-credit class="mt-1.5 space-y-0 border-t border-(--color-border) pt-1.5 text-sm leading-6">
                 <div class="flex justify-between gap-2">
                     <dt class="text-(--color-ink-muted)">{{ __('purchase::field.credit_limit') }}</dt>
                     <dd class="num font-semibold" x-text="creditLimit > 0 ? money(creditLimit) : @js(__('purchase::field.no_limit'))"></dd>

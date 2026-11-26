@@ -466,6 +466,9 @@ export default function directPurchase({
                    পিসে। */
                 unit_id: '', free_unit_id: '',
 
+                /* ⭐ লট — পণ্যের ডানের হলুদ বাক্স (নমুনা v9); খালি রাখলে সংরক্ষণে নিজে বসে ([[PurchaseLots]]) */
+                batch_no: '', expiry_date: '', mrp: '',
+
                 /* ছাড়টা কীভাবে লেখা হচ্ছে — টাকায় নাকি শতাংশে।
                    ⚠️ **সংরক্ষিত হয় সবসময় টাকায়**; এটা কেবল লেখার
                    ভঙ্গি। ⓘ ডিফল্ট টাকা, কারণ সরবরাহকারীর কাগজে
@@ -1019,14 +1022,14 @@ export default function directPurchase({
             const at = this.editingKey === null ? -1 : this.lines.findIndex(l => l.key === this.editingKey);
 
             if (at >= 0) {
-                Object.assign(this.lines[at], this.entryFigures());
+                Object.assign(this.lines[at], this.entryFigures(), this.lotPart(this.entryLot(this.picked)));
                 this.clearEntry();
                 this.$nextTick(() => this.$refs.search?.focus());
 
                 return true;
             }
 
-            const lot = this.lotSeed(this.picked);
+            const lot = this.entryLot(this.picked);
 
             this.lines.push({
                 key: this.nextKey++,
@@ -1050,18 +1053,12 @@ export default function directPurchase({
                 gifts: [],
             });
 
-            const added = this.lines.length - 1;
-            const tracked = !! this.picked.track_batch;
 
             this.clearEntry();
 
             /* ⭐ লট ধরা সারিতে কার্সর সোজা লট-ঘরে — বসানো মানটা
                ঠিক থাকলে Enter, Enter, Enter, আর পরের পণ্য খোঁজা। */
-            if (tracked) {
-                this.$nextTick(() => this.focusLot(added));
-
-                return true;
-            }
+            /* ⓘ লট এখন উপরের হলুদ বাক্সে (নমুনা v9) — কার্টে ঘর নেই, তাই কার্সর সোজা পরের পণ্য খোঁজায় */
 
             /* ?. — একটা ঘর খুঁজে না পাওয়া কখনো পুরো পর্দা
                থামানোর কারণ হওয়া উচিত নয়। এখানে ঠিক তা-ই
@@ -1151,6 +1148,9 @@ export default function directPurchase({
                 markup: anchor === 'markup' ? (line.pricing_pct || '') : '',
                 margin: anchor === 'margin' ? (line.pricing_pct || '') : '',
                 anchor,
+                batch_no: line.batch_no || '',
+                expiry_date: line.expiry_date || '',
+                mrp: line.mrp || '',
             };
 
             /* ⓘ নোঙরহীন বা দাম-নোঙরের সারিতেও markup ও margin দেখা যায় — দামটা ছুঁয়ে নয়, কেবল দুই শতাংশ
@@ -1881,6 +1881,31 @@ export default function directPurchase({
          * ([[LastLotFor]]); মালিকের আদেশে তার জায়গায় নতুন নম্বর —
          * পুরনো লট বসালে নতুন মাল পুরনো লটে, পুরনো মেয়াদে মিশত।
          */
+        /** উপরের হলুদ বাক্সে লেখা লট — কিছু লেখা থাকলে সেটাই, নইলে কার্টের আগের সারি বা খালি ([[lotSeed()]]) */
+        entryLot(product) {
+            const typed = ['batch_no', 'expiry_date', 'mrp'].some((k) => String(this.entry[k] ?? '').trim() !== '');
+
+            if (! product || ! product.track_batch) return { batch_no: '', expiry_date: '', mrp: '', from: '' };
+
+            return typed
+                ? { batch_no: this.entry.batch_no || '', expiry_date: this.entry.expiry_date || '', mrp: this.entry.mrp || '', from: 'typed' }
+                : this.lotSeed(product);
+        },
+
+        lotPart(lot) {
+            return { batch_no: lot.batch_no, expiry_date: lot.expiry_date, mrp: lot.mrp, lot_from: lot.from };
+        },
+
+        /** সারির আনলোডিংয়ের ভাগ — পণ্য ধরে হলে নিজের হার; পুরো চালানে হলে কার্টন ধরে ভাগ (সার্ভারের [[UnloadingSplit::split()]]-এর মতো, দেখানোর জন্য) */
+        unloadShareOf(line) {
+            if (! this.unloadCostsUs) return 0;
+            if (this.unloadSplit === 'product') return this.unloadLineAmount(line);
+
+            const cartons = this.unloadCartons;
+
+            return cartons > 0 ? this.paisa(this.unloadTotal * this.lineCartons(line) / cartons) : 0;
+        },
+
         lotSeed(product) {
             const blank = { batch_no: '', expiry_date: '', mrp: '', from: '' };
 

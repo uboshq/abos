@@ -413,6 +413,8 @@ return [
         'full_name' => 'A Business Operating System',
         'tagline' => 'Simple to Run. Powerful to Grow.',
         'powered_by' => 'Powered by',
+        // ⭐ সংস্করণ পুরো শব্দে — "v" নয় (মালিক, ২৬ নভেম্বর ২০২৬: "ভার্সন পুরাপুরি ডিটেলসে লিখবা")
+        'version_word' => 'Version',
         'released' => 'Released',
         'updated' => 'Updated',
         /* Not translated: a company's name is its name. */

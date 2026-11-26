@@ -9,5 +9,7 @@ declare(strict_types=1);
  * counter use one name each; only this screen's own sentences live here.
  */
 return [
+    'keeps_lot' => 'Keeps lots',
+    'auto_short' => 'lot set on save',
     'auto' => 'Leave it empty and the lot number is filled in on save, on the paper date — for example :number. A lot you type stays as typed.',
 ];

@@ -113,7 +113,7 @@ final class TheShellWearsTheOwnersNewLookTest extends TestCase
             @unlink($build);
         }
         $line = $this->between($page, 'data-release-line', '</p>');
-        $this->assertMatchesRegularExpression('/ABOS v1\.4\.2\s*·\s*'.preg_quote(__('core.brand.released'), '/').' 24-10-2026\s*·\s*'.preg_quote(__('core.brand.updated'), '/').' 06-11-2026/u', $line, '⛔ লগইনের ঘরের নিচে সংস্করণের পুরো বিবরণ নেই (৫)।');
+        $this->assertMatchesRegularExpression('/ABOS '.preg_quote(__('core.brand.version_word'), '/').' 1\.4\.2\s*·\s*'.preg_quote(__('core.brand.released'), '/').' 24-10-2026\s*·\s*'.preg_quote(__('core.brand.updated'), '/').' 06-11-2026/u', $line, '⛔ লগইনের ঘরের নিচে সংস্করণের পুরো বিবরণ নেই (৫)।');
         $this->assertStringNotContainsString('ae03a14', $line, '⛔ লগইনের ঘরে build নম্বর — মালিক চান না।');
     }
 
