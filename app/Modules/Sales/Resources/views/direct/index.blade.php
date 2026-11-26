@@ -383,7 +383,7 @@
         form[data-abos-counter] .ds-out > [data-sign='adv'] { background: #ecfdf3 !important; border-color: #a7e3bf; color: #15803d !important; }
         form[data-abos-counter] .ds-out > [data-sign='due'] { background: #fef2f2 !important; border-color: #fecaca; color: #b91c1c !important; }
         form[data-abos-counter] .ds-out > div > span:last-child { font-size: 1.1rem; }
-        form[data-abos-counter] .ds-credit { background: #fff; padding: .15rem .75rem .3rem !important; }
+        form[data-abos-counter] .ds-credit { background: #fff; padding: .15rem .75rem .2rem !important; }
         form[data-abos-counter] .ds-limit { border: 1px dashed #c3cede; border-radius: 10px; padding: .2rem .9rem; }
         form[data-abos-counter] .ds-details { border-top: 1px solid #e3e8f0; padding: .3rem 1rem .2rem; }
         form[data-abos-counter] .ds-sec-h { display: flex; width: 100%; justify-content: space-between; font-size: .68rem; font-weight: 800; letter-spacing: .1em;
