@@ -9,7 +9,7 @@
                      জায়গা**: উপর-নিচের প্যাডিং আর লেবেলের নিচের ফাঁক।
                      ⓘ ঘর ছোট করলে তারিখের ঘরে আঙুল বসানো কঠিন হত, আর
                      কাউন্টারে ওটাই সবচেয়ে বেশি ছোঁয়া হয়। --}}
-                <div class="px-3 py-2">
+                <div class="px-3 py-1.5">
                 {{-- ── ছয়টা ঘর — মালিকের ক্রমে, এক সারিতে ────────────────
 
                      ⚠️ সরবরাহকারীর বাক্সটা এখান থেকে **সরে গেছে**।
@@ -60,7 +60,7 @@
                             {{ __('purchase::field.received_on') }}
                         </span>
                         <x-ui.date dense name="received_on" :value="old('received_on')"
-                                   class="w-full text-sm" />
+                                   class="w-full text-xs" />
                     </label>
 
                     {{-- ── আমাদের নিজের চালান নম্বর ─────────────────────
@@ -94,7 +94,7 @@
                                  বাক্সটা বিক্রয়ের বাক্সের চেয়ে লম্বা দেখাত, আর
                                  মালিক দুইটা পর্দা পাশাপাশি রেখে সেটাই ধরেছেন। --}}
                                class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
-                                      border-(--color-border) bg-(--color-surface-app) px-2 text-sm">
+                                      border-(--color-border) bg-(--color-surface-app) px-2 text-xs">
                     </label>
 
                     {{-- ── গুদাম — কোন ভবনে, তাকে নয় ──────────────────
@@ -157,7 +157,7 @@
                         <select name="warehouse_id" required
                                 title="{{ __('purchase::message.goods_wait_for_placement') }}"
                                 class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
-                                       border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                                       border-(--color-border) bg-(--color-surface-card) px-2 text-xs">
                             <option value="">—</option>
                             @foreach ($warehouses as $house)
                                 <option value="{{ $house->id }}"
@@ -175,7 +175,7 @@
                         </span>
                         <x-ui.date dense name="trx_date"
                                    :value="old('trx_date', now()->toDateString())"
-                                   class="w-full text-sm" />
+                                   class="w-full text-xs" />
                     </label>
 
                     <label class="block">
@@ -186,7 +186,7 @@
                         <input type="text" name="supplier_bill_no" value="{{ old('supplier_bill_no') }}"
                                placeholder="{{ __('purchase::message.as_printed') }}"
                                class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
-                                      border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                                      border-(--color-border) bg-(--color-surface-card) px-2 text-xs">
                     </label>
 
                     {{-- ── পরিশোধের শর্ত — একটাই ঘর, সাতটা বিকল্প ─────────
@@ -234,7 +234,7 @@
 
                         <select x-model="termChoice" @change="termPicked()"
                                 class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border
-                                       border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                                       border-(--color-border) bg-(--color-surface-card) px-2 text-xs">
                             @foreach ($paymentTerms as $term)
                                 <option value="{{ $term['value'] }}"
                                         @selected($term['value'] === $paymentTermDefault)>

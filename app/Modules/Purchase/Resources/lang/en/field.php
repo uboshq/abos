@@ -195,6 +195,7 @@ return [
     'this_line' => 'This line',
     'unloading_bill' => 'Unloading bill',
     'unload_owed' => 'Unloading · owed to labour',
+    'discount_reason' => 'Reason for the discount or a note — kept on the bill',
     'credit_limit' => 'Credit limit',
     'no_limit' => 'No limit',
     'can_bill_more' => 'Can still bill',

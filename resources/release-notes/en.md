@@ -1,5 +1,10 @@
 # What's new
 
+## 1.3.17 — 26-11-2026
+
+- The two boxes at the top of direct purchase are smaller: the supplier's name one step smaller, no empty space above or below, smaller date text.
+- The bill discount box is smaller, with a ✎ beside it — click to write the reason for the discount or a note; it stays on the bill.
+
 ## 1.3.16 — 26-11-2026
 
 - The top of direct purchase is smaller: under the supplier's name one line with "Can still bill" and the previous balance; the six paper boxes on one line.

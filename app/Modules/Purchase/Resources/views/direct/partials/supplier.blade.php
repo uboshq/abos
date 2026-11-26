@@ -1,5 +1,5 @@
         <section data-boxed class="relative h-full rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-surface-selected) px-3 py-2"
+                        bg-(--color-surface-selected) px-3 py-1.5"
                  style="box-shadow: inset var(--rail-tile-on-edge-w, 2px) 0 0 var(--color-brand-500)">
 
             {{-- ── সরবরাহকারী — মালিকের ক্রমের সাত নম্বর ────────────
@@ -48,7 +48,8 @@
                  বলে না।
 
                  ⛔ *"স্বত্বাধিকারী"* সারিটা বাদ — তিনি তিনটা সারিই চেয়েছেন। --}}
-            <div class="mt-2 flex items-center gap-2">
+            {{-- ⓘ উপরে ফাঁকা নেই, নাম এক ধাপ ছোট (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+            <div class="flex items-center gap-2">
                 <button type="button"
                         @click="supplierPickerOpen = ! supplierPickerOpen"
                         :aria-expanded="supplierPickerOpen ? 'true' : 'false'"
@@ -73,7 +74,7 @@
                      ⓘ তাই ধাপটা তুলে দেওয়া হলো — সব মাপে `text-lg`। বড় পর্দায়
                      জায়গা আছে বলেই হরফ বড় করতে হবে, এমন নয়; **নামটা পুরো
                      দেখা যাওয়াই বড় হওয়ার চেয়ে দামি**। --}}
-                <span class="min-w-0 flex-1 truncate text-lg font-semibold text-(--color-ink)"
+                <span class="min-w-0 flex-1 truncate text-base font-semibold text-(--color-ink)"
                       :title="(supplier && supplier.name)"
                       x-text="(supplier && supplier.name) || @js(__('purchase::message.search_supplier'))"></span>
             </div>
@@ -83,16 +84,16 @@
                  ⓘ "আর বিল করা যাবে" = লিমিট − (দেনা + বিল-না-আসা মাল), সার্ভারের মাপ; লিমিট নেই তো "সীমা নেই"; ছাড়িয়ে গেলে লাল ঋণাত্মক।
                  ⛔ লাইন ভাঙে না (`whitespace-nowrap`) — ঠিকানা, মোবাইল, লিমিটের আলাদা সারি নেই। --}}
             <div x-show="supplier" x-cloak data-supplier-credit
-                 class="mt-1.5 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-3 whitespace-nowrap border-t border-(--color-border) pt-1.5 text-sm">
+                 class="mt-1 grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-3 whitespace-nowrap border-t border-(--color-border) pt-1 text-xs">
                 <span class="flex min-w-0 items-baseline gap-1.5 overflow-hidden">
                     <span class="min-w-0 truncate text-2xs text-(--color-ink-muted)">{{ __('purchase::field.can_bill_more') }}</span>
-                    <b class="num shrink-0 text-xs xl:text-sm" :class="creditRoom === null ? '' : (creditRoom >= 0 ? 'text-(--color-success)' : 'text-(--color-danger)')"
+                    <b class="num shrink-0 text-xs" :class="creditRoom === null ? '' : (creditRoom >= 0 ? 'text-(--color-success)' : 'text-(--color-danger)')"
                        x-text="creditRoom === null ? @js(__('purchase::field.no_limit')) : money(creditRoom)"></b>
                 </span>
                 <span class="flex min-w-0 items-baseline gap-1.5 overflow-hidden">
                     <span class="min-w-0 truncate text-2xs text-(--color-ink-muted)"
                           x-text="previousDue < 0 ? @js(__('purchase::field.previous_advance')) : @js(__('purchase::field.previous_due'))"></span>
-                    <b class="num shrink-0 text-xs xl:text-sm" :class="previousDue > 0 ? 'text-(--color-danger)' : 'text-(--color-success)'"
+                    <b class="num shrink-0 text-xs" :class="previousDue > 0 ? 'text-(--color-danger)' : 'text-(--color-success)'"
                        x-text="money($abs(previousDue))"></b>
                 </span>
             </div>

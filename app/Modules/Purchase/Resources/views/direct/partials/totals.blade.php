@@ -84,15 +84,21 @@
                          পর্দা ঠিক সেটাই কষে (`billShares`)। ⚠️ শতাংশে লিখলেও
                          সার্ভার নিজে কষে; পর্দার অঙ্ক কেবল আগে দেখানো। --}}
                     <div class="flex items-center justify-between gap-2">
-                        <dt class="shrink-0 text-(--color-ink-muted)">{{ __('purchase::field.bill_discount') }}</dt>
+                        {{-- ⭐ ✎ — ছাড়ের কারণ বা মন্তব্য, বিলেই লেখা থাকে (`narration`; মালিক, ২৬ নভেম্বর ২০২৬) --}}
+                        <dt class="flex shrink-0 items-center gap-1 text-(--color-ink-muted)">
+                            {{ __('purchase::field.bill_discount') }}
+                            <button type="button" @click="openNote()" :aria-expanded="noteOpen" data-discount-reason
+                                    title="{{ __('purchase::field.discount_reason') }}" aria-label="{{ __('purchase::field.discount_reason') }}"
+                                    class="rounded-(--radius-field) px-1 leading-5 text-(--color-link) hover:bg-(--color-surface-hover)">✎</button>
+                        </dt>
                         {{-- ⭐ বিক্রয়ের মতো এক ঘর — "500" টাকা, "2%" শতাংশ; পাশে টাকার অঙ্ক (মালিক, ২৬ নভেম্বর ২০২৬)।
                              ⓘ সার্ভারে আগের দুই ঘরই যায় (`bill_discount` + `bill_discount_mode`) — [[readBillDiscount()]] ভাঙে --}}
                         <dd class="flex min-w-0 flex-1 items-center gap-2">
                             <input type="text" inputmode="decimal" x-model="billDiscountText" @input="readBillDiscount()"
                                    placeholder="{{ __('purchase::field.bill_discount_hint') }}"
                                    aria-label="{{ __('purchase::field.bill_discount') }}"
-                                   class="num h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border-2 border-(--color-border)
-                                          bg-(--color-surface-card) px-2 text-end text-sm font-semibold">
+                                   class="num h-(--spacing-field-dense) w-20 min-w-0 rounded-(--radius-field) border border-(--color-border)
+                                          bg-(--color-surface-card) px-2 text-end text-xs font-semibold">
                             <span class="num ms-auto shrink-0 text-end"
                                   :class="billDiscountTooBig ? 'text-(--color-danger)' : ''"
                                   x-text="money(billDiscountAmount)"></span>
@@ -103,6 +109,12 @@
                     @error('bill_discount')
                         <p class="text-end text-2xs text-(--color-danger)">{{ $message }}</p>
                     @enderror
+                    <div x-show="noteOpen" x-cloak>
+                        <textarea name="narration" rows="2" maxlength="500" x-ref="note"
+                                  placeholder="{{ __('purchase::field.discount_reason') }}"
+                                  aria-label="{{ __('purchase::field.discount_reason') }}"
+                                  class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) p-1.5 text-2xs">{{ old('narration') }}</textarea>
+                    </div>
 
                     @if ($show['vat'])
                         {{-- ⛔ ২৭ সেপ্টেম্বর ২০২৬ (মালিক): আগে লেখা ছিল "খরচেরই অংশ", অথচ ভ্যাট বসে
