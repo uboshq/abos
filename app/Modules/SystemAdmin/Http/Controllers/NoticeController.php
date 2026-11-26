@@ -51,6 +51,7 @@ class NoticeController extends Controller
         $user = $request->user();
 
         $mine = $user->can('system_admin.notice.manage');
+        $find = is_string($request->query('q')) ? trim($request->query('q')) : '';
 
         return view('system_admin::notice.index', [
             'menu' => $this->menu->forUser($user),
@@ -68,10 +69,16 @@ class NoticeController extends Controller
                  * এই ভুলটা এই খাতায় আগেও ধরা পড়েছে (সরবরাহকারীর প্রদেয়)।
                  */
                 ? Notice::query()->with(['author', 'audience'])
-                    ->orderByDesc('id')->paginate(\App\Core\Support\PerPage::of())->withQueryString()
+                    // ⭐ পুরো বার — খোঁজা, অবস্থা, অগ্রাধিকার, সাজানো (মালিক, ২৪ নভেম্বর ২০২৬: প্রতিটা তালিকায় পুরো বার)
+                    ->when($find !== '', fn ($q) => $q->where('title', 'like', '%'.addcslashes($find, '%_\\').'%'))
+                    ->when(\App\Core\Support\NoticeStatus::tryFrom((string) $request->query('status')), fn ($q, $s) => $q->where('status', $s->value))
+                    ->when(\App\Core\Support\NoticePriority::tryFrom((string) $request->query('priority')), fn ($q, $p) => $q->where('priority', $p->value))
+                    ->orderBy('id', $request->query('sort') === 'oldest' ? 'asc' : 'desc')
+                    ->paginate(\App\Core\Support\PerPage::of())->withQueryString()
                 : null,
 
-            'mine' => $mine ? null : $this->board->forUser($user),
+            'mine' => $mine ? null : $this->board->forUser($user)
+                ->when($find !== '', fn ($c) => $c->filter(fn ($n) => str_contains(mb_strtolower((string) $n->title), mb_strtolower($find))))->values(),
             'unread' => $this->board->unreadIds($user),
             'canManage' => $mine,
         ]);
