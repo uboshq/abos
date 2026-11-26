@@ -1007,7 +1007,8 @@ class DirectSaleController extends Controller implements HasMiddleware
             ->when($q !== '', fn ($query) => $query->search($q))
             ->when($f['from'] ?? null, fn ($query, $d) => $query->whereDate('trx_date', '>=', $d))
             ->when($f['to'] ?? null, fn ($query, $d) => $query->whereDate('trx_date', '<=', $d))
-            ->orderByDesc('id');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['id', 'desc'], 'oldest' => ['id', 'asc'], 'amount_high' => ['total', 'desc'], 'amount_low' => ['total', 'asc']]));
 
         $drafts = (clone $query)->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
