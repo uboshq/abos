@@ -53,7 +53,8 @@ class NotificationArchiveController extends Controller
             ->when($f['priority'] ?? null, fn ($q, $p) => $q->where('notification_events.priority', $p))
             ->when($f['from'] ?? null, fn ($q, $d) => $q->where('notification_events.created_at', '>=', $d.' 00:00:00'))
             ->when($f['to'] ?? null, fn ($q, $d) => $q->where('notification_events.created_at', '<=', $d.' 23:59:59'))
-            ->orderByDesc('notification_events.id')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['notification_events.id', 'desc'], 'oldest' => ['notification_events.id', 'asc']], 'notification_events.id'))
             ->paginate(\App\Core\Support\PerPage::of(self::PER_PAGE))->withQueryString();
 
         $settings = app(SettingsService::class);

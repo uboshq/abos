@@ -89,7 +89,7 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div class="space-y-4">
         <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('promotion::menu.promotions')" :facets="$facetPanel">
+        <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest', 'due_soon', 'name_az'])" :title="__('promotion::menu.promotions')" :facets="$facetPanel">
             {{-- ⓘ চাবি না থাকলে বোতামটাই নেই — ক্লিক করে ৪০৩ দেখার চেয়ে ভালো --}}
             @can('promotion.create')
                 <x-slot:actions>

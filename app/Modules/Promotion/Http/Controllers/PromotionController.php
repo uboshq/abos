@@ -314,8 +314,8 @@ final class PromotionController extends Controller implements HasMiddleware
                     ->orWhere('name_en', 'like', $needle)
                     ->orWhere('name_bn', 'like', $needle));
             })
-            ->orderByDesc('starts_on')
-            ->orderByDesc('id')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['starts_on', 'desc'], 'oldest' => ['starts_on', 'asc'], 'due_soon' => ['ends_on', 'asc'], 'name_az' => ['name_en', 'asc']]))
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 

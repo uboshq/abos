@@ -109,7 +109,7 @@
                      আর বেশি বলে: প্রতিটায় ক্লিক করা যায়, পাশে সংখ্যা থাকে।
                      ⚠️ দুইটা একসাথে থাকলে একই মই পর্দায় দুইবার — মালিক ধূসর
                      লেখাটাকেই দাগিয়ে বলেছিলেন "এগুলো আলাদা ট্যাব হবে"। --}}
-                <x-ui.toolbar :title="__('master_data::menu.locations')"
+                <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['code', 'name_az', 'name_za', 'newest'])" :title="__('master_data::menu.locations')"
                 :columns="$columns" :facets="$facetPanel">
         <x-slot:actions>
             @can('master_data.manage')

@@ -61,8 +61,12 @@ class PurchaseContractController extends Controller implements HasMiddleware
                     ->orWhereHas('supplier', fn ($x) => $x->search($term))))
             ->with('supplier')
             ->withCount('lines')
-            ->orderByRaw("CASE WHEN status = '".DocumentStatus::CONFIRMED."' THEN 0 ELSE 1 END")
-            ->orderBy('ends_on');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম (চালু চুক্তি আগে, মেয়াদ শেষ আগে)
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, [
+                'due_soon' => [[\Illuminate\Support\Facades\DB::raw("CASE WHEN status = '".DocumentStatus::CONFIRMED."' THEN 0 ELSE 1 END"), 'asc'], ['ends_on', 'asc']],
+                'newest' => ['id', 'desc'],
+                'oldest' => ['id', 'asc'],
+            ]));
 
         // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
         $filters = \App\Core\ListFilter\Columns::set([
