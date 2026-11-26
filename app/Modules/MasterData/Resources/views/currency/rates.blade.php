@@ -5,9 +5,25 @@
     না — নতুন তারিখে নতুন সারি বসে, আর তাই গত মাসের বিলটা আজ খুললেও ওই
     মাসের হারেই দেখা যায়।
 --}}
+@php
+    $columns = [
+        ['key' => 'effective_from', 'label' => __('master_data::field.effective_from'), 'width' => '12rem',
+         'render' => fn ($r) => \App\Core\Support\DateFormat::format($r->effective_from)],
+        ['key' => 'rate', 'label' => __('master_data::field.exchange_rate'), 'numeric' => true, 'width' => '12rem',
+         'render' => fn ($r) => $r->rate],
+        ['key' => 'source', 'label' => __('master_data::field.rate_source'),
+         'render' => fn ($r) => $r->source ?? '—'],
+        ['key' => 'creator', 'label' => __('master_data::field.entered_by'), 'width' => '12rem',
+         'render' => fn ($r) => $r->creator?->name ?? '—'],
+    ];
+    // ⭐ এক সারির পুরো বার কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো — মাথা আগে, আজকের হার আর নতুন হারের ঘর তার নিচে
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([\App\Core\ListFilter\Facets::dates(__('master_data::field.effective_from'))]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ $currency->label() }}</x-slot:title>
 
+    @unless ($abosHead)
     <x-slot:header>
         <x-ui.page-header
             :title="__('master_data::menu.exchange_rates')"
@@ -19,6 +35,22 @@
             </x-slot:actions>
         </x-ui.page-header>
     </x-slot:header>
+    @endunless
+
+    <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
+    @if ($abosHead)
+        <div data-boxed class="mb-4 overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
+            <form id="list-form" method="GET" class="contents">
+                <x-ui.toolbar :title="__('master_data::menu.exchange_rates')" :count="$currency->label()"
+                              :search-placeholder="__('master_data::field.rate_source')" :facets="$facetPanel" :columns="$columns" :share="false"
+                              :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest')]">
+                    <x-slot:actions>
+                        <x-ui.button :href="route('master_data.currency.index')">{{ __('master_data::action.back_to_currencies') }}</x-ui.button>
+                    </x-slot:actions>
+                </x-ui.toolbar>
+            </form>
+        </div>
+    @endif
 
     @if (session('saved'))
         <div role="status"
@@ -124,18 +156,10 @@
         <x-ui.table
             :empty="__('master_data::message.no_rate_yet')"
             :rows="$rates"
-            :columns="[
-                ['key' => 'effective_from', 'label' => __('master_data::field.effective_from'), 'width' => '12rem',
-                 'render' => fn ($r) => \App\Core\Support\DateFormat::format($r->effective_from)],
-                ['key' => 'rate', 'label' => __('master_data::field.exchange_rate'), 'numeric' => true, 'width' => '12rem',
-                 'render' => fn ($r) => $r->rate],
-                ['key' => 'source', 'label' => __('master_data::field.rate_source'),
-                 'render' => fn ($r) => $r->source ?? '—'],
-                ['key' => 'creator', 'label' => __('master_data::field.entered_by'), 'width' => '12rem',
-                 'render' => fn ($r) => $r->creator?->name ?? '—'],
-            ]" />
+            :columns="$columns" />
 
         <x-ui.pager :rows="$rates" />
         <x-ui.list-totals :rows="$rates" />
     </div>
+    </x-ui.filter-layout>
 </x-layouts.app>
