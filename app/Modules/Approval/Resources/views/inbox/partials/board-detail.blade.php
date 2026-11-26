@@ -84,7 +84,7 @@
     $note = collect([$narration, $facts['about'] ?? null, $approval->requested_reason])->filter()->unique()->implode(' · ');
     // ⓘ নিশ্চিতকরণের ঘরগুলো যা উপরে আগেই বলা (পক্ষ, তারিখ, গুদাম …) তা আবার বলে না — [[sheet-body]] এটা পড়ে
     $boardSaid = collect($tiles)->merge($chips)->map(fn ($t) => strip_tags(html_entity_decode((string) $t[1])))->implode(' | ')
-        .' | '.$said.' | '.$paperDate.' | '.$note;
+        .' | '.$said.' | '.$paperDate.' | '.$note.' | '.($facts['branch'] ?? '');
     $notice = $approval->payload['supersedes'] ?? null
         ? ($was === null ? __('approval::message.supersedes_plain') : __('approval::message.supersedes', ['was' => '৳'.\App\Core\Support\Money::format($was)]))
         : ($changedSinceAsked ? __('approval::message.changed_since_asked') : null);
