@@ -1,0 +1,24 @@
+<?php
+
+return [
+    'no_imap' => 'Mail reading (IMAP) is not available on this server.',
+    'cannot_connect' => 'Could not sign in to the mail server — check the address and password. (:why)',
+    'personal_off' => 'Adding personal mail is off in this company.',
+    'personal_pending' => 'Waiting for approval — it turns on once approved.',
+    'added' => 'Mailbox added.',
+    'requested' => 'Approval requested — you will be told once it is decided.',
+    'approved' => 'Approved — the mailbox is on.',
+    'rejected' => 'Request declined.',
+    'turned_off' => 'Mailbox turned off — nothing was deleted.',
+    'sent' => 'Mail sent.',
+    'send_failed' => 'Could not send the mail: :why',
+    'server_error' => 'The mail server did not answer — try again in a moment.',
+    'linked' => 'Tied to the paper.',
+    'external' => 'This mail came from outside. If you do not know the sender, do not open attachments or move money.',
+    'images_blocked' => 'Outside images are blocked for safety.',
+    'show_images' => 'Show images',
+    'private_note' => 'Mail text is not stored in ABOS — it is shown from the server. Nobody can open another person\'s own mail.',
+    'empty_box' => 'No mail in this folder.',
+    'pick_mail' => 'Pick a mail on the left to read it.',
+    'no_accounts' => 'No mailbox yet — press "Add mailbox".',
+];
