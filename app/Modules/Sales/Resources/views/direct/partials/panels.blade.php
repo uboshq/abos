@@ -221,10 +221,10 @@
                 <input type="hidden" name="fare_when" value="{{ (string) old('fare_when', 'now') }}"
                        x-init="seedDriver($el, 'fareWhen')" :value="fareWhen">
 
-                <div class="mt-2 grid gap-2 sm:grid-cols-3" x-show="fareWhen === 'now'">
+                <div class="mt-2 grid gap-2 sm:grid-cols-3" x-show="fareWhen !== 'later'">
                     <label class="block">
                         <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::fare.account') }}</span>
-                        <select name="fare_account_id" x-model="fareAccount" :disabled="fareWhen !== 'now'"
+                        <select name="fare_account_id" x-model="fareAccount" :disabled="fareWhen === 'later'" @change="fareWhen = 'now'"
                                 class="h-(--spacing-field-compact) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs">
                             <option value="">{{ __('sales::fare.pick_account') }}</option>
                             <template x-for="a in moneyAccounts" :key="a.id">

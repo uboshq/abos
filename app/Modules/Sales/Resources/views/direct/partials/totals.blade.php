@@ -509,7 +509,7 @@
                             <div class="ds-tr">
                                 <span>{{ __('sales::field.det_vehicle') }}</span><span x-text="vehicleText || '—'"></span>
                                 <span>{{ __('sales::field.det_driver') }}</span><span x-text="driverText || '—'"></span>
-                                <span>{{ __('sales::field.det_carrier') }}</span><span x-text="carrierText || '—'"></span>
+                                <span x-show="carrierText">{{ __('sales::field.det_carrier') }}</span><span x-show="carrierText" x-text="carrierText"></span>
                             </div>
                             <div class="ds-fare">
                                 <span>{{ __('sales::field.det_fare') }}<i class="ds-who-pays" x-show="farePaidBy" x-text="farePayText"></i></span>
