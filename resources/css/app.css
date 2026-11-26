@@ -2809,6 +2809,8 @@ a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; te
 .inbox-board-fold > summary::-webkit-details-marker { display: none; }
 .inbox-board-fold > summary > .num { font-weight: 500; color: var(--color-ink-muted); font-size: 12.5px; }
 .inbox-board-fold:not([open]) { padding-block: 7px !important; }
+.inbox-board-box td, .inbox-board-box th { padding-block: 4px !important; }
+.inbox-board-box [data-sale-bundle] > .mt-4 { margin-top: 6px; }
 .inbox-board-actions [data-approval-decide] {
     border: 1.5px solid color-mix(in srgb, var(--k) 40%, transparent); border-radius: 12px;
     background: color-mix(in srgb, var(--k) 6%, var(--color-surface-card));

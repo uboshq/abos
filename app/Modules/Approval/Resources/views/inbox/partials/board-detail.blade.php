@@ -74,6 +74,8 @@
         __('accounts::field.instrument_no'), __('core.print.prepared_by'), __('core.table.narration')];
     foreach ($sheetFacts as $row) {
         if (! in_array($row['label'], $skip, true) && ! str_contains($said, (string) $row['value'])
+            // ⓘ "করিম ট্রেডার্স · Head Office" — পক্ষ মাথাতেই আছে
+            && ! (filled($partyName) && str_contains((string) $row['value'], (string) $partyName))
             // ⓘ "1106 — QA ব্যাংক" is the same account the where-tile already names
             && ! str_contains($said, trim((string) preg_replace('/^[\d.\-]+\s*—\s*/u', '', (string) $row['value'])))) {
             $chips[] = [$row['label'], e($row['value']), false];
@@ -81,7 +83,8 @@
     }
     $note = collect([$narration, $facts['about'] ?? null, $approval->requested_reason])->filter()->unique()->implode(' · ');
     // ⓘ নিশ্চিতকরণের ঘরগুলো যা উপরে আগেই বলা (পক্ষ, তারিখ, গুদাম …) তা আবার বলে না — [[sheet-body]] এটা পড়ে
-    $boardSaid = $said.' | '.$paperDate.' | '.$note;
+    $boardSaid = collect($tiles)->merge($chips)->map(fn ($t) => strip_tags(html_entity_decode((string) $t[1])))->implode(' | ')
+        .' | '.$said.' | '.$paperDate.' | '.$note;
     $notice = $approval->payload['supersedes'] ?? null
         ? ($was === null ? __('approval::message.supersedes_plain') : __('approval::message.supersedes', ['was' => '৳'.\App\Core\Support\Money::format($was)]))
         : ($changedSinceAsked ? __('approval::message.changed_since_asked') : null);
@@ -180,9 +183,9 @@
         {{-- ── the boxes ─────────────────────────────────────────────────── --}}
         <div class="inbox-board-boxes">
             @if ($bundle !== null)
-                <section class="inbox-board-box">@include('approval::inbox.partials.bundle', ['inBoard' => true, 'boardSaid' => $boardSaid])</section>
+                <section class="inbox-board-box">@include('approval::inbox.partials.bundle', ['inBoard' => true, 'boardSaid' => $boardSaid, 'boardParty' => (string) $partyName])</section>
             @elseif ($sheet !== null)
-                <section class="inbox-board-box">@include('approval::inbox.partials.sheet', ['boardSheet' => true, 'inBoard' => true, 'boardSaid' => $boardSaid])</section>
+                <section class="inbox-board-box">@include('approval::inbox.partials.sheet', ['boardSheet' => true, 'inBoard' => true, 'boardSaid' => $boardSaid, 'boardParty' => (string) $partyName])</section>
             @endif
 
             @if ($document instanceof \App\Core\Contracts\Drillable)

@@ -9,7 +9,9 @@
     $inBoard ??= false;
     $boardSaid ??= '';
     // ⓘ বোর্ডে — উপরে আগেই বলা কথা (পক্ষ, তারিখ, গুদাম) আবার নয় (মালিক, ২৬ নভেম্বর ২০২৬)
-    $fresh = fn ($value) => ! $inBoard || $boardSaid === '' || ! str_contains($boardSaid, trim((string) $value));
+    $boardParty ??= '';
+    $fresh = fn ($value) => ! $inBoard || (($boardSaid === '' || ! str_contains($boardSaid, trim((string) $value)))
+        && ($boardParty === '' || ! str_contains((string) $value, $boardParty)));
 @endphp
 @if ($inBoard && $sheet['facts'] !== [] && ! ($hideFacts ?? false))
     {{-- ⭐ বোর্ডে এক লাইনে নাম:অঙ্ক — বড় বড় বাক্স নয়, যাতে সব এক পর্দায় ধরে --}}
