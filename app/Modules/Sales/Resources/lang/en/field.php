@@ -161,6 +161,7 @@ return [
     'btn_transport' => 'Vehicle & fare',
     'btn_price' => 'Price check',
     'point_label' => 'Point',
+    'cost_short' => 'Cost price',
     'det_vehicle' => 'Vehicle',
     'det_driver' => 'Driver',
     'det_carrier' => 'Transport',

@@ -197,6 +197,7 @@ return [
     'btn_transport' => 'গাড়ি ও ভাড়া',
     'btn_price' => 'দাম দেখুন',
     'point_label' => 'পয়েন্ট',
+    'cost_short' => 'ক্রয়মূল্য',
     'det_vehicle' => 'গাড়ি',
     'det_driver' => 'চালক',
     'det_carrier' => 'পরিবহন',

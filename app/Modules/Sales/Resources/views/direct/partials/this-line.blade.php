@@ -114,7 +114,7 @@
      তাই "ঘর খালি করুন" লম্বা বলে সে বেশি জায়গা টেনে নেয় না।
      ⓘ কলামটা ১৪rem, তাই প্রতিটা বোতাম ≈৯০px — লম্বা লেখাটা
      দুই লাইনে ভাঁজ হয়, আর `leading-tight` তাতে উচ্চতা ধরে রাখে। --}}
-<div class="grid grid-cols-3 items-start gap-1">
+<div class="ds-tl-row grid grid-cols-3 items-start gap-1">
     {{-- ⭐ ABOS-এর রূপে উপহারের জায়গায় "দাম দেখুন" (F3) — উপহার এখন কার্টের আগে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
     @if (($abosLook ?? false))
         <button type="button" @click="openPanel('price')" data-counter-button="price" :class="panel === 'price' ? 'is-on' : ''"
@@ -149,7 +149,7 @@
     <button type="button" @click="showCosting = ! showCosting"
             class="ds-tl-cost w-full rounded-(--radius-field) leading-tight border border-(--color-border)
                    px-1 py-1.5 text-2xs font-medium">
-        {{ __('sales::field.costing') }}
+        {{ ($abosLook ?? false) ? __('sales::field.cost_short') : __('sales::field.costing') }}
     </button>
     @endcan
 

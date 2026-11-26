@@ -294,15 +294,15 @@
         form[data-abos-counter] .ds-head [data-customer-details] span.rounded-full { background: #fff !important; border-color: #fff !important;
             color: #0b6c7a !important; font-weight: 600; }
         form[data-abos-counter] .ds-head [data-customer-details] span.rounded-full * { color: #0b6c7a !important; }
-        form[data-abos-counter] .ds-row2 { display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: .75rem; align-items: start; }
+        form[data-abos-counter] .ds-row2 { display: grid; grid-template-columns: minmax(0, 1fr) 17.5rem; gap: .75rem; align-items: start; }
         form[data-abos-counter] .ds-row2-empty { grid-template-columns: minmax(0, 1fr); }
         form[data-abos-counter] .ds-row2-empty :is(.ds-rcpt, .ds-qtywrap, [data-stock-box]) { display: none !important; }
         form[data-abos-counter] .ds-pick-hint { display: none !important; }
         /* পণ্যের সারি আর তার উপরের মজুদের বাক্স — একই কলাম, সোজাসুজি (মালিক: "অ্যাভেলেবেল … পরিমাণ আর এককের ঘর পর্যন্ত") */
         form[data-abos-counter] .ds-qtyrow, form[data-abos-counter] .ds-stockrow {
-            grid-template-columns: repeat(4, minmax(0, 1fr)) 5.5rem 7rem auto auto auto !important; column-gap: .375rem; }
+            grid-template-columns: repeat(4, minmax(0, 1fr)) 5.5rem 7rem 6.2rem 6.6rem 7rem !important; column-gap: .375rem; }
         form[data-abos-counter] :is(.ds-qtyrow, .ds-stockrow).ds-nofree {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) 5.5rem 7rem auto auto auto !important; }
+            grid-template-columns: repeat(2, minmax(0, 1fr)) 5.5rem 7rem 6.2rem 6.6rem 7rem !important; }
         form[data-abos-counter] .ds-stockrow { display: grid; row-gap: .4rem; margin-top: .5rem; }
         form[data-abos-counter] .ds-sb { min-width: 0; border-radius: 12px; border: 1px solid var(--sb-ink); background: var(--sb-bg); padding: .3rem .6rem; color: var(--sb-ink); }
         form[data-abos-counter] .ds-sb-l { display: block; font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
@@ -324,8 +324,11 @@
         form[data-abos-counter] .ds-qtyrow label:has([data-total-qty]) > span:first-child { color: #c2410c; }
         form[data-abos-counter] .ds-qtyrow [data-price-source] { height: 2.6rem; border: 2px solid #6d28d9; }
         form[data-abos-counter] .ds-qtyrow label:has([data-price-source]) > span:first-child { color: #6d28d9; }
-        form[data-abos-counter] .ds-gift-btn { align-self: end; display: inline-flex; align-items: center; gap: .25rem; height: var(--spacing-field-dense);
-            white-space: nowrap; border-radius: var(--radius-field); border: 1px solid #f9a8d4; background: #fdf2f8; color: #be185d; padding: 0 .6rem; font-size: .75rem; font-weight: 700; }
+        form[data-abos-counter] .ds-gift-btn { align-self: end; display: inline-flex; align-items: center; justify-content: center; gap: .3rem; width: 100%; height: 2.6rem;
+            white-space: nowrap; border-radius: var(--radius-field); border: 1.5px solid #f472b6; background: #fdf2f8; color: #be185d; padding: 0 .5rem; font-size: .9rem; font-weight: 800; }
+        form[data-abos-counter] .ds-qtyrow > button[data-cart-button] { width: 100%; height: 2.6rem; justify-content: center; font-size: .9rem; font-weight: 800; }
+        form[data-abos-counter] .ds-qtyrow > [x-ref='chartEntry'] button { width: 100%; height: 2.6rem; font-size: .85rem; }
+        form[data-abos-counter] .ds-rcpt .ds-tl-row { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, .8fr) !important; }
         form[data-abos-counter] .ds-gift-btn:disabled { opacity: .45; }
         /* "এই লাইন"-এর তিন বোতাম — গাঢ় রঙে সাদা লেখা */
         form[data-abos-counter] .ds-rcpt .grid > button.ds-tl-price { background: #1e3a8a !important; color: #fff !important; font-weight: 700; }

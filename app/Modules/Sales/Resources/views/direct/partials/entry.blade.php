@@ -645,7 +645,7 @@
                                     🎁 {{ __('sales::field.gift') }}
                                 </button>
                             @endif
-                            <button type="button" @click="addToCart()" :disabled="! picked" x-show="! viewOnly"
+                            <button type="button" @click="addToCart()" :disabled="! picked" x-show="! viewOnly" data-cart-button
                                     class="inline-flex h-(--spacing-field-dense) items-center gap-1 self-end whitespace-nowrap
                                            rounded-(--radius-field) bg-(--color-success) px-3 text-xs font-semibold
                                            text-white disabled:opacity-50">
