@@ -240,14 +240,16 @@
                         {{-- ⭐ এক সারিতে সব ঘর, আর শেষে উপহার · কার্টে দিন · মুছুন — "এই লাইনে" বাক্স নেই (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9) --}}
                         {{-- ⭐ ছক, ভাঙে না — ঘর ছোট, এক লাইনে (মালিক, ২৬ নভেম্বর ২০২৬: "এত বড় বক্স না")। ⓘ কলাম সুইচ ধরে গোনা --}}
                         @php
-                            $cols = ['4.5rem', '5.5rem'];                                   // পরিমাণ, একক
-                            if ($show['free_qty']) { array_push($cols, '4rem', '5.5rem'); } // ফ্রি, ফ্রি-র একক
-                            array_push($cols, '4.5rem', '5.5rem', '4.5rem', '4.5rem', '5.5rem'); // মোট, ক্রয়দর, মার্কআপ, মার্জিন, বিক্রয়দর
-                            if ($show['line_discount']) { $cols[] = '5.5rem'; }
-                            if ($show['vat']) { $cols[] = '7rem'; }
-                            array_push($cols, '6.5rem', 'auto');                             // টাকা, বোতাম
+                            // ⓘ অনুপাতে (fr) — পর্দা যত চওড়াই হোক, সব ঘর আর তিন বোতাম এক লাইনে ধরে
+                            $fr = fn (float $n) => 'minmax(0,'.$n.'fr)';
+                            $cols = [$fr(1), $fr(1.25)];                                         // পরিমাণ, একক
+                            if ($show['free_qty']) { array_push($cols, $fr(0.9), $fr(1.25)); }   // ফ্রি, ফ্রি-র একক
+                            array_push($cols, $fr(0.9), $fr(1.2), $fr(0.9), $fr(0.9), $fr(1.2)); // মোট, ক্রয়দর, মার্কআপ, মার্জিন, বিক্রয়দর
+                            if ($show['line_discount']) { $cols[] = $fr(1.2); }
+                            if ($show['vat']) { $cols[] = $fr(1.5); }
+                            array_push($cols, $fr(1.3), 'auto');                                  // টাকা, বোতাম
                         @endphp
-                        <div class="grid items-end gap-1.5 overflow-x-auto [&>label]:min-w-0 [&>label>span]:truncate
+                        <div class="grid items-end gap-1.5 [&>label]:min-w-0 [&>label>span]:truncate
                                     [&_input]:px-1.5 [&_select]:px-1"
                              style="grid-template-columns: {{ implode(' ', $cols) }}">
                             <label class="block">
