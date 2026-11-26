@@ -17,6 +17,8 @@
 @import './fiori-look.css';
 /* ⭐ "ABOS" — নতুন ডিফল্ট রূপের নিজের খোলস (১৯ নভেম্বর ২০২৬); blue-look.css-এর উপর দাঁড়ায় না */
 @import './abos-look.css';
+/* ⭐ কাউন্টারের চেহারা — সরাসরি বিক্রয় আর কাউন্টার মোডের সারি (আগে পাতার <style>-এ; ২৬ নভেম্বর ২০২৬) */
+@import './counter-look.css';
 /* ⭐ হোমের গোটা-ব্যবসার বোর্ড — কেবল "ABOS"-এ, `[data-ui='rose']` (১৯ নভেম্বর ২০২৬) */
 @import './home-board.css';
 @import './viz-board.css';
