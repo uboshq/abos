@@ -57,7 +57,7 @@
                              পর খোঁজার ঘরটা সরু হয়ে নামটাকে জায়গা দেয়। --}}
                         {{-- ⓘ লম্বা নাম দুই লাইনে ভাঙে, পুরোটা দেখা যায়; তার বেশি হলে "…" আর মাউস রাখলে পুরো নাম (মালিক, ২৬ নভেম্বর ২০২৬) --}}
                         <div x-show="picked" x-cloak class="flex min-w-0 flex-1 items-center gap-2">
-                            <span class="line-clamp-2 min-w-0 text-xl font-semibold leading-tight" :title="(picked && picked.name)"
+                            <span class="line-clamp-2 min-w-0 py-0.5 text-lg font-semibold leading-normal" :title="(picked && picked.name)"
                                   x-text="(picked && picked.name)"></span>
                             <span x-show="(picked && picked.track_batch)" x-cloak
                                   class="ms-auto shrink-0 rounded-full bg-(--color-badge-warning-bg) px-2 text-2xs text-(--color-badge-warning-ink)">{{ __('purchase::lot.keeps_lot') }}</span>
@@ -171,20 +171,20 @@
                      ⓘ `x-if` — প্রতিটা পণ্য বাছায় ঘরগুলো নতুন করে বসে, তাই তারিখের ঘর আগের পণ্যের মেয়াদ ধরে রাখে না। --}}
                 <template x-if="picked && picked.track_batch">
                     <div data-lot-fields class="grid w-[42%] shrink-0 grid-cols-3 gap-2 rounded-(--radius-field)
-                                bg-(--color-badge-warning-bg) px-2 py-1.5">
+                                bg-(--color-badge-pending-bg) px-2 py-1.5">
                         <label class="block min-w-0">
-                            <span class="block truncate text-2xs text-(--color-badge-warning-ink)">{{ __('inventory::field.batch_no') }}</span>
+                            <span class="block truncate text-2xs text-(--color-badge-pending-ink)">{{ __('inventory::field.batch_no') }}</span>
                             <input type="text" maxlength="60" autocomplete="off" data-lot-field x-model="entry.batch_no"
                                    :placeholder="lotHint" @keydown.enter.prevent="lotNext($event)"
                                    class="h-9 w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                         </label>
                         <div class="min-w-0">
-                            <span class="block truncate text-2xs text-(--color-badge-warning-ink)">{{ __('inventory::field.expiry_date') }}</span>
+                            <span class="block truncate text-2xs text-(--color-badge-pending-ink)">{{ __('inventory::field.expiry_date') }}</span>
                             <x-ui.date dense name="entry_expiry_date" bind-iso="entry.expiry_date" bind-model="entry.expiry_date"
                                        data-lot-field x-on:keydown.enter.prevent="lotNext($event)" class="text-sm" />
                         </div>
                         <label class="block min-w-0">
-                            <span class="block truncate text-2xs text-(--color-badge-warning-ink)">{{ __('inventory::field.mrp') }}</span>
+                            <span class="block truncate text-2xs text-(--color-badge-pending-ink)">{{ __('inventory::field.mrp') }}</span>
                             <input type="number" step="0.01" min="0" inputmode="decimal" data-lot-field x-model="entry.mrp"
                                    @keydown.enter.prevent="lotNext($event)"
                                    class="num h-9 w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">

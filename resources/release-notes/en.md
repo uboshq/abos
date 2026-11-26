@@ -1,5 +1,9 @@
 # What's new
 
+## 1.3.18 — 26-11-2026
+
+- Direct purchase: the lot box is yellow as in the sample; thin, light lines between list rows; long product names no longer clip their letters.
+
 ## 1.3.17 — 26-11-2026
 
 - The two boxes at the top of direct purchase are smaller: the supplier's name one step smaller, no empty space above or below, smaller date text.

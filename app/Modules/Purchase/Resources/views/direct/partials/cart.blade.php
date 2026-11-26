@@ -3,7 +3,7 @@
                 {{-- ⭐ কেবল পণ্যের তালিকা নিজে সরে — বাকি সব ঘর জায়গায় থাকে (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9)।
                      ⓘ মাথার সারি আটকে থাকে (`sticky`), তাই নিচে নামলেও কলামের নাম চোখে থাকে। --}}
                 <div data-cart-scroll class="max-h-[calc(100dvh-29rem)] min-h-48 overflow-auto">
-                    <table class="ui-grid is-compact w-full text-sm">
+                    <table class="ui-grid is-compact w-full text-sm [&_tbody]:border-0">
                         {{-- ── কলামের ক্রম — মালিকের ছবির ক্রম ────────────────
 
                              ```
@@ -47,7 +47,8 @@
                             <template x-for="(line, index) in lines" :key="line.key">
                                 <tbody>
                                 {{-- ⓘ উপরে খোলা সারিটা রঙে আলাদা — কোনটা হালনাগাদ হবে, চোখে পড়ে --}}
-                                <tr class="border-t border-(--color-border)"
+                                {{-- ⓘ দাগ একটাই, চিকন আর হালকা — `.ui-grid tbody tr`-এর নিচের দাগই যথেষ্ট (মালিক, ২৬ নভেম্বর ২০২৬: "আরও চিকন") --}}
+                                <tr class="border-(--color-border)/50"
                                     :class="line.key === editingKey ? 'bg-(--color-badge-pending-bg)' : ''">
                                     <td class="num" x-text="index + 1"></td>
                                     <td>
