@@ -218,7 +218,10 @@ final class MailSignatures
         $photo = fn (int $w, int $h, string $radius = '10px', string $ring = '') => $hasPhoto
             ? '<img src="'.self::PHOTO.'" width="'.$w.'" height="'.$h.'" alt="" style="display:block;width:'.$w.'px;height:'.$h.'px;object-fit:cover;border-radius:'.$radius.';'.$ring.'">'
             : '<div style="width:'.$w.'px;height:'.$h.'px;border-radius:'.$radius.';background:'.$c1.';color:#fff;font:700 '.max(14, (int) ($w / 2.6)).'px/'.$h.'px Segoe UI,Arial,sans-serif;text-align:center;'.$ring.'">'.$e('initials').'</div>';
-        $logo = '<img src="'.self::LOGO.'" alt="'.$e('company').'" height="22" style="height:22px;vertical-align:middle;border:0">';
+        // ⓘ লোগো না থাকলে (বা SVG হলে) ছবির ঘরই বাদ — ফাঁকা src মানে ভাঙা ছবি; তখন শুধু কোম্পানির নাম
+        $logo = $this->logoBytes() !== null
+            ? '<img src="'.self::LOGO.'" alt="'.$e('company').'" height="22" style="height:22px;vertical-align:middle;border:0">'
+            : '';
         $brand = '<span style="font:800 15px Segoe UI,Arial,sans-serif;color:'.$c1.'">'.$e('company').'</span>';
         $mark = $logo.' '.$brand;
         $lines = fn (string $col = '') => '<div style="font-size:12px;line-height:1.6;color:#333">'
