@@ -30,10 +30,9 @@
              কলামের মাথায় একটা **ফাঁকা জায়গা** পড়ে থাকত — মালিক ছবিতে
              লাল দাগ দিয়ে ঠিক ওই ফাঁকাটাই দেখিয়েছেন। --}}
 
-            <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
+            {{-- ⭐ বিলের মোট — পুরো সবুজ (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9) --}}
+            <section data-boxed class="overflow-hidden rounded-(--radius-card) border-2 border-(--color-success)
                             bg-(--color-surface-card)">
-                <div class="h-0.5 w-full"
-                     style="background: linear-gradient(90deg, var(--color-success), var(--color-module-customer))"></div>
 
                 {{-- ── মাথার ব্যান্ড — নাম আর বড় অঙ্ক ────────────────────
 
@@ -41,18 +40,15 @@
                      ব্যান্ড, আর তাতে বড় করে মোট টাকা। ⓘ কার্ডটার বাকি সব
                      সারি ছোট হরফে — একটাই সংখ্যা বড়, আর সেটাই সেই সংখ্যা
                      যেটা নিয়ে সরবরাহকারীর সাথে কথা হয়। --}}
-                <div class="flex items-center justify-between gap-2 px-3 pt-2">
-                    <span class="text-2xs font-semibold tracking-wide text-(--color-ink-muted) uppercase">
-                        {{ __('purchase::field.bill_total') }}
-                    </span>
+                <div class="m-2 mb-0 flex items-center justify-between gap-2 rounded-(--radius-field) px-3 py-2.5
+                            text-(--color-ink-inverse)" style="background: var(--color-success)">
+                    <span class="text-sm font-semibold">{{ __('purchase::field.bill_total') }}</span>
 
                     {{-- ⭐ অঙ্কটা একটা নীল চিপের ভিতরে, ছবির মতো — গোটা
                          চওড়ায় ব্যান্ড নয়। ⓘ পার্থক্যটা ছোট মনে হয়, কিন্তু
                          ব্যান্ড পুরো কার্ডটাকে "শিরোনাম" বানিয়ে দেয়, আর
                          চিপ কেবল **সংখ্যাটাকে** আলাদা করে। --}}
-                    <span class="num rounded-(--radius-field) bg-(--color-badge-info-bg) px-2 py-1
-                                 text-lg font-bold text-(--color-badge-info-ink)">৳<span
-                          x-text="money(netPayable)"></span></span>
+                    <span class="num text-2xl font-bold">৳<span x-text="money(netPayable)"></span></span>
                 </div>
 
                 <div class="p-3">
@@ -77,7 +73,7 @@
                      বসে। --}}
                 <dl class="space-y-1 text-2xs">
                     <div class="flex justify-between">
-                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.sub_total_goods') }}</dt>
+                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.sub_total_goods') }}@if (app()->getLocale() !== 'en')<span class="font-normal text-(--color-ink-muted)"> · {{ __('purchase::field.sub_total_goods', [], 'en') }}</span>@endif</dt>
                         <dd class="num" x-text="money(subTotal)"></dd>
                     </div>
 
@@ -88,27 +84,21 @@
                          পর্দা ঠিক সেটাই কষে (`billShares`)। ⚠️ শতাংশে লিখলেও
                          সার্ভার নিজে কষে; পর্দার অঙ্ক কেবল আগে দেখানো। --}}
                     <div class="flex items-center justify-between gap-2">
-                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.bill_discount') }}</dt>
-                        <dd class="flex items-center gap-1">
-                            <select name="bill_discount_mode" x-model="billDiscountMode"
-                                    aria-label="{{ __('purchase::field.bill_discount') }}"
-                                    class="h-(--spacing-field-dense) rounded-(--radius-field) border
-                                           border-(--color-border) bg-(--color-surface-card) px-1 text-2xs">
-                                <option value="amount">{{ __('purchase::field.bill_discount_amount') }}</option>
-                                <option value="percent">{{ __('purchase::field.bill_discount_percent') }}</option>
-                            </select>
-                            <input type="number" step="0.01" min="0" inputmode="decimal"
-                                   name="bill_discount" x-model="billDiscount"
+                        <dt class="shrink-0 text-(--color-ink-muted)">{{ __('purchase::field.bill_discount') }}</dt>
+                        {{-- ⭐ বিক্রয়ের মতো এক ঘর — "500" টাকা, "2%" শতাংশ; পাশে টাকার অঙ্ক (মালিক, ২৬ নভেম্বর ২০২৬)।
+                             ⓘ সার্ভারে আগের দুই ঘরই যায় (`bill_discount` + `bill_discount_mode`) — [[readBillDiscount()]] ভাঙে --}}
+                        <dd class="flex min-w-0 flex-1 items-center gap-2">
+                            <input type="text" inputmode="decimal" x-model="billDiscountText" @input="readBillDiscount()"
+                                   placeholder="{{ __('purchase::field.bill_discount_hint') }}"
                                    aria-label="{{ __('purchase::field.bill_discount') }}"
-                                   class="num h-(--spacing-field-dense) w-24 rounded-(--radius-field)
-                                          border border-(--color-border) bg-(--color-surface-card)
-                                          px-2 text-end text-2xs">
+                                   class="num h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border-2 border-(--color-border)
+                                          bg-(--color-surface-card) px-2 text-end text-sm font-semibold">
+                            <span class="num ms-auto shrink-0 text-end"
+                                  :class="billDiscountTooBig ? 'text-(--color-danger)' : ''"
+                                  x-text="money(billDiscountAmount)"></span>
+                            <input type="hidden" name="bill_discount" :value="billDiscount">
+                            <input type="hidden" name="bill_discount_mode" :value="billDiscountMode">
                         </dd>
-                    </div>
-                    <div x-show="billDiscountAmount > 0" x-cloak class="flex justify-between">
-                        <dt class="text-(--color-ink-muted)"></dt>
-                        <dd class="num" :class="billDiscountTooBig ? 'text-(--color-danger)' : ''"
-                            x-text="'− ' + money(billDiscountAmount)"></dd>
                     </div>
                     @error('bill_discount')
                         <p class="text-end text-2xs text-(--color-danger)">{{ $message }}</p>
@@ -161,7 +151,7 @@
                          ⓘ চারটার তিনটা থাকলে সংখ্যাটা ভুল — তাই চারটাই
                          একসাথে, নয়তো একটাও নয়। --}}
                     <div class="flex justify-between border-t border-(--color-border) pt-1.5 font-semibold">
-                        <dt>{{ __('purchase::field.net_payable') }}</dt>
+                        <dt><span>{{ __('purchase::field.net_payable') }}</span>@if (app()->getLocale() !== 'en')<span class="font-normal text-(--color-ink-muted)"> · {{ __('purchase::field.net_payable', [], 'en') }}</span>@endif</dt>
                         <dd class="num" x-text="money(netPayable)"></dd>
                     </div>
 
@@ -170,7 +160,7 @@
                          "জমা" প্যানেলে, কিন্তু **যোগফলটা এখানে**, কারণ
                          বকেয়ার অঙ্কটা এটা বাদ দিয়েই দাঁড়ায়। --}}
                     <div class="flex justify-between">
-                        <dt class="text-(--color-ink-muted)">{{ __('purchase::field.paid_total') }}</dt>
+                        <dt class="text-(--color-ink-muted)"><span>{{ __('purchase::field.paid_total') }}</span>@if (app()->getLocale() !== 'en')<span class="font-normal text-(--color-ink-muted)"> · {{ __('purchase::field.paid_total', [], 'en') }}</span>@endif</dt>
                         <dd class="num" x-text="paidTotal ? money(paidTotal) : '—'"></dd>
                     </div>
 
@@ -188,8 +178,8 @@
                          ছয় মাসের জমা দেনা। ⓘ দুইজন মানুষ দুইটা অর্থ করতেন,
                          আর দরাদরির টেবিলে ওই ভুলের দাম টাকা। --}}
                     <div class="flex justify-between font-semibold">
-                        <dt>{{ __('purchase::field.invoice_due') }}</dt>
-                        <dd class="num" x-text="money(invoiceDue)"></dd>
+                        <dt><span>{{ __('purchase::field.invoice_due') }}</span>@if (app()->getLocale() !== 'en')<span class="font-normal text-(--color-ink-muted)"> · {{ __('purchase::field.invoice_due', [], 'en') }}</span>@endif</dt>
+                        <dd class="num" :class="invoiceDue > 0 ? 'text-(--color-danger)' : ''" x-text="money(invoiceDue)"></dd>
                     </div>
 
                     {{-- ⚠️ লেবেলটা বদলায় — অগ্রিম আর বকেয়া এক জিনিস নয়।
@@ -212,10 +202,13 @@
                      সাথে নয়। ⓘ কারণটা পড়ার: এটাই সেই সংখ্যা যা নিয়ে
                      মানুষটা কাল আবার ফোন করবেন, তাই ওটাকে বাকি সারিগুলোর
                      ভিড় থেকে আলাদা করে রাখা হয়েছে। --}}
-                <div class="mt-2 flex items-center justify-between rounded-(--radius-field)
-                            bg-(--color-surface-sunken) px-2 py-1.5 text-2xs">
-                    <span class="font-medium">{{ __('purchase::field.total_due') }}</span>
-                    <span class="num font-semibold" x-text="money(totalDue)"></span>
+                {{-- ⭐ মোট বকেয়া — সরবরাহকারী আমাদের কাছে পায় হলে লাল, আমরা তাঁর কাছে পাই (অগ্রিম) হলে সবুজ (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+                <div class="mt-2 flex items-center justify-between rounded-(--radius-field) px-2 py-1.5 text-2xs"
+                     :class="totalDue > 0
+                         ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)'
+                         : (totalDue < 0 ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' : 'bg-(--color-surface-sunken)')">
+                    <span class="font-medium"><span>{{ __('purchase::field.total_due') }}</span>@if (app()->getLocale() !== 'en')<span class="font-normal text-(--color-ink-muted)"> · {{ __('purchase::field.total_due', [], 'en') }}</span>@endif</span>
+                    <span class="num text-sm font-bold" x-text="money($abs(totalDue))"></span>
                 </div>
                 </div>
 
@@ -251,8 +244,9 @@
                  *"কতটা ফ্রি পেলাম"* দুইটা প্রশ্নের একটাই উত্তর ছিল, অথচ
                  দ্বিতীয়টাই ক্রয়ের আসল দর ঠিক করে। ⓘ ছবিতে চারটা সারি,
                  আর চারটাই আলাদা প্রশ্ন। --}}
-            <section data-boxed class="rounded-(--radius-card) border border-(--color-border)
-                            bg-(--color-surface-card) px-3 py-2 text-2xs text-(--color-ink-muted)">
+            {{-- ⭐ পণ্যের সারাংশ — হাইলাইট রঙে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+            <section data-boxed class="rounded-(--radius-card) border-2 border-(--color-badge-info-ink)/30
+                            bg-(--color-badge-info-bg) px-3 py-2 text-2xs text-(--color-badge-info-ink)">
                 <div class="flex justify-between">
                     <span>{{ __('purchase::field.total_item') }}</span>
                     <span class="num" x-text="lines.length"></span>
@@ -268,6 +262,14 @@
                 <div class="mt-1 flex justify-between border-t border-(--color-border) pt-1">
                     <span>{{ __('purchase::field.total_free_plus_bought') }}</span>
                     <span class="num" x-text="qty(totalQty)"></span>
+                </div>
+                {{-- ⭐ আনলোডিং বিল — পপআপে বসানোর পরে এখানে (মালিক, ২৬ নভেম্বর ২০২৬); বাছা না হলে লাল, চাপলে পপআপ খোলে --}}
+                <div class="mt-1 flex items-center justify-between gap-2 border-t border-(--color-border) pt-1 text-(--color-ink)">
+                    <span>{{ __('purchase::field.unload_owed') }}</span>
+                    <button type="button" @click="openUnloading()" data-unload-summary
+                            class="num text-end font-semibold hover:underline"
+                            :class="unloadMode === '' ? 'text-(--color-danger)' : ''"
+                            x-text="unloadSummary"></button>
                 </div>
             </section>
 
@@ -298,11 +300,12 @@
                     {{ __('purchase::action.add_deposit_panel') }}
                 </button>
 
-                <button type="button" @click="openNote()" :aria-expanded="noteOpen"
+                {{-- ⭐ "মন্তব্য"-র জায়গায় "আনলোডিং বিল" — মালিক, ২৬ নভেম্বর ২০২৬: "মন্তব্য দেওয়ার দরকার নাই" --}}
+                <button type="button" @click="openUnloading()" :aria-expanded="unloadOpen" data-open-unloading
                         class="rounded-(--radius-field) px-1 py-2 text-2xs leading-tight font-medium
                                text-(--color-ink-inverse)"
                         style="background: var(--color-info)">
-                    {{ __('purchase::action.add_note') }}
+                    {{ __('purchase::field.unloading_bill') }}
                 </button>
 
                 {{-- ⛔ "Chart Entry" আর "শিপমেন্ট" — দুইটা বোতামই মালিকের
@@ -336,6 +339,21 @@
                  মুহূর্তে চোখ বোতামেই থাকে, উপরের ছকে নয়। ⚠️ অঙ্কটা
                  বোতামে না থাকলে মানুষটাকে চোখ সরিয়ে মেলাতে হত, আর
                  বেশিরভাগ দিন সেটা করা হত না। --}}
+            {{-- ⭐ পাঠানো কেন থামল, আর সার্ভারের ভুল — বোতামের ঠিক উপরে, চোখ যেখানে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+            <div x-show="stopped !== ''" x-cloak role="alert" data-stopped
+                 class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-xs text-(--color-badge-danger-ink)"
+                 x-text="stopped"></div>
+            @if ($errors->any())
+                <div role="alert" data-form-errors
+                     class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-xs text-(--color-badge-danger-ink)">
+                    <ul class="list-inside list-disc space-y-0.5">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <x-ui.button type="submit" tone="primary" class="w-full" data-overview-trigger
                          ::class="(busy || lines.length === 0) && 'pointer-events-none opacity-50'">
                 {{ __('purchase::action.receive_goods') }} ·

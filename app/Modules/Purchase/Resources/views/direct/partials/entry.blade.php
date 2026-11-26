@@ -25,8 +25,10 @@
                      ⚠️ বোতামটা সাজসজ্জা নয় — চাপলে কার্সর ঘরে ফেরে।
                      কাউন্টারে মাউস ধরাই যায় না, তাই ঘরটায় ফেরার একটা বড়
                      লক্ষ্য থাকা দরকার। --}}
+                {{-- ⭐ খোঁজার ঘর মোটা, ভিতরে ধূসর লেখা "এখানে পণ্য খুঁজুন" — উপরে "পণ্য" লেবেল নেই (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9) --}}
                 <div class="relative">
-                    <div class="flex items-center gap-2">
+                    <div class="flex min-h-14 items-center gap-2 rounded-(--radius-field) border-2 border-(--color-brand-500)
+                                bg-(--color-surface-card) px-2 py-1">
                         {{-- ⓘ চিহ্নটা এখন কেবল ফোকাস করে না, **তালিকাও খোলে**।
                              ⛔ আগে চাপলে কিছুই হত না, কারণ খালি লেখায় তালিকা
                              খালি থাকত — মালিক: *"product sarch icon o kaj kore
@@ -52,8 +54,10 @@
                              ⭐ এখন একই সারিতে: বাঁয়ে খোঁজার ঘর, ডানে যেটা বাছা
                              হয়েছে তার নাম · মজুদ · গতবারের দর। ⓘ পণ্য বাছার
                              পর খোঁজার ঘরটা সরু হয়ে নামটাকে জায়গা দেয়। --}}
-                        <div x-show="picked" x-cloak class="flex min-w-0 shrink items-baseline gap-x-4">
-                            <span class="font-semibold" x-text="(picked && picked.name)"></span>
+                        {{-- ⓘ লম্বা নাম দুই লাইনে ভাঙে, পুরোটা দেখা যায়; তার বেশি হলে "…" আর মাউস রাখলে পুরো নাম (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+                        <div x-show="picked" x-cloak class="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-4">
+                            <span class="line-clamp-2 text-xl font-semibold leading-tight" :title="(picked && picked.name)"
+                                  x-text="(picked && picked.name)"></span>
                             <span class="text-2xs text-(--color-ink-muted)" x-show="picked" x-cloak>
                                 {{ __('purchase::message.on_hand') }}:
                                 <span class="num" x-text="qty((picked && picked.on_hand))"></span>
@@ -94,27 +98,10 @@
                                @keydown.escape="browsing = false"
                                @keydown.enter.prevent="pickFirst()"
                                :placeholder="supplierId ? @js(__('purchase::message.search_product')) : @js(__('purchase::message.pick_supplier_first'))"
-                               class="h-(--spacing-command) min-w-0 flex-1 border-0 bg-transparent px-1
-                                      text-lg text-(--color-ink) placeholder:text-(--color-ink-placeholder)
+                               class="h-12 min-w-0 flex-1 border-0 bg-transparent px-1
+                                      text-xl text-(--color-ink) placeholder:text-(--color-ink-placeholder)
                                       focus:outline-none">
 
-                        {{-- ── ছবির ছোট লাইনটা — সারির **ডান প্রান্তে** ──────
-
-                             মালিক (৬ সেপ্টেম্বর ২০২৬): *"Pick an item to see
-                             what is already in stock — lika dane mark kora
-                             box er jaygay rako"*।
-
-                             ⛔ আগে লাইনটা খোঁজার ঘরের **নিচে** বসত, আর একটা
-                             গোটা সারির উচ্চতা নিত — অথচ ঘরটার ডান পাশে
-                             অর্ধেক প্রস্থ খালি পড়ে থাকত।
-
-                             ⓘ `ms-auto` — সে ডান কিনারায় সরে যায়। ⚠️ আর
-                             পণ্য বাছার সাথে সাথেই মিলিয়ে যায়, কারণ তখন ঐ
-                             জায়গাটা পণ্যের নাম নেয়। --}}
-                        <span x-show="! picked" x-cloak
-                              class="ms-auto hidden truncate text-2xs text-(--color-module-purchase) sm:block">
-                            {{ __('purchase::message.pick_item_hint') }}
-                        </span>
                     </div>
 
                     {{-- ⭐ ক্রয়দর বদলেছে — প্রশ্ন, বদল নয়।
@@ -220,7 +207,8 @@
 
                              ⛔ সরু পর্দায় নয়টা এক সারিতে চাপালে প্রতিটা ঘর
                              আঙুলের চেয়ে ছোট হত — তাই `lg`-র নিচে তিনটা করে। --}}
-                        <div class="grid gap-2 sm:grid-cols-3 lg:grid-cols-9
+                        {{-- ⭐ এক সারিতে সব ঘর, আর শেষে উপহার · কার্টে দিন · মুছুন — "এই লাইনে" বাক্স নেই (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9) --}}
+                        <div class="flex flex-wrap items-end gap-2 [&>label]:min-w-[5.5rem] [&>label]:flex-1
                                     [&>label>span]:truncate">
                             <label class="block">
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">
@@ -365,7 +353,81 @@
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
                                               disabled:opacity-50">
                             </label>
+
+                            @if ($show['line_discount'])
+                                {{-- ⓘ সারির ছাড় — টাকা বা শতাংশ, সংরক্ষণ টাকায় (আগে "এই লাইনে" বাক্সে ছিল) --}}
+                                <label class="block">
+                                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('purchase::field.discount_on_line') }}</span>
+                                    <span class="flex gap-1">
+                                        <input type="number" step="0.01" inputmode="decimal" x-model="entry.discount" :disabled="! picked"
+                                               class="num h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border
+                                                      border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm disabled:opacity-50">
+                                        <button type="button" @click="toggleDiscountMode()" :aria-pressed="entry.discount_mode === 'percent'"
+                                                class="h-(--spacing-field) w-7 shrink-0 rounded-(--radius-field) border border-(--color-border)
+                                                       text-center font-medium hover:bg-(--color-surface-hover)"
+                                                x-text="entry.discount_mode === 'percent' ? '%' : '৳'">৳</button>
+                                    </span>
+                                </label>
+                            @endif
+
+                            @if ($show['vat'])
+                                <label class="block">
+                                    <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('purchase::field.vat_mode') }}</span>
+                                    <span class="flex gap-1">
+                                        <select x-model="entry.vat_mode" :disabled="! picked"
+                                                class="h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border)
+                                                       bg-(--color-surface-card) px-1 text-sm disabled:opacity-50">
+                                            <option value="product">{{ __('purchase::field.vat_mode_product') }}</option>
+                                            <option value="amount">{{ __('purchase::field.vat_mode_amount') }}</option>
+                                            <option value="none">{{ __('purchase::field.vat_mode_none') }}</option>
+                                        </select>
+                                        <input type="number" step="0.01" inputmode="decimal" x-model="entry.tax"
+                                               x-show="entry.vat_mode === 'amount'" x-cloak aria-label="{{ __('purchase::field.tax') }}"
+                                               class="num h-(--spacing-field) w-16 rounded-(--radius-field) border border-(--color-border)
+                                                      bg-(--color-surface-card) px-1 text-end text-sm">
+                                    </span>
+                                </label>
+                            @endif
+
+                            {{-- ⓘ এই সারির টাকা — ছাড় ও ভ্যাটসহ নেট (আগে "এই লাইনে" বাক্সের বড় অঙ্ক) --}}
+                            <label class="block">
+                                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('purchase::field.amount') }}</span>
+                                <div class="num flex h-(--spacing-field) items-center justify-end rounded-(--radius-field)
+                                            bg-(--color-surface-sunken) px-2 text-sm font-semibold"
+                                     x-text="money(entryNet)"></div>
+                            </label>
+
+                            <div class="flex shrink-0 items-end gap-1">
+                                {{-- ⓘ উপহার — পণ্যটা কার্টে বসিয়ে তার ঠিক নিচে উপহারের সারি খোলে, বিক্রয়ের মতো ([[giftForThisLine()]]) --}}
+                                <button type="button" @click="giftForThisLine()" :disabled="! picked"
+                                        class="h-(--spacing-field) rounded-(--radius-field) border px-3 text-sm font-semibold disabled:opacity-40"
+                                        style="border-color: var(--color-module-purchase); color: var(--color-module-purchase);
+                                               background: var(--color-badge-warning-bg)">
+                                    {{ __('purchase::action.gift_short') }}
+                                </button>
+
+                                <button type="button" @click="addToCart()" :disabled="! picked"
+                                        class="h-(--spacing-field) rounded-(--radius-field) bg-(--color-success) px-4 text-sm font-semibold
+                                               text-(--color-ink-inverse) hover:bg-(--color-success-hover) disabled:opacity-40">
+                                    {{-- ⓘ কার্টের সারি উপরে খোলা থাকলে "হালনাগাদ করুন" — নতুন সারি নয়, সেটাই বদলায় --}}
+                                    <span x-show="editingKey === null">＋ {{ __('purchase::action.add_to_cart') }}</span>
+                                    <span x-show="editingKey !== null" x-cloak data-update-line>{{ __('purchase::action.update_line') }}</span>
+                                </button>
+
+                                <button type="button" @click="clearEntry()"
+                                        class="h-(--spacing-field) rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 text-sm font-semibold
+                                               text-(--color-badge-danger-ink) hover:bg-(--color-surface-hover)">
+                                    {{ __('purchase::action.clear_data') }}
+                                </button>
+                            </div>
                         </div>
+
+                        @if ($show['line_discount'])
+                            <p x-show="discountOverLine" x-cloak
+                               class="mt-2 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-1.5 text-xs text-(--color-badge-danger-ink)">
+                                {{ __('purchase::message.discount_over_line_screen') }}
+                            </p>
+                        @endif
 
                         {{-- ⛔ কার্টে না ঢোকার কারণ — দর ০ বা বিক্রয়দর ছাড়া (মালিক, ৩ অক্টোবর ২০২৬) --}}
                         <p x-show="entryError !== ''" x-cloak role="alert" data-entry-error x-text="entryError"

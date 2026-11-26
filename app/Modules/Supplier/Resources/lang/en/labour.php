@@ -36,6 +36,19 @@ return [
     'loading_already' => 'Loading is already written on this challan — it is not booked twice.',
 
     // ⛔ walls
+    'split_how' => 'How was it billed?',
+    'split_whole' => 'One amount for the lorry',
+    'split_product' => 'By product',
+    'who_pays' => 'Who pays / paid',
+    'whole_amount' => 'Unloading amount for the whole lorry',
+    'same_rate' => 'Same rate on every product',
+    'apply_all' => 'Put on all',
+    'same_rate_hint' => 'then change only the ones that differ',
+    'rate_short' => 'Rate per carton',
+    'put_on_bill' => 'OK — put it on the bill',
+    'new_contractor' => 'New contractor',
+    'split_by_carton' => 'Split by carton',
+
     'pick_one' => 'Choose how the labour was paid: cash now, due to a contractor, paid by the supplier, or not needed.',
     'needs_reason' => 'Write a short reason why it was not needed.',
     'needs_amount' => 'Write the amount paid (more than zero).',

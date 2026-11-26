@@ -1,6 +1,8 @@
             <section data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card)">
-                <div class="overflow-x-auto">
+                {{-- ⭐ কেবল পণ্যের তালিকা নিজে সরে — বাকি সব ঘর জায়গায় থাকে (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9)।
+                     ⓘ মাথার সারি আটকে থাকে (`sticky`), তাই নিচে নামলেও কলামের নাম চোখে থাকে। --}}
+                <div data-cart-scroll class="max-h-[calc(100dvh-26rem)] min-h-48 overflow-auto">
                     <table class="ui-grid is-compact w-full text-sm">
                         {{-- ── কলামের ক্রম — মালিকের ছবির ক্রম ────────────────
 
@@ -17,7 +19,7 @@
                              আর "এই লাইনে" ছকে ছাড় লেখা যায়। ⛔ কলাম না থাকলে
                              সারিটা কার্টে যাওয়ার পর ছাড়টা আর দেখাই যেত না,
                              বদলানো তো দূরের কথা। --}}
-                        <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
+                        <thead class="sticky top-0 z-10 bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
                             <tr>
                                 <th class="text-start">{{ __('core.table.serial') }}</th>
                                 <th class="text-start">{{ __('purchase::field.product') }}</th>
@@ -39,14 +41,16 @@
                             </tr>
                         </thead>
 
-                        <tbody>
+                        {{-- ⭐ প্রতিটা পণ্য নিজের `<tbody>`-তে — তার উপহার ঠিক তার নিচেই (বিক্রয়ের কার্টের মতো; মালিক, ২৬ নভেম্বর ২০২৬)।
+                             ⓘ আগে সব উপহার তালিকার শেষে একসাথে বসত, আর কোনটা কার সাথে তা চোখে মেলাতে হত। --}}
                             <template x-for="(line, index) in lines" :key="line.key">
+                                <tbody>
                                 {{-- ⓘ উপরে খোলা সারিটা রঙে আলাদা — কোনটা হালনাগাদ হবে, চোখে পড়ে --}}
                                 <tr class="border-t border-(--color-border)"
                                     :class="line.key === editingKey ? 'bg-(--color-badge-pending-bg)' : ''">
                                     <td class="num" x-text="index + 1"></td>
                                     <td>
-                                        <span :id="'dc-' + index + '-product'" x-text="line.name"></span>
+                                        <span :id="'dc-' + index + '-product'" class="whitespace-normal break-words" x-text="line.name"></span>
                                         <input type="hidden" :name="'lines[' + (index) + '][product_id]'" :value="line.id">
                                         <input type="hidden" :name="'lines[' + (index) + '][sales_price]'"
                                                :value="line.sales_price">
@@ -156,17 +160,9 @@
                                             </span>
                                         </template>
 
-                                        {{-- ⭐ হাতে বসানো আনলোডিং দর, কার্টনপ্রতি — মালিক, ১৮ নভেম্বর ২০২৬ ("ওকে"; [[UnloadingSplit]])।
-                                             ⓘ খালি = পণ্যের নিজের দর বা সমান ভাগ। পণ্যের ঘরের ভিতরেই — নতুন কলাম নয় (উপরের লটের একই কারণ)। --}}
-                                        <label class="mt-1 block" data-unload-rate>
-                                            <input type="number" step="0.01" min="0" inputmode="decimal"
-                                                   :name="'lines[' + (index) + '][unload_rate]'" x-model="line.unload_rate"
-                                                   placeholder="{{ __('supplier::labour.hand_rate_short') }}"
-                                                   title="{{ __('supplier::labour.hand_rate') }}"
-                                                   aria-label="{{ __('supplier::labour.hand_rate') }}"
-                                                   class="num h-(--spacing-field-dense) w-20 rounded-(--radius-field) border
-                                                          border-(--color-border) bg-(--color-surface-card) px-1 text-end text-xs">
-                                        </label>
+                                        {{-- ⭐ হাতে বসানো আনলোডিং দর, কার্টনপ্রতি — এখন "আনলোডিং বিল" পপআপে, "পণ্য ধরে" বাছলে (মালিক, ২৬ নভেম্বর ২০২৬)।
+                                             ⓘ "পুরো চালানে একটা" হলে খালি যায় — তখন সার্ভার পণ্যের নিজের দর বা সমান ভাগ ধরে ([[UnloadingSplit]])। --}}
+                                        <input type="hidden" data-unload-rate :name="'lines[' + (index) + '][unload_rate]'" :value="unloadRateOf(line)">
                                     </td>
                                     {{-- ── ⛔ কার্টে লেখার ঘর নেই — মালিক, ৩ অক্টোবর ২০২৬ ──────────────
                                          দর, পরিমাণ, ফ্রি আর ছাড় কেবল দেখা যায়; বদলাতে ✎ — সারিটা উপরের বাক্সে
@@ -279,7 +275,6 @@
                                         </div>
                                     </td>
                                 </tr>
-                            </template>
 
                             {{-- ── উপহারের সারিগুলো ─────────────────────────────
 
@@ -293,7 +288,6 @@
                                  সংখ্যা নয় — মাঝখানের একটা সারি মুছে দিলে ক্রমিক
                                  সংখ্যাগুলো পিছিয়ে যেত আর দুইটা উপহার একই নামে
                                  জমা পড়ত। --}}
-                            <template x-for="line in lines" :key="'g' + (line.key)">
                                 <template x-for="(gift, gi) in line.gifts" :key="gift.key">
                                     <tr class="bg-(--color-surface-sunken)/50">
                                         <td></td>
@@ -419,8 +413,10 @@
                                         </td>
                                     </tr>
                                 </template>
+                                </tbody>
                             </template>
 
+                        <tbody>
                             <tr x-show="lines.length === 0" x-cloak>
                                 <td colspan="{{ 8
                                         + ($show['free_qty'] ? 1 : 0)

@@ -83,10 +83,10 @@ return [
     // in direct/index.blade). The words stay so the work returns whole.
     'expense' => 'Expense',
     'rounding' => 'Rounding',
-    'invoice_due' => 'Invoice Due',
-    'previous_due' => 'Previous Due',
+    'invoice_due' => 'Balance due',
+    'previous_due' => 'Previous balance',
     'previous_advance' => 'Previous Credit',
-    'total_due' => 'DUE',
+    'total_due' => 'Total outstanding',
     'total_item' => 'Total items',
     'total_qty' => 'Total qty',
 
@@ -193,6 +193,13 @@ return [
     'free_unit' => 'Free unit',
     'line_qty_total' => 'Total qty.',
     'this_line' => 'This line',
+    'unloading_bill' => 'Unloading bill',
+    'unload_owed' => 'Unloading · owed to labour',
+    'credit_limit' => 'Credit limit',
+    'no_limit' => 'No limit',
+    'can_bill_more' => 'Can still bill',
+    'over_limit' => 'Over the limit by',
+    'bill_discount_hint' => 'Tk or %',
     'total_amount' => 'Total amount',
     /*
      * Just "Discount" — the owner's word, 6 September 2026.
@@ -291,7 +298,7 @@ return [
      * until it is answered.
      */
     'paid_how' => 'How was it paid',
-    'paid_total' => 'Paid now',
+    'paid_total' => 'Amount paid',
     'reference' => 'Cheque / transaction no.',
 
     /*

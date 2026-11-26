@@ -288,6 +288,8 @@ class DirectPurchaseController extends Controller implements HasMiddleware
             'labourTills' => app(LabourCost::class)->cashTills(),
             'labourContractors' => app(LabourCost::class)->contractors(),
             'unloadRate' => UnloadingSplit::rate(),
+            // ⓘ "＋ নতুন ঠিকাদার" — সেবাদাতার ফর্ম, নতুন ট্যাবে (হাম্মালি ঠিকাদার = সেবাদাতা, ধরন LABOUR)
+            'newContractorUrl' => route('supplier.create', ['kind' => 'service']),
         ]);
     }
 
@@ -429,6 +431,15 @@ class DirectPurchaseController extends Controller implements HasMiddleware
              * ⓘ ঋণাত্মক মানে অগ্রিম — পর্দা লেবেলটাই বদলে দেয়।
              */
             'due' => (float) $supplier->payable(),
+
+            /*
+             * ⭐ ক্রেডিট লিমিট আর "আর কত টাকার বিল করা যাবে" — সরবরাহকারীর ঘরে (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v8)।
+             * ⓘ ঘর = লিমিট − (দেনা + বিল-না-আসা মাল), [[Supplier::isOverTheirLimit()]]-এর একই মাপ; লিমিট শূন্য = সীমা নেই।
+             */
+            'limit' => (float) $supplier->credit_limit,
+            'room' => bccomp((string) $supplier->credit_limit, '0', 4) === 0
+                ? null
+                : (float) bcsub((string) $supplier->credit_limit, bcadd($supplier->payable(), $supplier->goodsNotBilled(), 4), 4),
         ]);
     }
 
@@ -474,9 +485,15 @@ class DirectPurchaseController extends Controller implements HasMiddleware
          * ⛔ "গতবারের লট" (`last_lot`) আর যায় না — ৫ অক্টোবর ২০২৬ থেকে
          * খালি লটে নতুন নম্বর বসে ([[PurchaseLots]], মালিকের আদেশ)।
          */
+        $cartons = UnloadingSplit::cartonFactors($this->products());
+
         return $this->products()
             ->map(fn (Product $p) => $this->purchases->stockPanel($p, $warehouse) + [
                 'track_batch' => (bool) $p->track_batch,
+                /* ⭐ আনলোডিং পপআপের জন্য (মালিক, ২৬ নভেম্বর ২০২৬): কার্টনের মাপ আর পণ্যের নিজের কার্টনপ্রতি দর —
+                   সার্ভারের হুবহু ([[UnloadingSplit::cartonFactors()]], [[ChargesUnloading]]), যাতে পর্দার ভাগ আর খাতার ভাগ মেলে */
+                'carton' => $cartons[(int) $p->id] ?? '1',
+                'unload_rate' => $p->unload_rate === null ? null : (string) $p->unload_rate,
             ])
             ->all();
     }

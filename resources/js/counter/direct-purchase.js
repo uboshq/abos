@@ -29,6 +29,7 @@ export default function directPurchase({
     catalogue, vatEnabled, lastRatesUrl,
     depositMethods, moneyAccounts, carriers, packs, packDefaults, suppliers,
     paymentTermDefault, draftKey, hasErrors, accountCodes, texts, lotErrors, lotHint,
+    unloadRate, unloadStart, unloadRequired,
 }) {
     return {
         catalogue,
@@ -75,6 +76,27 @@ export default function directPurchase({
            বদলে যায় — "আগের বকেয়া" নয়, "আগের অগ্রিম"। */
         previousDue: 0,
 
+        /* ⭐ ক্রেডিট লিমিট আর "আর কত টাকার বিল করা যাবে" — সরবরাহকারী বাছলে আসে ([[loadLastRates]]; মালিক, ২৬ নভেম্বর ২০২৬)।
+           ⓘ `creditRoom` null = সীমা নেই; ঋণাত্মক = লিমিট ছাড়িয়েছে। মাপ সার্ভারের (দেনা + বিল-না-আসা মাল)। */
+        creditLimit: 0,
+        creditRoom: null,
+
+        /* ══ আনলোডিং বিল — পপআপ, পর্দার মাঝে (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9) ══════════════
+           ⓘ দুই রকম: `whole` — পুরো চালানে একটা অঙ্ক (খালি = কার্টন × দর, সার্ভার কার্টন ধরে ভাগ করে);
+           `product` — প্রতিটা সারির কার্টনপ্রতি হার (`line.unload_rate`), অঙ্ক = হারগুলোর যোগফল।
+           ⚠️ কার্টনের মাপ সার্ভারের হুবহু ([[UnloadingSplit::cartonFactors()]] → `catalogue[].carton`), তাই পর্দার ভাগ = খাতার ভাগ। */
+        unloadRate: Number(unloadRate) || 0,
+        unloadRequired: unloadRequired !== false,
+        unloadOpen: false,
+        unloadMode: (unloadStart && unloadStart.mode) || '',
+        unloadSplit: (unloadStart && unloadStart.split === 'product') ? 'product' : 'whole',
+        unloadAmount: (unloadStart && unloadStart.amount) || '',
+        unloadAccountId: (unloadStart && unloadStart.account) || '',
+        unloadContractorId: (unloadStart && unloadStart.contractor) || '',
+        unloadReason: (unloadStart && unloadStart.reason) || '',
+        unloadSame: '',
+        unloadProblem: '',
+
         /* ── জমা ─────────────────────────────────────────────
            এক বিলের টাকা এক পথে যায় না — কিছু নগদ, বাকিটা চেকে
            বা bKash-এ। প্রতিটা সারি নিজের উপায় ও নিজের খাত নিয়ে
@@ -106,6 +128,8 @@ export default function directPurchase({
            [[DirectPurchaseService::spreadBillDiscount()]]-এর হুবহু। */
         billDiscount: '',
         billDiscountMode: 'amount',
+        /* ⭐ বিক্রয়ের মতো এক ঘর — "500" টাকা, "2%" শতাংশ ([[readBillDiscount()]]); সার্ভারে আগের দুই ঘরই যায় */
+        billDiscountText: '',
         driverName: '',
 
         /* এই সরবরাহকারীর কাছ থেকে কোন পণ্য গতবার কত দরে —
@@ -351,6 +375,7 @@ export default function directPurchase({
                 this.transportCost = d.transportCost ?? '';
                 this.billDiscount = d.billDiscount ?? '';
                 this.billDiscountMode = d.billDiscountMode === 'percent' ? 'percent' : 'amount';
+                this.billDiscountText = this.discountTextOf(this.billDiscount, this.billDiscountMode);
                 this.vehicleNo = d.vehicleNo ?? '';
                 this.driverName = d.driverName ?? '';
                 this.nextKey = d.nextKey ?? (this.lines.length + 1);
@@ -455,6 +480,9 @@ export default function directPurchase({
         init() {
             this.entry = this.blankEntry();
 
+            /* ⓘ সার্ভারের আনলোডিং-ভুল নিয়ে পাতা ফিরলে পপআপটাই খোলা — ভুলটা তার ঘরের পাশেই */
+            if (unloadStart && unloadStart.failed) this.unloadOpen = true;
+
             /* ⚠️ খসড়া খোঁজা **সবার আগে** — নাহলে নিচের
                `loadLastRates` খসড়ার সরবরাহকারীকে নয়, পর্দার
                পুরনো মানটাকে ধরে বসত। */
@@ -502,6 +530,8 @@ export default function directPurchase({
                **অন্য একজনের বকেয়া** এই একজনের নামে বসে থাকত —
                ঠিক যে ভুলটা দরের বেলায় উপরে ঠেকানো হয়েছে। */
             this.previousDue = 0;
+            this.creditLimit = 0;
+            this.creditRoom = null;
 
             if (id <= 0) return;
 
@@ -516,6 +546,8 @@ export default function directPurchase({
 
                 this.lastRates = payload.rates ?? {};
                 this.previousDue = Number(payload.due) || 0;
+                this.creditLimit = Number(payload.limit) || 0;
+                this.creditRoom = payload.room === null || payload.room === undefined ? null : (Number(payload.room) || 0);
             } catch (e) {
                 /* নীরবে ছেড়ে দেওয়া — সংখ্যাটা সুবিধার, বাধ্যতামূলক
                    নয়। ওটা না এলে ক্রয় থেমে যাওয়া অনেক বড় ক্ষতি। */
@@ -1166,6 +1198,7 @@ export default function directPurchase({
             this.transportCost = '';
             this.billDiscount = '';
             this.billDiscountMode = 'amount';
+            this.billDiscountText = '';
             this.vehicleNo = '';
             this.driverName = '';
 
@@ -1178,7 +1211,160 @@ export default function directPurchase({
             this.noteOpen = false;
             this.shipmentOpen = false;
 
+            /* ⓘ আনলোডিংও নতুন করে — আগের লরির বাছাই নতুন বিলে বসে থাকত */
+            this.unloadOpen = false;
+            this.unloadMode = '';
+            this.unloadSplit = 'whole';
+            this.unloadAmount = '';
+            this.unloadAccountId = '';
+            this.unloadContractorId = '';
+            this.unloadReason = '';
+            this.unloadSame = '';
+            this.unloadProblem = '';
+
             this.clearEntry();
+        },
+
+        /* ══ বিলের ছাড় — এক ঘর ══════════════════════════════════════════════════ */
+
+        /** "2%" → শতাংশ ২; "500" → টাকা ৫০০ — সার্ভারের দুই ঘরে ভেঙে। ⓘ কমা বাদ, খালি = ছাড় নেই */
+        readBillDiscount() {
+            const raw = String(this.billDiscountText || '').replace(/,/g, '').trim();
+            const percent = raw.endsWith('%');
+            const value = (percent ? raw.slice(0, -1) : raw).trim();
+
+            this.billDiscountMode = percent ? 'percent' : 'amount';
+            this.billDiscount = value;
+        },
+
+        discountTextOf(value, mode) {
+            const v = String(value ?? '').trim();
+
+            return v === '' ? '' : (mode === 'percent' ? v + '%' : v);
+        },
+
+        /* ══ আনলোডিং বিল ═════════════════════════════════════════════════════════ */
+
+        openUnloading() {
+            this.unloadProblem = '';
+            this.unloadOpen = true;
+        },
+
+        /** পণ্যের এক এককে মূল এককের কতটা — প্যাক না থাকলে ১ */
+        packFactor(productId, unitId) {
+            if (unitId === '' || unitId === null || unitId === undefined) return 1;
+
+            const found = (this.packs[productId] ?? []).find((u) => String(u.id) === String(unitId));
+
+            return found ? (Number(found.factor) || 1) : 1;
+        },
+
+        /** সারির কার্টন — (কেনা + ফ্রি, মূল এককে) ÷ কার্টনের মাপ; সার্ভারের [[UnloadingSplit::rows()]]-এর হুবহু */
+        lineCartons(line) {
+            const base = (Number(line.qty) || 0) * this.packFactor(line.id, line.unit_id)
+                + (Number(line.free_qty) || 0) * this.packFactor(line.id, line.free_unit_id);
+            const carton = Number(this.productOf(line)?.carton) || 1;
+
+            return base / (carton > 0 ? carton : 1);
+        },
+
+        get unloadCartons() {
+            return this.lines.reduce((s, l) => s + this.lineCartons(l), 0);
+        },
+
+        /** পণ্যের নিজের কার্টনপ্রতি দর, নইলে নিয়ন্ত্রণ প্যানেলের দর — সার্ভারের [[ChargesUnloading]]-এর ক্রম */
+        defaultUnloadRateOf(line) {
+            const own = this.productOf(line)?.unload_rate;
+
+            return own === null || own === undefined || own === '' ? this.unloadRate : (Number(own) || 0);
+        },
+
+        unloadLineAmount(line) {
+            return this.paisa(this.lineCartons(line) * (Number(line.unload_rate) || 0));
+        },
+
+        get unloadProductTotal() {
+            return this.paisa(this.lines.reduce((s, l) => s + this.unloadLineAmount(l), 0));
+        },
+
+        /** প্রস্তাবিত — সারির নিজের দর, নইলে সাধারণ দর; সার্ভারের [[UnloadingSplit::expected()]] */
+        get unloadSuggested() {
+            return this.paisa(this.lines.reduce((s, l) => s + this.lineCartons(l) * this.defaultUnloadRateOf(l), 0));
+        },
+
+        get unloadCostsUs() {
+            return this.unloadMode === 'cash' || this.unloadMode === 'due';
+        },
+
+        get unloadTotal() {
+            if (! this.unloadCostsUs) return 0;
+
+            return this.unloadSplit === 'product'
+                ? this.unloadProductTotal
+                : (Number(this.unloadAmount) > 0 ? this.paisa(Number(this.unloadAmount)) : this.unloadSuggested);
+        },
+
+        /** সার্ভারে যায় — পণ্য ধরে হলে হারগুলোর যোগফল; পুরো চালানে লেখা অঙ্ক (খালি = সার্ভার প্রস্তাব বসায়) */
+        get unloadAmountSent() {
+            if (! this.unloadCostsUs) return '';
+
+            return this.unloadSplit === 'product' ? this.unloadProductTotal.toFixed(2) : String(this.unloadAmount || '');
+        },
+
+        /** সারির হাতের দর — কেবল "পণ্য ধরে"-তে; নইলে খালি (সার্ভার পণ্যের দর বা সমান ভাগ ধরে) */
+        unloadRateOf(line) {
+            return this.unloadSplit === 'product' && this.unloadCostsUs ? String(line.unload_rate ?? '') : '';
+        },
+
+        setUnloadSplit(kind) {
+            this.unloadSplit = kind === 'product' ? 'product' : 'whole';
+
+            if (this.unloadSplit !== 'product') return;
+
+            /* ⓘ খালি হারে পণ্যের নিজের দর বসে — মানুষ কেবল আলাদাগুলো বদলান */
+            this.lines.forEach((line) => {
+                if (line.unload_rate === undefined || line.unload_rate === null || String(line.unload_rate) === '') {
+                    line.unload_rate = String(this.defaultUnloadRateOf(line));
+                }
+            });
+        },
+
+        applySameRate() {
+            const rate = String(this.unloadSame ?? '').trim();
+
+            if (rate === '' || ! (Number(rate) >= 0)) return;
+
+            this.lines.forEach((line) => { line.unload_rate = rate; });
+        },
+
+        /** ডানের ঘরের এক লাইন — "হাম্মালি ঠিকাদারের কাছে বাকি · 531.50" */
+        get unloadSummary() {
+            const modes = texts.unloadModes || {};
+
+            if (this.unloadMode === '') return texts.unloadNotChosen || '';
+
+            const name = modes[this.unloadMode] || '';
+
+            return this.unloadCostsUs ? name + ' · ' + this.money(this.unloadTotal) : name;
+        },
+
+        /** "ঠিক আছে — বিলে বসান" — সার্ভারের নিয়ম আগেই দেখে, তারপর বন্ধ ([[LabourCost::read()]]) */
+        saveUnloading() {
+            this.unloadProblem = this.unloadMissing();
+
+            if (this.unloadProblem === '') this.unloadOpen = false;
+        },
+
+        unloadMissing() {
+            const t = texts.unload || {};
+
+            if (this.unloadMode === '') return t.pick || '';
+            if (this.unloadMode === 'cash' && String(this.unloadAccountId || '') === '') return t.till || '';
+            if (this.unloadMode === 'due' && String(this.unloadContractorId || '') === '') return t.contractor || '';
+            if (this.unloadMode === 'none' && String(this.unloadReason || '').trim().length < 3) return t.reason || '';
+            if (this.unloadCostsUs && ! (this.unloadTotal > 0)) return t.amount || '';
+
+            return '';
         },
 
         // ── কার্টের অঙ্ক ────────────────────────────────────
@@ -1592,6 +1778,16 @@ export default function directPurchase({
             }
 
             /* ⓘ খালি লট আর থামায় না — ৫ অক্টোবর ২০২৬ থেকে সংরক্ষণে নিজে বসে (`PurchaseLots`) */
+
+            /* ⛔ আনলোডিং বিল না বসালে পাঠানো নয় — সার্ভারও থামায় ([[LabourCost::assertComplete()]]); পর্দা আগেই পপআপ খোলে */
+            if (this.unloadRequired && this.unloadMissing() !== '') {
+                event.preventDefault();
+                this.stopped = this.unloadMissing();
+                this.unloadProblem = this.stopped;
+                this.unloadOpen = true;
+
+                return;
+            }
 
             const paid = this.paidTotal + (Number(this.paidNow) || 0);
 

@@ -107,7 +107,7 @@ class TheBuyingCounterLooksLikeTheOwnerDrewItTest extends TestCase
             'purchase::field.terms',
             'purchase::field.received_on',      // বাঁ কার্ড ১, সারি ২
             'purchase::field.pur_inv_no',
-            'purchase::field.this_line',        // মাঝের ছক
+            'purchase::field.unloading_bill',   // আনলোডিং বিলের বোতাম ও পপআপ ("এই লাইনে" বাক্স নেই, মালিক, ২৬ নভেম্বর ২০২৬)
             'purchase::field.bill_total',       // ডান কার্ডের মাথা
             'purchase::field.total_due',
         ] as $key) {

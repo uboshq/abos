@@ -17,18 +17,6 @@
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('purchase::menu.direct') }}</x-slot:title>
 
-    @if ($errors->any())
-        <div role="alert"
-             class="mb-3 rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-sm
-                    text-(--color-badge-danger-ink)">
-            <ul class="list-inside list-disc">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
-
     {{-- ⓘ `data-confirm-overview` — নিশ্চিতের আগে সারাংশের পপ-আপ ([[confirm-overview.js]], ৪ অক্টোবর ২০২৬) --}}
     <form method="POST" action="{{ route('purchase.direct.store') }}" data-confirm-overview="{{ route('purchase.direct.overview') }}"
           x-data="directPurchase({
@@ -79,6 +67,18 @@
                   'needRate' => __('purchase::message.need_rate'),
                   'needSalesPrice' => __('purchase::message.need_sales_price'),
                   'needPricedLines' => __('purchase::message.need_priced_lines'),
+
+                  {{-- ⭐ আনলোডিং বিলের পপআপ — ডানের এক লাইন আর পাঠানোর আগের পাহারা ([[LabourCost::read()]]-এর একই বার্তা) --}}
+                  'unloadModes' => collect(\App\Modules\Supplier\Services\LabourCost::UNLOADING)
+                      ->mapWithKeys(fn ($m) => [$m => __('supplier::labour.mode_'.$m)])->all(),
+                  'unloadNotChosen' => __('supplier::labour.not_chosen'),
+                  'unload' => [
+                      'pick' => __('supplier::labour.pick_one'),
+                      'till' => __('supplier::labour.needs_till'),
+                      'contractor' => __('supplier::labour.needs_contractor'),
+                      'reason' => __('supplier::labour.needs_reason'),
+                      'amount' => __('supplier::labour.needs_amount'),
+                  ],
               ]),
               {{-- ⭐ সার্ভার কোন সারির লট ফিরিয়েছে — সারির ক্রম ধরে (`lines.{i}.batch_no`),
                    যাতে বার্তাটা ঐ সারির লট-ঘরের নিচেই বসে, কেবল উপরের তালিকায় নয় --}}
@@ -88,6 +88,18 @@
                   ->all()),
               {{-- ⭐ খালি লট-ঘরের প্রস্তাব — পরের লট নম্বর, খরচ হয় না ([[PurchaseLots]], মালিক, ৫ অক্টোবর ২০২৬) --}}
               lotHint: @js($lotHint),
+              {{-- ⭐ আনলোডিং বিল (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9) — নিয়ন্ত্রণ প্যানেলের দর, আর ফিরে আসা পাতার আগের বাছাই --}}
+              unloadRate: @js((string) $unloadRate),
+              unloadRequired: @js((bool) config('abos.unloading_required', true)),
+              unloadStart: @js([
+                  'mode' => (string) old('unload_mode', ''),
+                  'split' => collect((array) old('lines', []))->contains(fn ($l) => is_array($l) && filled($l['unload_rate'] ?? null)) ? 'product' : 'whole',
+                  'amount' => (string) old('unload_amount', ''),
+                  'account' => (string) old('unload_account_id', ''),
+                  'contractor' => (string) old('unload_contractor_id', ''),
+                  'reason' => (string) old('unload_reason', ''),
+                  'failed' => $errors->hasAny(\App\Modules\Supplier\Services\LabourCost::fields('unload_')),
+              ]),
           })"
           @submit="guard($event)"
           x-effect="saveDraft()"
@@ -121,12 +133,6 @@
             ⚠️ `x-cloak` — নাহলে Alpine বসার আগে এক পলকের জন্য খালি বাক্সটা
             দেখা যেত।
         --}}
-        <div x-show="stopped !== ''" x-cloak role="alert"
-             data-stopped
-             class="lg:col-span-2 rounded-(--radius-field) bg-(--color-badge-danger-bg)
-                    px-3 py-2 text-sm text-(--color-badge-danger-ink)"
-             x-text="stopped"></div>
-
         <div x-show="draftFound" x-cloak
              class="lg:col-span-2 flex flex-wrap items-center gap-2 rounded-(--radius-card)
                     border border-(--color-border) bg-(--color-badge-warning-bg)
@@ -212,7 +218,7 @@
 
                  ⓘ সরবরাহকারী বাছলে ভিতরে চারটা সারি নামে, আর তখন
                  উচ্চতাটা এমনিতেই মিলে যায়। --}}
-                class="grid gap-3 lg:grid-cols-[1.15fr_1.3fr] xl:grid-cols-[1.15fr_1.5fr_0.85fr]">
+                class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)]">
             <div class="min-w-0">
         {{-- ⓘ শিরোনামটা নেই — মালিক: *"Supplier details likte hobe na"*।
 
@@ -273,8 +279,8 @@
                  ⚠️ DOM-এ এটা পণ্যের বাক্সের পরে, কিন্তু পর্দায় উপরে —
                  জায়গাটা ছকেই ঠিক করা, মার্কআপ নাড়িয়ে নয়। ⓘ নাড়ালে
                  দুইশো লাইন সরত, আর আজ ঐ পথে দুইবার পর্দা ভেঙেছে। --}}
-            @include('purchase::direct.partials.payable')
-            <div class="min-w-0 space-y-3 lg:col-span-2 xl:col-span-2">
+            {{-- ⓘ "এই লাইনে" বাক্সটা নেই — মালিক, ২৬ নভেম্বর ২০২৬ (নমুনা v9): টাকা আর তিনটা বোতাম পরিমাণের সারিতেই ([[entry]]) --}}
+            <div class="min-w-0 space-y-3 lg:col-span-2">
 
             {{-- ── পণ্যের বাক্স — মালিকের দাগানো *"Products box"* ──────── --}}
             @include('purchase::direct.partials.entry')
@@ -389,89 +395,6 @@
                  চেক/bKash-এ দেখা যায়, আর গ্রিডে ওটা লুকালে একটা ফাঁকা
                  কলাম পড়ে থাকত। --}}
             @include('purchase::direct.partials.deposit')
-
-            {{-- ⭐ আনলোডিং খরচ — বাধ্যতামূলক, সবসময় খোলা (মালিক, ১৮ নভেম্বর ২০২৬: "ওকে"; [[LabourCost]], [[UnloadingSplit]])।
-                 ⓘ বোতামের পিছনে নয় — না বাছলে বিল পাকা হয় না ([[DirectPurchaseService::complete()]]), তাই চোখের সামনে।
-                 ⓘ নিজের ছোট x-data — direct-purchase.js-এ হাত পড়ে না; ঘরগুলো পথ ধরে দেখা দেয়, লুকানোটা সেবা পড়ে না। --}}
-            @php
-                $unloadMode = (string) old('unload_mode', '');
-                $unloadRateText = \App\Core\Support\Money::format($unloadRate, bccomp(\App\Core\Support\Money::round($unloadRate, 2), $unloadRate, 4) === 0 ? 2 : 4);
-                $unloadInput = 'h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-2xs';
-            @endphp
-            <section data-boxed data-direct-unloading
-                     x-data="{ unloadMode: @js($unloadMode) }"
-                     class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-3">
-                <div class="mb-2 flex flex-wrap items-center gap-2">
-                    <h2 class="text-sm font-semibold">
-                        {{ __('supplier::labour.unloading') }} <span class="text-(--color-danger)" aria-hidden="true">*</span>
-                    </h2>
-                    <span class="text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.how') }}</span>
-                </div>
-
-                <div class="ds-seg" role="radiogroup" aria-label="{{ __('supplier::labour.how') }}">
-                    @foreach (\App\Modules\Supplier\Services\LabourCost::UNLOADING as $choice)
-                        <button type="button" role="radio" @click="unloadMode = '{{ $choice }}'"
-                                :class="unloadMode === '{{ $choice }}' ? 'is-on' : ''"
-                                :aria-checked="unloadMode === '{{ $choice }}' ? 'true' : 'false'">{{ __('supplier::labour.mode_'.$choice) }}</button>
-                    @endforeach
-                </div>
-                <input type="hidden" name="unload_mode" :value="unloadMode" value="{{ $unloadMode }}">
-
-                <div class="mt-2 flex flex-wrap items-end gap-2">
-                    <label class="min-w-0 flex-1" x-show="unloadMode === 'cash' || unloadMode === 'due'" x-cloak>
-                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.amount') }}</span>
-                        <input type="number" step="0.01" min="0" inputmode="decimal" name="unload_amount"
-                               value="{{ old('unload_amount') }}"
-                               class="num {{ $unloadInput }} text-end">
-                    </label>
-
-                    <label class="min-w-0 flex-1" x-show="unloadMode === 'cash'" x-cloak>
-                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.till') }}</span>
-                        <select name="unload_account_id" class="{{ $unloadInput }}">
-                            <option value="">—</option>
-                            @foreach ($labourTills as $till)
-                                <option value="{{ $till['id'] }}" @selected((string) old('unload_account_id') === $till['id'])>{{ $till['label'] }}</option>
-                            @endforeach
-                        </select>
-                    </label>
-
-                    <div class="min-w-0 flex-1" x-show="unloadMode === 'due'" x-cloak>
-                        @if ($labourContractors->isEmpty())
-                            <p class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-2 py-1 text-2xs text-(--color-badge-warning-ink)">
-                                {{ __('supplier::labour.no_contractor_party') }}
-                            </p>
-                        @else
-                            <label class="block">
-                                <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.contractor') }}</span>
-                                <select name="unload_contractor_id" class="{{ $unloadInput }}">
-                                    <option value="">—</option>
-                                    @foreach ($labourContractors as $contractor)
-                                        <option value="{{ $contractor['id'] }}" @selected((string) old('unload_contractor_id') === $contractor['id'])>{{ $contractor['label'] }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-                        @endif
-                    </div>
-
-                    <label class="min-w-0 flex-1" x-show="unloadMode === 'none'" x-cloak>
-                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.reason') }}</span>
-                        <input type="text" name="unload_reason" maxlength="255" value="{{ old('unload_reason') }}"
-                               class="{{ $unloadInput }}">
-                    </label>
-                </div>
-
-                <p class="mt-2 text-2xs text-(--color-ink-muted)" x-show="unloadMode === 'cash' || unloadMode === 'due'" x-cloak>
-                    {{ __('supplier::labour.amount_hint') }}
-                    · {{ __('supplier::labour.rate_per_carton') }}: <span class="num">{{ $unloadRateText }}</span>
-                </p>
-                <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.split_hint') }}</p>
-
-                @foreach (\App\Modules\Supplier\Services\LabourCost::fields('unload_') as $field)
-                    @error($field)
-                        <p class="mt-1 text-2xs text-(--color-danger)" role="alert" data-unload-error>{{ $message }}</p>
-                    @enderror
-                @endforeach
-            </section>
 
             {{-- ⭐ পরিবহন · শিপমেন্ট · নোট — **বাঁ দিকে, কার্টের নিচে**।
 
@@ -670,29 +593,6 @@
                     </p>
                 </div>
 
-                {{-- ── মন্তব্য — `Add Note` বোতামের পিছনে ────────────────
-
-                     ⭐ ঘরটা মালিকের প্রথম ছবিতে ডান কার্ডে `REMARKS` নামে
-                     ছিল, আর স্ক্রিনশটে সেটাই `Add Note` বোতাম হয়ে গেছে।
-                     ⓘ দুইটা একই জিনিস, কেবল দ্বিতীয়টা খালি পর্দায় জায়গা
-                     নেয় না।
-
-                     ⚠️ `narration` নামটা কন্ট্রোলারের নিয়মের সাথে মেলানো
-                     (`'narration' => ['nullable','string','max:500']`) — অন্য
-                     নাম দিলে লেখাটা নীরবে হারাত, কারণ যাচাই ওটাকে চিনত না। --}}
-                <div x-show="noteOpen" x-cloak
-                     class="mt-3 border-t border-(--color-border) pt-3">
-                    <label class="block">
-                        <span class="mb-1 block text-2xs font-medium text-(--color-ink-muted)">
-                            {{ __('purchase::field.remarks') }}
-                        </span>
-                        <textarea name="narration" rows="2" maxlength="500" x-ref="note"
-                                  placeholder="{{ __('purchase::field.optional') }}"
-                                  class="w-full rounded-(--radius-field) border border-(--color-border)
-                                         bg-(--color-surface-card) p-2 text-2xs">{{ old('narration') }}</textarea>
-                    </label>
-                </div>
-
         </div>
 
         {{-- ══ ডান কার্ড — সরবরাহকারী ও রসিদ ═══════════════════════════
@@ -709,6 +609,178 @@
              গায়ে লেগে একটা মোটা রেখা হয়ে যেত, আর কার্ড দুইটা আলাদা
              বোঝা যেত না। --}}
         @include('purchase::direct.partials.totals')
+
+        {{-- ══ আনলোডিং বিল — পপআপ, পর্দার ঠিক মাঝে ═══════════════════════
+             মালিক, ২৬ নভেম্বর ২০২৬ (নমুনা v9 "ঠিক আছে"): "পপ আপটা স্ক্রিনের মাঝামাঝিতে আসবে, এটার কাজটা কমপ্লিট করে অন্য কাজে
+             হাত দিবে"। ⓘ দুই রকম বিল: পুরো চালানে একটা অঙ্ক (কার্টন ধরে সমান ভাগ), নয়তো পণ্য ধরে প্রতি কার্টনের হার
+             (`lines.*.unload_rate`) — দুটোই [[UnloadingSplit]]-এর পুরনো পথ, সার্ভার বদলায়নি।
+             ⚠️ ফর্মের ভিতরে — ঘরগুলো বিলের সাথেই যায়; বাধ্যতামূলক থাকছে ([[LabourCost]], মালিক, ১৮ নভেম্বর ২০২৬)। --}}
+        @php
+            $unloadInput = 'h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm';
+        @endphp
+        <div x-show="unloadOpen" x-cloak data-direct-unloading
+             x-on:keydown.escape.window="unloadOpen = false"
+             x-on:click.self="unloadOpen = false"
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4">
+            <section role="dialog" aria-modal="true" aria-labelledby="unloading-title"
+                     class="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-(--radius-card)
+                            bg-(--color-surface-card) text-(--color-ink) shadow-xl">
+                <header class="flex items-center justify-between gap-2 px-4 py-3 text-(--color-ink-inverse)"
+                        style="background: var(--color-info)">
+                    <h2 id="unloading-title" class="text-base font-semibold">
+                        {{ __('purchase::field.unloading_bill') }}<span x-show="unloadSplit === 'product'" x-cloak> — {{ __('supplier::labour.split_product') }}</span>
+                    </h2>
+                    <button type="button" @click="unloadOpen = false" aria-label="{{ __('purchase::action.close_panel') }}"
+                            class="rounded-(--radius-field) px-2 text-xl leading-none hover:opacity-80">&times;</button>
+                </header>
+
+                <div class="min-h-0 space-y-3 overflow-y-auto p-4 text-sm">
+                    <div>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.split_how') }}</span>
+                        <div class="ds-seg" role="radiogroup" aria-label="{{ __('supplier::labour.split_how') }}">
+                            @foreach (['whole', 'product'] as $split)
+                                <button type="button" role="radio" @click="setUnloadSplit('{{ $split }}')"
+                                        :class="unloadSplit === '{{ $split }}' ? 'is-on' : ''"
+                                        :aria-checked="unloadSplit === '{{ $split }}' ? 'true' : 'false'">{{ __('supplier::labour.split_'.$split) }}</button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.who_pays') }}</span>
+                        <div class="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="{{ __('supplier::labour.who_pays') }}">
+                            @foreach (\App\Modules\Supplier\Services\LabourCost::UNLOADING as $choice)
+                                <button type="button" role="radio" @click="unloadMode = '{{ $choice }}'"
+                                        :aria-checked="unloadMode === '{{ $choice }}' ? 'true' : 'false'"
+                                        :class="unloadMode === '{{ $choice }}'
+                                            ? 'border-(--color-success) bg-(--color-success) text-(--color-ink-inverse)'
+                                            : 'border-(--color-border) bg-(--color-surface-card) hover:bg-(--color-surface-hover)'"
+                                        class="rounded-(--radius-field) border px-2 py-2 text-sm font-semibold">{{ __('supplier::labour.mode_'.$choice) }}</button>
+                            @endforeach
+                        </div>
+                    </div>
+                    <input type="hidden" name="unload_mode" :value="unloadMode">
+                    <input type="hidden" name="unload_amount" :value="unloadAmountSent">
+
+                    <label class="block" x-show="unloadMode === 'cash'" x-cloak>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.till') }}</span>
+                        <select name="unload_account_id" x-model="unloadAccountId" class="{{ $unloadInput }}">
+                            <option value="">—</option>
+                            @foreach ($labourTills as $till)
+                                <option value="{{ $till['id'] }}">{{ $till['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+
+                    <div x-show="unloadMode === 'due'" x-cloak>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.contractor') }}</span>
+                        @if ($labourContractors->isEmpty())
+                            <p class="rounded-(--radius-field) bg-(--color-badge-warning-bg) px-2 py-1 text-2xs text-(--color-badge-warning-ink)">
+                                {{ __('supplier::labour.no_contractor_party') }}
+                            </p>
+                        @else
+                            <select name="unload_contractor_id" x-model="unloadContractorId" class="{{ $unloadInput }}">
+                                <option value="">—</option>
+                                @foreach ($labourContractors as $contractor)
+                                    <option value="{{ $contractor['id'] }}">{{ $contractor['label'] }}</option>
+                                @endforeach
+                            </select>
+                        @endif
+                        {{-- ⓘ ঠিকাদার না থাকলে এখান থেকেই যোগ — নতুন ট্যাবে, তাই এই বিলটা হারায় না; ফিরে এসে পাতা নতুন করে খুললে তালিকায় আসে --}}
+                        <a href="{{ $newContractorUrl }}" target="_blank" rel="noopener" data-new-contractor
+                           class="mt-1 inline-block text-2xs font-semibold text-(--color-link)">＋ {{ __('supplier::labour.new_contractor') }}</a>
+                    </div>
+
+                    <label class="block" x-show="unloadMode === 'none'" x-cloak>
+                        <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.reason') }}</span>
+                        <input type="text" name="unload_reason" maxlength="255" x-model="unloadReason" class="{{ $unloadInput }}">
+                    </label>
+
+                    {{-- ── পুরো চালানে একটা অঙ্ক — খালি রাখলে কার্টন × দর --}}
+                    <div x-show="unloadCostsUs && unloadSplit === 'whole'" x-cloak>
+                        <label class="block">
+                            <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.whole_amount') }}</span>
+                            <input type="number" step="0.01" min="0" inputmode="decimal" x-model="unloadAmount"
+                                   :placeholder="money(unloadSuggested)"
+                                   class="num {{ $unloadInput }} text-end text-lg font-bold">
+                        </label>
+                        <p class="mt-1 text-2xs text-(--color-ink-muted)">
+                            {{ __('supplier::labour.amount_hint') }} ·
+                            <span class="num" x-text="qty(unloadCartons)"></span> {{ __('supplier::labour.cartons') }} ×
+                            <span class="num" x-text="money(unloadRate)"></span> =
+                            <span class="num font-semibold" x-text="money(unloadSuggested)"></span>
+                        </p>
+                        <p class="mt-1 text-2xs text-(--color-ink-muted)">{{ __('supplier::labour.split_hint') }}</p>
+                    </div>
+
+                    {{-- ── পণ্য ধরে — প্রতি কার্টনের হার, টাকা নিজে গোনা (কার্টন × হার) --}}
+                    <div x-show="unloadCostsUs && unloadSplit === 'product'" x-cloak class="space-y-2">
+                        <div class="flex flex-wrap items-center gap-2 rounded-(--radius-field) bg-(--color-surface-sunken) px-3 py-2 text-2xs">
+                            <span>{{ __('supplier::labour.same_rate') }}:</span>
+                            <input type="number" step="0.01" min="0" inputmode="decimal" x-model="unloadSame"
+                                   aria-label="{{ __('supplier::labour.same_rate') }}"
+                                   class="num h-(--spacing-field-dense) w-24 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
+                            <button type="button" @click="applySameRate()"
+                                    class="rounded-(--radius-field) px-3 py-1 font-semibold text-(--color-ink-inverse)"
+                                    style="background: var(--color-info)">{{ __('supplier::labour.apply_all') }}</button>
+                            <span class="text-(--color-ink-muted)">— {{ __('supplier::labour.same_rate_hint') }}</span>
+                        </div>
+
+                        <table class="ui-grid is-compact w-full text-sm">
+                            <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
+                                <tr>
+                                    <th class="text-start">{{ __('core.table.serial') }}</th>
+                                    <th class="text-start">{{ __('purchase::field.product') }}</th>
+                                    <th class="text-end">{{ __('supplier::labour.cartons') }}</th>
+                                    <th class="text-end">{{ __('supplier::labour.rate_short') }}</th>
+                                    <th class="text-end">{{ __('purchase::field.amount') }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="(line, index) in lines" :key="'u' + line.key">
+                                    <tr class="border-t border-(--color-border)">
+                                        <td class="num" x-text="index + 1"></td>
+                                        <td x-text="line.name"></td>
+                                        <td class="num" x-text="qty(lineCartons(line))"></td>
+                                        <td class="text-end">
+                                            <input type="number" step="0.01" min="0" inputmode="decimal" x-model="line.unload_rate"
+                                                   aria-label="{{ __('supplier::labour.rate_short') }}"
+                                                   class="num h-(--spacing-field-dense) w-24 rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end">
+                                        </td>
+                                        <td class="num font-medium" x-text="money(unloadLineAmount(line))"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                            <tfoot class="bg-(--color-surface-sunken) font-semibold">
+                                <tr>
+                                    <td></td>
+                                    <td x-text="@js(__('purchase::field.items_count', ['count' => ':n'])).replace(':n', lines.length)"></td>
+                                    <td class="num" x-text="qty(unloadCartons)"></td>
+                                    <td></td>
+                                    <td class="num" x-text="money(unloadProductTotal)"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <p x-show="unloadProblem !== ''" x-cloak role="alert" x-text="unloadProblem"
+                       class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-2xs text-(--color-badge-danger-ink)"></p>
+                    @foreach ([...\App\Modules\Supplier\Services\LabourCost::fields('unload_'), 'unload_mode'] as $field)
+                        @error($field)
+                            <p class="rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 py-2 text-2xs text-(--color-badge-danger-ink)" role="alert" data-unload-error>{{ $message }}</p>
+                        @enderror
+                    @endforeach
+                </div>
+
+                <footer class="border-t border-(--color-border) p-4">
+                    <button type="button" @click="saveUnloading()"
+                            class="w-full rounded-(--radius-field) bg-(--color-success) px-4 py-2.5 text-base font-semibold
+                                   text-(--color-ink-inverse) hover:bg-(--color-success-hover)">
+                        {{ __('supplier::labour.put_on_bill') }}<span x-show="unloadCostsUs" x-cloak class="num"> · ৳<span x-text="money(unloadTotal)"></span></span>
+                    </button>
+                </footer>
+            </section>
+        </div>
     </form>
 
     {{-- ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ — এই পাতায় খসড়ার বোতাম নেই, তাই পপ-আপেও নেই --}}

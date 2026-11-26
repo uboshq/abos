@@ -92,6 +92,27 @@
                 <span class="font-semibold text-(--color-ink)">{{ $receivedBy }}</span>
             </div>
 
+            {{-- ⭐ ক্রেডিট লিমিট · আগের বকেয়া · আর বিল করা যাবে — মালিক, ২৬ নভেম্বর ২০২৬ (নমুনা v8)।
+                 ⓘ "আর বিল করা যাবে" = লিমিট − (দেনা + বিল-না-আসা মাল), সার্ভারের মাপ; লিমিট না থাকলে "সীমা নেই" আর শেষ সারি নেই। --}}
+            <dl x-show="supplier" x-cloak data-supplier-credit class="mt-2 space-y-0.5 border-t border-(--color-border) pt-2 text-sm">
+                <div class="flex justify-between gap-2">
+                    <dt class="text-(--color-ink-muted)">{{ __('purchase::field.credit_limit') }}</dt>
+                    <dd class="num font-semibold" x-text="creditLimit > 0 ? money(creditLimit) : @js(__('purchase::field.no_limit'))"></dd>
+                </div>
+                <div class="flex justify-between gap-2">
+                    <dt class="text-(--color-ink-muted)"
+                        x-text="previousDue < 0 ? @js(__('purchase::field.previous_advance')) : @js(__('purchase::field.previous_due'))"></dt>
+                    <dd class="num font-semibold" :class="previousDue > 0 ? 'text-(--color-danger)' : ''"
+                        x-text="money($abs(previousDue))"></dd>
+                </div>
+                <div x-show="creditRoom !== null" x-cloak class="flex justify-between gap-2">
+                    <dt class="text-(--color-ink-muted)"
+                        x-text="creditRoom >= 0 ? @js(__('purchase::field.can_bill_more')) : @js(__('purchase::field.over_limit'))"></dt>
+                    <dd class="num font-semibold" :class="creditRoom >= 0 ? 'text-(--color-success)' : 'text-(--color-danger)'"
+                        x-text="money($abs(creditRoom))"></dd>
+                </div>
+            </dl>
+
             <input type="hidden" name="supplier_id" x-model="supplierId">
 
             {{-- ছাঁকনি — টাইপের সাথে সাথে, আর বাছা হলেই বন্ধ --}}
