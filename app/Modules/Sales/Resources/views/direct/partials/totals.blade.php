@@ -57,10 +57,6 @@
                     <span class="num rounded-(--radius-field) bg-(--color-brand-600)
                                  px-3 py-1 text-2xl font-bold text-(--color-brand-ink) shadow-sm"
                           x-text="'৳' + money(grossTotal)"></span>
-                    @if (($abosLook ?? false))
-                        <span class="ds-head-who"><span x-text="customer.name || ''"></span>
-                            <span class="num">{{ old('challan_no', $resume['challanNo'] ?? $salePreview ?? '') }}</span></span>
-                    @endif
                 </div>
 
                 @if ($show['sub_total'])

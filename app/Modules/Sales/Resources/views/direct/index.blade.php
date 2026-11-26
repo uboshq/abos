@@ -49,6 +49,15 @@
          (মালিকের অনুমোদিত নকশা, ২৮ সেপ্টেম্বর ২০২৬)। ⓘ বাতিল এখানে নেই — সইয়ের
          অপেক্ষার বিক্রি আগে খসড়ায় ফেরে, তারপর বাতিল বা বদল। --}}
     {{-- ⭐ ডেলিভারির অপেক্ষায় — পাকা বিক্রি, কেবল দেখা; "ডেলিভারি নিশ্চিত" চালানের পাতায় --}}
+    {{-- ⭐ নতুন সাজ কেবল ABOS-এর তিন রূপে (ABOS · Navy · Blue) — মালিক, ২৬ নভেম্বর ২০২৬: SAP/Dynamic/Odoo নিজের ধাঁচে থাকে --}}
+    @php
+        $abosLook = in_array(
+            \App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)),
+            \App\Core\Support\Ui::FOLD_MENU_LOOKS, true);
+    @endphp
+    {{-- ⭐ ABOS-এর রূপে উপরের বার্তাগুলো (পেন্ডিং, সম্পাদনা, ডেলিভারি) কেবল বাম কলামে — ডানের বিলের মোট একদম উপর থেকে
+         (মালিকের ছবি, ২৬ নভেম্বর ২০২৬: "এটা নিচে নামবে না, এটা শুধু বাম পাশে থাকার কথা") --}}
+    @if ($abosLook)<div class="ds-page">@endif
     @if (! empty($resume) && ($resume['stage'] ?? '') === 'delivery')
         {{-- ⭐ গেট পাসের আগে সম্পাদনা এখান থেকেও — বিলের পাতার হুবহু একই শর্তে (63, ৪ অক্টোবর ২০২৬; [[SaleEditor]]).
              ⓘ মালিক পেন্ডিং থেকে খুলে "হালনাগাদ করুন" চাপছিলেন, আর কিছুই হচ্ছিল না। --}}
@@ -160,12 +169,6 @@
     {{-- ⭐ সরাসরি বিক্রয়ের চূড়ান্ত নকশা — মালিক, ৪ অক্টোবর ২০২৬ ("ok final ekhoni eti planer 100% live daw")।
          ⓘ নিজের ছোট CSS, কারণ Tailwind-এর বান্ডেল আগে থেকে বানানো — নতুন `[...]` শ্রেণি ওতে নেই।
          ⚠️ রং কেবল থিমের টোকেন (`--color-*`), হাতে লেখা রং নয় — নয়টা থিমেই মানায়। --}}
-    {{-- ⭐ নতুন সাজ কেবল ABOS-এর তিন রূপে (ABOS · Navy · Blue) — মালিক, ২৬ নভেম্বর ২০২৬: SAP/Dynamic/Odoo নিজের ধাঁচে থাকে --}}
-    @php
-        $abosLook = in_array(
-            \App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)),
-            \App\Core\Support\Ui::FOLD_MENU_LOOKS, true);
-    @endphp
     <style @nonce>
         .ds-gold { border-left: 6px solid var(--color-brand-gold) !important; }
         .ds-top { display: grid; gap: .5rem .75rem; align-items: start; }
@@ -282,6 +285,12 @@
            (মালিক, ২৬ নভেম্বর ২০২৬ — নমুনা sales-counter, ব্রাউজারে দেখানো)। ⓘ রংগুলো মালিকের নিজের বাছা:
            উপরের সারি লোগোর টিল (#08b8c8, "ABOS" রং), ডানের বাক্স রং-বাছাইয়ের টকটকে গোলাপি (#ff00aa)। ════ */
         form[data-abos-counter] .ds-top { display: block; }
+        @media (min-width: 1280px) {
+            .ds-page { display: grid; grid-template-columns: minmax(0, 1fr) 18.7rem; column-gap: .75rem; align-items: start; }
+            .ds-page > form[data-abos-counter] { display: contents; }
+            .ds-page > :not(form), .ds-page > form[data-abos-counter] > :not(.ds-side) { grid-column: 1; }
+            .ds-page > form[data-abos-counter] > .ds-side { grid-column: 2; grid-row: 1 / span 30; }
+        }
         form[data-abos-counter] .ds-head { border-radius: 18px; background: #08b8c8; padding: .55rem 1rem; margin-bottom: .6rem; }
         form[data-abos-counter] .ds-party { grid-template-columns: minmax(0, 24rem) minmax(0, 1fr) !important; gap: 0 !important; align-items: center; }
         form[data-abos-counter] .ds-party > div:first-child { border: 0 !important; border-right: 2px solid rgb(255 255 255 / .7) !important;
@@ -1111,6 +1120,7 @@
         </div>
 
     </form>
+    @if ($abosLook)</div>{{-- ds-page --}}@endif
 
     {{-- ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ — মালিক, ৪ অক্টোবর ২০২৬ ([[confirm-overview.js]]) --}}
     <x-ui.confirm-overview />
