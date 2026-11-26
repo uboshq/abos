@@ -60,6 +60,8 @@ final class ThePapersLinesHaveRoomAndTheirTotalTest extends TestCase
         $asked = app(VoucherWriter::class)->post($voucher);
         $this->assertNotNull($asked, 'প্রস্তুতিটাই ভুল — সই চাওয়া হয়নি।');
 
+        // ⓘ ABOS-এর তিন রূপে ইনবক্স এখন বোর্ড (মালিক, ২৩ নভেম্বর ২০২৬); কাগজের দুই-কলাম পাতা বাকি রূপগুলোর — সেটাই এখানে মাপা
+        $signer->forceFill(['ui' => 'dynamic'])->save();
         $html = $this->actingAs($signer->fresh())->get(route('approval.inbox.show', $asked->id))->assertOk()->getContent();
         $this->assertStringContainsString('data-signing-sheet', $html, 'প্রস্তুতিটাই ভুল — সইদাতা কাগজের সারি দেখছেন না।');
 

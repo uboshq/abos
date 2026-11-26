@@ -49,7 +49,8 @@ final class TheBarCarriesTheReleaseTest extends TestCase
         $html = (string) $this->actingAs($this->owner())->get(route('release.notes'))->getContent();
         $link = $this->releaseLink($html);
 
-        $this->assertStringContainsString('v1.4.2 · 24-10-2026', $link, '⛔ ছবির মেনুতে config-এর সংস্করণ আর তারিখ নেই।');
+        // ⓘ "v" নয়, পুরো শব্দ — "সংস্করণ 1.4.2" (মালিক, ২৬ নভেম্বর ২০২৬)
+        $this->assertStringContainsString(__('core.brand.version_word').' 1.4.2 · 24-10-2026', $link, '⛔ ছবির মেনুতে config-এর সংস্করণ আর তারিখ নেই।');
         $this->assertStringNotContainsString('v0.1.0', $link, '⛔ পুরনো v0.1.0 রয়ে গেছে।');
         $this->assertStringContainsString('href="'.route('release.notes').'"', $link, '⛔ সংস্করণে চাপলে "নতুন কী এল" খোলে না।');
         $this->assertStringNotContainsString('v1.4.2', $this->bar($html), '⛔ নিচের বারে এখনো সংস্করণ — মালিক ফুটারে কেবল © চান।');

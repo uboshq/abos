@@ -54,7 +54,7 @@
                                     <td>
                                         {{-- ⓘ গতবারের দর (এই সরবরাহকারীর) — নামের উপর মাউস রাখলে; সারিতে আলাদা লাইন নয় (নমুনা v9) --}}
                                         <span :id="'dc-' + index + '-product'" class="whitespace-normal break-words font-medium"
-                                              :title="lastRateFor(line) ? (@js(__('purchase::message.last_from_supplier')) + ': ' + money(lastRateFor(line).rate) + ' · ' + lastRateFor(line).on) : ''"
+                                              :title="lastRateFor(line) ? (@js(__('purchase::message.last_from_supplier')) + ': ' + money(lastRateFor(line).rate) + ' · ' + lastRateFor(line).on) : @js(__('purchase::message.first_from_supplier'))"
                                               x-text="line.name"></span>
                                         <input type="hidden" :name="'lines[' + (index) + '][product_id]'" :value="line.id">
                                         <input type="hidden" :name="'lines[' + (index) + '][sales_price]'"

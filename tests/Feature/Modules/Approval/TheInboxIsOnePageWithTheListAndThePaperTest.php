@@ -206,7 +206,8 @@ final class TheInboxIsOnePageWithTheListAndThePaperTest extends TestCase
         foreach (['rose', 'navy', 'blue'] as $look) {
             $this->first->forceFill(['ui' => $look])->save();
             $html = (string) $this->actingAs($this->first->fresh())->get(route('approval.inbox.index'))->assertOk()->getContent();
-            $tiles = preg_match('/<dl class="inbox-board-tiles">(.*?)<\/dl>/s', $html, $m) === 1 ? strip_tags($m[1]) : '';
+            // ⓘ মালিকের নমুনা (২৬ নভেম্বর ২০২৬): শেষ সময় আর ধাপ এখন ঘরের নিচের চিপের লাইনে
+            $tiles = preg_match('/<p class="inbox-board-chips">(.*?)<\/p>/s', $html, $m) === 1 ? strip_tags($m[1]) : '';
             $this->assertStringContainsString(__('approval::message.due_passed_hours', ['hours' => 3]), html_entity_decode($tiles), "⛔ দফা ৭: {$look} বোর্ডের ঘরে শেষ সময় নেই।");
             $this->assertStringContainsString('1 / 2', $tiles, "⛔ দফা ৮: {$look} বোর্ডের ঘরে ধাপ নেই।");
             $this->assertStringNotContainsString('data-card-step', $html, "⛔ {$look}: নমুনায় নেই এমন ধাপের ব্যাজ সারিতে।");
