@@ -305,9 +305,9 @@
         form[data-abos-counter] .ds-head [data-customer-details] span.rounded-full * { color: #0b6c7a !important; }
         form[data-abos-counter] .ds-row2 { display: grid; grid-template-columns: minmax(0, 1fr) 17.5rem; gap: .75rem; align-items: start; }
         form[data-abos-counter] .ds-row2-empty { grid-template-columns: minmax(0, 1fr); }
-        /* ⭐ বাছা পণ্যের নাম — হলুদ মার্কারের মতো উজ্জ্বল ঘরে (মালিক, ২৬ নভেম্বর ২০২৬: "আর একটু বেশি হাইলাইট") */
-        form[data-abos-counter] .ds-picked-pill { flex: 0 1 auto !important; max-width: 100%; background: #fff1a8; border: 2px solid #f5b800 !important;
-            border-radius: 12px; color: #0b2a66 !important; font-weight: 800; padding-inline: 1rem; box-shadow: 0 2px 0 #e0a800; }
+        /* ⭐ বাছা পণ্যের নাম — হালকা টিল ঘরে, বাঁয়ে গাঢ় টিল দাগ; মোটের বাক্সের রঙের সাথে মেলে (মালিক, ২৬ নভেম্বর ২০২৬) */
+        form[data-abos-counter] .ds-picked-pill { flex: 0 1 auto !important; max-width: 100%; background: #e6f8fb; border: 1px solid #9fdde6 !important;
+            border-left: 5px solid #0b8a9a !important; border-radius: 10px; color: #0b3b5c !important; font-weight: 800; padding-inline: .9rem; }
         form[data-abos-counter] .ds-row2-empty :is(.ds-rcpt, .ds-qtywrap, [data-stock-box]) { display: none !important; }
         form[data-abos-counter] .ds-pick-hint { display: none !important; }
         /* পণ্যের সারি আর তার উপরের মজুদের বাক্স — একই কলাম, সোজাসুজি (মালিক: "অ্যাভেলেবেল … পরিমাণ আর এককের ঘর পর্যন্ত") */
@@ -411,6 +411,12 @@
         @media (min-width: 1280px) {
             body:has([data-counter-strip]) form[data-abos-counter] .ds-side { max-height: calc(100dvh - 3.6rem); }
             body:has([data-counter-strip]) form[data-abos-counter] .ds-left { height: calc(100dvh - 3.6rem); }
+            /* ⭐ বাক্সটা পর্দার নিচ পর্যন্ত — জায়গা থাকলে সারিগুলো ছড়িয়ে বসে, না থাকলে চাপা; বোতাম সবসময় নিচে (মালিক, ২৬ নভেম্বর ২০২৬) */
+            body:has([data-counter-strip]) form[data-abos-counter] .ds-side { height: calc(100dvh - 3.6rem); }
+            form[data-abos-counter] .ds-side > aside.ds-tot-abos { height: 100%; }
+            form[data-abos-counter] .ds-tot-abos > div:first-child { display: flex; flex-direction: column; }
+            form[data-abos-counter] .ds-tot-card { flex: 1 0 auto; display: flex; flex-direction: column; }
+            form[data-abos-counter] .ds-tot-card > .space-y-1:first-child { flex: 1 0 auto; display: flex; flex-direction: column; justify-content: space-between; }
         }
         form[data-abos-counter] .ds-tot-abos .mt-2.grid { margin-top: .4rem; }
         form[data-abos-counter] .ds-tot-abos [data-overview-trigger] { background: #0b8a9a !important; border-color: #0b8a9a !important; color: #fff !important;
