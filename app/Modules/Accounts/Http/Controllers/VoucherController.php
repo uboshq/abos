@@ -324,6 +324,9 @@ class VoucherController extends Controller implements HasMiddleware
             'known' => true,
             'amount' => app(AccountsFacts::class)->dueFrom($type, $id),
             'bills' => $this->openBillsOf($type, $id),
+            // ⭐ "আগের জের (ওপেনিং)" — কোনো বিলে নেই, কার্ড সবার উপরে বসায়, কেবল দেখায় (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬); নেই হলে null।
+            //   ⓘ `bills`-এর বাইরে: বিলের তালিকা ফোনের দরজার সাথে হুবহু এক থাকে, আর সারিগুলো + এটা = `amount`
+            'opening' => app(\App\Modules\Accounts\Services\VoucherAllocations::class)->openingOf($type, $id, true),
             /*
              * ⭐ পক্ষের মালিক মডিউলের তিন উত্তর — Core চুক্তি দিয়ে, মডিউল না চিনে (cb-ma-4; হিসাব গ্রাহক বা সরবরাহকারী মডিউল পড়ে না):
              * বাকির সীমা (গ্রাহক; সুইচ বন্ধ হলে null, ০.০০ মানে বাকি নেই), BIN/TIN (সরবরাহকারী), প্রাপকের ব্যাংক {state, line}।

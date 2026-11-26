@@ -21,6 +21,13 @@ interface PayableOpenBills
      */
     public function openBills(string $partyType, int $partyId, int $limit = 50): array;
 
+    /**
+     * ⭐ "আগের জের (ওপেনিং)" — দেনার যে অংশ কোনো খোলা বিলে নেই ([[\App\Core\Support\OpeningRow]]); না থাকলে null।
+     *
+     * @return array<string, mixed>|null
+     */
+    public function openingRow(string $partyType, int $partyId): ?array;
+
     /** যে ধরনের পক্ষকে আমরা দেনা থাকি ([[PartyRegistry]]-এর ধরন); কেউ না থাকলে খালি লেখা */
     public function partyType(): string;
 }

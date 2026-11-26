@@ -150,6 +150,7 @@ final class CreditControlApiController extends Controller implements HasMiddlewa
         $user = $request->user();
 
         $bills = $this->credit->openBills([(int) $customer->id => $customer])[(int) $customer->id] ?? [];
+        $opening = app(\App\Core\Contracts\PartyOpenBills::class)->openingRow('customer', (int) $customer->id);
 
         return response()->json([
             'id' => (string) $customer->public_id,
@@ -191,7 +192,9 @@ final class CreditControlApiController extends Controller implements HasMiddlewa
                 'days_overdue' => (int) $b['days_overdue'],
             ], $bills),
             // ⭐ খোলা বিলের মোট বাকি — ওয়েবের পাতার একই যোগ (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬)
-            'bills_total' => array_reduce($bills, fn (string $sum, array $b) => bcadd($sum, (string) $b['unpaid'], 4), '0'),
+            'bills_total' => array_reduce($bills, fn (string $sum, array $b) => bcadd($sum, (string) $b['unpaid'], 4), (string) ($opening['outstanding'] ?? '0')),
+            // ⭐ "আগের জের (ওপেনিং)" — কোনো বিলে নেই, কেবল দেখায়; `bills_total`-এ ধরা (ওয়েবের একই যোগ); নেই হলে null
+            'opening' => $opening === null ? null : ['label' => (string) $opening['no'], 'date' => (string) $opening['date'], 'unpaid' => bcadd((string) $opening['outstanding'], '0', 4)],
             'requests' => CustomerCreditRequest::query()->where('customer_id', $customer->id)
                 ->with(['requester', 'approval'])->latest('id')->limit(10)->get()
                 ->map(fn (CustomerCreditRequest $r) => [

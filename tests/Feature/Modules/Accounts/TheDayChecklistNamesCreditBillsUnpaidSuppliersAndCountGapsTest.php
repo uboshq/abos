@@ -198,6 +198,11 @@ final class TheDayChecklistNamesCreditBillsUnpaidSuppliersAndCountGapsTest exten
             {
                 return $partyType === $this->side ? $this->rows : [];
             }
+
+            public function openingRow(string $partyType, int $partyId, bool $withNotes = false): ?array
+            {
+                return null;
+            }
         });
     }
 }

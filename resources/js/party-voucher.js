@@ -246,12 +246,44 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
             return String(b?.kind ?? 'invoice') === 'invoice';
         },
 
+        /** ⭐ "আগের জের (ওপেনিং)" — কোনো বিলে নেই, কেবল দেখায় */
+        isOpening(b) {
+            return String(b?.kind ?? '') === 'opening';
+        },
+
+        get hasOpening() {
+            return this.bills.some((b) => this.isOpening(b));
+        },
+
+        /** নামটা লিংক কেবল আগের জেরে, আর ঠিকানা থাকলে (হিসাব বিবরণী) */
+        openingLink(b) {
+            return this.isOpening(b) && Boolean(b.url);
+        },
+
+        /** ⓘ আগের জেরের সারি হালকা কমলা — নমুনার মতো; বাকি সারি সাদা */
+        rowTone(b) {
+            return this.isOpening(b) ? 'bg-(--color-badge-warning-bg)' : '';
+        },
+
+        kindTone(b) {
+            return this.isOpening(b) ? 'bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)' : 'bg-(--color-badge-info-bg) text-(--color-badge-info-ink)';
+        },
+
+        get dueSumLabel() {
+            return String((this.hasOpening ? this.texts?.remainingLedger : this.texts?.remainingTotal) ?? '');
+        },
+
+        /** সব সারির বাকি (নোট চিহ্নসহ, আগের জের সহ) — আগের জের থাকলে খাতার জেরের সমান */
+        get dueSumText() {
+            return '৳' + taka(this.bills.reduce((sum, b) => sum + Math.round(Number(b.outstanding || 0) * 100), 0) / 100);
+        },
+
         kindText(b) {
             return this.isBill(b) ? '' : String(this.texts?.kinds?.[b.kind] ?? b.kind ?? '');
         },
 
         get hasNotes() {
-            return this.bills.some((b) => !this.isBill(b));
+            return this.bills.some((b) => !this.isBill(b) && !this.isOpening(b));
         },
 
         billKey(b) {
@@ -314,9 +346,9 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
         /* ⭐ ভাঁজের মাথা — "৮টা বিল · বাকি ৳… · এই রসিদে প্রয়োগ ৳…" (মালিক, ৮ নভেম্বর ২০২৬, নমুনা "ok"); নোট গোনা নয় */
         get billsPeek() {
             const open = this.bills.filter((b) => this.isBill(b));
-            const due = open.reduce((sum, b) => sum + Math.round(Number(b.outstanding || 0) * 100), 0);
+            const due = this.bills.filter((b) => this.isBill(b) || this.isOpening(b)).reduce((sum, b) => sum + Math.round(Number(b.outstanding || 0) * 100), 0);
 
-            return String(this.texts?.billsPeek ?? '')
+            return String((this.hasOpening ? this.texts?.billsPeekOpening : null) ?? this.texts?.billsPeek ?? '')
                 .replace(':n', String(open.length))
                 .replace(':due', taka(due / 100))
                 .replace(':applied', this.allocSumText);
@@ -383,14 +415,24 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
 
         /** টাকা লাখ-কমায় দুই দশমিকে — নকশার "30,000.00" */
         lakh(value) {
-            return taka(Number(value ?? 0));
+            // ⓘ ফাঁকা ঘর (আগের জেরের "বিলের টাকা") — শূন্য নয়, ড্যাশ: ওখানে কোনো বিলই নেই
+            if (value === '' || value === null || value === undefined) {
+                return '—';
+            }
+
+            return taka(Number(value));
         },
 
         /** "2026-10-17" → "17-10" (নকশার মতো) */
         dayMonth(value) {
             const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? ''));
 
-            return m ? m[3] + '-' + m[2] : String(value ?? '');
+            if (m) {
+                return m[3] + '-' + m[2];
+            }
+
+            // ⓘ শেষ দিন নেই (আগের জের) — ড্যাশ
+            return String(value ?? '') === '' ? '—' : String(value);
         },
 
         clearAllocs() {
@@ -515,7 +557,8 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
                 }
 
                 this.due = data.known ? Number(data.amount).toFixed(2) : null;
-                this.bills = data.bills || [];
+                // ⭐ আগের জের (ওপেনিং) সবার উপরে — কেবল দেখায় (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬)
+                this.bills = [...(data.opening ? [data.opening] : []), ...(data.bills || [])];
                 this.credit = data.credit ?? null;
                 this.taxIds = data.tax_ids ?? null;
                 this.payeeBank = data.payee_bank ?? null;

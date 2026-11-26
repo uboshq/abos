@@ -77,6 +77,8 @@ class CreditProfileController extends Controller
             ]);
 
         $bills = $this->credit->openBills([(int) $customer->id => $customer])[(int) $customer->id] ?? [];
+        // ⭐ "আগের জের (ওপেনিং)" — বিলের তালিকার সবার উপরে, কেবল দেখায় (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬)
+        $opening = app(\App\Core\Contracts\PartyOpenBills::class)->openingRow('customer', (int) $customer->id);
 
         return view('credit_control::profile', [
             'menu' => $this->menu->forUser($request->user()),
@@ -86,8 +88,9 @@ class CreditProfileController extends Controller
             // ⭐ ঝুঁকির মাত্রা আর তার কারণ — কেবল জানায় (ধাপ ৩.১)
             'risk' => app(CreditRisk::class)->rate($customer),
             'bills' => $bills,
-            // ⭐ খোলা বিলের মোট বাকি — পূর্ণ নিরীক্ষা §৫ (১৮ অক্টোবর ২০২৬); আগে সারিই ছিল, যোগ নেই
-            'billsTotal' => array_reduce($bills, fn (string $sum, array $b) => bcadd($sum, (string) $b['unpaid'], 4), '0'),
+            'opening' => $opening,
+            // ⭐ খোলা বিলের মোট বাকি — পূর্ণ নিরীক্ষা §৫ (১৮ অক্টোবর ২০২৬); আগে সারিই ছিল, যোগ নেই। আগের জের থাকলে সেটাও (= খাতার জের)
+            'billsTotal' => array_reduce($bills, fn (string $sum, array $b) => bcadd($sum, (string) $b['unpaid'], 4), (string) ($opening['outstanding'] ?? '0')),
             'history' => $history->concat($blocks)->sortByDesc('at')->values(),
             'decisions' => CreditDecision::query()->where('customer_id', $customer->id)->latest('id')->limit(10)->get(),
 

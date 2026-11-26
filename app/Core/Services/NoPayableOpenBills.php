@@ -14,6 +14,11 @@ final class NoPayableOpenBills implements PayableOpenBills
         return [];
     }
 
+    public function openingRow(string $partyType, int $partyId): ?array
+    {
+        return null;
+    }
+
     public function partyType(): string
     {
         return '';

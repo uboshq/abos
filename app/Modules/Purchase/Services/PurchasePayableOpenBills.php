@@ -6,6 +6,9 @@ namespace App\Modules\Purchase\Services;
 
 use App\Core\Contracts\PayableOpenBills;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\OpeningRow;
+use App\Models\LedgerEntry;
+use App\Modules\Supplier\Models\Supplier;
 use App\Modules\Purchase\Models\PurchaseBill;
 use Carbon\Carbon;
 
@@ -65,6 +68,31 @@ final class PurchasePayableOpenBills implements PayableOpenBills
         }
 
         return $open;
+    }
+
+    /**
+     * ⓘ দেনার খাতের জের ([[Supplier::payable()]]-এর একই খাত আর চিহ্ন, গোটা কোম্পানি) − সব খোলা বিলের বাকি ([[PurchaseBill::dueAmount()]];
+     * বিলের তালিকার একই অঙ্ক)।
+     */
+    public function openingRow(string $partyType, int $partyId): ?array
+    {
+        if ($partyType !== 'supplier' || $partyId <= 0) {
+            return null;
+        }
+
+        $ledger = LedgerEntry::query()->forParty(Supplier::drillSourceType(), $partyId)
+            ->whereIn('account_id', Supplier::payableAccountIds())
+            ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as net, MIN(trx_date) as since')
+            ->first();
+
+        $onBills = '0';
+        foreach (PurchaseBill::acrossBranches()->withPaid()->stillOwed()->where('supplier_id', $partyId)
+            ->where('status', DocumentStatus::CONFIRMED)->cursor() as $bill) {
+            $onBills = bcadd($onBills, $bill->dueAmount(), 4);
+        }
+
+        return OpeningRow::make('supplier', $partyId, bcadd((string) ($ledger?->net ?? 0), '0', 4), $onBills,
+            $ledger?->since === null ? null : (string) $ledger->since);
     }
 
     public function partyType(): string

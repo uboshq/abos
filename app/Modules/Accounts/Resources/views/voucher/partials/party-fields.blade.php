@@ -89,7 +89,10 @@
                  'billsPeek' => __('money.fold_peek.bills_'.($isReceipt ? 'in' : 'out')),
                  'bankNone' => __('money.screen.payee_bank_none'),
                  // ⭐ বিলে না-বাঁধা নোটের সারি — ধরনের নাম (a5-এর চুক্তি `kind`)
-                 'kinds' => ['credit_note' => __('money.screen.kind.credit_note'), 'debit_note' => __('money.screen.kind.debit_note')],
+                 'kinds' => ['credit_note' => __('money.screen.kind.credit_note'), 'debit_note' => __('money.screen.kind.debit_note'), 'opening' => __('core.opening_row.tag')],
+                 'remainingTotal' => __('money.screen.col.remaining_total'),
+                 'remainingLedger' => __('money.screen.col.remaining_ledger'),
+                 'billsPeekOpening' => __('money.fold_peek.bills_'.($isReceipt ? 'in' : 'out').'_opening'),
              ]),
          })">
 <section data-boxed data-voucher-general class="rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4">
@@ -471,7 +474,7 @@
                         </thead>
                         <tbody>
                             <template x-for="b in bills" :key="billKey(b)">
-                                <tr class="border-b border-(--color-border)" data-bill-row>
+                                <tr class="border-b border-(--color-border)" data-bill-row :data-opening="isOpening(b)" x-bind:class="rowTone(b)">
                                     {{-- ⓘ নোটের সারিতে টিক আর অঙ্ক নেই — নোট এই কাগজে প্রয়োগ হয় না (আলাদা কাজ); কেবল দেখায় পক্ষের বকেয়া কত কমেছে/বেড়েছে --}}
                                     <td>
                                         <template x-if="isBill(b)">
@@ -480,8 +483,15 @@
                                         </template>
                                     </td>
                                     <td class="whitespace-normal font-medium">
-                                        <span x-text="b.no"></span>
-                                        <span class="mt-0.5 block w-fit whitespace-nowrap rounded bg-(--color-badge-info-bg) px-1.5 py-0.5 text-2xs text-(--color-badge-info-ink)"
+                                        {{-- ⭐ "আগের জের (ওপেনিং)" — নামটা হিসাব বিবরণীর লিংক, পাশে "কোনো বিলে নেই" (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬) --}}
+                                        <template x-if="openingLink(b)">
+                                            <a :href="b.url" target="_blank" rel="noopener" class="text-(--color-link) hover:underline" data-opening-link x-text="b.no"></a>
+                                        </template>
+                                        <template x-if="! openingLink(b)">
+                                            <span x-text="b.no"></span>
+                                        </template>
+                                        <span class="mt-0.5 block w-fit whitespace-nowrap rounded px-1.5 py-0.5 text-2xs"
+                                              x-bind:class="kindTone(b)"
                                               data-bill-kind x-show="! isBill(b)" x-text="kindText(b)"></span>
                                     </td>
                                     <td class="num" x-text="dayMonth(b.date)"></td>
@@ -501,8 +511,10 @@
                         </tbody>
                         <tfoot>
                             <tr class="font-semibold">
-                                <td colspan="7">{{ __('money.screen.col.applied_total') }}</td>
-                                <td class="num" data-bills-sum x-text="allocSumText"></td>
+                                {{-- ⭐ মোট বাকি — সব সারি মিলে; আগের জের থাকলে খাতার জেরের সমান (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬) --}}
+                                <td colspan="6" x-text="dueSumLabel"></td>
+                                <td class="num" data-bills-due-sum x-text="dueSumText"></td>
+                                <td class="num" data-bills-sum x-text="allocSumText" title="{{ __('money.screen.col.applied_total') }}"></td>
                             </tr>
                         </tfoot>
                     </table>

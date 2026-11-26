@@ -53,6 +53,17 @@ final class VoucherAllocations
     }
 
     /**
+     * ⭐ "আগের জের (ওপেনিং)" — গ্রাহক বা সরবরাহকারীর, যার আছে ([[\App\Core\Support\OpeningRow]]); কেবল দেখানোর জন্য।
+     * ⛔ [[resolve()]] এটা দেখে না — তাই এই সারিতে টাকা বসানোর কোনো পথ নেই।
+     *
+     * @return array<string, mixed>|null
+     */
+    public function openingOf(string $partyType, int $partyId, bool $withNotes = false): ?array
+    {
+        return $this->openBills->openingRow($partyType, $partyId, $withNotes) ?? $this->payableBills->openingRow($partyType, $partyId);
+    }
+
+    /**
      * পাঠানো সারি → পক্ষের খোলা বিল; ভুল ঘর ধরে (চুক্তি §৪-এর চাবি)।
      *
      * @param  array<int|string, mixed>  $rows  `bills` — প্রতিটা `['id' => public_id, 'amount' => …]`
