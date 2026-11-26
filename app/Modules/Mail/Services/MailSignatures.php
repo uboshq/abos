@@ -53,9 +53,12 @@ final class MailSignatures
         ];
     }
 
+    /** ⓘ এক অনুরোধে একবার — স্বাক্ষরের পাতা 20টা নকশা আঁকে, প্রতিটায় আলাদা প্রশ্ন নয় */
+    private array $memo = [];
+
     public function profile(User $user): MailProfile
     {
-        return MailProfile::query()->firstOrNew(['user_id' => $user->id]);
+        return $this->memo['profile'][$user->id] ??= MailProfile::query()->firstOrNew(['user_id' => $user->id]);
     }
 
     /**
@@ -125,9 +128,13 @@ final class MailSignatures
             return null;
         }
 
-        return MailFestival::query()->where('active', true)->whereNotNull('on_date')
-            ->whereBetween('on_date', [now()->toDateString(), now()->addDay()->toDateString()])
-            ->orderBy('on_date')->first();
+        if (! array_key_exists('festival', $this->memo)) {
+            $this->memo['festival'] = MailFestival::query()->where('active', true)->whereNotNull('on_date')
+                ->whereBetween('on_date', [now()->toDateString(), now()->addDay()->toDateString()])
+                ->orderBy('on_date')->first();
+        }
+
+        return $this->memo['festival'];
     }
 
     public function festivalBanner(MailFestival $fest, string $company): string
@@ -147,6 +154,16 @@ final class MailSignatures
     /** @return array{bytes: string, mime: string, ext: string}|null */
     public function photoBytes(User $user): ?array
     {
+        if (array_key_exists($user->id, $this->memo['photo'] ?? [])) {
+            return $this->memo['photo'][$user->id];
+        }
+
+        return $this->memo['photo'][$user->id] = $this->readPhoto($user);
+    }
+
+    /** @return array{bytes: string, mime: string, ext: string}|null */
+    private function readPhoto(User $user): ?array
+    {
         $path = $this->profile($user)->photo_path;
 
         foreach (['local', 'public'] as $disk) {
@@ -162,6 +179,16 @@ final class MailSignatures
 
     /** @return array{bytes: string, mime: string, ext: string}|null */
     public function logoBytes(): ?array
+    {
+        if (array_key_exists('logo', $this->memo)) {
+            return $this->memo['logo'];
+        }
+
+        return $this->memo['logo'] = $this->readLogo();
+    }
+
+    /** @return array{bytes: string, mime: string, ext: string}|null */
+    private function readLogo(): ?array
     {
         $company = Company::query()->find(CompanyContext::id());
 
