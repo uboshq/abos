@@ -2,7 +2,7 @@
                             bg-(--color-surface-card)">
                 {{-- ⭐ কেবল পণ্যের তালিকা নিজে সরে — বাকি সব ঘর জায়গায় থাকে (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9)।
                      ⓘ মাথার সারি আটকে থাকে (`sticky`), তাই নিচে নামলেও কলামের নাম চোখে থাকে। --}}
-                <div data-cart-scroll class="max-h-[calc(100dvh-26rem)] min-h-48 overflow-auto">
+                <div data-cart-scroll class="max-h-[calc(100dvh-29rem)] min-h-48 overflow-auto">
                     <table class="ui-grid is-compact w-full text-sm">
                         {{-- ── কলামের ক্রম — মালিকের ছবির ক্রম ────────────────
 

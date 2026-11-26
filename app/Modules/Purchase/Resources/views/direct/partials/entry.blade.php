@@ -208,8 +208,8 @@
                              ⛔ সরু পর্দায় নয়টা এক সারিতে চাপালে প্রতিটা ঘর
                              আঙুলের চেয়ে ছোট হত — তাই `lg`-র নিচে তিনটা করে। --}}
                         {{-- ⭐ এক সারিতে সব ঘর, আর শেষে উপহার · কার্টে দিন · মুছুন — "এই লাইনে" বাক্স নেই (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9) --}}
-                        <div class="flex flex-wrap items-end gap-2 [&>label]:min-w-[5.5rem] [&>label]:flex-1
-                                    [&>label>span]:truncate">
+                        <div class="flex flex-wrap items-end gap-1.5 lg:flex-nowrap [&>label]:min-w-0 [&>label]:flex-1
+                                    [&>label>span]:truncate [&_input]:px-1.5 [&_select]:px-1">
                             <label class="block">
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">
                                     {{ __('purchase::field.qty') }}
@@ -400,14 +400,14 @@
                             <div class="flex shrink-0 items-end gap-1">
                                 {{-- ⓘ উপহার — পণ্যটা কার্টে বসিয়ে তার ঠিক নিচে উপহারের সারি খোলে, বিক্রয়ের মতো ([[giftForThisLine()]]) --}}
                                 <button type="button" @click="giftForThisLine()" :disabled="! picked"
-                                        class="h-(--spacing-field) rounded-(--radius-field) border px-3 text-sm font-semibold disabled:opacity-40"
+                                        class="h-(--spacing-field) rounded-(--radius-field) border px-2 text-sm font-semibold disabled:opacity-40"
                                         style="border-color: var(--color-module-purchase); color: var(--color-module-purchase);
                                                background: var(--color-badge-warning-bg)">
                                     {{ __('purchase::action.gift_short') }}
                                 </button>
 
                                 <button type="button" @click="addToCart()" :disabled="! picked"
-                                        class="h-(--spacing-field) rounded-(--radius-field) bg-(--color-success) px-4 text-sm font-semibold
+                                        class="h-(--spacing-field) whitespace-nowrap rounded-(--radius-field) bg-(--color-success) px-3 text-sm font-semibold
                                                text-(--color-ink-inverse) hover:bg-(--color-success-hover) disabled:opacity-40">
                                     {{-- ⓘ কার্টের সারি উপরে খোলা থাকলে "হালনাগাদ করুন" — নতুন সারি নয়, সেটাই বদলায় --}}
                                     <span x-show="editingKey === null">＋ {{ __('purchase::action.add_to_cart') }}</span>
@@ -415,7 +415,7 @@
                                 </button>
 
                                 <button type="button" @click="clearEntry()"
-                                        class="h-(--spacing-field) rounded-(--radius-field) bg-(--color-badge-danger-bg) px-3 text-sm font-semibold
+                                        class="h-(--spacing-field) whitespace-nowrap rounded-(--radius-field) bg-(--color-badge-danger-bg) px-2 text-sm font-semibold
                                                text-(--color-badge-danger-ink) hover:bg-(--color-surface-hover)">
                                     {{ __('purchase::action.clear_data') }}
                                 </button>

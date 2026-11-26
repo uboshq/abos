@@ -1324,7 +1324,7 @@ export default function directPurchase({
             /* ⓘ খালি হারে পণ্যের নিজের দর বসে — মানুষ কেবল আলাদাগুলো বদলান */
             this.lines.forEach((line) => {
                 if (line.unload_rate === undefined || line.unload_rate === null || String(line.unload_rate) === '') {
-                    line.unload_rate = String(this.defaultUnloadRateOf(line));
+                    line.unload_rate = Number(this.defaultUnloadRateOf(line)).toFixed(2);
                 }
             });
         },
@@ -1345,7 +1345,8 @@ export default function directPurchase({
 
             const name = modes[this.unloadMode] || '';
 
-            return this.unloadCostsUs ? name + ' · ' + this.money(this.unloadTotal) : name;
+            /* ⓘ খরচ হলে কেবল অঙ্ক (কে পাবে তা পপআপে); নইলে পথের নাম — সারিটা এক লাইনে থাকে */
+            return this.unloadCostsUs ? this.money(this.unloadTotal) : name;
         },
 
         /** "ঠিক আছে — বিলে বসান" — সার্ভারের নিয়ম আগেই দেখে, তারপর বন্ধ ([[LabourCost::read()]]) */
