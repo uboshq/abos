@@ -265,6 +265,26 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->getJson('/mail/compose?paper=nonsense&no=1')->assertStatus(422);
     }
 
+    public function test_the_bar_shows_mail_with_its_unread_count_only_in_abos_looks(): void
+    {
+        $this->box($this->clerk, MailAccount::OWN, 'clerk@adi.test');
+
+        $this->clerk->forceFill(['ui' => 'rose'])->save();
+        $this->as($this->clerk);
+        $this->get('/mail/signature')->assertOk()->assertSee('data-mail-topbar', false);
+        $this->assertSame(1, $this->getJson('/mail/unread')->assertOk()->json('unread'));
+
+        $this->clerk->forceFill(['ui' => 'dynamic'])->save();
+        $this->as($this->clerk);
+        $this->get('/mail/signature')->assertOk()->assertDontSee('data-mail-topbar', false);
+
+        // ⛔ মেইলবক্স না থাকলে চিহ্নও নেই
+        $none = $this->person('No Box', ['mail.use']);
+        $none->forceFill(['ui' => 'rose'])->save();
+        $this->as($none);
+        $this->get('/mail/signature')->assertOk()->assertDontSee('data-mail-topbar', false);
+    }
+
     // ── সাহায্যকারী ─────────────────────────────────────────────────
 
     private function person(string $name, array $keys, bool $superAdmin = false): User

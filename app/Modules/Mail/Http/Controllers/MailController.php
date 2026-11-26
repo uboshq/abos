@@ -495,18 +495,26 @@ final class MailController extends Controller implements HasMiddleware
     /** ⓘ ABOS-এর বারের না-পড়া সংখ্যা — নিজের আর দলের মেইলবক্সের ইনবক্স; ধীর সার্ভার হলে যা পাওয়া গেল */
     public function unread(Request $request): JsonResponse
     {
-        $total = 0;
+        $user = $request->user();
+        $key = 'mail.unread.'.\App\Core\Support\CompanyContext::companyId().'.'.$user->id;
 
-        foreach ($this->access->listed($request->user())->filter(fn (MailAccount $a) => $a->isUsable())->take(6) as $box) {
-            try {
-                $inbox = collect($this->server->folders($box))->firstWhere('role', 'inbox');
-                $total += (int) ($inbox['unread'] ?? 0);
-            } catch (\Throwable) {
-                // ⓘ একটা মেইলবক্স না পেলে বাকিগুলো গোনা হয়
+        // ⓘ 2 মিনিট জমা — প্রতিটা খোলা ট্যাব মেইল সার্ভারে আলাদা করে ঢোকে না
+        $total = \Illuminate\Support\Facades\Cache::remember($key, 120, function () use ($user) {
+            $total = 0;
+
+            foreach ($this->access->listed($user)->filter(fn (MailAccount $a) => $a->isUsable())->take(6) as $box) {
+                try {
+                    $inbox = collect($this->server->folders($box))->firstWhere('role', 'inbox');
+                    $total += (int) ($inbox['unread'] ?? 0);
+                } catch (\Throwable) {
+                    // ⓘ একটা মেইলবক্স না পেলে বাকিগুলো গোনা হয়
+                }
             }
-        }
 
-        return response()->json(['unread' => $total]);
+            return $total;
+        });
+
+        return response()->json(['unread' => (int) $total]);
     }
 
     // ── ভিতরের কাজ ───────────────────────────────────────────────────────

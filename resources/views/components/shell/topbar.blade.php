@@ -339,6 +339,11 @@
         @if (class_exists(\App\Modules\Messaging\Support\MessengerChrome::class) && \App\Modules\Messaging\Support\MessengerChrome::on())
             @include('messaging::partials.topbar-chat')
         @endif
+        {{-- ⭐ মেইল — বার্তার পাশে, কেবল তিন ABOS রূপে, `mail.use` আর চালু মেইলবক্স থাকলে (মেইল মডিউল, নমুনা v4 "ok") --}}
+        @if (\Illuminate\Support\Facades\Route::has('mail.index') && class_exists(\App\Modules\Mail\Services\MailAccess::class)
+            && \App\Modules\Mail\Services\MailAccess::showsOnBar(auth()->user()))
+            @include('mail::partials.topbar-mail')
+        @endif
         <x-shell.notification-bell />
         <x-shell.profile-menu :user="$user" :company="$company" :branch="$branch" />
     </div>

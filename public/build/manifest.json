@@ -45,6 +45,12 @@
       "assets/mail-jBVr1jVa.css"
     ]
   },
+  "resources/js/mail-badge.js": {
+    "file": "assets/mail-badge-KSK7HBgo.js",
+    "name": "mail-badge",
+    "src": "resources/js/mail-badge.js",
+    "isEntry": true
+  },
   "resources/js/mail-page.js": {
     "file": "assets/mail-page-CyUwv2ao.js",
     "name": "mail-page",

@@ -1,0 +1,1 @@
+var e=document.querySelector(`[data-mail-topbar]`);if(e){let t=e.querySelector(`[data-mail-badge]`),n=async()=>{if(!document.hidden)try{let n=await fetch(e.dataset.unreadUrl,{headers:{Accept:`application/json`},credentials:`same-origin`});if(!n.ok)return;let r=Number((await n.json()).unread||0);t.hidden=r<=0,t.textContent=r>99?`99+`:String(r)}catch{}};n(),setInterval(n,18e4)}

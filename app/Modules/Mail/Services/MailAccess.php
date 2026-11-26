@@ -60,6 +60,27 @@ final class MailAccess
         return (bool) $account->members()->where('users.id', $user->id)->first()?->pivot?->can_send;
     }
 
+    /**
+     * ⓘ ABOS-এর বারে মেইলের চিহ্ন — তিন ABOS রূপে, `mail.use` চাবিতে, আর অন্তত একটা চালু মেইলবক্স থাকলে।
+     * ⓘ এক অনুরোধে একবারই হিসাব (বার প্রতিটা পাতায় আঁকা হয়)।
+     */
+    public static function showsOnBar(?User $user): bool
+    {
+        if ($user === null || ! $user->can('mail.use')) {
+            return false;
+        }
+
+        $attrs = request()->attributes;
+
+        if (! $attrs->has('mail.bar')) {
+            $look = \App\Core\Support\Ui::clean(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen($user->ui)));
+            $attrs->set('mail.bar', in_array($look, \App\Core\Support\Ui::FOLD_MENU_LOOKS, true)
+                && app(self::class)->listed($user)->contains(fn (MailAccount $a) => $a->isUsable()));
+        }
+
+        return (bool) $attrs->get('mail.bar');
+    }
+
     /** ⛔ খুলতে না পারলে থামে — নিয়ামক এটা ডাকে, তাই কোনো পথ নিয়ম এড়াতে পারে না */
     public function mustOpen(User $user, MailAccount $account): void
     {
