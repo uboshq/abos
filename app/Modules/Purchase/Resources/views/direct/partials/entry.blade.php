@@ -1,6 +1,13 @@
             {{-- ⭐ বাক্স নেই — শুধু খোঁজার বোতাম; পণ্য বাছলে লট (৩) আর পরিমাণের সারি (৪) দেখা দেয়, "কার্টে দিন"-এ আবার লুকায়
                  (মালিক, ২৬ নভেম্বর ২০২৬) --}}
-            <section data-direct-entry class="px-1 py-1">
+            {{-- ⓘ ⋯ → সম্পাদনা: এই অংশটাই পপআপ হয়ে পর্দার মাঝে বসে, পেছনে ঝাপসা পর্দা; "হালনাগাদ করুন" বা ✕ চাপলে ফেরে --}}
+            <div x-show="editingKey !== null" x-cloak @click="clearEntry()" class="fixed inset-0 z-50 bg-black/45"></div>
+            <section data-direct-entry class="px-1 py-1" :class="editingKey !== null ? 'entry-as-popup' : ''">
+                <div x-show="editingKey !== null" x-cloak class="mb-3 flex items-center justify-between border-b border-(--color-border) pb-2">
+                    <h2 class="text-base font-semibold">{{ __('purchase::action.edit_line') }}</h2>
+                    <button type="button" @click="clearEntry()" aria-label="{{ __('purchase::action.close_panel') }}"
+                            class="rounded-(--radius-field) px-2 text-xl leading-none text-(--color-ink-muted) hover:bg-(--color-surface-hover)">&times;</button>
+                </div>
 {{-- ⚠️ বার্তাটা সারির **নিচে**, ঘরটার ভিতরে নয়।
 
                      ⛔ আগে এটা গুদামের `<label>`-এর ভিতরে ছিল, আর তাতে

@@ -6,7 +6,10 @@
 <div data-counter-strip
      class="sticky top-0 z-40 flex h-10 items-center gap-3 px-4 text-sm text-(--color-ink-inverse) print-hide"
      style="background: var(--color-brand-700, #0f2d6b)">
-    <span class="rounded-(--radius-field) bg-(--color-surface-card) px-2 font-bold text-(--color-brand-600)">abos</span>
+    {{-- ⓘ ABOS-এর জীবন্ত লোগো, ছোট — সাদা ঘরে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+    <span class="flex h-7 items-center rounded-(--radius-field) bg-(--color-surface-card) px-2">
+        <x-brand.live-logo style="height: 20px; width: auto;" />
+    </span>
     <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" style="background: var(--color-warning)">
         {{ __('core.counter.mode') }} · {{ $title }}
     </span>

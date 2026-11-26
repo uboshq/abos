@@ -2811,6 +2811,13 @@ a.inbox-board-dno, a.inbox-board-damount { text-decoration: underline dashed; te
 .inbox-board-fold > summary::-webkit-details-marker { display: none; }
 .inbox-board-fold > summary > .num { font-weight: 500; color: var(--color-ink-muted); font-size: 12.5px; }
 .inbox-board-fold:not([open]) { padding-block: 7px !important; }
+/* ⭐ কাউন্টার মোড — পেছনের রূপের নীল নিচে দেখা যায় না, পাতা পুরো হালকা (মালিক, ২৬ নভেম্বর ২০২৬) */
+body:has([data-counter-strip]) { background: var(--color-surface-app) !important; }
+body:has([data-counter-strip]) #main { border-radius: 0 !important; margin: 0 !important; min-height: calc(100dvh - 40px); }
+/* ⭐ সরাসরি ক্রয় — ⋯ → সম্পাদনা: সারিটা পর্দার মাঝখানে পপআপে (মালিক, ২৬ নভেম্বর ২০২৬) */
+.entry-as-popup { position: fixed !important; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 60;
+    width: min(1280px, 94vw); max-height: 90dvh; overflow: auto; padding: 16px 18px !important;
+    background: var(--color-surface-card); border-radius: 16px; box-shadow: 0 24px 70px rgb(0 0 0 / .35); }
 .inbox-board-box td, .inbox-board-box th { padding-block: 4px !important; }
 .inbox-board-box [data-sale-bundle] > .mt-4 { margin-top: 6px; }
 .inbox-board-actions [data-approval-decide] {
