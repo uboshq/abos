@@ -80,12 +80,35 @@ final class CreditControlLists
             filters: ['branch', 'salesman_id'],
             query: function (array $f) use ($buckets): Builder {
                 $sums = array_fill_keys($buckets, []);
+                $customers = CreditPositionReports::customers($f);
+                $onBills = [];
 
-                foreach (app(CreditExposure::class)->openBills(CreditPositionReports::customers($f)) as $id => $bills) {
+                foreach (app(CreditExposure::class)->openBills($customers) as $id => $bills) {
                     foreach ($bills as $bill) {
                         $b = CreditPositionReports::bucketOf($bill['days_overdue']);
                         $sums[$b][$id] = bcadd($sums[$b][$id] ?? '0', $bill['unpaid'], 4);
+                        $onBills[$id] = bcadd($onBills[$id] ?? '0', $bill['unpaid'], 4);
                     }
+                }
+
+                /*
+                 * ⭐ আগের জের (ওপেনিং) — কোনো বিলে নেই, তবু পাওনা; বয়স জেরের প্রথম দিন থেকে, নিজের ঘরে (মালিকের নমুনা v2, ২৬ নভেম্বর ২০২৬;
+                 *   SAP/Dynamics/Odoo-র বয়সের ছকে খোলা আইটেম)। ⓘ এক উৎস — রসিদ আর প্রোফাইলের একই সারি ([[PartyOpenBills::openingRow()]]);
+                 *   কেবল যাঁর খাতার জের আর বিলের যোগ মেলে না, তাঁর জন্যই খোঁজা। ⓘ অগ্রিম (বিয়োগ) পাওনার ছকে নয়।
+                 */
+                $parties = app(\App\Core\Contracts\PartyOpenBills::class);
+                foreach ($customers as $id => $customer) {
+                    if (bccomp(bcadd((string) ($customer->outstanding_net ?? '0'), '0', 4), $onBills[$id] ?? '0', 2) === 0) {
+                        continue;
+                    }
+
+                    $opening = $parties->openingRow('customer', (int) $id, false, true);
+                    if ($opening === null || $opening['kind'] !== \App\Core\Support\OpeningRow::KIND) {
+                        continue;
+                    }
+
+                    $b = CreditPositionReports::bucketOf((int) $opening['age']);
+                    $sums[$b][$id] = bcadd($sums[$b][$id] ?? '0', (string) $opening['outstanding'], 4);
                 }
 
                 $ids = array_values(array_unique(array_merge(...array_map('array_keys', array_values($sums)))));

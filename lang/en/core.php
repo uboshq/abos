@@ -43,7 +43,16 @@ return [
     ],
 
     // ⭐ খাতার জেরের যে অংশ কোনো খোলা বিলে নেই — বিলের তালিকার সবার উপরে, কেবল দেখায় ([[OpeningRow]], ২৬ নভেম্বর ২০২৬)
-    'opening_row' => ['label' => 'Earlier balance (opening)', 'tag' => 'Not on any bill'],
+    'opening_row' => [
+        'label' => 'Earlier balance (opening)',
+        'tag' => 'Not on any bill',
+        'info' => 'Open balance not on any bill (mostly brought over from the old system) · first day :date · ledger balance − all open bills',
+        'advance_label' => 'Advance received',
+        'advance_tag' => 'Not on any bill',
+        'advance_info' => 'Paid ahead, or money not set against any bill · first day :date · ledger balance − all open bills',
+        'advance_paid_label' => 'Advance paid',
+        'advance_paid_info' => 'Paid to the supplier ahead, or not set against any bill · first day :date · ledger balance − all open bills',
+    ],
     'source' => [
         'voucher' => 'Voucher',
         'sales_invoice' => 'Sales Invoice',

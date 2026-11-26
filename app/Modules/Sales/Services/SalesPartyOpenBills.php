@@ -33,7 +33,7 @@ final class SalesPartyOpenBills implements PartyOpenBills
      * বিলের তালিকার একই অঙ্ক) − নোট চাইলে বিলে না-বাঁধা নোট (ক্রেডিট ঋণাত্মক)।
      * ⓘ আপনা থেকে শোধের ভাগ ([[AutoDues]]) এই অঙ্ক বদলায় না: জের বিলের যোগের বেশি হলে কোনো বিলই আপনা থেকে শোধ হয় না।
      */
-    public function openingRow(string $partyType, int $partyId, bool $withNotes = false): ?array
+    public function openingRow(string $partyType, int $partyId, bool $withNotes = false, bool $byLedger = false): ?array
     {
         if ($partyType !== 'customer' || $partyId <= 0) {
             return null;
@@ -46,7 +46,8 @@ final class SalesPartyOpenBills implements PartyOpenBills
         $onBills = '0';
         // ⛔ জের গোটা কোম্পানির — বিলও সব শাখার, নইলে অন্য শাখার বিল "আগের জের" হয়ে দেখা দিত
         foreach (SalesInvoice::acrossBranches()->withCollected()->where('customer_id', $partyId)->where('status', DocumentStatus::CONFIRMED)->cursor() as $invoice) {
-            $onBills = bcadd($onBills, $invoice->ownDue(), 4);
+            // ⓘ খাতা ধরে দেখালে অটো-বসানো বাকি ([[SalesInvoice::dueAmount()]]), টাকা বসানোর তালিকায় বিলের নিজের বাকি
+            $onBills = bcadd($onBills, $byLedger ? $invoice->dueAmount() : $invoice->ownDue(), 4);
         }
 
         if ($withNotes) {
@@ -59,7 +60,7 @@ final class SalesPartyOpenBills implements PartyOpenBills
         }
 
         return OpeningRow::make('customer', $partyId, bcadd((string) ($ledger?->net ?? 0), '0', 4), $onBills,
-            $ledger?->since === null ? null : (string) $ledger->since);
+            $ledger?->since === null ? null : (string) $ledger->since, \App\Modules\Customer\Models\Customer::query()->find($partyId));
     }
 
     public function openBills(string $partyType, int $partyId, int $limit = 50, bool $withNotes = false): array

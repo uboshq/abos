@@ -22,6 +22,7 @@ return [
     'open_bills' => 'খোলা বিল',
     'no_open_bills' => 'কোনো খোলা বিল নেই',
     'open_bills_total' => 'মোট বাকি (:countটা বিল)',
+    'bucket' => 'বয়সের ঘর',
     'open_bills_total_ledger' => 'মোট বাকি (:countটা বিল + আগের জের) = খাতার জের',
     'history' => 'বদলের ইতিহাস',
     'no_history' => 'সীমা, বাকির দিন বা বাকি বন্ধে কোনো বদল হয়নি',

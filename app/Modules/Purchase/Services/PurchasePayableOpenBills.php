@@ -92,7 +92,7 @@ final class PurchasePayableOpenBills implements PayableOpenBills
         }
 
         return OpeningRow::make('supplier', $partyId, bcadd((string) ($ledger?->net ?? 0), '0', 4), $onBills,
-            $ledger?->since === null ? null : (string) $ledger->since);
+            $ledger?->since === null ? null : (string) $ledger->since, Supplier::query()->find($partyId));
     }
 
     public function partyType(): string

@@ -531,14 +531,14 @@ describe('খোলা বিলে নোটের সারি', () => {
     })
 })
 
-/* ⭐ আগের জের (ওপেনিং) — সবার উপরে, কেবল দেখায়; মোট বাকি খাতার জেরের সমান (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬) */
+/* ⭐ আগের জের (ওপেনিং) — সবার উপরে; মোট বাকি খাতার জেরের সমান (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬); v2: টিক দেওয়া যায়, অগ্রিম সবুজ */
 describe('খোলা বিলে আগের জের', () => {
-    it('সবার উপরে বসে, টিক হয় না, নোটের কথাও আনে না, আর মোটে ধরা হয়', async () => {
+    it('সবার উপরে বসে, নোটের কথা আনে না, আর মোটে ধরা হয়', async () => {
         const box = make({ texts: { kinds: { opening: 'কোনো বিলে নেই' }, remainingTotal: 'মোট বাকি', remainingLedger: 'মোট বাকি = খাতার জের' } })
         box.partyId = '7'
         globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
             known: true, amount: '58200.0000',
-            opening: { kind: 'opening', no: 'আগের জের (ওপেনিং)', date: '2026-10-01', due_date: '', total: '', outstanding: '37700.0000', public_id: '', url: '/accounts/statement/customer/7' },
+            opening: { kind: 'opening', no: 'আগের জের (ওপেনিং)', date: '2026-10-01', due_date: '', total: '', outstanding: '37700.0000', public_id: 'opening', url: '/accounts/statement/customer/7', info: 'পুরনো সিস্টেম · 01/10/2026' },
             bills: [{ kind: 'invoice', public_id: 'inv-1', no: 'INV-0398', outstanding: '8500.0000', total: '8500.0000', due_date: '2026-11-17' },
                 { kind: 'invoice', public_id: 'inv-2', no: 'INV-0412', outstanding: '12000.0000', total: '12000.0000', due_date: '2026-12-05' }],
         }) })
@@ -547,7 +547,9 @@ describe('খোলা বিলে আগের জের', () => {
         const opening = box.bills[0]
 
         expect(box.isOpening(opening), '⛔ প্রথম সারি আগের জের নয়').toBe(true)
-        expect(box.isBill(opening), '⛔ আগের জের বিল ধরা হলো — টিক আর অঙ্কের ঘর পেত').toBe(false)
+        expect(box.isBill(opening), '⛔ আগের জের বিল ধরা হলো — বিলের সারিতে পাঠানো হত').toBe(false)
+        expect(box.canTick(opening), '⛔ আগের জেরে টিক নেই — নমুনা v2').toBe(true)
+        expect(box.hasInfo(opening), '⛔ ⓘ-তে উৎস নেই').toBe(true)
         expect(box.kindText(opening)).toBe('কোনো বিলে নেই')
         expect(box.openingLink(opening), '⛔ নামটা হিসাব বিবরণীর লিংক নয়').toBe(true)
         expect(box.hasNotes, '⛔ আগের জেরে নোটের কথার লাইন এল').toBe(false)
@@ -557,6 +559,38 @@ describe('খোলা বিলে আগের জের', () => {
         expect(box.dueSumLabel).toBe('মোট বাকি = খাতার জের')
 
         box.toggle(opening)
-        expect(box.pickedRows, '⛔ আগের জের টিক হয়ে প্রয়োগের সারিতে গেল').toEqual([])
+        box.setRow(opening, '10,000')
+        box.toggle(box.bills[1])
+        box.setRow(box.bills[1], '2300')
+
+        expect(box.openingTicked, '⛔ আগের জেরের টিক থাকল না').toBe(true)
+        expect(box.pickedRows, '⛔ আগের জের বিলের সারিতে পাঠানো হলো — সার্ভারে ওটা বিল নয়').toEqual([{ id: 'inv-1', amount: '2300' }])
+        expect(box.allocSumText, '⛔ এই রসিদে নেওয়া মোটে আগের জেরের টাকা নেই').toBe('৳12,300.00')
+        expect(box.hasTicked).toBe(true)
+    })
+
+    it('খাতার জের বিলের চেয়ে কম — সবুজ অগ্রিম সারি, বিয়োগে, টিক নেই, মোট = খাতার জের', async () => {
+        const box = make({ texts: { kinds: { opening: 'কোনো বিলে নেই', advance: 'কোনো বিলে বসেনি' }, remainingTotal: 'মোট বাকি', remainingLedger: 'মোট বাকি = খাতার জের' } })
+        box.partyId = '8'
+        globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+            known: true, amount: '5000.0000',
+            opening: { kind: 'advance', no: 'অগ্রিম জমা', date: '2026-11-14', due_date: '', total: '', outstanding: '-3000.0000', public_id: '', url: null, info: 'আগে দেওয়া টাকা' },
+            bills: [{ kind: 'invoice', public_id: 'inv-9', no: 'INV-0420', outstanding: '8000.0000', total: '8000.0000', due_date: '2026-12-07' }],
+        }) })
+
+        await box.loadDue()
+        const advance = box.bills[0]
+
+        expect(box.isAdvance(advance), '⛔ প্রথম সারি অগ্রিম নয়').toBe(true)
+        expect(box.canTick(advance), '⛔ অগ্রিমে টিক — ওটা পাওনা নয়').toBe(false)
+        expect(box.rowTone(advance), '⛔ অগ্রিম সবুজ নয়').toContain('success')
+        expect(box.kindText(advance)).toBe('কোনো বিলে বসেনি')
+        expect(box.openingLink(advance), '⛔ চাবি ছাড়া লিংক').toBe(false)
+        expect(box.hasNotes, '⛔ অগ্রিমে নোটের কথার লাইন এল').toBe(false)
+        expect(box.dueSumText, '⛔ মোট বাকি খাতার জের নয়').toBe('৳5,000.00')
+        expect(box.dueSumLabel).toBe('মোট বাকি = খাতার জের')
+
+        box.toggle(advance)
+        expect(box.allocSumPaisa, '⛔ অগ্রিমে টাকা বসল').toBe(0)
     })
 })
