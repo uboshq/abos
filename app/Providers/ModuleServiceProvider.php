@@ -101,6 +101,8 @@ class ModuleServiceProvider extends ServiceProvider
         $this->app->bind(PartyOpenBills::class, NoPartyOpenBills::class);
         // ⓘ ক্রয় বন্ধ থাকলে পরিশোধ ভাউচারে সরবরাহকারীর খোলা বিল নেই ([[\App\Core\Contracts\PayableOpenBills]], cb-ma-5)
         $this->app->bind(\App\Core\Contracts\PayableOpenBills::class, \App\Core\Services\NoPayableOpenBills::class);
+        // ⓘ ক্রয় বন্ধ থাকলে সরাসরি বিক্রয়ের "ক্রয়মূল্য"-তে কোনো ক্রয় নেই, কেবল খাতার খরচ ([[\App\Core\Contracts\LastPurchaseCost]])
+        $this->app->bind(\App\Core\Contracts\LastPurchaseCost::class, \App\Core\Services\NoLastPurchaseCost::class);
         // ⓘ হিসাব বন্ধ থাকলে চলন্ত বারে দিন বন্ধের খবর নেই ([[\App\Core\Contracts\DayCloseReminder]])
         $this->app->bind(\App\Core\Contracts\DayCloseReminder::class, \App\Core\Services\NoDayCloseReminder::class);
 

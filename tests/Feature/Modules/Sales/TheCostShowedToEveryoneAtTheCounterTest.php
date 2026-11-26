@@ -216,6 +216,29 @@ final class TheCostShowedToEveryoneAtTheCounterTest extends TestCase
             "⛔ [{$door}] চাবি থাকা সত্ত্বেও সংখ্যাটা ({$value}) নেই — তাহলে উপরের \"নেই\" কিছুই প্রমাণ করে না।");
     }
 
+    /**
+     * ⭐ "এই লাইন"-এর "ক্রয়মূল্য" (`sales.direct.cost`, ২৬ নভেম্বর ২০২৬) — চাবি ছাড়া দরজাটাই বন্ধ (৪০৩, কোনো সংখ্যা নয়);
+     * চাবিসহ শেষ পোস্ট হওয়া ক্রয়ের দর আর বিলটা। ⓘ উত্তর আসে ক্রয়ের কাছ থেকে চুক্তি দিয়ে ([[LastPurchaseCost]]) — বিক্রয় ক্রয়ের ভেতরে হাত দেয় না।
+     */
+    public function test_the_line_cost_door_opens_only_with_its_key(): void
+    {
+        $clerk = $this->clerk();
+        $url = route('sales.direct.cost', ['product' => $this->product->id]);
+
+        $without = $this->actingAs($clerk)->getJson($url);
+        $without->assertForbidden();
+        $this->assertStringNotContainsString('37.73', (string) $without->getContent(), '⛔ চাবি ছাড়াই ক্রয়মূল্য পৌঁছেছে।');
+
+        $clerk->givePermissionTo('sales.cost.view');
+        $with = $this->actingAs($clerk->fresh())->getJson($url)->assertOk();
+
+        $this->assertTrue($with->json('found'), '⛔ পোস্ট হওয়া ক্রয় থাকা সত্ত্বেও "কোনো ক্রয় নেই"।');
+        $this->assertSame(0, bccomp((string) $with->json('rate'), self::PURCHASE_PRICE, 4), '⛔ শেষ ক্রয়ের দর ৩৭.৭৩ নয়।');
+        $this->assertSame(0, bccomp((string) $with->json('total'), self::PURCHASE_PRICE, 4), '⛔ ছাড় আর আনলোডিং ছাড়া প্রতি একক মোট দরের সমান নয়।');
+        $this->assertSame('CV-3773', $with->json('supplierBillNo'), '⛔ সরবরাহকারীর বিল নম্বর হারাল।');
+        $this->assertSame(0, bccomp((string) $with->json('book'), self::PURCHASE_PRICE, 4), '⛔ খাতার খরচ হারাল।');
+    }
+
     // ── যে দরজায় খরচ কখনো যায় না ────────────────────────────────────────
 
     /** @return array<string, array{string}> */

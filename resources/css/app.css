@@ -17,6 +17,8 @@
 @import './fiori-look.css';
 /* ⭐ "ABOS" — নতুন ডিফল্ট রূপের নিজের খোলস (১৯ নভেম্বর ২০২৬); blue-look.css-এর উপর দাঁড়ায় না */
 @import './abos-look.css';
+/* ⭐ কাউন্টারের চেহারা — সরাসরি বিক্রয় আর কাউন্টার মোডের সারি (আগে পাতার <style>-এ; ২৬ নভেম্বর ২০২৬) */
+@import './counter-look.css';
 /* ⭐ হোমের গোটা-ব্যবসার বোর্ড — কেবল "ABOS"-এ, `[data-ui='rose']` (১৯ নভেম্বর ২০২৬) */
 @import './home-board.css';
 @import './viz-board.css';
@@ -3190,3 +3192,14 @@ html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .stage-strip .stag
 
 /* ⓘ সরু বাক্সের বারেও এক সারি — খোঁজার ঘর আগে ছোট হয় */
 html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .toolbar-view label:has(> input[type='search']) { min-width: 7rem; }
+
+/* ⭐ মডিউলের আড়াআড়ি সারির ড্রপডাউন (যেমন "প্রতিবেদন") তালিকার টুলবারের নিচে চাপা পড়ত — দুটোই z-20, টুলবার পরে আসে বলে উপরে
+   (মালিকের ছবি, Navy, ক্রয় ফেরত, ২৬ নভেম্বর ২০২৬)। ⓘ ABOS-এর তিন রূপেই সারিটা উপরের স্তরে, আর তালিকাটা পর্দার মাপে লম্বা।
+   ⓘ তিন রূপের নিয়ম বলে এখানে — blue-look.css কেবল Blue-এর, abos-look.css কেবল Smart-এর ([[TheBlueLookHasNoOuterFrameTest]]) */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-module-bar] {
+    z-index: 30;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-modulebar-fold] {
+    max-height: min(70dvh, 34rem);
+}

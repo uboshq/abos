@@ -5,10 +5,10 @@
 @endphp
 <div data-counter-strip
      class="sticky top-0 z-40 flex h-10 items-center gap-3 px-4 text-sm text-(--color-ink-inverse) print-hide"
-     style="background: var(--color-brand-700, #0f2d6b)">
+     style="background: var(--color-brand-700)">
     {{-- ⓘ ABOS-এর জীবন্ত লোগো, ছোট — সাদা ঘরে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
-    <span class="flex h-7 items-center rounded-(--radius-field) bg-(--color-surface-card) px-2">
-        <x-brand.live-logo style="height: 20px; width: auto;" />
+    <span class="flex h-(--spacing-field-compact) items-center rounded-(--radius-field) bg-(--color-surface-card) px-2">
+        <x-brand.live-logo class="counter-logo" />
     </span>
     <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold" style="background: var(--color-warning)">
         {{ __('core.counter.mode') }} · {{ $title }}
@@ -17,8 +17,7 @@
     <span class="flex min-w-0 items-center gap-2.5">
         <b class="truncate font-extrabold" style="font-size: 19px">{{ $user?->currentCompany?->name() }}</b>
         @if ($user?->currentBranch)
-            <span class="shrink-0 rounded-full px-3.5 py-0.5 font-extrabold" style="background: #ffd23f; color: #0b2a66; font-size: 15px"
-                  data-counter-branch>{{ $user->currentBranch->name() }}</span>
+            <span class="shrink-0 rounded-full px-3.5 py-0.5 font-extrabold" data-counter-branch>{{ $user->currentBranch->name() }}</span>
         @endif
     </span>
     <span class="hidden truncate opacity-80 md:inline">{{ __('core.counter.billing_by', ['name' => $user?->name]) }}</span>

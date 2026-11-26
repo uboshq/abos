@@ -431,13 +431,3 @@
     top: 0;
     margin: 0 0 10px;
 }
-
-/* ⭐ মডিউলের আড়াআড়ি সারির ড্রপডাউন (যেমন "প্রতিবেদন") তালিকার টুলবারের নিচে চাপা পড়ত — দুটোই z-20, টুলবার পরে আসে বলে উপরে
-   (মালিকের ছবি, Navy, ক্রয় ফেরত, ২৬ নভেম্বর ২০২৬)। ⓘ ABOS-এর তিন রূপেই সারিটা উপরের স্তরে, আর তালিকাটা পর্দার মাপে লম্বা */
-:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-module-bar] {
-    z-index: 30;
-}
-
-:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-modulebar-fold] {
-    max-height: min(70dvh, 34rem);
-}

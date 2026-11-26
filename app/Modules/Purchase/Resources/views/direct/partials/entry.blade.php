@@ -192,7 +192,7 @@
                             <span class="block truncate text-2xs text-(--color-badge-pending-ink)">{{ __('inventory::field.batch_no') }}</span>
                             <input type="text" maxlength="60" autocomplete="off" data-lot-field x-model="entry.batch_no"
                                    :placeholder="lotHint" @keydown.enter.prevent="lotNext($event)"
-                                   class="h-9 w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
+                                   class="h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-sm">
                         </label>
                         <div class="min-w-0">
                             <span class="block truncate text-2xs text-(--color-badge-pending-ink)">{{ __('inventory::field.expiry_date') }}</span>
@@ -203,7 +203,7 @@
                             <span class="block truncate text-2xs text-(--color-badge-pending-ink)">{{ __('inventory::field.mrp') }}</span>
                             <input type="number" step="0.01" min="0" inputmode="decimal" data-lot-field x-model="entry.mrp"
                                    @keydown.enter.prevent="lotNext($event)"
-                                   class="num h-9 w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
+                                   class="num h-(--spacing-field) w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm">
                         </label>
                     </div>
                 </template>
@@ -269,7 +269,7 @@
                                 </span>
                                 <input type="number" step="0.01" inputmode="decimal" x-model="entry.qty" x-ref="entryQty"
                                        :disabled="! picked"
-                                       class="num h-9 w-full rounded-(--radius-field) border
+                                       class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
                                               disabled:opacity-50">
                             </label>
@@ -292,7 +292,7 @@
                                     {{ __('purchase::field.unit') }}
                                 </span>
                                 <select x-model="entry.unit_id" :disabled="! picked"
-                                        class="h-9 w-full rounded-(--radius-field) border
+                                        class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                                border-(--color-border) bg-(--color-surface-card) px-2 text-sm
                                                disabled:opacity-50">
                                     {{-- ⓘ খালি মানে **পণ্যের নিজের একক** — তাই লেখাটাও
@@ -319,7 +319,7 @@
                                     </span>
                                     <input type="number" step="0.01" inputmode="decimal" x-model="entry.free_qty"
                                            :disabled="! picked"
-                                           class="num h-9 w-full rounded-(--radius-field) border
+                                           class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                                   border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
                                                   disabled:opacity-50">
                                 </label>
@@ -338,7 +338,7 @@
                                         {{ __('purchase::field.free_unit') }}
                                     </span>
                                     <select x-model="entry.free_unit_id" :disabled="! picked"
-                                                class="h-9 w-full rounded-(--radius-field) border
+                                                class="h-(--spacing-field) w-full rounded-(--radius-field) border
                                                    border-(--color-border) bg-(--color-surface-card) px-2 text-sm
                                                    disabled:opacity-50">
                                         {{-- ⓘ খালি মানে **পণ্যের নিজের একক** — তাই লেখাটাও
@@ -356,7 +356,7 @@
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">
                                     {{ __('purchase::field.line_qty_total') }}
                                 </span>
-                                <div class="num flex h-9 items-center justify-end
+                                <div class="num flex h-(--spacing-field) items-center justify-end
                                             rounded-(--radius-field) bg-(--color-surface-sunken) px-2 text-sm"
                                      x-text="qty(entryTotalQty)"></div>
                             </label>
@@ -368,7 +368,7 @@
                                 </span>
                                 <input type="number" step="0.01" inputmode="decimal"
                                        x-model="entry.rate" @input="rateEdited()" :disabled="! picked" x-ref="entryRate"
-                                       class="num h-9 w-full rounded-(--radius-field) border
+                                       class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
                                               disabled:opacity-50">
                             </label>
@@ -378,7 +378,7 @@
                                 </span>
                                 <input type="number" step="any" inputmode="decimal"
                                        x-model="entry.markup" @input="priced('markup')" :disabled="! picked"
-                                       class="num h-9 w-full rounded-(--radius-field) border
+                                       class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
                                               disabled:opacity-50">
                             </label>
@@ -389,7 +389,7 @@
                                 </span>
                                 <input type="number" step="any" inputmode="decimal"
                                        x-model="entry.margin" @input="priced('margin')" :disabled="! picked"
-                                       class="num h-9 w-full rounded-(--radius-field) border
+                                       class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
                                               disabled:opacity-50">
                             </label>
@@ -402,7 +402,7 @@
                                        x-model="entry.sales_price" @input="priced('sales_price')" x-ref="entrySalesPrice"
                                        :disabled="! picked"
                                        placeholder="{{ __('purchase::message.sales_rate_hint') }}"
-                                       class="num h-9 w-full rounded-(--radius-field) border
+                                       class="num h-(--spacing-field) w-full rounded-(--radius-field) border
                                               border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm
                                               disabled:opacity-50">
                             </label>
@@ -413,10 +413,10 @@
                                     <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('purchase::field.discount_on_line') }}</span>
                                     <span class="flex gap-1">
                                         <input type="number" step="0.01" inputmode="decimal" x-model="entry.discount" :disabled="! picked"
-                                               class="num h-9 min-w-0 flex-1 rounded-(--radius-field) border
+                                               class="num h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border
                                                       border-(--color-border) bg-(--color-surface-card) px-2 text-end text-sm disabled:opacity-50">
                                         <button type="button" @click="toggleDiscountMode()" :aria-pressed="entry.discount_mode === 'percent'"
-                                                class="h-9 w-7 shrink-0 rounded-(--radius-field) border border-(--color-border)
+                                                class="h-(--spacing-field) w-7 shrink-0 rounded-(--radius-field) border border-(--color-border)
                                                        text-center font-medium hover:bg-(--color-surface-hover)"
                                                 x-text="entry.discount_mode === 'percent' ? '%' : '৳'">৳</button>
                                     </span>
@@ -428,7 +428,7 @@
                                     <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('purchase::field.vat_mode') }}</span>
                                     <span class="flex gap-1">
                                         <select x-model="entry.vat_mode" :disabled="! picked"
-                                                class="h-9 min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border)
+                                                class="h-(--spacing-field) min-w-0 flex-1 rounded-(--radius-field) border border-(--color-border)
                                                        bg-(--color-surface-card) px-1 text-sm disabled:opacity-50">
                                             <option value="product">{{ __('purchase::field.vat_mode_product') }}</option>
                                             <option value="amount">{{ __('purchase::field.vat_mode_amount') }}</option>
@@ -436,7 +436,7 @@
                                         </select>
                                         <input type="number" step="0.01" inputmode="decimal" x-model="entry.tax"
                                                x-show="entry.vat_mode === 'amount'" x-cloak aria-label="{{ __('purchase::field.tax') }}"
-                                               class="num h-9 w-16 rounded-(--radius-field) border border-(--color-border)
+                                               class="num h-(--spacing-field) w-16 rounded-(--radius-field) border border-(--color-border)
                                                       bg-(--color-surface-card) px-1 text-end text-sm">
                                     </span>
                                 </label>
@@ -445,7 +445,7 @@
                             {{-- ⓘ এই সারির টাকা — ছাড় ও ভ্যাটসহ নেট (আগে "এই লাইনে" বাক্সের বড় অঙ্ক) --}}
                             <label class="block">
                                 <span class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('purchase::field.amount') }}</span>
-                                <div class="num flex h-9 items-center justify-end rounded-(--radius-field)
+                                <div class="num flex h-(--spacing-field) items-center justify-end rounded-(--radius-field)
                                             bg-(--color-surface-sunken) px-2 text-sm font-semibold"
                                      x-text="money(entryNet)"></div>
                             </label>
@@ -453,14 +453,14 @@
                             <div class="flex shrink-0 items-end gap-0.5">
                                 {{-- ⓘ উপহার — পণ্যটা কার্টে বসিয়ে তার ঠিক নিচে উপহারের সারি খোলে, বিক্রয়ের মতো ([[giftForThisLine()]]) --}}
                                 <button type="button" @click="giftForThisLine()" :disabled="! picked"
-                                        class="h-9 rounded-(--radius-field) border px-1.5 text-sm font-semibold disabled:opacity-40"
+                                        class="h-(--spacing-field) rounded-(--radius-field) border px-1.5 text-sm font-semibold disabled:opacity-40"
                                         style="border-color: var(--color-module-purchase); color: var(--color-module-purchase);
                                                background: var(--color-badge-warning-bg)">
                                     {{ __('purchase::action.gift_short') }}
                                 </button>
 
                                 <button type="button" @click="addToCart()" :disabled="! picked"
-                                        class="h-9 whitespace-nowrap rounded-(--radius-field) bg-(--color-success) px-2 text-sm font-semibold
+                                        class="h-(--spacing-field) whitespace-nowrap rounded-(--radius-field) bg-(--color-success) px-2 text-sm font-semibold
                                                text-(--color-ink-inverse) hover:bg-(--color-success-hover) disabled:opacity-40">
                                     {{-- ⓘ কার্টের সারি উপরে খোলা থাকলে "হালনাগাদ করুন" — নতুন সারি নয়, সেটাই বদলায় --}}
                                     <span x-show="editingKey === null">＋ {{ __('purchase::action.add_to_cart') }}</span>
@@ -468,7 +468,7 @@
                                 </button>
 
                                 <button type="button" @click="clearEntry()"
-                                        class="h-9 whitespace-nowrap rounded-(--radius-field) bg-(--color-badge-danger-bg) px-1.5 text-sm font-semibold
+                                        class="h-(--spacing-field) whitespace-nowrap rounded-(--radius-field) bg-(--color-badge-danger-bg) px-1.5 text-sm font-semibold
                                                text-(--color-badge-danger-ink) hover:bg-(--color-surface-hover)">
                                     {{ __('purchase::action.clear_data') }}
                                 </button>
