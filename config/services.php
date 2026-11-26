@@ -57,6 +57,8 @@ return [
         'token' => env('CPANEL_TOKEN', ''),
         'write' => (bool) env('CPANEL_WRITE', false),
         'verify' => (bool) env('CPANEL_VERIFY_TLS', false),
+        // ⓘ একই হোস্টিংয়ে চললে সার্ভারের নিজের uapi — টোকেন লাগে না
+        'uapi' => env('CPANEL_UAPI', '/usr/bin/uapi'),
     ],
 
     'slack' => [

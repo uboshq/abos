@@ -42,10 +42,14 @@ final class MailDaily extends Command
         return self::SUCCESS;
     }
 
-    /** ⓘ cPanel-এর মেইল ফোল্ডার ~/mail/<domain>/<user> — থাকলে tar করে storage/app/mail-backups-এ; না থাকলে কারণ লিখে মোছা থামে না */
+    /**
+     * ⓘ cPanel-এর মেইল ফোল্ডার ~/mail/<domain>/<user> — থাকলে tar.gz করে storage/app/mail-backups-এ।
+     * ⛔ হোস্টিংয়ে exec/proc_open বন্ধ — তাই PHP-র নিজের PharData (কোনো কমান্ড নয়)। ব্যাকআপ না হলে মোছা থামে।
+     * ⓘ ফোল্ডারই না থাকলে (কখনো মেইল আসেনি) রাখার কিছু নেই — কারণ লিখে মোছা চলে।
+     */
     private function backup(MailAddress $a): void
     {
-        $home = (string) (getenv('HOME') ?: '');
+        $home = (string) (getenv('HOME') ?: (function_exists('posix_getpwuid') ? (posix_getpwuid(posix_geteuid())['dir'] ?? '') : ''));
         $dir = $home.'/mail/'.$a->domain.'/'.$a->localPart();
         $target = storage_path('app/mail-backups');
 
@@ -56,11 +60,19 @@ final class MailDaily extends Command
         }
 
         @mkdir($target, 0750, true);
-        $file = $target.'/'.$a->email.'-'.now()->format('Ymd-His').'.tar.gz';
-        $cmd = 'tar -czf '.escapeshellarg($file).' -C '.escapeshellarg(dirname($dir)).' '.escapeshellarg(basename($dir));
-        @exec($cmd, $out, $rc);
+        $tar = $target.'/'.$a->email.'-'.now()->format('Ymd-His').'.tar';
 
-        if ($rc !== 0 || ! is_file($file)) {
+        try {
+            $archive = new \PharData($tar);
+            $archive->buildFromDirectory($dir);
+            $archive->compress(\Phar::GZ);
+            unset($archive);
+            @unlink($tar);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException("backup failed for {$a->email} — not deleting ({$e->getMessage()})");
+        }
+
+        if (! is_file($tar.'.gz') || filesize($tar.'.gz') === 0) {
             throw new \RuntimeException("backup failed for {$a->email} — not deleting");
         }
     }

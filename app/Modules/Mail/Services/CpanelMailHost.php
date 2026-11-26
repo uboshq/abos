@@ -9,14 +9,26 @@ use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
- * ⭐ হোস্টিংয়ের cPanel UAPI — টোকেন দিয়ে (`services.cpanel.*`, .env-এ; ⛔ কোডে বা খাতায় নয়)।
+ * ⭐ হোস্টিংয়ের cPanel UAPI — দুই পথ:
+ *   · সার্ভারের নিজের `uapi` (ABOS একই হোস্টিং অ্যাকাউন্টে চলে) — ⭐ কোনো চাবি জমা থাকে না; এটাই প্রথম পছন্দ;
+ *   · নয়তো টোকেন দিয়ে HTTPS (`services.cpanel.*`, .env-এ) — অন্য সার্ভারে চললে।
+ * ⛔ পুরো অ্যাকাউন্টের টোকেন .env-এ রাখা ঝুঁকি (ফাঁস হলে গোটা হোস্টিং) — তাই `uapi` থাকলে টোকেন লাগে না।
  * ⓘ লেখা কেবল `services.cpanel.write` সত্য হলে — লাইভে চালু, ডেমোতে বন্ধ (ডেমো থেকে আসল ঠিকানা তৈরি বা মোছা হয় না)।
  */
 final class CpanelMailHost implements MailHost
 {
     public function configured(): bool
     {
-        return (string) config('services.cpanel.url') !== '' && (string) config('services.cpanel.user') !== '' && (string) config('services.cpanel.token') !== '';
+        return $this->local() || ((string) config('services.cpanel.url') !== '' && (string) config('services.cpanel.user') !== '' && (string) config('services.cpanel.token') !== '');
+    }
+
+    /** ⓘ সার্ভারের নিজের uapi চালানো যায় কিনা — বাইনারি আছে আর proc_open বন্ধ নয় */
+    private function local(): bool
+    {
+        $bin = (string) config('services.cpanel.uapi', '/usr/bin/uapi');
+        $off = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+
+        return $bin !== '' && @is_executable($bin) && function_exists('proc_open') && ! in_array('proc_open', $off, true);
     }
 
     public function writable(): bool
@@ -145,6 +157,10 @@ final class CpanelMailHost implements MailHost
             throw new RuntimeException(__('mail::message.host_not_set'));
         }
 
+        if ($this->local()) {
+            return $this->viaUapi($module, $fn, $params);
+        }
+
         $res = Http::withHeaders(['Authorization' => 'cpanel '.config('services.cpanel.user').':'.config('services.cpanel.token')])
             ->withOptions(['verify' => (bool) config('services.cpanel.verify', false)])
             ->timeout(20)
@@ -160,6 +176,42 @@ final class CpanelMailHost implements MailHost
         }
 
         return $json['data'] ?? null;
+    }
+
+    /**
+     * ⓘ `uapi --output=json Module func key=value …` — প্রতিটা মান আলাদা যুক্তি (shell নয়), তাই কোনো মানে কমান্ড ঢোকে না।
+     *
+     * @param  array<string, mixed>  $params
+     */
+    private function viaUapi(string $module, string $fn, array $params): mixed
+    {
+        $cmd = [(string) config('services.cpanel.uapi', '/usr/bin/uapi'), '--output=json', $module, $fn];
+
+        foreach ($params as $k => $v) {
+            $cmd[] = $k.'='.(string) $v;
+        }
+
+        $proc = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+
+        if (! is_resource($proc)) {
+            throw new RuntimeException('uapi did not start');
+        }
+
+        $out = (string) stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        proc_close($proc);
+
+        $json = json_decode($out, true);
+        $result = is_array($json) ? ($json['result'] ?? null) : null;
+
+        if (! is_array($result) || (int) ($result['status'] ?? 0) !== 1) {
+            $why = is_array($result) ? implode(' ', (array) ($result['errors'] ?? [])) : 'uapi error';
+
+            throw new RuntimeException(mb_substr($why !== '' ? $why : 'uapi error', 0, 200));
+        }
+
+        return $result['data'] ?? null;
     }
 
     /** @return array{0: string, 1: string} */
