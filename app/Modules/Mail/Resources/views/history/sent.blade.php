@@ -10,13 +10,10 @@
     @endpush
 
     <div class="mailx mx-page" data-mail-history>
-        <div class="mx-head">
-            <h1>📤 {{ $H('sent_title') }} <x-ui.page-info :text="$H('sent_info')" /></h1><span class="sp"></span>
-            <a class="mx-btn" href="{{ route('mail.history') }}">🕘 {{ $H('title') }}</a>
-        </div>
-
         <form class="mx-card" style="overflow:hidden" method="GET" action="{{ route('mail.sent') }}">
-            <x-ui.toolbar :title="$H('sent_title')" :search-placeholder="$H('search')" :filter="false" :export="false" :print="false" :share="false" :quiet="['from', 'to', 'paper']" />
+            <x-ui.toolbar :title="$H('sent_title')" :subtitle="$H('sent_info')" :search-placeholder="$H('search')" :filter="false" :export="false" :print="false" :share="false" :quiet="['from', 'to', 'paper']">
+                <x-slot:actions><a class="mx-btn" href="{{ route('mail.history') }}">🕘 {{ $H('title') }}</a></x-slot:actions>
+            </x-ui.toolbar>
             <div class="mx-filter" style="padding:10px 14px">
             <label>{{ $H('from') }}<x-ui.date name="from" :value="$from" /></label>
             <label>{{ $H('to') }}<x-ui.date name="to" :value="$to" /></label>

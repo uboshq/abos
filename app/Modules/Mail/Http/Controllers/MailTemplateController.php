@@ -56,7 +56,7 @@ final class MailTemplateController extends Controller implements HasMiddleware
             ->values();
 
         $selected = $request->query('t') ? $all->firstWhere('public_id', (string) $request->query('t')) : $list->first();
-        $customer = $request->query('customer') && $user->can('customer.view') ? Customer::query()->find((int) $request->query('customer')) : null;
+        $customer = $request->query('customer') && $user->can('customer.view') ? Customer::query()->inViewedBranch()->find((int) $request->query('customer')) : null;
         $values = $this->fields->values($user, null) + ($customer ? $this->fields->forCustomer($customer) : []);
         $company = (string) (Company::query()->whereKey(CompanyContext::id())->value('name_en') ?? '');
 
