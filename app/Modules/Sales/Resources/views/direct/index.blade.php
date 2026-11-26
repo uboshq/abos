@@ -305,6 +305,9 @@
         form[data-abos-counter] .ds-head [data-customer-details] span.rounded-full * { color: #0b6c7a !important; }
         form[data-abos-counter] .ds-row2 { display: grid; grid-template-columns: minmax(0, 1fr) 17.5rem; gap: .75rem; align-items: start; }
         form[data-abos-counter] .ds-row2-empty { grid-template-columns: minmax(0, 1fr); }
+        /* ⭐ লটের ঘর ছোট আর একদম ডানে — নিচের "কার্ট" আর "অনেক পণ্য" বোতামের সোজা (৬.৬ + ৭rem + ফাঁক); বাকি জায়গা পণ্যের
+           নামের, লম্বা নাম কাটে না (মালিক, ২৬ নভেম্বর ২০২৬) */
+        form[data-abos-counter] .ds-lot { margin-inline-start: auto; flex: 0 0 14rem; min-width: 0; max-width: 14rem; }
         /* ⭐ বাছা পণ্যের নাম — হালকা টিল ঘরে, বাঁয়ে গাঢ় টিল দাগ; মোটের বাক্সের রঙের সাথে মেলে (মালিক, ২৬ নভেম্বর ২০২৬) */
         form[data-abos-counter] .ds-picked-pill { flex: 0 1 auto !important; max-width: 100%; background: #e6f8fb; border: 1px solid #9fdde6 !important;
             border-left: 5px solid #0b8a9a !important; border-radius: 10px; color: #0b3b5c !important; font-weight: 800; padding-inline: .9rem; }
