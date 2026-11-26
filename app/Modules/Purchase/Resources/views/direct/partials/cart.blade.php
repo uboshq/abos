@@ -2,7 +2,7 @@
                             bg-(--color-surface-card)">
                 {{-- ⭐ কেবল পণ্যের তালিকা নিজে সরে — বাকি সব ঘর জায়গায় থাকে (মালিক, ২৬ নভেম্বর ২০২৬, নমুনা v9)।
                      ⓘ মাথার সারি আটকে থাকে (`sticky`), তাই নিচে নামলেও কলামের নাম চোখে থাকে। --}}
-                <div data-cart-scroll class="max-h-[calc(100dvh-29rem)] min-h-48 overflow-auto">
+                <div data-cart-scroll class="min-h-48 overflow-auto" style="max-height: calc(100dvh - 29rem)">
                     <table class="ui-grid is-compact w-full text-sm [&_tbody]:border-0">
                         {{-- ── কলামের ক্রম — মালিকের ছবির ক্রম ────────────────
 
@@ -171,15 +171,17 @@
                                     {{-- ⭐ এই সারির আনলোডিংয়ের ভাগ — পপআপে বসানোর পরে (নমুনা v9) --}}
                                     <td class="num bg-(--color-badge-danger-bg)/40" x-text="unloadShareOf(line) > 0 ? money(unloadShareOf(line)) : '—'"></td>
                                     <td class="text-end">
-                                        <div x-data="{ acts: false }" class="relative inline-block">
-                                            <button type="button" @click="acts = ! acts" data-row-acts
+                                        {{-- ⭐ ⋯-এর তালিকা পর্দার উপরে ভাসে (fixed) — তালিকার ঘরের ভিতরে কেটে যায় না; নিচে জায়গা না থাকলে উপরে খোলে
+                                             (মালিক, ২৬ নভেম্বর ২০২৬: "কেটে যাচ্ছে") — [[toggleActs()]] --}}
+                                        <div class="relative inline-block">
+                                            <button type="button" @click="toggleActs($event)" data-row-acts
                                                     aria-label="{{ __('core.table.actions') }}"
                                                     class="rounded-(--radius-field) border border-(--color-border) px-2 leading-6 text-(--color-ink-muted)
                                                            hover:bg-(--color-surface-hover)">⋯</button>
                                             {{-- ⛔ CSP-র Alpine এক হ্যান্ডলারে দুই কাজ (`a(); b = c`) চালায় না — তাই বোতাম কেবল কাজটা করে, আর তালিকাটা
                                                  নিজের ক্লিকে বন্ধ হয় (বোতামের ক্লিক এখানে উঠে আসে) — মালিক, ২৬ নভেম্বর ২০২৬: "মুছতেছে না" --}}
-                                            <div x-show="acts" x-cloak @click.outside="acts = false" @click="acts = false"
-                                                 class="absolute end-0 z-20 mt-1 w-40 rounded-(--radius-field) border border-(--color-border)
+                                            <div hidden data-acts-menu @click="closeActs()"
+                                                 class="fixed z-50 w-44 rounded-(--radius-field) border border-(--color-border)
                                                         bg-(--color-surface-card) py-1 text-start text-sm shadow-lg">
                                                 {{-- উপহার যোগ — এই সারির সাথে বাঁধা --}}
                                                 <button type="button" @click="addGift(line)"

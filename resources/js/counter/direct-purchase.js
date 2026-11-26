@@ -482,8 +482,67 @@ export default function directPurchase({
             };
         },
 
+        /* ⭐ সারির ⋯ — তালিকা পর্দার উপরে ভাসে (fixed), তাই তালিকার ঘরে কেটে যায় না; নিচে জায়গা না থাকলে উপরে খোলে */
+        toggleActs(event) {
+            const button = event.currentTarget;
+            const menu = button.nextElementSibling;
+            const wasOpen = menu && ! menu.hidden;
+
+            this.closeActs();
+
+            if (! menu || wasOpen) return;
+
+            menu.hidden = false;
+            const r = button.getBoundingClientRect();
+            const h = menu.offsetHeight || 120;
+            const w = menu.offsetWidth || 176;
+            const below = r.bottom + 4 + h <= window.innerHeight;
+
+            menu.style.left = Math.max(8, r.right - w) + 'px';
+            menu.style.top = (below ? r.bottom + 4 : Math.max(8, r.top - h - 4)) + 'px';
+
+            const away = (e) => {
+                if (menu.contains(e.target) || button.contains(e.target)) return;
+                this.closeActs();
+                document.removeEventListener('click', away, true);
+                window.removeEventListener('scroll', closeOnScroll, true);
+            };
+            const closeOnScroll = () => { this.closeActs(); window.removeEventListener('scroll', closeOnScroll, true); };
+
+            setTimeout(() => {
+                document.addEventListener('click', away, true);
+                window.addEventListener('scroll', closeOnScroll, true);
+            }, 0);
+        },
+
+        closeActs() {
+            this.$root.querySelectorAll('[data-acts-menu]').forEach((m) => { m.hidden = true; });
+        },
+
+        /* ⭐ পণ্যের তালিকা পর্দার নিচ পর্যন্ত — ফাঁকা থাকে না (মালিক, ২৬ নভেম্বর ২০২৬); উপরের অংশ বড়-ছোট হলেও মেলে */
+        fitCart() {
+            const box = this.$root.querySelector('[data-cart-scroll]');
+
+            if (! box || window.innerWidth < 1024) return;
+
+            const top = box.getBoundingClientRect().top + window.scrollY;
+            box.style.maxHeight = 'none';
+            box.style.height = Math.max(192, window.innerHeight - top - 20) + 'px';
+        },
+
         init() {
             this.entry = this.blankEntry();
+
+            /* ⓘ তালিকার উচ্চতা — খোলার সময়, পর্দা বদলালে, আর উপরের অংশ বড়-ছোট হলে (পণ্য বাছা, লটের বাক্স) */
+            const fit = () => this.$nextTick(() => this.fitCart());
+            window.addEventListener('resize', fit);
+            this.$watch('picked', fit);
+            this.$watch('editingKey', fit);
+            setTimeout(fit, 50);
+            if (window.ResizeObserver) {
+                const head = this.$root.querySelector('[data-direct-entry]');
+                if (head) new ResizeObserver(fit).observe(head);
+            }
 
             /* ⓘ সার্ভারের আনলোডিং-ভুল নিয়ে পাতা ফিরলে পপআপটাই খোলা — ভুলটা তার ঘরের পাশেই */
             if (unloadStart && unloadStart.failed) this.unloadOpen = true;
