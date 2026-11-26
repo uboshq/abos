@@ -200,7 +200,7 @@ return [
     'no_limit' => 'No limit',
     'can_bill_more' => 'Can still bill',
     'over_limit' => 'Over the limit by',
-    'bill_discount_hint' => 'Tk or %',
+    'bill_discount_hint' => 'Amount or %',
     'total_amount' => 'Total amount',
     /*
      * Just "Discount" — the owner's word, 6 September 2026.

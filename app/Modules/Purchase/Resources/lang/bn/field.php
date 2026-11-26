@@ -200,7 +200,7 @@ return [
     'no_limit' => 'সীমা নেই',
     'can_bill_more' => 'আর বিল করা যাবে',
     'over_limit' => 'লিমিট ছাড়িয়েছে',
-    'bill_discount_hint' => '৳ বা %',
+    'bill_discount_hint' => 'অঙ্ক বা %',
     'total_amount' => 'মোট টাকা',
     /*
      * শুধু "ছাড়" — মালিকের শব্দ, ৬ সেপ্টেম্বর ২০২৬।

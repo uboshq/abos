@@ -1,5 +1,9 @@
 # What's new
 
+## 1.3.20 — 26-11-2026
+
+- Direct purchase: the bill discount box now reads "Amount or %".
+
 ## 1.3.19 — 26-11-2026
 
 - Unloading bill, "Paid in cash now": first who got it (a labour contractor from the list, or a typed name), then the till and the amount on one line; the name stays on the bill and in the ledger narration.
