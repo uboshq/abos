@@ -116,6 +116,24 @@
                দুই লাইনে ভেঙে যেত। ছোট পর্দায় তাই দুইটা কার্ড উপর-নিচে। --}}
           class="grid gap-3 lg:grid-cols-[minmax(0,78fr)_minmax(0,20fr)]">
         @csrf
+        @if (\App\Core\Support\CounterMode::wanted())
+            <input type="hidden" name="{{ \App\Core\Support\CounterMode::PARAM }}" value="1">
+        @endif
+
+        {{-- ⭐ কাউন্টার মোডে জমার পরে — সবুজ খবর, ছাপুন · দেখুন; নিচে নতুন খালি বিল (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+        @if ($done = session('counter_done'))
+            <div data-counter-done role="status"
+                 class="lg:col-span-2 flex flex-wrap items-center gap-3 rounded-(--radius-card) border border-(--color-success)/40
+                        bg-(--color-badge-success-bg) px-4 py-2 text-sm text-(--color-badge-success-ink)">
+                <span>✔ <b>{{ __('core.counter.saved', ['no' => $done['no']]) }}</b> · {{ $done['party'] }} · ৳{{ $done['total'] }} · {{ __('core.counter.new_bill') }}</span>
+                <span class="ms-auto flex gap-2">
+                    <a href="{{ $done['print'] }}" target="_blank" rel="noopener"
+                       class="rounded-(--radius-field) bg-(--color-success) px-3 py-1 font-semibold text-(--color-ink-inverse)">🖨 {{ __('core.counter.print') }}</a>
+                    <a href="{{ $done['view'] }}" target="_blank" rel="noopener"
+                       class="rounded-(--radius-field) border border-(--color-success)/40 bg-(--color-surface-card) px-3 py-1 font-semibold">{{ __('core.counter.view') }}</a>
+                </span>
+            </div>
+        @endif
 
         {{-- ── খসড়া পাওয়া গেছে ───────────────────────────────────────
 

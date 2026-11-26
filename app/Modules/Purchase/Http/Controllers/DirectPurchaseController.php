@@ -358,6 +358,21 @@ class DirectPurchaseController extends Controller implements HasMiddleware
                 ->withErrors($held->errors());
         }
 
+        // ⭐ কাউন্টার মোড — ট্যাব খোলা থাকে, নতুন খালি বিল; উপরে "জমা হয়েছে" আর ছাপার বোতাম (মালিক, ২৬ নভেম্বর ২০২৬; [[CounterMode]])
+        if ($request->boolean(\App\Core\Support\CounterMode::PARAM)) {
+            $bill = $result['bill'];
+
+            return redirect()
+                ->route('purchase.direct.create', [\App\Core\Support\CounterMode::PARAM => 1])
+                ->with('counter_done', [
+                    'no' => (string) $bill->document_no,
+                    'party' => (string) ($bill->supplier?->name() ?? ''),
+                    'total' => \App\Core\Support\Money::format((string) $bill->total),
+                    'view' => route('purchase.bill.show', $bill->id),
+                    'print' => route('purchase.print.bill', $bill->id),
+                ]);
+        }
+
         return redirect()
             ->route('purchase.bill.show', $result['bill']->id)
             ->with('saved', __('purchase::message.direct_done', [

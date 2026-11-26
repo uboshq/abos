@@ -37,6 +37,7 @@ import documentScan from './document-scan.js'
 import { listenForColumnChoice } from './columns.js'
 import { listenForFreshData } from './live.js'
 import { guardAllBranchesView } from './all-branches-view.js'
+import { installCounterMode } from './counter-mode.js'
 import { holdPrintTabOnSubmit, handPrintToTab } from './print-tab.js'
 
 /*
@@ -198,6 +199,8 @@ wireRoleScreen()
 // ⛔ "সব শাখা" = কেবল দেখা — লেখার বোতাম ধূসর, চাপা আর জমা থামে; সবার আগে (capture), তাই সারাংশের পপ-আপও খোলে না
 // (মালিক, ২০ নভেম্বর ২০২৬; [[all-branches-view.js]])। খোলস চিহ্ন না আঁকলে কিছুই বসে না
 guardAllBranchesView()
+// ⭐ কাউন্টার মোড — সরাসরি ক্রয়/বিক্রয় নতুন ট্যাবে, মেনু-বার ছাড়া (মালিক, ২৬ নভেম্বর ২০২৬)
+installCounterMode()
 // ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ — একবার-জমার পাহারার আগে (capture), মালিক ৪ অক্টোবর ২০২৬ ([[confirm-overview.js]])
 guardConfirmOverview()
 guardOneSubmit()

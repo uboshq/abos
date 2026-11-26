@@ -480,6 +480,17 @@ return [
         'how_to_renew' => 'নবায়ন করতে বিক্রেতার সাথে যোগাযোগ করুন, আর নতুন কোডটি নিচে বসান।',
     ],
 
+    // ⭐ কাউন্টার মোড ([[CounterMode]]; মালিক, ২৬ নভেম্বর ২০২৬)
+    'counter' => [
+        'mode' => 'কাউন্টার মোড',
+        'billing_by' => 'বিল করছেন: :name',
+        'close' => 'বন্ধ করুন',
+        'saved' => ':no জমা হয়েছে',
+        'new_bill' => 'নতুন বিল খোলা হলো',
+        'print' => 'ছাপুন',
+        'view' => 'দেখুন',
+        'open' => 'কাউন্টার মোডে খুলুন',
+    ],
     'brand' => [
         'developed_by' => 'Developed by Al-Amin Shuvo',
         'full_name' => 'A Business Operating System',

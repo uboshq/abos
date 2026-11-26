@@ -262,6 +262,12 @@
         $bandShape = \App\Core\Support\Ui::band($shellLook);
     @endphp
 
+    {{-- ⭐ কাউন্টার মোড — মেনু, বার, মডিউলের সারি, ফুটার নেই; উপরে কেবল পাতলা সারি ([[CounterMode]]; মালিক, ২৬ নভেম্বর ২০২৬) --}}
+    @php $counter = \App\Core\Support\CounterMode::wanted(); @endphp
+    @if ($counter)
+        <x-shell.counter-strip :title="$title ?? ''" />
+    @endif
+
     {{-- প্রিভিউয়ের পটি সবার আগে — Redwood-এর ইটরঙা পটিরও উপরে, কারণ
          "আপনি যা দেখছেন সেটা আসল নয়" কথাটা রূপের সাজসজ্জার চেয়ে বড়। --}}
     <x-shell.preview-bar />
@@ -272,7 +278,7 @@
     {{-- ⭐ পুরো চওড়া বার — SAP Fiori shell bar (ওয়েবের মান ধাপ ২, মালিকের আদেশ "100% int. standard", ২০ অক্টোবর ২০২৬)।
          `rail` রূপে বারটা সাইডবারের উপরে, পর্দার এক প্রান্ত থেকে অন্য প্রান্ত; লোগো বারের ভেতরে, রেলে আর নয়।
          ⛔ আগে বারটা পাতার কলামের ভেতরে ছিল, তাই রেলের পাশে কাটা দেখাত আর লোগো দুই জায়গায় ভাগ হত। --}}
-    @php $fullBar = $navPlacement === 'rail'; @endphp
+    @php $fullBar = $navPlacement === 'rail' && ! $counter; @endphp
     @if ($fullBar)
         {{-- ⓘ `over-rail` — "≡" রেলের কলামে, আর ⊞ সব মডিউল বারে (মালিক, ২১ অক্টোবর ২০২৬; [[shell.topbar]]) --}}
         <x-shell.topbar :menu="$menu ?? []" over-rail />
@@ -285,7 +291,7 @@
              দুইটার তফাত তালিকায় নয়, **উপরে**: `rail` তালিকার সাথে
              একটা টপবারও রাখে, `quiet` রাখে না। তাই শর্তটা "রেল কি না"
              নয়, "উপরে বার আছে কি না" — আর সেটা নিচে আলাদা করে বলা। --}}
-        @if (in_array($navPlacement, ['rail', 'quiet'], true))
+        @if (! $counter && in_array($navPlacement, ['rail', 'quiet'], true))
             <x-shell.sidebar :menu="$menu ?? []" :under-bar="$fullBar" />
         @endif
 
@@ -309,9 +315,11 @@
                  তাই `quiet`-এ বারটা আসে `narrow` হয়ে — `lg:hidden`,
                  অর্থাৎ ঠিক ততটুকু চওড়ায় যতক্ষণ সাইডবার নেই। Linear
                  নিজেও সরু পর্দায় হেডার দেখায়, তাই নকলটা ভাঙে না। --}}
-            @if ($navPlacement === 'quiet')
+            @if ($counter)
+                {{-- ⓘ কাউন্টার মোড — বার নেই --}}
+            @elseif ($navPlacement === 'quiet')
                 <x-shell.topbar :menu="$menu ?? []" narrow />
-            @elseif (! $fullBar)
+            @elseif ($navPlacement !== 'rail')
                 <x-shell.topbar :menu="$menu ?? []" />
             @endif
 
@@ -324,7 +332,7 @@
             <x-shell.day-check />
 
 
-            @if ($topnavShape !== 'none')
+            @if (! $counter && $topnavShape !== 'none')
                 <x-shell.topnav :menu="$menu ?? []" :shape="$topnavShape" />
             @endif
 
@@ -356,7 +364,9 @@
                 (`chrome/*`-এর `page-head`), তাই ওখানে এটা বসালে দুইটা
                 ট্যাব বার হত — একটার নিচে আরেকটা।
             --}}
-            @if (in_array(\App\Core\Support\Ui::pathBar($shellLook), ['modulebar', 'collapsed'], true))
+            @if ($counter)
+                {{-- ⓘ কাউন্টার মোড — মডিউলের সারি নেই --}}
+            @elseif (in_array(\App\Core\Support\Ui::pathBar($shellLook), ['modulebar', 'collapsed'], true))
                 {{-- ⓘ `collapsed` ("ABOS"): একই বার, কিন্তু কেবল মেনু গুটালে — খোলা মেনুর সময় [[abos-look.css]] লুকায় --}}
                 <x-shell.modulebar :menu="$menu ?? []" />
             @elseif (\App\Core\Support\Ui::pathBar($shellLook) === 'crumbs')
@@ -402,7 +412,9 @@
 
             {{-- রূপের নিজের পাতা-মাথা — NetSuite-এর নেভি শিরোনাম।
                  যে রূপের কিছু নেই তার জন্য কিছুই আঁকে না। --}}
-            <x-shell.chrome region="page-head" :menu="$menu ?? []" />
+            @unless ($counter)
+                <x-shell.chrome region="page-head" :menu="$menu ?? []" />
+            @endunless
 
             {{--
                 কাজের পটি — কেবল যে চেহারাগুলো ওটা চায়।
@@ -448,8 +460,9 @@
             {{-- ⭐ the open module's own colour, for the coloured page title in the ABOS looks (owner "ok", 24 Nov 2026, sample
                  9VVoe6uQ v2) — [[PageAccent]]; only a variable, so no other look changes a pixel. --}}
             <main id="main"
-                  class="min-w-0 flex-1 px-3 pt-2 pb-[calc(var(--spacing-bottom-nav)+1.5rem)]
-                         md:px-5 md:pb-[calc(var(--spacing-status-bar)+1.5rem)] lg:px-6"
+                  @class(['min-w-0 flex-1 px-3 pt-2',
+                          'pb-[calc(var(--spacing-bottom-nav)+1.5rem)] md:px-5 md:pb-[calc(var(--spacing-status-bar)+1.5rem)] lg:px-6' => ! $counter,
+                          'pb-3 md:px-4' => $counter])
                   @if ($pageAccent = \App\Core\Support\PageAccent::style($menu ?? null)) style="{{ $pageAccent }}" @endif
                   tabindex="-1">
                 {{-- কনটেন্টের সর্বোচ্চ প্রস্থ — সেকশন ২০.১। বড় স্ক্রিনে
@@ -518,7 +531,9 @@
 
                  ⓘ যে রূপের নিজের ফাইল নেই, তার জন্য এখানে কিছুই আঁকা
                  হয় না — `chrome` কেবল ফাইলটা থাকলে ডাকে। --}}
-            <x-shell.chrome region="page-foot" :menu="$menu ?? []" />
+            @unless ($counter)
+                <x-shell.chrome region="page-foot" :menu="$menu ?? []" />
+            @endunless
         </div>
     </div>
 
@@ -546,9 +561,11 @@
          সব রূপে আছে। --}}
     <x-shell.scanner />
 
-    <x-shell.statusbar />
+    @unless ($counter)
+        <x-shell.statusbar />
 
-    <x-shell.bottom-nav :menu="$menu ?? []" :launcher="$fullBar" />
+        <x-shell.bottom-nav :menu="$menu ?? []" :launcher="$fullBar" />
+    @endunless
 
     {{-- স্ক্রিনের নিজের স্ক্রিপ্ট — Alpine লোড হওয়ার পরে।
 

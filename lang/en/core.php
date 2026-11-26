@@ -408,6 +408,16 @@ return [
         'how_to_renew' => 'Contact your supplier to renew, then enter the new code below.',
     ],
 
+    'counter' => [
+        'mode' => 'Counter mode',
+        'billing_by' => 'Billing: :name',
+        'close' => 'Close',
+        'saved' => ':no saved',
+        'new_bill' => 'a new bill is open',
+        'print' => 'Print',
+        'view' => 'View',
+        'open' => 'Open in counter mode',
+    ],
     'brand' => [
         'developed_by' => 'Developed by Al-Amin Shuvo',
         'full_name' => 'A Business Operating System',

@@ -1,5 +1,9 @@
 # What's new
 
+## 1.3.24 — 26-11-2026
+
+- Counter mode: "Direct purchase" in the menu opens in a new tab on large screens — only the bill, no menu, bar or footer; a thin strip with company, branch, who is billing, the bell and "✕ Close". After saving the tab stays open — "saved" on top with Print · View, and a fresh bill below.
+
 ## 1.3.23 — 26-11-2026
 
 - Approval inbox: party · point (highlighted, bold; "—" when none) · branch in the head, larger; the first tile shows who asked — one line less below.
