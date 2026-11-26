@@ -14,18 +14,73 @@
     ⓘ **এটা পড়ার পাতা** — খোলার কোনো ফর্ম নেই। নতুন জমা খুলতে হলে
     ইস্যুকারীর নিজের পাতায়, আর প্রতিটা সারি সেখানেই নামায়।
 --}}
+@php
+    $columns = [
+        // ⭐ নম্বরটা নিজের পাতায় খোলে — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬
+        ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '9rem',
+         'render' => fn ($d) => view('finance::deposit.partials.number', ['deposit' => $d])],
+
+        /*
+         * ইস্যুকারীর কলামটা এখানে বাড়তি — তিনটা মিশে আছে,
+         * তাই কোনটা কার সেটা না বললে তালিকাটা পড়া যায় না।
+         */
+        ['key' => 'issuer', 'label' => __('finance::field.issuer'), 'width' => '9rem',
+         /*
+          * ⓘ নামগুলো আগে থেকেই `menu.deposit_*`-এ আছে —
+          * নতুন কী বানানো হয়নি। `national_savings`-এর কী
+          * `deposit_savings`, তাই ওই একটা ব্যতিক্রম।
+          */
+         'render' => fn ($d) => __('finance::menu.deposit_'
+             .($d->kind->issuer === 'national_savings' ? 'savings' : $d->kind->issuer))],
+
+        ['key' => 'kind', 'label' => __('finance::field.deposit_kind'),
+         'render' => fn ($d) => view('finance::deposit.partials.kind-link', ['deposit' => $d])],
+        ['key' => 'institution', 'label' => __('finance::field.institution'),
+         'render' => fn ($d) => view('finance::deposit.partials.where', ['deposit' => $d])],
+        ['key' => 'held_by', 'label' => __('finance::field.held_by'), 'width' => '9rem',
+         'render' => fn ($d) => view('finance::deposit.partials.holder', ['deposit' => $d])],
+        ['key' => 'principal', 'label' => __('finance::field.principal'), 'numeric' => true,
+         'width' => '11rem',
+         'render' => fn ($d) => view('ui.amount-link', [
+             'value' => $d->principal,
+             'href' => route('accounts.coa.show', $d->account_id).'#transactions',
+         ])],
+        ['key' => 'matures_on', 'label' => __('finance::field.matures_on'), 'width' => '11rem',
+         'render' => fn ($d) => view('finance::deposit.partials.maturity', ['deposit' => $d])],
+
+        /*
+         * ⓘ ইস্যুকারীটা সারি থেকেই নেওয়া (`kind->issuer`), বাইরে
+         * থেকে দেওয়া নয় — এই পাতায় একটামাত্র ইস্যুকারী বলে
+         * কিছু নেই।
+         */
+        ['key' => 'do', 'label' => '', 'width' => '7rem',
+         'render' => fn ($d) => view('finance::deposit.partials.open-it',
+             ['deposit' => $d, 'issuer' => $d->kind->issuer])],
+    ];
+    // ⭐ এক সারির পুরো বার কেবল তিন ABOS রূপে ([[AbosHead]]); বাকি রূপ আগের মতো। ধরনটাও প্যানেলের ঘর (ধরনের তালিকার লিংক `?kind=` অটুট)
+    $abosHead = \App\Core\Support\AbosHead::on();
+    $facetPanel = ! $abosHead ? null : \App\Core\ListFilter\Facets::panel([
+        \App\Core\ListFilter\Facets::pick('issuer', __('finance::field.issuer'), collect(\App\Modules\Finance\Models\DepositKind::ISSUERS)
+            ->mapWithKeys(fn ($i) => [$i => __('finance::menu.deposit_'.($i === 'national_savings' ? 'savings' : $i))])->all()),
+        \App\Core\ListFilter\Facets::pick('kind', __('finance::field.deposit_kind'), $kinds->mapWithKeys(fn ($k) => [(string) $k->id => $k->name()])->all()),
+        \App\Core\ListFilter\Facets::pick('status', __('core.table.status'), collect(['active', 'awaiting', 'closed', 'cancelled'])
+            ->mapWithKeys(fn ($st) => [$st => \Illuminate\Support\Facades\Lang::has('finance::state.'.$st) ? __('finance::state.'.$st) : __('core.status.'.$st)])->all()),
+    ]);
+@endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('finance::menu.deposits_all') }}</x-slot:title>
 
     <div class="py-6">
+        @unless ($abosHead)
         <x-ui.page-header :title="__('finance::menu.deposits_all')"
                           :subtitle="__('finance::message.deposits_all_hint')" />
+        @endunless
 
         {{-- ⭐ ধরনের তালিকা থেকে আসা ছাঁকনি — ২০ সেপ্টেম্বর ২০২৬।
              ⓘ ছাঁকনিটা চুপচাপ বসলে মানুষ ভাবতেন এটাই সব জমা, আর সংখ্যাটা
              কম মনে হত। ⚠️ তাই কোন ধরন ছাঁকা হয়েছে সেটা লেখা থাকে, আর
              পাশেই সব দেখার পথ। --}}
-        @if (($kind ?? null) !== null)
+        @if (($kind ?? null) !== null && ! $abosHead)
             <p class="mt-3 flex flex-wrap items-center gap-2 text-sm">
                 <span class="rounded-(--radius-pill) border border-(--color-border) px-3 py-0.5">
                     {{ __('finance::field.deposit_kind') }}: {{ $kind->name() }}
@@ -38,57 +93,25 @@
             </p>
         @endif
 
+        <x-ui.filter-layout :filters="$facetPanel ?? \App\Core\ListFilter\Facets::panel([])" form="list-form">
         <section data-boxed
-                 class="mt-5 overflow-hidden rounded-(--radius-card) border border-(--color-border)
-                        bg-(--color-surface-card)">
+                 @class(['overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)', 'mt-5' => ! $abosHead])>
+            @if ($abosHead)
+                <form id="list-form" method="GET" class="contents">
+                    <x-ui.toolbar :title="__('finance::menu.deposits_all')" :info="__('finance::message.deposits_all_hint')"
+                                  :count="trans_choice('core.count.records', $deposits->total(), ['count' => $deposits->total()])"
+                                  :search-placeholder="__('core.print.document_no')" :facets="$facetPanel" :columns="$columns" :share="false"
+                                  :sort="['maturity' => __('finance::field.matures_on'), 'largest' => __('finance::field.principal'), 'newest' => __('core.notify.sort.newest')]" />
+                </form>
+            @endif
             <x-ui.table
                 :empty="__('finance::message.no_deposit_yet')"
                 :rows="$deposits"
-                :columns="[
-                    // ⭐ নম্বরটা নিজের পাতায় খোলে — মালিকের নির্দেশ, ২০ সেপ্টেম্বর ২০২৬
-                    ['key' => 'document_no', 'label' => __('core.print.document_no'), 'width' => '9rem',
-                     'render' => fn ($d) => view('finance::deposit.partials.number', ['deposit' => $d])],
-
-                    /*
-                     * ইস্যুকারীর কলামটা এখানে বাড়তি — তিনটা মিশে আছে,
-                     * তাই কোনটা কার সেটা না বললে তালিকাটা পড়া যায় না।
-                     */
-                    ['key' => 'issuer', 'label' => __('finance::field.issuer'), 'width' => '9rem',
-                     /*
-                      * ⓘ নামগুলো আগে থেকেই `menu.deposit_*`-এ আছে —
-                      * নতুন কী বানানো হয়নি। `national_savings`-এর কী
-                      * `deposit_savings`, তাই ওই একটা ব্যতিক্রম।
-                      */
-                     'render' => fn ($d) => __('finance::menu.deposit_'
-                         .($d->kind->issuer === 'national_savings' ? 'savings' : $d->kind->issuer))],
-
-                    ['key' => 'kind', 'label' => __('finance::field.deposit_kind'),
-                     'render' => fn ($d) => view('finance::deposit.partials.kind-link', ['deposit' => $d])],
-                    ['key' => 'institution', 'label' => __('finance::field.institution'),
-                     'render' => fn ($d) => view('finance::deposit.partials.where', ['deposit' => $d])],
-                    ['key' => 'held_by', 'label' => __('finance::field.held_by'), 'width' => '9rem',
-                     'render' => fn ($d) => view('finance::deposit.partials.holder', ['deposit' => $d])],
-                    ['key' => 'principal', 'label' => __('finance::field.principal'), 'numeric' => true,
-                     'width' => '11rem',
-                     'render' => fn ($d) => view('ui.amount-link', [
-                         'value' => $d->principal,
-                         'href' => route('accounts.coa.show', $d->account_id).'#transactions',
-                     ])],
-                    ['key' => 'matures_on', 'label' => __('finance::field.matures_on'), 'width' => '11rem',
-                     'render' => fn ($d) => view('finance::deposit.partials.maturity', ['deposit' => $d])],
-
-                    /*
-                     * ⓘ ইস্যুকারীটা সারি থেকেই নেওয়া (`kind->issuer`), বাইরে
-                     * থেকে দেওয়া নয় — এই পাতায় একটামাত্র ইস্যুকারী বলে
-                     * কিছু নেই।
-                     */
-                    ['key' => 'do', 'label' => '', 'width' => '7rem',
-                     'render' => fn ($d) => view('finance::deposit.partials.open-it',
-                         ['deposit' => $d, 'issuer' => $d->kind->issuer])],
-                ]" />
+                :columns="$columns" />
 
             <x-ui.pager :rows="$deposits" />
             <x-ui.list-totals :rows="$deposits" />
         </section>
+        </x-ui.filter-layout>
     </div>
 </x-layouts.app>
