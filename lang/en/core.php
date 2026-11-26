@@ -42,6 +42,8 @@ return [
         'view_source' => 'View source',
     ],
 
+    // ⭐ খাতার জেরের যে অংশ কোনো খোলা বিলে নেই — বিলের তালিকার সবার উপরে, কেবল দেখায় ([[OpeningRow]], ২৬ নভেম্বর ২০২৬)
+    'opening_row' => ['label' => 'Earlier balance (opening)', 'tag' => 'Not on any bill'],
     'source' => [
         'voucher' => 'Voucher',
         'sales_invoice' => 'Sales Invoice',

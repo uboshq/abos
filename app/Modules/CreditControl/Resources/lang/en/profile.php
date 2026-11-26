@@ -22,6 +22,7 @@ return [
     'open_bills' => 'Open bills',
     'no_open_bills' => 'No open bills',
     'open_bills_total' => 'Total unpaid (:count bills)',
+    'open_bills_total_ledger' => 'Total unpaid (:count bills + earlier balance) = ledger balance',
     'history' => 'Change history',
     'no_history' => 'No change to the limit, credit days or block yet',
     'when' => 'When',

@@ -114,6 +114,8 @@ return [
             'remaining' => 'বাকি',
             'apply' => 'এখন প্রয়োগ',
             'applied_total' => 'মোট প্রয়োগ',
+            'remaining_total' => 'মোট বাকি',
+            'remaining_ledger' => 'মোট বাকি = খাতার জের',
             // ⭐ টাকা নেওয়া/দেওয়া ভাউচারের খোলা বিল (নকশা পাতা ২; cb-ma-4)
             'paper' => 'কাগজ',
             'date' => 'তারিখ',
@@ -261,7 +263,9 @@ return [
         'diffNone' => 'কম-বেশি নেই',
         'diff' => 'কম-বেশি :amount',
         'bills_in' => ':nটা বিল · বাকি ৳:due · এই রসিদে প্রয়োগ :applied',
+        'bills_in_opening' => ':nটা বিল + আগের জের · বাকি ৳:due · এই রসিদে প্রয়োগ :applied',
         'bills_out' => ':nটা বিল · বাকি ৳:due · এই পরিশোধে প্রয়োগ :applied',
+        'bills_out_opening' => ':nটা বিল + আগের জের · বাকি ৳:due · এই পরিশোধে প্রয়োগ :applied',
         'noFile' => 'কোনো ফাইল নেই',
         'file' => 'ফাইল: :name',
         'carrier' => 'কার মাধ্যমে: :name',

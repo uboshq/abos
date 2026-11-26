@@ -530,3 +530,33 @@ describe('খোলা বিলে নোটের সারি', () => {
         expect(box.pickedRows, '⛔ ক্রেডিট নোট টিক হয়ে প্রয়োগের সারিতে গেল').toEqual([])
     })
 })
+
+/* ⭐ আগের জের (ওপেনিং) — সবার উপরে, কেবল দেখায়; মোট বাকি খাতার জেরের সমান (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬) */
+describe('খোলা বিলে আগের জের', () => {
+    it('সবার উপরে বসে, টিক হয় না, নোটের কথাও আনে না, আর মোটে ধরা হয়', async () => {
+        const box = make({ texts: { kinds: { opening: 'কোনো বিলে নেই' }, remainingTotal: 'মোট বাকি', remainingLedger: 'মোট বাকি = খাতার জের' } })
+        box.partyId = '7'
+        globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({
+            known: true, amount: '58200.0000',
+            opening: { kind: 'opening', no: 'আগের জের (ওপেনিং)', date: '2026-10-01', due_date: '', total: '', outstanding: '37700.0000', public_id: '', url: '/accounts/statement/customer/7' },
+            bills: [{ kind: 'invoice', public_id: 'inv-1', no: 'INV-0398', outstanding: '8500.0000', total: '8500.0000', due_date: '2026-11-17' },
+                { kind: 'invoice', public_id: 'inv-2', no: 'INV-0412', outstanding: '12000.0000', total: '12000.0000', due_date: '2026-12-05' }],
+        }) })
+
+        await box.loadDue()
+        const opening = box.bills[0]
+
+        expect(box.isOpening(opening), '⛔ প্রথম সারি আগের জের নয়').toBe(true)
+        expect(box.isBill(opening), '⛔ আগের জের বিল ধরা হলো — টিক আর অঙ্কের ঘর পেত').toBe(false)
+        expect(box.kindText(opening)).toBe('কোনো বিলে নেই')
+        expect(box.openingLink(opening), '⛔ নামটা হিসাব বিবরণীর লিংক নয়').toBe(true)
+        expect(box.hasNotes, '⛔ আগের জেরে নোটের কথার লাইন এল').toBe(false)
+        expect(box.lakh(opening.total), '⛔ বিলের টাকার ঘরে শূন্য — ড্যাশ চাই').toBe('—')
+        expect(box.dayMonth(opening.due_date)).toBe('—')
+        expect(box.dueSumText, '⛔ মোট বাকি খাতার জের নয়').toBe('৳58,200.00')
+        expect(box.dueSumLabel).toBe('মোট বাকি = খাতার জের')
+
+        box.toggle(opening)
+        expect(box.pickedRows, '⛔ আগের জের টিক হয়ে প্রয়োগের সারিতে গেল').toEqual([])
+    })
+})

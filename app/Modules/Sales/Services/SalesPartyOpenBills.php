@@ -6,6 +6,8 @@ namespace App\Modules\Sales\Services;
 
 use App\Core\Contracts\PartyOpenBills;
 use App\Core\Support\DocumentStatus;
+use App\Core\Support\OpeningRow;
+use App\Models\LedgerEntry;
 use App\Modules\Accounts\Models\Note;
 use App\Modules\Sales\Models\SalesInvoice;
 use Carbon\Carbon;
@@ -24,6 +26,40 @@ final class SalesPartyOpenBills implements PartyOpenBills
     public function partyType(): string
     {
         return 'customer';
+    }
+
+    /**
+     * ⓘ খাতার জের ([[Customer::outstanding()]]-এর একই যোগ, গোটা কোম্পানি) − সব পাকা বিলের নিজের বাকি ([[SalesInvoice::ownDue()]];
+     * বিলের তালিকার একই অঙ্ক) − নোট চাইলে বিলে না-বাঁধা নোট (ক্রেডিট ঋণাত্মক)।
+     * ⓘ আপনা থেকে শোধের ভাগ ([[AutoDues]]) এই অঙ্ক বদলায় না: জের বিলের যোগের বেশি হলে কোনো বিলই আপনা থেকে শোধ হয় না।
+     */
+    public function openingRow(string $partyType, int $partyId, bool $withNotes = false): ?array
+    {
+        if ($partyType !== 'customer' || $partyId <= 0) {
+            return null;
+        }
+
+        $ledger = LedgerEntry::query()->forParty('customer', $partyId)
+            ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as net, MIN(trx_date) as since')
+            ->first();
+
+        $onBills = '0';
+        // ⛔ জের গোটা কোম্পানির — বিলও সব শাখার, নইলে অন্য শাখার বিল "আগের জের" হয়ে দেখা দিত
+        foreach (SalesInvoice::acrossBranches()->withCollected()->where('customer_id', $partyId)->where('status', DocumentStatus::CONFIRMED)->cursor() as $invoice) {
+            $onBills = bcadd($onBills, $invoice->ownDue(), 4);
+        }
+
+        if ($withNotes) {
+            $notes = Note::acrossBranches()->where('party_type', 'customer')->where('party_id', $partyId)->whereNull('against_id')
+                ->whereIn('status', DocumentStatus::POSTED)->get(['direction', 'total']);
+
+            foreach ($notes as $note) {
+                $onBills = $note->direction === Note::CREDIT ? bcsub($onBills, (string) $note->total, 4) : bcadd($onBills, (string) $note->total, 4);
+            }
+        }
+
+        return OpeningRow::make('customer', $partyId, bcadd((string) ($ledger?->net ?? 0), '0', 4), $onBills,
+            $ledger?->since === null ? null : (string) $ledger->since);
     }
 
     public function openBills(string $partyType, int $partyId, int $limit = 50, bool $withNotes = false): array

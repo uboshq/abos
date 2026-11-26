@@ -277,6 +277,13 @@ final class VoucherApiController extends Controller implements HasMiddleware
                 'total' => bcadd((string) $b['total'], '0', 4),
                 'outstanding' => bcadd((string) $b['outstanding'], '0', 4),
             ])->values(),
+            // ⭐ "আগের জের (ওপেনিং)" — কোনো বিলে নেই, কেবল দেখায় (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬); নেই হলে null। ⓘ আলাদা ঘর, `bills`-এ নয়:
+            //   ফোন `bills`-এর প্রতিটা সারিকে টাকা বসানোর বিল ধরে
+            'opening' => ($o = app(\App\Modules\Accounts\Services\VoucherAllocations::class)->openingOf($type, $id)) === null ? null : [
+                'label' => (string) $o['no'],
+                'date' => (string) $o['date'],
+                'outstanding' => bcadd((string) $o['outstanding'], '0', 4),
+            ],
         ]);
     }
 

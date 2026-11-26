@@ -30,6 +30,14 @@ interface PartyOpenBills
      */
     public function openBills(string $partyType, int $partyId, int $limit = 50, bool $withNotes = false): array;
 
+    /**
+     * ⭐ "আগের জের (ওপেনিং)" — খাতার জেরের যে অংশ কোনো খোলা বিলে নেই ([[\App\Core\Support\OpeningRow]]); না থাকলে null।
+     * ⓘ `$withNotes` হলে বিলে না-বাঁধা নোটও যোগে ধরা — [[openBills()]]-এর একই তালিকা, যাতে সারিগুলোর যোগ খাতার জেরের সমান।
+     *
+     * @return array<string, mixed>|null
+     */
+    public function openingRow(string $partyType, int $partyId, bool $withNotes = false): ?array;
+
     /** যে ধরনের পক্ষের বিল এখানে থাকে ([[PartyRegistry]]-এর ধরন); কেউ না থাকলে খালি লেখা */
     public function partyType(): string;
 }

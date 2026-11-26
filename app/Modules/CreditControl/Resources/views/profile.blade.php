@@ -107,6 +107,22 @@
                             </tr>
                         </thead>
                         <tbody>
+                            {{-- ⭐ "আগের জের (ওপেনিং)" — সবার উপরে, কোনো বিলে নেই, কেবল দেখায় (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬) --}}
+                            @if ($opening)
+                                <tr class="border-t border-(--color-border) bg-(--color-badge-warning-bg)" data-opening-row>
+                                    <td>
+                                        @if ($opening['url'])
+                                            <a href="{{ $opening['url'] }}" class="text-(--color-link) hover:underline">{{ $opening['no'] }}</a>
+                                        @else
+                                            {{ $opening['no'] }}
+                                        @endif
+                                        <span class="ms-1 rounded px-1.5 py-0.5 text-2xs bg-(--color-badge-warning-bg) text-(--color-badge-warning-ink)">{{ __('core.opening_row.tag') }}</span>
+                                    </td>
+                                    <td>{{ DateFormat::format($opening['date']) }}</td>
+                                    <td class="tabular text-right">{{ $opening['age'] }}</td>
+                                    <td class="tabular text-right">{{ Money::format($opening['outstanding']) }}</td>
+                                </tr>
+                            @endif
                             @forelse ($bills as $bill)
                                 <tr class="border-t border-(--color-border)" data-bill="{{ $bill['no'] }}">
                                     <td><x-ui.drill source="sales_invoice" :id="$bill['id']">{{ $bill['no'] }}</x-ui.drill></td>
@@ -117,14 +133,16 @@
                                     <td class="tabular text-right">{{ Money::format($bill['unpaid']) }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_open_bills') }}</td></tr>
+                                @unless ($opening)
+                                    <tr><td colspan="4" class="text-center text-(--color-ink-muted)">{{ __('credit_control::profile.no_open_bills') }}</td></tr>
+                                @endunless
                             @endforelse
                         </tbody>
                         {{-- ⭐ মোট বাকি — সব খোলা বিল মিলে (পূর্ণ নিরীক্ষা §৫, ১৮ অক্টোবর ২০২৬) --}}
-                        @if ($bills !== [])
+                        @if ($bills !== [] || $opening)
                             <tfoot>
                                 <tr class="border-t-2 border-(--color-border) font-semibold" data-open-bills-total>
-                                    <td colspan="3">{{ __('credit_control::profile.open_bills_total', ['count' => count($bills)]) }}</td>
+                                    <td colspan="3">{{ __($opening ? 'credit_control::profile.open_bills_total_ledger' : 'credit_control::profile.open_bills_total', ['count' => count($bills)]) }}</td>
                                     <td class="tabular text-right">{{ Money::format($billsTotal) }}</td>
                                 </tr>
                             </tfoot>

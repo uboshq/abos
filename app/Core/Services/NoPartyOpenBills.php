@@ -20,4 +20,9 @@ final class NoPartyOpenBills implements PartyOpenBills
     {
         return [];
     }
+
+    public function openingRow(string $partyType, int $partyId, bool $withNotes = false): ?array
+    {
+        return null;
+    }
 }
