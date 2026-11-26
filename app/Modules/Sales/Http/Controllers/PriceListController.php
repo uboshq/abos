@@ -40,7 +40,7 @@ final class PriceListController extends Controller implements HasMiddleware
     public function index(Request $request): View
     {
         $q = $request->string('q')->toString();
-        $products = $this->book->list($q, (int) $request->query('category') ?: null);
+        $products = $this->book->list($q, (int) $request->query('category') ?: null, $request->query('sort'));
 
         return view('sales::price_list.index', [
             'menu' => $this->menu->forUser($request->user()),

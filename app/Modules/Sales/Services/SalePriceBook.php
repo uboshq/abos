@@ -34,7 +34,7 @@ final class SalePriceBook
      *
      * @return LengthAwarePaginator<Product>
      */
-    public function list(?string $q, ?int $category = null): LengthAwarePaginator
+    public function list(?string $q, ?int $category = null, mixed $sort = null): LengthAwarePaginator
     {
         return Product::query()
             ->active()
@@ -47,7 +47,8 @@ final class SalePriceBook
                     ->orWhere('name_en', 'like', $like)
                     ->orWhere('name_bn', 'like', $like));
             })
-            ->orderBy('name_en')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($w) => \App\Core\ListFilter\ListSort::apply($w, $sort, ['name_az' => ['name_en', 'asc'], 'name_za' => ['name_en', 'desc'], 'code' => ['code', 'asc'], 'amount_high' => ['sale_price', 'desc'], 'amount_low' => ['sale_price', 'asc']]))
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
     }

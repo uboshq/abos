@@ -71,7 +71,7 @@
         @if ($abosHead)
             <form id="list-form" method="GET" class="contents">
                 <input type="hidden" name="target" value="{{ $target }}">
-                <x-ui.toolbar :title="__('sales::price_book.title_'.$target)" :info="__('sales::price_book.subtitle')"
+                <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['code', 'name_az', 'name_za', 'newest'])" :title="__('sales::price_book.title_'.$target)" :info="__('sales::price_book.subtitle')"
                               :search-placeholder="__('sales::price_book.search')" :columns="$columns" :facets="$facetPanel" :quiet="['target']">
                     @if ($canManage)
                         <x-slot:actions>
