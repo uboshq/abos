@@ -26,7 +26,9 @@ final class TheCounterStockSitsInAHighlightBoxTest extends TestCase
         $this->seed(DemoSeeder::class);
         $company = Company::query()->where('code', 'TDEPOT')->firstOrFail();
         CompanyContext::set($company->id, $company->defaultBranch()?->id);
-        $this->actingAs(User::query()->where('email', 'owner@abos.test')->firstOrFail());
+        // ⓘ এই দাবি ক্লাসিক কাউন্টারের (SAP/Dynamic/Odoo) — ABOS রূপের কাউন্টার মালিকের ২৬ নভেম্বরের নির্দেশে আলাদা,
+        // তার দাবি [[TheAbosCounterFollowsTheOwners26NovOrdersTest]]-এ
+        $this->actingAs(tap(User::query()->where('email', 'owner@abos.test')->firstOrFail(), fn (User $u) => $u->forceFill(['ui' => 'dynamic'])->save()));
 
         $html = $this->get(route('sales.direct.create'))->assertOk()->getContent();
 
