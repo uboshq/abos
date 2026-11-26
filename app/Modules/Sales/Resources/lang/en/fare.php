@@ -89,4 +89,6 @@ return [
     'carrier_phone_new' => 'Carrier mobile (type it if not in the list)',
     'for_paper' => 'For',
     'trip_label' => 'Trip',
+    'owed_to' => 'Owed to',
+    'owed_to_unknown' => 'Write the carrier or driver name',
 ];

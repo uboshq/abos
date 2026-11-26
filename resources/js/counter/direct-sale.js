@@ -972,6 +972,11 @@ export default function directSale({
             return c ? String(c.label ?? '') : '';
         },
 
+        /** ⭐ "পরে দেব" — কার নামে পাওনা থাকবে: পরিবহন, না থাকলে চালক */
+        get farePayee() {
+            return this.carrierText || this.driverName || '';
+        },
+
         get fareText() {
             const fare = Number(this.transportCost) || 0;
 
