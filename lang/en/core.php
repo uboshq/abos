@@ -42,6 +42,8 @@ return [
         'view_source' => 'View source',
     ],
 
+    'list_sort' => ['newest' => 'Newest first', 'oldest' => 'Oldest first', 'amount_high' => 'Largest amount first', 'amount_low' => 'Smallest amount first',
+        'name_az' => 'Name A → Z', 'name_za' => 'Name Z → A', 'code' => 'By code', 'due_soon' => 'Due soonest first'],
     'source' => [
         'voucher' => 'Voucher',
         'sales_invoice' => 'Sales Invoice',

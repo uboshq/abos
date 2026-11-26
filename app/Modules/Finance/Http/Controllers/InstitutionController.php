@@ -58,9 +58,13 @@ class InstitutionController extends Controller implements HasMiddleware
                 ->orWhere('branch_name', 'like', "%{$term}%")->orWhere('contact_person', 'like', "%{$term}%")
                 ->orWhere('phone', 'like', "%{$term}%")));
 
-        $institutions = $filtered()
-            ->orderByDesc('is_active')
-            ->orderBy('name_en')
+        // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম (চালু আগে, নাম ধরে)
+        $institutions = \App\Core\ListFilter\ListSort::apply($filtered(), $request, [
+            'name_az' => [['is_active', 'desc'], ['name_en', 'asc']],
+            'name_za' => [['is_active', 'desc'], ['name_en', 'desc']],
+            'newest' => ['created_at', 'desc'],
+            'oldest' => ['created_at', 'asc'],
+        ])
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 

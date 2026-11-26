@@ -50,7 +50,10 @@ final class BankCharges
      * @param  ?int  $bankId  কেবল এই ব্যাংকের কাটাগুলো — "কতবার" সংখ্যাটার পিছনের তালিকা
      * @return LengthAwarePaginator<int, LedgerEntry>
      */
-    public function rows(string $from, string $to, int $perPage = 100, ?int $bankId = null): LengthAwarePaginator
+    /** ⭐ বারের সাজানো ([[ListSort]]) — প্রথমটা আগের ক্রম */
+    public const SORTS = ['newest', 'oldest', 'amount_high', 'amount_low'];
+
+    public function rows(string $from, string $to, int $perPage = 100, ?int $bankId = null, mixed $sort = null): LengthAwarePaginator
     {
         $query = $this->base($from, $to)
             ->selectRaw('ledger_entries.*, '.self::BANK_OF.' as bank_id', [Account::BANK, Account::MFS]);
@@ -64,9 +67,14 @@ final class BankCharges
             $query->whereRaw(self::BANK_OF.' = ?', [Account::BANK, Account::MFS, $bankId]);
         }
 
-        return $query
-            ->orderByDesc('trx_date')
-            ->orderByDesc('id')
+        $amount = \Illuminate\Support\Facades\DB::raw('ledger_entries.debit - ledger_entries.credit');
+
+        return \App\Core\ListFilter\ListSort::apply($query, $sort, [
+            'newest' => ['ledger_entries.trx_date', 'desc'],
+            'oldest' => ['ledger_entries.trx_date', 'asc'],
+            'amount_high' => [$amount, 'desc'],
+            'amount_low' => [$amount, 'asc'],
+        ], 'ledger_entries.id')
             ->paginate($perPage)
             ->withQueryString();
     }

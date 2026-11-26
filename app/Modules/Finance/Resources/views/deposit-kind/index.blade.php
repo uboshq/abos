@@ -81,7 +81,7 @@
                 <input type="hidden" name="tab" value="{{ $tab }}">
             @endif
 
-            <x-ui.toolbar :title="__('finance::menu.deposit_kinds')"
+            <x-ui.toolbar :title="__('finance::menu.deposit_kinds')" :sort="\App\Core\ListFilter\ListSort::labels(['code', 'name_az', 'newest'])"
                           :subtitle="__('finance::message.kind_note')"
                           :columns="$columns"
                           :search-placeholder="__('finance::message.kind_search')"

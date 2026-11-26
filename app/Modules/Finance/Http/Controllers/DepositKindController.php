@@ -64,9 +64,12 @@ class DepositKindController extends Controller implements HasMiddleware
             ->when($request->query('state') === 'active', fn ($q) => $q->where('is_active', true))
             ->when($request->query('state') === 'inactive', fn ($q) => $q->where('is_active', false))
             ->withCount('deposits')
-            ->orderBy('issuer')
-            ->orderBy('sort')
-            ->orderBy('code')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, [
+                'code' => [['issuer', 'asc'], ['sort', 'asc'], ['code', 'asc']],
+                'name_az' => ['name_en', 'asc'],
+                'newest' => ['id', 'desc'],
+            ]))
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 
