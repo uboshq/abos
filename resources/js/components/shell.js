@@ -1162,6 +1162,34 @@ export function notifyBell () {
 
         toggle () {
             this.open = ! this.open
+
+            if (this.open) {
+                this.fill()
+            }
+        },
+
+        /*
+         * ⭐ তিন ABOS রূপে তালিকাটা প্রথমবার খুললে আনা — একবারই (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬)। ⓘ নতুন সারিগুলোর Alpine (ট্যাব, দেখানো)
+         *   এই উপাদানের ভিতরেই জাগে ([[Alpine.initTree]]); না এলে "আবার চেষ্টা" লেখা আর সব খবরের পাতার লিংক।
+         */
+        fill () {
+            const box = this.$el.closest('[data-notify-bell-root]')?.querySelector('[data-bell-list]')
+
+            if (! box || box.dataset.state === 'loading' || box.dataset.state === 'done') return
+
+            box.dataset.state = 'loading'
+            fetch(box.dataset.bellUrl, { headers: { Accept: 'text/html', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+                .then((response) => response.ok ? response.text() : Promise.reject(new Error(String(response.status))))
+                .then((html) => {
+                    box.innerHTML = html
+                    box.dataset.state = 'done'
+                    window.Alpine?.initTree(box)
+                })
+                .catch(() => {
+                    box.dataset.state = ''
+                    box.querySelector('[data-bell-wait]')?.classList.add('hidden')
+                    box.querySelector('[data-bell-failed]')?.classList.remove('hidden')
+                })
         },
 
         close () {

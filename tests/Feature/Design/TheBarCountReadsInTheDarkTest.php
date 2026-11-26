@@ -52,7 +52,8 @@ final class TheBarCountReadsInTheDarkTest extends TestCase
             'approval-quick-access' => ['{{ $pending > 99','bg-(--color-count-urgent)', 'text-(--color-count-ink)'],
             'signed-unposted' => ['data-signed-unposted-count', 'bg-(--color-count-urgent)', 'text-(--color-count-ink)'],
             'notification-bell' => ['data-notify-count', "'bg-(--color-count-urgent) text-(--color-count-ink)' => \$urgent", "'bg-(--color-count-info) text-(--color-count-info-ink)' => ! \$urgent"],
-            'notification-bell ' => ['data-critical', 'bg-(--color-count-urgent)', 'text-(--color-count-ink)'],
+            // ⓘ খবরের তালিকা এখন নিজের টুকরায় — ঘণ্টায় সরাসরি, বা তিন ABOS রূপে খুললে আনা (২৬ নভেম্বর ২০২৬)
+            'partials/bell-list' => ['data-critical', 'bg-(--color-count-urgent)', 'text-(--color-count-ink)'],
         ];
 
         foreach ($badges as $file => [$mark, $bg, $ink]) {

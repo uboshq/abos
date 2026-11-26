@@ -344,6 +344,10 @@
                     $shownSection = null;
                     // ⭐ রেলের ক্রম এই মানুষের — পিন আর নিজের ক্রম, নইলে খোলা পাতার অনুপাতে ([[MenuBuilder::arranged()]])
                     $railMenu = app(\App\Core\Services\MenuBuilder::class)->arranged($menu ?? [], auth()->user());
+                    // ⭐ তিন ABOS রূপে পাশে খোলা তালিকার সারি পাতায় আঁকা হয় না — এক টুকরো JSON, প্রথমবার মাউস রাখলে তৈরি
+                    //   ([[rail-fit.js]] `fillFlyout`; মালিকের নমুনা, ঘণ্টা ও রেল দ্রুত, ২৬ নভেম্বর ২০২৬)। বাকি রূপে আগের মতো আঁকা
+                    $railLazy = \App\Core\Support\AbosHead::on();
+                    $railItems = [];
                 @endphp
 
                 @foreach ($railMenu as $module)
@@ -601,6 +605,13 @@
                                 </span>
                             </div>
 
+                            @if ($railLazy)
+                                @php
+                                    $railItems[$module['code']] = collect($module['groups'])->flatten(1)
+                                        ->map(fn ($item) => ['label' => (string) $item['label'], 'url' => $item['url'] ?: null, 'active' => (bool) $item['active']])->values()->all();
+                                @endphp
+                                <div class="max-h-[70vh] overflow-y-auto" data-rail-items="{{ $module['code'] }}"></div>
+                            @else
                             <div class="max-h-[70vh] overflow-y-auto">
                                 @foreach (collect($module['groups'])->flatten(1) as $item)
                                     <a @if ($item['url']) href="{{ $item['url'] }}" @endif
@@ -614,9 +625,14 @@
                                     </a>
                                 @endforeach
                             </div>
+                            @endif
                         </div>
                     </div>
                 @endforeach
+
+                @if ($railLazy)
+                    <script type="application/json" @nonce data-rail-menu>@json($railItems)</script>
+                @endif
 
                 {{-- ⓘ রেলের সাজ রাখার চিহ্ন — এখানে কোনো ফর্ম নেই, তাই নিজের --}}
                 <input type="hidden" value="{{ csrf_token() }}" data-rail-token>

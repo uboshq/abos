@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
-import { fitRail, hideOrder, layoutOf, matches, moved } from './rail-fit.js'
+import { fillFlyout, fitRail, hideOrder, layoutOf, matches, moved } from './rail-fit.js'
 
 /*
  * ⭐ বাঁ মডিউল-রেল — যা ধরে না তা "⋯ আরও"-তে, কিছুই হারায় না (মালিক, ২৪ অক্টোবর ২০২৬: "১০০% জুমে সব মডিউলের আইকন আসে না")।
@@ -62,5 +62,28 @@ describe('"আরও" তালিকা আর সাজানো', () => {
         expect(moved(rows, 0, -1).map(r => r.code)).toEqual(['a', 'b', 'c'])
         expect(rows.map(r => r.code)).toEqual(['a', 'b', 'c'])
         expect(layoutOf(rows)).toEqual({ order: ['a', 'b', 'c'], pinned: ['b'] })
+    })
+})
+
+/* ⭐ পাশের তালিকা প্রথমবার মাউস রাখলে তৈরি (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬) */
+describe('fillFlyout', () => {
+    it('builds the rows once, in order, with the old classes, text only', () => {
+        const box = document.createElement('div')
+        const items = [
+            { label: 'বিল', url: '/sales/invoices', active: true },
+            { label: '<b>আদায়</b>', url: '/sales/receipts', active: false },
+            { label: 'শীঘ্রই', url: null, active: false },
+        ]
+
+        expect(fillFlyout(box, items)).toBe(true)
+        expect(fillFlyout(box, items), '⛔ দ্বিতীয়বার আবার সারি যোগ হলো').toBe(false)
+
+        const rows = [...box.querySelectorAll('a')]
+        expect(rows.map(a => a.textContent)).toEqual(['বিল', '<b>আদায়</b>', 'শীঘ্রই'])
+        expect(box.querySelector('b'), '⛔ লেখা HTML হয়ে বসল').toBeNull()
+        expect(rows[0].className).toContain('font-semibold')
+        expect(rows[1].getAttribute('href')).toBe('/sales/receipts')
+        expect(rows[2].hasAttribute('href'), '⛔ ঠিকানাহীন সারি চাপা যায়').toBe(false)
+        expect(rows[2].className).toContain('cursor-not-allowed')
     })
 })
