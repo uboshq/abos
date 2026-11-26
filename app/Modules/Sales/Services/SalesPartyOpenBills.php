@@ -44,12 +44,13 @@ final class SalesPartyOpenBills implements PartyOpenBills
             ->first();
 
         $onBills = '0';
-        foreach (SalesInvoice::query()->withCollected()->where('customer_id', $partyId)->where('status', DocumentStatus::CONFIRMED)->cursor() as $invoice) {
+        // ⛔ জের গোটা কোম্পানির — বিলও সব শাখার, নইলে অন্য শাখার বিল "আগের জের" হয়ে দেখা দিত
+        foreach (SalesInvoice::acrossBranches()->withCollected()->where('customer_id', $partyId)->where('status', DocumentStatus::CONFIRMED)->cursor() as $invoice) {
             $onBills = bcadd($onBills, $invoice->ownDue(), 4);
         }
 
         if ($withNotes) {
-            $notes = Note::query()->where('party_type', 'customer')->where('party_id', $partyId)->whereNull('against_id')
+            $notes = Note::acrossBranches()->where('party_type', 'customer')->where('party_id', $partyId)->whereNull('against_id')
                 ->whereIn('status', DocumentStatus::POSTED)->get(['direction', 'total']);
 
             foreach ($notes as $note) {

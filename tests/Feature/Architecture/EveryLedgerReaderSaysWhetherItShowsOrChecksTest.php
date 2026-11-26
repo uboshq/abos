@@ -101,6 +101,9 @@ final class EveryLedgerReaderSaysWhetherItShowsOrChecksTest extends TestCase
     /** @var array<string, string> যাচাই করে — গোটা কোম্পানি, দেখার শাখা কখনো নয় */
     private const CHECKS = [
         'app/Modules/Sales/Services/AutoDues.php' => 'বিলের অটো বাকি — গ্রাহকের গোটা কোম্পানির জের, সব শাখার বিলে ভাগ (মালিক, ২৫ নভেম্বর ২০২৬); দেখার শাখা পরে বিলের তালিকা নিজেই মানে',
+        // ⓘ আগের জের (ওপেনিং) — খাতার জের − সব খোলা বিলের বাকি, কেবল দেখায় (মালিকের নমুনা, ২৬ নভেম্বর ২০২৬)
+        'app/Modules/Sales/Services/SalesPartyOpenBills.php' => 'আগের জের — গ্রাহকের গোটা কোম্পানির জের − সব শাখার খোলা বিলের বাকি; Customer::outstanding()-এর একই যোগ, আধা দেখলে অন্য শাখার বিল জের হয়ে দেখা দিত',
+        'app/Modules/Purchase/Services/PurchasePayableOpenBills.php' => 'আগের জের — সরবরাহকারীর দেনার খাতের গোটা কোম্পানির জের − সব শাখার খোলা বিলের বাকি; আধা দেখলে অন্য শাখার বিল জের হয়ে দেখা দিত',
         // ⓘ শ্রম আইনের দুই পাঠক (২৫ নভেম্বর ২০২৬)
         'app/Modules/Hr/Services/HeldWages.php' => 'বাতিল ভাউচার খাতায় কখনো বসেছিল কি না — একটা ভাউচারের নিজের সারি, গোটা কোম্পানি; আধা দেখলে মজুরি দুইবার ছাড়া হত',
         'app/Modules/Hr/Services/WppfService.php' => 'তহবিলের ভিত্তির মুনাফা — আইনে গোটা কোম্পানির; শাখায় সীমিত মানুষ পর্দাটাই পান না (seesTheWholeCompany)',
