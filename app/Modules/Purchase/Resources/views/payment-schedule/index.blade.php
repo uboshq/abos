@@ -6,6 +6,8 @@
 @php
     use App\Core\Support\Money;
 
+    // ⓘ প্রস্তাবের ঘর কলামের আঁকায় লাগে — তাই কলামের আগেই (Mac run of 8a4037f6c: নিচে সংজ্ঞা থাকায় ৫০০)
+    $proposing = $accounts->isNotEmpty();
     $columns = [
             ['key' => 'due', 'label' => __('purchase::schedule.due_on'), 'width' => '9rem',
              'render' => fn ($bill) => view('purchase::payment-schedule.partials.when',
@@ -82,7 +84,6 @@
         </form>
 
         {{-- ⭐ পরিশোধের প্রস্তাব (ধাপ খ ১১, ৭ অক্টোবর ২০২৬) — প্রতি সারিতে অঙ্ক, খালি মানে বাছা নয়; JS ছাড়া --}}
-        @php $proposing = $accounts->isNotEmpty(); @endphp
         @if ($proposing)
         <form method="POST" action="{{ route('purchase.payment_schedule.propose') }}" data-payment-proposal>
             @csrf
