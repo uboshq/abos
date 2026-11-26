@@ -82,7 +82,7 @@
     <div data-boxed data-obligations class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
-            <x-ui.toolbar :title="__('accounts::menu.obligations')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['due_soon', 'newest', 'oldest'])" :title="__('accounts::menu.obligations')"
                           :info="\App\Core\Support\AbosHead::on() ? __('accounts::obligation.subtitle') : null"
                           :search-placeholder="__('accounts::obligation.search')"
                           :columns="$columns" :facets="$facetPanel" :quiet="['tab']" />

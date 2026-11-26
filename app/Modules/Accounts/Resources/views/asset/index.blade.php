@@ -135,7 +135,7 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :title="__('accounts::asset.title')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest', 'amount_high', 'amount_low', 'code'])" :title="__('accounts::asset.title')"
                 :subtitle="__('accounts::asset.subtitle')"
                 :search-placeholder="__('accounts::message.asset_search')"
                 :columns="$columns"

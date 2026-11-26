@@ -55,8 +55,9 @@ class InterCompanyController extends Controller implements HasMiddleware
         $filters->apply($rows, $request);
         $rows = $rows
             ->with(['counterCompany', 'creator'])
-            ->latest('trx_date')
-            ->latest('id')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['trx_date', 'desc'], 'oldest' => ['trx_date', 'asc'],
+                'amount_high' => ['amount', 'desc'], 'amount_low' => ['amount', 'asc']]))
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 

@@ -78,7 +78,8 @@ class BankReconciliationController extends Controller implements HasMiddleware
         return view('accounts::reconciliation.index', [
             'menu' => $this->menu->forUser($request->user()),
             'filters' => \App\Core\ListFilter\Panel::of($filters, $base, $request),
-            'reconciliations' => $query->orderByDesc('statement_date')->orderByDesc('id')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬)
+            'reconciliations' => \App\Core\ListFilter\ListSort::apply($query, $request, ['newest' => ['statement_date', 'desc'], 'oldest' => ['statement_date', 'asc']])
                 ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString(),
             'q' => $request->query('q'),

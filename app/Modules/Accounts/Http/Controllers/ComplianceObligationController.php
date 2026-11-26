@@ -65,8 +65,12 @@ final class ComplianceObligationController extends Controller implements HasMidd
                 })
             ->when($this->day($request, 'from'), fn ($q, $day) => $q->whereDate('due_on', '>=', $day))
             ->when($this->day($request, 'to'), fn ($q, $day) => $q->whereDate('due_on', '<=', $day))
-            ->orderBy($tab === 'done' ? 'done_at' : 'due_on', $tab === 'done' ? 'desc' : 'asc')
-            ->orderBy('id');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম (খোলা: শেষ দিন আগে; সম্পন্ন: শেষ কাজ আগে)
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, [
+                'due_soon' => $tab === 'done' ? ['done_at', 'desc'] : ['due_on', 'asc'],
+                'newest' => ['id', 'desc'],
+                'oldest' => ['id', 'asc'],
+            ]));
 
         $rows = (clone $query)->with('doneBy')->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
