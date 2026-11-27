@@ -3203,3 +3203,69 @@ html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .toolbar-view labe
 :root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-modulebar-fold] {
     max-height: min(70dvh, 34rem);
 }
+
+/*
+ * ⭐ Navy — লেখা পড়ার মতো গাঢ় আর বোতাম অন্তত ২৮px (মালিক "ok", ২৮ নভেম্বর ২০২৬; নমুনা মালিকের-ফাইল/রং-ও-বোতামের-মাপ-নমুনা-২৮-নভেম্বর.html)।
+ * ⓘ axe (WCAG 2.2 AA): সাধারণ লেখা ৪.৫:১, বোতাম ২৪×২৪। রঙের পরিবার একই — কেবল শেড গাঢ়; অর্থের রং (টাকা সবুজ, বাকি লাল) যেমন ছিল।
+ * ⓘ ব্র্যান্ড-৫০০ কোম্পানির নিজের রং থেকেই আসে (৬০০ আর ৭০০-র মিশেল) — ABOS টিয়ায় প্রায় #0b7285 (৫.৫:১), অন্য কোম্পানির রঙেও একই গাঢ়তা।
+ * ⓘ গাঢ় রূপে (data-theme=dark / .dark) এগুলো বসে না — সেখানে তালিকার নিজের উজ্জ্বল রং (list-filter.css) থাকে; ডেমোতে গাঢ় পটে গাঢ় শেড ৩:১-এ নেমেছিল (axe, ২৮ নভেম্বর)।
+ */
+:root[data-ui='navy']:not([data-theme='dark']):not(.dark) {
+    --color-brand-500: color-mix(in srgb, rgb(var(--accent-600)) 55%, rgb(var(--accent-700)));
+}
+:root[data-ui='navy']:not([data-theme='dark']):not(.dark) .tone-sky { --c: #0369a1; }
+:root[data-ui='navy']:not([data-theme='dark']):not(.dark) .tone-amber { --c: #b45309; }
+:root[data-ui='navy']:not([data-theme='dark']):not(.dark) .tone-green { --c: #047857; }
+:root[data-ui='navy']:not([data-theme='dark']):not(.dark) .tone-teal { --c: #0f766e; }
+:root[data-ui='navy']:not([data-theme='dark']):not(.dark) .list-filter-option.is-zero { opacity: 1; color: #5f6b7a; }
+:root[data-ui='navy'] .list-filter-tools button { display: inline-flex; align-items: center; min-height: 28px; }
+:root[data-ui='navy']:not([data-theme='dark']):not(.dark) form[data-abos-counter] .ds-sec-h { color: #0b6c7a; }
+:root[data-ui='navy'] .ds-b8 small { opacity: 1; }
+
+/*
+ * ⭐ ABOS (rose) আর Blue — লেখা পড়ার মতো গাঢ় আর বোতাম অন্তত ২৮px (সমন্বয়কের "ok", মালিকের ২৮ নভেম্বর ২০২৬-এর দায়িত্ব-অর্পণে;
+ *    নমুনা মালিকের-ফাইল/রং-ও-বোতামের-মাপ-ABOS-ও-Blue-২৮-নভেম্বর.html)। Navy-র একই নিয়ম।
+ * ⓘ axe (WCAG 2.2 AA 1.4.3 আর 2.5.8): সাধারণ লেখা ৪.৫:১, বোতাম ২৪×২৪। রঙের পরিবার একই — কেবল শেড গাঢ়; অর্থের রং (টাকা সবুজ, বাকি লাল) একই।
+ * ⓘ লেখার রংগুলো কেবল আলো থিমে — গাঢ় থিমে তালিকার নিজের উজ্জ্বল রং থাকে (Navy-তে ডেমোতে ধরা পড়েছিল, ২৮ নভেম্বর)।
+ * ⓘ উপরের বার আর রেল দুই থিমেই গাঢ় নীল, তাই ওগুলোর নিয়ম দুই থিমেই।
+ */
+:root:is([data-ui='rose'], [data-ui='blue']):not([data-theme='dark']):not(.dark) {
+    /* লিংক আর প্রধান বোতাম — কোম্পানির নিজের রঙের গাঢ় শেড (ABOS টিয়ায় প্রায় #0b7285, ৫.৫:১) */
+    --color-brand-500: color-mix(in srgb, rgb(var(--accent-600)) 55%, rgb(var(--accent-700)));
+    --color-brand-600: rgb(var(--accent-700));
+}
+:root:is([data-ui='rose'], [data-ui='blue']):not([data-theme='dark']):not(.dark) .tone-sky { --c: #0369a1; }
+:root:is([data-ui='rose'], [data-ui='blue']):not([data-theme='dark']):not(.dark) .tone-amber { --c: #b45309; }
+:root:is([data-ui='rose'], [data-ui='blue']):not([data-theme='dark']):not(.dark) .tone-green { --c: #047857; }
+:root:is([data-ui='rose'], [data-ui='blue']):not([data-theme='dark']):not(.dark) .tone-teal { --c: #0f766e; }
+:root:is([data-ui='rose'], [data-ui='blue']):not([data-theme='dark']):not(.dark) .list-filter-option.is-zero { opacity: 1; color: #5f6b7a; }
+/* বকেয়ার লাল অঙ্ক — একই লাল, গাঢ় শেড (৪.২ → ৫.৭) */
+:root:is([data-ui='rose'], [data-ui='blue']):not([data-theme='dark']):not(.dark) .text-\(--color-danger\) { color: #b91c1c; }
+:root:is([data-ui='rose'], [data-ui='blue']) .list-filter-tools button { display: inline-flex; align-items: center; min-height: 28px; }
+
+/* উপরের বার — খোঁজার ঘর (সাদা লেখা ৪.৩ → ৫.৩) আর পদবির সোনালি (৪.০ → ৫.১) */
+:root:is([data-ui='rose'], [data-ui='blue']):not([data-theme='dark']):not(.dark) [data-search-field] { background: #3567cf; }
+:root:is([data-ui='rose'], [data-ui='blue']) [data-topbar] { --color-brand-gold-bright: #fff3c4; }
+/* ABOS: ভরা টিয়া "+ তৈরি করুন" — একই টিয়া, গাঢ় (২.৪ → ৫.৬) */
+:root[data-ui='rose'] [data-shell-create] > button { background: #0b7285; }
+/* ABOS: বাঁয়ের "মডিউল বদলান" (৪.৫ / ৩.৪ → ৫.৫ / ৪.৮) */
+:root[data-ui='rose'] .abos-modpick-btn { background: #2d63cf; }
+:root[data-ui='rose'] .abos-modpick-btn small { color: #e8f0ff; }
+/* Blue: মেনুর ভাগের মাথা (৩.৫ → ৪.৬৫) আর রেলের ছোট লেখা (৩.১ → ৬.০) */
+:root[data-ui='blue'] [data-site-map] > p,
+:root[data-ui='blue'] [data-site-map] [data-panel-section],
+:root[data-ui='blue'] [data-site-map] .menu-kind-head { color: #ffffff; }
+:root[data-ui='blue'] { --rail-label-ink: #ffffff; }
+:root[data-ui='blue'] [data-rail] [data-rail-module] > a[aria-current] { background: #2a5ec7; }
+/* Blue: হোমের তালিকার নামের আদ্যক্ষর — ধূসর ছোপে সাদা ২.৫৬ → স্লেটের গাঢ় শেড ৪.৭৬ (একই ধূসর পরিবার) */
+:root[data-ui='blue']:not([data-theme='dark']):not(.dark) .hm-avatar[style*='--color-chart-4'] { background: #64748b !important; }
+
+/*
+ * ⭐ গাঢ় থিম, তিন ABOS রূপ — সমন্বয়কের "ok" (২৮ নভেম্বর ২০২৬, WCAG 2.2 AA 1.4.3), কেবল গাঢ় থিমে:
+ * · নিচের বারের "UNIVER BANGLADESH" — নির্মাতার একই টিয়া, গাঢ় পটে হালকা শেড (#007a99 → #22a6c7: ৩.৮৪ → ৬.৬৬)
+ * · হোমের সময়ের চালু ট্যাব — কোম্পানির রঙের গাঢ় শেডে সাদা লেখা (হালকা নীলে সাদা ২.৫৯ ছিল)
+ * · তথ্যের নীল চিপ — গাঢ় পটে হালকা নীল লেখা (৩.৮৪ → ৫.৪৪)
+ */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']):is([data-theme='dark'], .dark) { --color-univer: #22a6c7; }
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']):is([data-theme='dark'], .dark) [data-period-menu] .bg-\(--color-brand-600\) { background-color: rgb(var(--accent-700, 13 71 161)); }
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']):is([data-theme='dark'], .dark) .status-chip[data-status-chip='info'] { color: rgb(var(--accent-dark-600, 96 165 250)) !important; }
