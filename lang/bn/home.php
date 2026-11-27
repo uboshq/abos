@@ -84,7 +84,7 @@ return [
         'chart_dues_ageing' => 'বাকির বয়স',
         'chart_stock_category' => 'ক্যাটাগরি ধরে স্টক',
         'chart_top_products' => 'শীর্ষ 10 পণ্য',
-        'chart_top_shops' => 'শীর্ষ 10 গ্রাহক',
+        'chart_top_shops' => 'শীর্ষ 8 গ্রাহক',
         'chart_channel' => 'মাধ্যম ধরে আদায়',
         'chart_working_capital' => 'খাটানো মূলধন',
         'last_12_months' => 'গত 12 মাস · চলতি মাস চলছে',

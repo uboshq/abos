@@ -71,6 +71,9 @@
 .hb-bars { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; font-size: 11.5px; }
 .hb-bars li { display: grid; grid-template-columns: minmax(0, 42%) minmax(0, 1fr) auto; align-items: center; gap: 6px; }
 .hb-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink); }
+/* ⓘ নামটা লিংক হলে (শীর্ষ গ্রাহক) অন্তত ২৪px উঁচু চাপার জায়গা — WCAG 2.2 AA 2.5.8; কেবল লিংকের নিজের উচ্চতা, সারির ফাঁক একই।
+   কার্ড ১০ নয় ৮ সারি ([[HomeBoard::TOP_SHOPS]]) যাতে ১০৮০-এ দুই সারি চার্ট ধরে — মালিকের সিদ্ধান্ত, ২৮ নভেম্বর ২০২৬ */
+a.hb-bar-name { display: block; min-height: 24px; line-height: 24px; }
 .hb-bar { display: block; height: 8px; border-radius: 4px; background: var(--color-surface-muted); overflow: hidden; }
 .hb-bar i { display: block; height: 100%; border-radius: 4px; }
 .hb-bars b { font-weight: 600; white-space: nowrap; }
