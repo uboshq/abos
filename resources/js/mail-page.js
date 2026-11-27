@@ -360,6 +360,8 @@ if (root) {
             if (! state.compose.data) await loadComposeData({}, true)
             renderRows()
             renderReader(m)
+            rememberTab(key, m.subject)
+            drawTabs()
             loadParty((m.from[0] || {}).email)
         } catch (e) {
             reader.innerHTML = '<p class="mx-err">' + esc(e.message) + '</p>'
@@ -367,10 +369,67 @@ if (root) {
     }
 
     function closeReader () {
+        if (state.open) forgetTab(state.openAcc + ':' + state.open.uid)
         state.open = null
         state.openAcc = null
         $('[data-reader]').innerHTML = '<div class="mx-empty">' + esc(M.pick_mail) + '</div>'
+        drawTabs()
     }
+
+    /*
+     * ⭐ ভিতরের সাব-ট্যাব — Outlook-এর মতো (যৌথ PLAN.md §2): একাধিক মেইল খোলা থাকলে পড়ার জায়গার মাথায় ছোট ট্যাবের সারি,
+     *   সবচেয়ে বেশি 8টা; চাপলে সেই মেইল, ✕ বা মাঝের বোতামে বন্ধ। ⓘ এগুলো ব্রাউজারের ট্যাব নয় — সব একই মেইলের ট্যাবে।
+     */
+    state.tabs = []
+    function rememberTab (key, subject) {
+        const t = state.tabs.find(x => x.key === key)
+        if (t) { t.subject = subject; return }
+        state.tabs.push({ key, subject })
+        if (state.tabs.length > 8) state.tabs.shift()
+    }
+    function forgetTab (key) { state.tabs = state.tabs.filter(t => t.key !== key) }
+    function drawTabs () {
+        const reader = $('[data-reader]')
+        const old = reader.querySelector('[data-subtabs]')
+        if (old) old.remove()
+        if (state.tabs.length < 2 && ! (state.tabs.length === 1 && ! state.open)) return
+        const cur = state.open ? state.openAcc + ':' + state.open.uid : ''
+        const bar = document.createElement('div')
+        bar.dataset.subtabs = '1'
+        bar.setAttribute('role', 'tablist')
+        bar.setAttribute('aria-label', W.open_tabs || '')
+        bar.style.cssText = 'display:flex;gap:4px;overflow-x:auto;margin:-6px -8px 0;padding:0 0 6px;border-bottom:1px solid var(--mx-line, #e1e7f1);flex:none'
+        bar.innerHTML = state.tabs.map(t => {
+            const on = t.key === cur
+            const name = String(t.subject || W.no_subject || '—')
+            return '<span style="display:inline-flex;align-items:center;max-width:220px;border-radius:8px 8px 0 0;border:1px solid ' + (on ? '#9cc0f5' : 'transparent') + ';border-bottom:0;background:' + (on ? '#eef4fe' : 'transparent') + '">'
+                + '<button type="button" role="tab" aria-selected="' + on + '" data-subtab="' + esc(t.key) + '" title="' + esc(name) + '" style="min-height:32px;padding:0 8px;background:none;border:0;font-weight:' + (on ? 700 : 500) + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:190px">' + esc(name) + '</button>'
+                + '<button type="button" data-subtab-close="' + esc(t.key) + '" aria-label="' + esc(tr(W.close_tab || '', { name })) + '" style="min-width:28px;min-height:32px;background:none;border:0;color:#5b6576">✕</button></span>'
+        }).join('')
+        reader.prepend(bar)
+    }
+    root.addEventListener('click', (ev) => {
+        const go = ev.target.closest && ev.target.closest('[data-subtab]')
+        const shut = ev.target.closest && ev.target.closest('[data-subtab-close]')
+        if (shut) {
+            ev.preventDefault()
+            const key = shut.dataset.subtabClose
+            const wasOpen = state.open && key === state.openAcc + ':' + state.open.uid
+            forgetTab(key)
+            if (wasOpen) {
+                const next = state.tabs[state.tabs.length - 1]
+                next ? openMail(next.key, false) : closeReader()
+            } else drawTabs()
+        } else if (go) {
+            ev.preventDefault()
+            openMail(go.dataset.subtab, false)
+        }
+    })
+    // ⓘ মাঝের বোতামে ট্যাব বন্ধ — ব্রাউজারের ট্যাবের মতোই
+    root.addEventListener('auxclick', (ev) => {
+        const go = ev.button === 1 && ev.target.closest && ev.target.closest('[data-subtab]')
+        if (go) { ev.preventDefault(); const c = root.querySelector('[data-subtab-close="' + CSS.escape(go.dataset.subtab) + '"]'); if (c) c.click() }
+    })
 
     function renderReader (m) {
         const reader = $('[data-reader]')
