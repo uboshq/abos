@@ -207,7 +207,7 @@
                           @if ($shown) style="position: absolute; left: {{ $pct($x($i), $w) }}; top: {{ $pct(min($h - $bottom - 8, max(9, $y($point[$side]) + $dy)), $h) }}; transform: translate({{ $anchor($i) }}, -50%); font-size: {{ $px }}px; color: {{ $stroke }}" @endif>{{ $zero($point[$side]) ? '' : ($point[$side.'Note'] ?? $short($point[$side])) }}</span>
                     @if ($interactive)
                         <span data-chart-tip tabindex="0" aria-label="{{ $label }}" title="{{ $label }}"
-                              style="position: absolute; left: {{ $pct($x($i), $w) }}; top: {{ $pct($y($point[$side]), $h) }}; width: 1.25rem; height: 1.25rem; transform: translate(-50%, -50%); border-radius: 9999px"><span class="chart-tip" aria-hidden="true">{{ $label }}</span></span>
+                              style="position: absolute; left: {{ $pct($x($i), $w) }}; top: {{ $pct($y($point[$side]), $h) }}; width: 1.25rem; height: 1.25rem; transform: translate(-50%, -50%); border-radius: 9999px" role="img"><span class="chart-tip" aria-hidden="true">{{ $label }}</span></span>
                     @endif
                 @endforeach
             @endforeach

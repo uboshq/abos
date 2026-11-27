@@ -391,12 +391,12 @@
             @endphp
             @if ($viewMode === 'dropdown')
                 <{{ $headingTag }} class="contents">
-                    <x-ui.view-menu :label="$title" mode="heading" /><x-ui.page-info :text="$info" />@if ($titleNote)<span data-title-note class="hidden" title="{{ $titleNote }}" aria-label="{{ $titleNote }}" tabindex="0"><x-ui.icon name="info" :size="15" /></span>@endif
+                    <x-ui.view-menu :label="$title" mode="heading" /><x-ui.page-info :text="$info" />@if ($titleNote)<span data-title-note class="hidden" role="img" title="{{ $titleNote }}" aria-label="{{ $titleNote }}" tabindex="0"><x-ui.icon name="info" :size="15" /></span>@endif
                 </{{ $headingTag }}>
             @else
                 <{{ $headingTag }} data-view-selector
                     class="shrink-0 truncate text-lg font-semibold text-(--color-ink)">
-                    {{ $title }}<x-ui.page-info :text="$info" />@if ($titleNote)<span data-title-note class="hidden" title="{{ $titleNote }}" aria-label="{{ $titleNote }}" tabindex="0"><x-ui.icon name="info" :size="15" /></span>@endif
+                    {{ $title }}<x-ui.page-info :text="$info" />@if ($titleNote)<span data-title-note class="hidden" role="img" title="{{ $titleNote }}" aria-label="{{ $titleNote }}" tabindex="0"><x-ui.icon name="info" :size="15" /></span>@endif
                 </{{ $headingTag }}>
             @endif
 

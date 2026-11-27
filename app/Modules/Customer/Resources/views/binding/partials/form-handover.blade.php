@@ -3,7 +3,7 @@
     $label = 'mb-1 block text-sm text-(--color-ink-muted)';
 @endphp
             <label class="block">
-                <span class="{{ $label }}">{{ __('customer::binding.from') }}<span class="ms-1 inline-block align-middle" title="{{ __('customer::binding.handover_hint') }}" aria-label="{{ __('customer::binding.handover_hint') }}" tabindex="0"><x-ui.icon name="info" :size="14" /></span></span>
+                <span class="{{ $label }}">{{ __('customer::binding.from') }}<span class="ms-1 inline-block align-middle" title="{{ __('customer::binding.handover_hint') }}" aria-label="{{ __('customer::binding.handover_hint') }}" tabindex="0" role="img"><x-ui.icon name="info" :size="14" /></span></span>
                 <select name="from_user_id" required class="{{ $field }}">
                     <option value="">—</option>
                     @foreach ($staff as $person)

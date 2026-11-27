@@ -28,7 +28,7 @@
         }
 
         return new HtmlString('<span data-over title="'.e(__('purchase::cost_report.over')).'" aria-label="'.e($pctPlain($r['pct']).' — '.__('purchase::cost_report.over')).'"'
-            .' class="inline-flex items-center gap-1 rounded-(--radius-field) bg-(--color-badge-warning-bg) px-2 font-semibold text-(--color-badge-warning-ink)">'
+            .' class="inline-flex items-center gap-1 rounded-(--radius-field) bg-(--color-badge-warning-bg) px-2 font-semibold text-(--color-badge-warning-ink)" role="img">'
             .'<svg viewBox="0 0 12 12" aria-hidden="true" class="size-3 shrink-0 fill-current"><path d="M6 1.5 11 10H1z"/></svg>'
             .e($pctPlain($r['pct'])).'</span>');
     };

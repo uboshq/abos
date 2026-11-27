@@ -73,7 +73,7 @@
                 <x-ui.icon :name="$module['icon']" :size="20" drawn />
             </span>
             @if ($module['count'])
-                <span data-bottom-count class="bottom-nav-count" aria-label="{{ $module['count'] }}">{{ $module['count'] > 99 ? '99+' : $module['count'] }}</span>
+                <span data-bottom-count class="bottom-nav-count" aria-label="{{ $module['count'] }}" role="img">{{ $module['count'] > 99 ? '99+' : $module['count'] }}</span>
             @endif
             <span class="w-full truncate text-center">{{ $module['label'] }}</span>
         </a>

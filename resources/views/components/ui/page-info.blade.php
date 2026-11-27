@@ -8,4 +8,4 @@
       আর "Dynamic"-এ লুকায় ([[abos-look.css]], [[dynamic-look.css]]) — Navy, Blue, SAP, D365-এ লাইনটা যেমন ছিল তেমনই থাকে।
     ⓘ জাভাস্ক্রিপ্ট লাগে না — [[abos-list-head.js]] foldPageNotes() কেবল যে লাইন ধরতে পারে (প্রথম বাক্সের আগের), এটা সব।
 --}}
-@if (filled($text))<span data-page-info class="hidden" title="{{ $text }}" aria-label="{{ $text }}"><x-ui.icon name="info" :size="15" /></span>@endif
+@if (filled($text))<span data-page-info class="hidden" role="img" title="{{ $text }}" aria-label="{{ $text }}"><x-ui.icon name="info" :size="15" /></span>@endif
