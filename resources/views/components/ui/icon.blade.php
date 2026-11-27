@@ -131,12 +131,14 @@
     $aiMark = in_array($name, ['brain', 'assistant'], true) && \App\Core\Support\AiMark::shows();
 
     /*
-     * ⭐ ABOS-এর তিন নিজের রূপে মডিউলের চিহ্ন = নিজের রঙের পটে সাদা আঁকা চিহ্ন, emoji নয় (মালিক, ২৮ নভেম্বর ২০২৬:
+     * ⭐ ABOS-এর তিন নিজের রূপে মডিউলের চিহ্ন = সাদা আঁকা চিহ্ন, emoji নয় (মালিক, ২৮ নভেম্বর ২০২৬:
      *   "প্রত্যেকটার জন্য ইউনিক আইকন … প্রত্যেকটারই ইউনিক কালার"; নমুনা মালিকের-ফাইল/মডিউলের-চিহ্ন-নমুনা-২৮-নভেম্বর.html)।
-     * ⓘ উপরের ৫ সেপ্টেম্বরের যুক্তি (১৮px-এ সাদামাটা আউটলাইন একে অপরের মতো) রঙিন পটে আর খাটে না — রঙই প্রথম চেনায়,
-     *   চিহ্ন দ্বিতীয়বার। Lucide (ISC) — [[LucideIcons]]; রং tokens.css-এর `--module-*` (২৪টা আলাদা, সাদার সাথে ≥ ৩:১)।
+     * ⓘ যে ঘরে মডিউলের চিহ্ন বসে, সেটা আগে থেকেই মডিউলের নিজের রঙের পট (`--color-module-*` / `--color-launcher-*`,
+     *   আলাদা আর সাদার সাথে পড়ার মতো — [[TheLauncherWearsEachModulesOwnColourTest]], [[TheModuleColoursCarryWhiteTextTest]]);
+     *   তাই এখানে কেবল চিহ্নটা — `currentColor`, পটের সাদা কালি নেয়। ⓘ উপরের ৫ সেপ্টেম্বরের যুক্তি (১৮px-এ সাদামাটা আউটলাইন
+     *   একে অপরের মতো) রঙিন পটে আর খাটে না — রঙ প্রথম চেনায়, চিহ্ন দ্বিতীয়বার। Lucide (ISC) — [[LucideIcons]]।
      * ⛔ নকল রূপে (SAP, Dynamics, Odoo…) আগের মতো — সেখানে সেই কোম্পানির নিজের চিহ্ন বসবে, ABOS-এর নকশা নয়।
-     * ⛔ চিহ্নগুলো অনন্য — একটা নাম দুই মডিউলে নয় ([[EveryModuleWearsItsOwnTileTest]])।
+     * ⛔ চিহ্নগুলো অনন্য — একটা নাম দুই মডিউলে নয় ([[IconSetTest]])।
      */
     $moduleTiles = [
         'dashboard' => 'layout-dashboard', 'master_data' => 'library', 'customer' => 'handshake', 'promotion' => 'gift',
@@ -152,11 +154,10 @@
 @if ($aiMark)
     <x-ui.ai-mark :size="$size" {{ $attributes }} />
 @elseif ($tile)
-    {{-- রঙিন পট, সাদা চিহ্ন — পটের কোণ মাপের ~২৮%, চিহ্ন পটের ~৭০% --}}
-    <span aria-hidden="true" data-module-tile="{{ $name }}"
-          style="width: {{ $size }}px; height: {{ $size }}px; border-radius: {{ max(5, (int) round($size * 0.28)) }}px; background: var(--module-{{ $name }}); color: white"
+    {{-- কেবল আঁকা চিহ্ন — পটটা ডাকা ঘরের নিজের (মডিউলের রং) --}}
+    <span aria-hidden="true" data-module-mark="{{ $name }}"
           {{ $attributes->class('icon inline-grid shrink-0 place-items-center') }}
-    ><x-ui.licon :name="$tile" :size="(int) round($size * 0.7)" /></span>
+    ><x-ui.licon :name="$tile" :size="$size" /></span>
 @elseif ($glyph)
     {{-- ইমোজি একটা অক্ষর, তাই মাপটা `font-size`-এ। মোড়কে সেই একই
          `.icon` ক্লাস, যাতে আঁকাগুলোর চারপাশের সব নিয়ম এখানেও খাটে। --}}
