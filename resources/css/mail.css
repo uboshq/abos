@@ -294,3 +294,5 @@ body:has([data-counter-strip]) .mailx.mx-inbox { height: calc(100dvh - 40px - 1r
 .mailx .mx-h26 { height: 26px; } .mailx .mx-h28 { height: 28px; } .mailx .mx-h30 { height: 30px; } .mailx .mx-h32 { height: 32px; } .mailx .mx-h36 { height: 36px; }
 .mailx .mx-dot-c1 { background: #f5121d; } .mailx .mx-dot-c2 { background: #1a3fd0; } .mailx .mx-dot-c3 { background: #00ab3f; } .mailx .mx-dot-c4 { background: #f8a500; } .mailx .mx-dot-c5 { background: #6a3fd0; }
 .mailx .mx-ic-g { background: var(--mx-green-bg); } .mailx .mx-ic-r { background: var(--mx-red-bg); } .mailx .mx-ic-b { background: var(--mx-brand-100); } .mailx .mx-ic-a { background: var(--mx-amber-bg); }
+/* ⓘ কিবোর্ডে চলাফেরার স্পষ্ট দাগ — mouse-এ নয় (web-design-guidelines: focus-visible; ২৭ নভেম্বর) */
+.mailx :is(button, a, [role="tab"], [data-key], input, select, textarea):focus-visible { outline: 2px solid var(--mx-brand); outline-offset: 2px; border-radius: 6px; }

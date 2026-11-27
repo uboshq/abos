@@ -1089,6 +1089,9 @@ if (root) {
     function toast (text, bad) {
         const p = document.createElement('div')
         p.textContent = text
+        // ⓘ পর্দা-পাঠক যেন পড়ে (web-design-guidelines: async খবরে aria-live)
+        p.setAttribute('role', bad ? 'alert' : 'status')
+        p.setAttribute('aria-live', bad ? 'assertive' : 'polite')
         p.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:80;padding:9px 16px;border-radius:10px;font-weight:600;box-shadow:0 8px 24px rgb(0 0 0 / .2);'
             + (bad ? 'background:#fde7e8;color:#c40d16' : 'background:#e3f7ea;color:#0a7a33')
         root.appendChild(p)
