@@ -104,7 +104,7 @@ export function commandCenter ({ url }) {
 
                 this.recent = Array.isArray(data.recent) ? data.recent : []
                 this.actions = Array.isArray(data.actions) ? data.actions : []
-            } catch (e) {
+            } catch {
                 this.recent = []
                 this.actions = []
             }
@@ -335,7 +335,7 @@ export function commandCenter ({ url }) {
                 if (asked !== this.q) return
 
                 this.hits = data.hits ?? []
-            } catch (e) {
+            } catch {
                 if (asked !== this.q) return
 
                 // ⓘ নীরবে খালি — খোঁজা ব্যর্থ হলে পাতা ভাঙার কারণ নেই
@@ -648,6 +648,7 @@ export function shareMenu ({ url }) {
  * @returns {{ length: number, parts: number, unicode: boolean }}
  */
 const smsMeasure = (text) => {
+    // eslint-disable-next-line no-control-regex -- the ASCII range is the point: any letter outside it makes the SMS Unicode (70/67), as SmsOutbox::parts() counts
     const unicode = /[^\x00-\x7F]/.test(text)
     const length = Array.from(text).length
     const [single, multi] = unicode ? [70, 67] : [160, 153]
@@ -1065,7 +1066,7 @@ export function peek () {
                 } else if (res.ok) {
                     fragment = peekFragmentOf(await res.text())
                 }
-            } catch (e) {
+            } catch {
                 fragment = null
             }
 

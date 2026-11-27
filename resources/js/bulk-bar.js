@@ -97,7 +97,7 @@ export function pickColumns (root = document) {
                 await navigator.clipboard.writeText(text)
                 e.target.textContent = w.copied
                 setTimeout(() => { e.target.textContent = w.copy }, 1500)
-            } catch (_) {
+            } catch {
                 // ⓘ ক্লিপবোর্ড না দিলে চুপ — পাতা ভাঙে না
             }
         })

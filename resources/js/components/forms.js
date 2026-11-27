@@ -465,7 +465,7 @@ export function kitchenBoard ({ at = '', url, every = 20000 }) {
                     const row = document.querySelector(`[data-dish='${dish.id}']`)
                     if (row) { row.classList.toggle('is-out', dish.portions === 0) }
                 })
-            } catch (e) {
+            } catch {
                 this.stale = true
             } finally {
                 this.busy = false
@@ -499,7 +499,7 @@ export function kitchenTickets ({ at = '', url, count = 0, every = 10000 }) {
                 if (d.tickets.length !== count) {
                     window.location.reload()
                 }
-            } catch (e) {
+            } catch {
                 this.stale = true
             }
         },
@@ -1543,7 +1543,7 @@ export function filterPanel () {
                         row.classList.toggle('is-zero', n === 0 && ! row.querySelector('input')?.checked)
                     }
                 }
-            } catch (e) {
+            } catch {
                 // ⓘ সংখ্যা না এলে পুরোনোটাই থাকে; ছাঁকনি নিজে ঠিকই চলে
             }
         },

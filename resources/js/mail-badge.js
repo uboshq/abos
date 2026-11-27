@@ -14,7 +14,7 @@ if (link) {
             const n = Number((await r.json()).unread || 0)
             badge.hidden = n <= 0
             badge.textContent = n > 99 ? '99+' : String(n)
-        } catch (e) { /* চিহ্ন না এলে কিছু হয় না */ }
+        } catch { /* চিহ্ন না এলে কিছু হয় না */ }
     }
     tick()
     setInterval(tick, 180000)

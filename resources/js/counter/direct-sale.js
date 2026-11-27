@@ -74,7 +74,7 @@ const DEPOSIT_DETAIL_FIELDS = {
 }
 
 export default function directSale({
-    catalogue, customers, walkinId, vatEnabled, packs,
+    catalogue, customers, vatEnabled, packs,
     paymentTermDefault, carriers, drivers, depositMethods, moneyAccounts,
     draftKey, hasErrors, texts, freeAllowedUrl, warehouseId, creditRules, lots,
     pendingDrafts, resume, pendingUrl, transferModes, approvalNotice,
@@ -433,7 +433,7 @@ export default function directSale({
                 }
 
                 localStorage.setItem(this.draftKey, this.screenSnapshot);
-            } catch (e) {
+            } catch {
                 /*
                  * ⚠️ চুপ করে থাকা ইচ্ছাকৃত।
                  *
@@ -509,14 +509,14 @@ export default function directSale({
             try {
                 parked = localStorage.getItem(this.draftKey + '.pending');
                 localStorage.removeItem(this.draftKey + '.pending');
-            } catch (e) {
+            } catch {
                 // localStorage বন্ধ — তখন বিলের রাখা ছবিটাই
             }
 
             const sameBill = (raw) => {
                 try {
                     return String(JSON.parse(raw)?.customerId ?? '') === String(resume.customerId);
-                } catch (e) {
+                } catch {
                     return false;
                 }
             };
@@ -657,7 +657,7 @@ export default function directSale({
 
                 this.draftFound = true;
                 this.draftAt = d.at ? new Date(d.at).toLocaleString() : '';
-            } catch (e) {
+            } catch {
                 localStorage.removeItem(this.draftKey);
             }
         },
@@ -694,7 +694,7 @@ export default function directSale({
                 this.roundingSign = d.roundingSign ?? '+';
                 this.deposits = Array.isArray(d.deposits) ? d.deposits : [];
                 this.nextKey = d.nextKey ?? (this.lines.length + 1);
-            } catch (e) {
+            } catch {
                 // ভাঙা খসড়া — ফেরানোর চেয়ে বাদ দেওয়াই নিরাপদ
             }
         },
@@ -727,7 +727,7 @@ export default function directSale({
                 if (raw) localStorage.setItem(this.draftKey + '.pending', raw);
 
                 localStorage.removeItem(this.draftKey);
-            } catch (e) {
+            } catch {
                 // localStorage বন্ধ — তখন আগের মতোই আচরণ
             }
 
@@ -738,7 +738,7 @@ export default function directSale({
         dropDraft() {
             try {
                 localStorage.removeItem(this.draftKey);
-            } catch (e) {
+            } catch {
                 // উপরের একই কারণ
             }
 
@@ -989,7 +989,7 @@ export default function directSale({
                     this.costSource = [String(w.from ?? ''), d.billNo, d.supplierBillNo, d.date, d.supplier].filter(Boolean).join(' · ');
                     this.costNotes = Array.isArray(d.notes) ? d.notes : [];
                 }
-            } catch (err) {
+            } catch {
                 this.costNone = true;
             }
 
@@ -1551,7 +1551,7 @@ export default function directSale({
                 osc.start();
                 osc.stop(ctx.currentTime + 0.18);
                 osc.onended = () => ctx.close();
-            } catch (e) {
+            } catch {
                 // শব্দ বাজেনি — লাল বাক্স আর নোটিশ তবু আছে
             }
         },
@@ -1980,7 +1980,7 @@ export default function directSale({
                 if (short > 0 && short < step - 0.0001) {
                     this.freeHint = texts.freeNextAt.replace(':more', this.qty(data.short));
                 }
-            } catch (e) {
+            } catch {
                 /* ⓘ নেটওয়ার্ক পড়ে গেলে ঘরটা যেমন ছিল তেমনই — ⛔ শূন্য
                      বসিয়ে দিলে প্রাপ্য ফ্রি নীরবে হারাত। */
             }
@@ -2063,7 +2063,7 @@ export default function directSale({
                 this.freeWarning = texts.freeBeyondRatio.replace(':allowed', this.qty(allowed));
 
                 return false;
-            } catch (e) {
+            } catch {
                 return true;
             }
         },
@@ -3321,7 +3321,7 @@ export default function directSale({
 
             try {
                 localStorage.removeItem(this.draftKey + '.pending');
-            } catch (e) {
+            } catch {
                 // localStorage বন্ধ — পর্দা মোছা আর নতুন করে খোলা তবু চলে
             }
 
@@ -3401,7 +3401,7 @@ export default function directSale({
                 });
 
                 setTimeout(() => ctx.close(), 1200);
-            } catch (e) {
+            } catch {
                 // শব্দ না বাজলেও পপ-আপ থাকে — সেটাই আসল বার্তা
             }
         },

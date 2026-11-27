@@ -35,7 +35,7 @@ export function sidebarStart ({ stored, twoColumnForm, width }) {
 
 /** Alpine store — app.js বসায়; `doc`/`win` পরীক্ষায় বদলানো যায় */
 export function sidebarStore ({ doc = document, win = window, storage = window.localStorage } = {}) {
-    const read = () => { try { return storage.getItem('abos.sidebar') } catch (e) { return null } }
+    const read = () => { try { return storage.getItem('abos.sidebar') } catch { return null } }
     const twoColumnForm = doc.documentElement.hasAttribute('data-two-column-form')
     const start = sidebarStart({ stored: read(), twoColumnForm, width: win.innerWidth })
 
@@ -63,7 +63,7 @@ export function sidebarStore ({ doc = document, win = window, storage = window.l
 
         toggle () {
             this.collapsed = ! this.collapsed
-            try { storage.setItem('abos.sidebar', this.collapsed ? 'collapsed' : 'open') } catch (e) {}
+            try { storage.setItem('abos.sidebar', this.collapsed ? 'collapsed' : 'open') } catch { /* storage blocked (private window): the menu still folds, it just isn't remembered */ }
         },
 
         /**

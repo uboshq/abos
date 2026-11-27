@@ -100,7 +100,7 @@ export function copilotPage () {
 
         init () {
             const node = this.$el.querySelector('[data-cpp-state]')
-            try { this.cfg = JSON.parse(node ? node.textContent : '{}') || {} } catch (_) { this.cfg = {} }
+            try { this.cfg = JSON.parse(node ? node.textContent : '{}') || {} } catch { this.cfg = {} }
             this.conv = this.cfg.talk ? { id: this.cfg.talk.id, title: this.cfg.talk.title, url: this.cfg.talk.url } : null
             this.items = pairUp(this.cfg.talk ? this.cfg.talk.messages : [])
             this.histOpen = this.items.length > 0
@@ -250,7 +250,7 @@ export function copilotPage () {
                 if (navigator.clipboard) await navigator.clipboard.writeText(text)
                 this.copiedKey = item.key
                 setTimeout(() => { if (this.copiedKey === item.key) this.copiedKey = '' }, 1500)
-            } catch (_) { /* ⓘ no clipboard in this browser — nothing to do */ }
+            } catch { /* ⓘ no clipboard in this browser — nothing to do */ }
         },
         vote (item, value) {
             if (! item.answerId || item.voted !== 0 || ! this.cfg.feedbackUrl) return
@@ -291,7 +291,7 @@ export function copilotPage () {
                     const r = await fetch(`${this.cfg.papersUrl}?q=${encodeURIComponent(term)}`, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                     const d = r.ok ? await r.json() : { data: [] }
                     this.attachHits = (Array.isArray(d.data) ? d.data : []).slice(0, 8).map((p, i) => ({ key: `p${i}`, no: String(p.no ?? ''), title: String(p.title ?? ''), meta: [p.amount, p.party].filter(Boolean).join(' · ') }))
-                } catch (_) { this.attachHits = [] }
+                } catch { this.attachHits = [] }
                 this.attachEmpty = this.attachHits.length === 0
             }, 250)
         },
@@ -322,10 +322,10 @@ export function copilotPage () {
             rec.onend = () => { this.listening = false; this.rec = null; this.focusBox() }
             this.rec = rec
             this.listening = true
-            try { rec.start() } catch (_) { this.listening = false; this.rec = null }
+            try { rec.start() } catch { this.listening = false; this.rec = null }
         },
         stopListening () {
-            if (this.rec) { try { this.rec.stop() } catch (_) { /* already stopped */ } }
+            if (this.rec) { try { this.rec.stop() } catch { /* already stopped */ } }
             this.listening = false
         },
 

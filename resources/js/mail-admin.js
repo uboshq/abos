@@ -196,6 +196,6 @@ if (page) {
     if (create) kindSwitch(create, 'person')
 }
 
-function parse (s, f) { try { return JSON.parse(s || '') } catch (e) { return f } }
+function parse (s, f) { try { return JSON.parse(s || '') } catch { return f } }
 function esc (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])) }
 function slug (name) { return String(name || '').toLowerCase().split(/\s+/)[0].replace(/[^a-z0-9._-]/g, '') }

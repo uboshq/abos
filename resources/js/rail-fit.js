@@ -120,7 +120,7 @@ export function railFit () {
             this.root = this.$el
             try {
                 this.menu = JSON.parse(this.root.querySelector('[data-rail-menu]')?.textContent || '{}')
-            } catch (e) {
+            } catch {
                 this.menu = {}
             }
             this.rows = [...this.root.querySelectorAll('[data-rail-module]')].map(el => ({

@@ -104,7 +104,7 @@ export function pos(catalogue, walkinId, resumed, discountOn, methods, roundingO
                 bill.lines.forEach((l) => { l.take = ''; });
 
                 this.bill = bill;
-            } catch (e) {
+            } catch {
                 this.billError = texts.billNotFound;
             }
         },
@@ -214,7 +214,7 @@ export function pos(catalogue, walkinId, resumed, discountOn, methods, roundingO
                     batch: product.scanned_batch,
                     expiry: product.scanned_expiry,
                 });
-            } catch (e) {
+            } catch {
                 /*
                  * নেট গেলে কাউন্টার থামে না।
                  *
