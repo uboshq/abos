@@ -1851,7 +1851,7 @@ final class PurchaseBillService
      * ⓘ "সবটুকু" = এই বিলের পরিমাণ চালানের মোট পরিমাণের সমান। বিল চালানের বাকির বেশি হয় না ([[resolveReceiptLine()]]), তাই
      * তখন অন্য কোনো জীবিত বিল ঐ চালান·পণ্যের নয় — এক স্তরে দুই বিলের দাম বসার প্রশ্নই ওঠে না।
      *
-     * @return list<array{receipt_id: int, product_id: int, qty: string, net: string, receipt_value: string}>
+     * @return list<array{receipt_id: int, product_id: int, qty: string, net: string, receipt_value: string, unload: string}>
      */
     private function wholeReceipts(PurchaseBill $bill): array
     {

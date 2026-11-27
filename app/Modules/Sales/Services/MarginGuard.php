@@ -482,7 +482,7 @@ final class MarginGuard
     // ── ভিতরের কাজ ───────────────────────────────────────────────────────
 
     /**
-     * @param  list<array{index: int, product: Product, qty: string, net: string}>  $rows
+     * @param  list<array{index: int, product: Product, qty: string, net: string, batch?: int|null}>  $rows
      */
     private function evaluate(array $rows, string $headerDiscount): MarginVerdict
     {

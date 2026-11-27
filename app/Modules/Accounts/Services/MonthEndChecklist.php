@@ -42,7 +42,7 @@ final class MonthEndChecklist
     public const NOT_APPLICABLE = 'na';
 
     /**
-     * @return list<array{key: string, state: string, count: int, route: string, params: array<string, mixed>}>
+     * @return list<array{key: string, state: string, count: int, route: string, params: array<string, mixed>, dates: list<string>}>
      */
     public function run(CarbonImmutable $month): array
     {

@@ -775,7 +775,9 @@ final class YearEndService
     /**
      * খাত ধরে ব্যালেন্স — ডেবিট বিয়োগ ক্রেডিট।
      *
-     * @return array<int, string>
+     * ⓘ ঘোষণা আগে `array<int, string>` ছিল — খাত·শাখা ধরে সারি হওয়ার (অডিট গ১০) পরে আর মেলেনি (PHPStan, ২৮ নভেম্বর ২০২৬)
+     *
+     * @return array<int, array{account_id: int, branch_id: int|null, signed: string}>
      */
     private function balancesByAccount(FinancialYear $year, string $type): array
     {

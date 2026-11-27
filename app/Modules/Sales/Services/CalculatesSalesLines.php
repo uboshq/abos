@@ -28,7 +28,7 @@ trait CalculatesSalesLines
      * ছাড় ভ্যাটের আগে বসে — ছাড়ের পরের টাকার উপরেই ভ্যাট, কারণ সরকারকে
      * যা নেওয়া হয়নি তার উপর ভ্যাট দিতে হয় না।
      *
-     * @return array{base: string, discount: string, tax: string, tax_variance: ?string, amount: string}
+     * @return array{base: string, discount: string, tax: string, tax_variance: ?string, amount: string, inclusive: bool}
      */
     private function lineFigures(string $qty, string $rate, mixed $discount, mixed $tax, ?Tax $standard = null): array
     {

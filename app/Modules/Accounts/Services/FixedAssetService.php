@@ -333,7 +333,7 @@ final class FixedAssetService
      * ⓘ দাম আপাতত বিলের দরে; সইয়ের পরে মজুদ যে দামে ছাড়ে সেটাই আসল দাম হয়ে বসে ([[finishRegistered()]])।
      *
      * @param  array<string, mixed>  $data
-     * @return array{line_id: int, qty: string}|null
+     * @return array{line_id: int, qty: string, line_qty: string}|null
      */
     private function billLine(array &$data): ?array
     {
