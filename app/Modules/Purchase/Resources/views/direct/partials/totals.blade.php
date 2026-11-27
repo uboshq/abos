@@ -76,7 +76,7 @@
                      ইচ্ছে করে এখানেই রাখা, যাতে ঘরগুলো এলে ছবির ক্রমেই
                      বসে। --}}
                 <dl class="divide-y divide-(--color-border) text-2xs [&>div]:py-1.5">
-                    <div class="flex justify-between">
+                    <div class="flex justify-between" data-row="sub">
                         <dt class="text-(--color-ink-muted)">{{ __('purchase::field.sub_total_goods') }}</dt>
                         <dd class="num" x-text="money(subTotal)"></dd>
                     </div>
@@ -87,7 +87,7 @@
                          [[DirectPurchaseService::spreadBillDiscount()]]-এ, আর
                          পর্দা ঠিক সেটাই কষে (`billShares`)। ⚠️ শতাংশে লিখলেও
                          সার্ভার নিজে কষে; পর্দার অঙ্ক কেবল আগে দেখানো। --}}
-                    <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center justify-between gap-2" data-row="disc">
                         {{-- ⭐ ✎ — ছাড়ের কারণ বা মন্তব্য, বিলেই লেখা থাকে (`narration`; মালিক, ২৬ নভেম্বর ২০২৬) --}}
                         <dt class="flex shrink-0 items-center gap-1 text-(--color-ink-muted)">
                             {{ __('purchase::field.bill_discount') }}
@@ -133,7 +133,7 @@
                              ⏳ ছবির `Per product ▾` ড্রপডাউনটা বিল-স্তরের, আর
                              ওটা nexus-25-এর চারটা কলামের সাথে আসবে। অঙ্কটা
                              আজই সত্যি — সারিগুলোর যোগফল। --}}
-                        <div class="flex justify-between">
+                        <div class="flex justify-between" data-row="tax">
                             <dt class="text-(--color-ink-muted)">{{ __('purchase::field.vat_recoverable') }}</dt>
                             <dd class="num" x-text="money(taxTotal)"></dd>
                         </div>
@@ -166,7 +166,7 @@
                          ```
                          ⓘ চারটার তিনটা থাকলে সংখ্যাটা ভুল — তাই চারটাই
                          একসাথে, নয়তো একটাও নয়। --}}
-                    <div class="flex justify-between font-semibold">
+                    <div class="flex justify-between font-semibold" data-row="pay">
                         <dt><span>{{ __('purchase::field.net_payable') }}</span></dt>
                         <dd class="num" x-text="money(netPayable)"></dd>
                     </div>
@@ -175,7 +175,7 @@
                          দেওয়া হলো, সব পথ মিলিয়ে। ⚠️ সারিগুলো নিজে বসে
                          "জমা" প্যানেলে, কিন্তু **যোগফলটা এখানে**, কারণ
                          বকেয়ার অঙ্কটা এটা বাদ দিয়েই দাঁড়ায়। --}}
-                    <div class="flex justify-between">
+                    <div class="flex justify-between" data-row="paid">
                         <dt class="text-(--color-ink-muted)"><span>{{ __('purchase::field.paid_total') }}</span></dt>
                         <dd class="num" x-text="paidTotal ? money(paidTotal) : '—'"></dd>
                     </div>
@@ -193,7 +193,7 @@
                          বাকি" পড়ে বোঝার উপায় থাকত না ওটা আজকের বিলের নাকি
                          ছয় মাসের জমা দেনা। ⓘ দুইজন মানুষ দুইটা অর্থ করতেন,
                          আর দরাদরির টেবিলে ওই ভুলের দাম টাকা। --}}
-                    <div class="flex justify-between font-semibold">
+                    <div class="flex justify-between font-semibold" data-row="bal">
                         <dt><span>{{ __('purchase::field.invoice_due') }}</span></dt>
                         <dd class="num" :class="invoiceDue > 0 ? 'text-(--color-danger)' : ''" x-text="money(invoiceDue)"></dd>
                     </div>
@@ -204,7 +204,7 @@
                          ওখানে লেখা: *"ব্যালেন্স ৫০০" পড়ে বোঝার উপায় ছিল না
                          তিনি ৫০০ পাবেন না দেবেন*। ⛔ এখানে উল্টো দিক —
                          আমরা দেব, নাকি আগেই বেশি দিয়ে রেখেছি। --}}
-                    <div class="flex justify-between">
+                    <div class="flex justify-between" data-row="prev">
                         <dt class="text-(--color-ink-muted)"
                             x-text="previousDue < 0
                               ? @js(__('purchase::field.previous_advance'))
@@ -219,7 +219,7 @@
                      মানুষটা কাল আবার ফোন করবেন, তাই ওটাকে বাকি সারিগুলোর
                      ভিড় থেকে আলাদা করে রাখা হয়েছে। --}}
                 {{-- ⭐ মোট বকেয়া — সরবরাহকারী আমাদের কাছে পায় হলে লাল, আমরা তাঁর কাছে পাই (অগ্রিম) হলে সবুজ (মালিক, ২৬ নভেম্বর ২০২৬) --}}
-                <div class="mb-1.5 mt-1 flex items-center justify-between rounded-(--radius-field) px-2 py-1.5 text-2xs"
+                <div data-total-owed :data-sign="totalDue > 0 ? 'due' : (totalDue < 0 ? 'adv' : 'zero')" class="mb-1.5 mt-1 flex items-center justify-between rounded-(--radius-field) px-2 py-1.5 text-2xs"
                      :class="totalDue > 0
                          ? 'bg-(--color-badge-danger-bg) text-(--color-badge-danger-ink)'
                          : (totalDue < 0 ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' : 'bg-(--color-surface-sunken)')">
@@ -261,6 +261,8 @@
                  দ্বিতীয়টাই ক্রয়ের আসল দর ঠিক করে। ⓘ ছবিতে চারটা সারি,
                  আর চারটাই আলাদা প্রশ্ন। --}}
             {{-- ⭐ পণ্যের সারাংশ — বিলের মোটের বাক্সের মতো: নীল গোল বাক্স, ভিতরে সাদা, লাইনে লাইনে চিকন দাগ (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+            {{-- ABOS-এ এই গোনার বাক্সের জায়গায় "মাল আনার খরচ" (নিচে) — সংখ্যাগুলো কার্টের নিচের মোটের সারিতে আছে --}}
+            @unless (($abosLook ?? false))
             <section data-boxed class="overflow-hidden rounded-2xl border-2 border-(--color-info) bg-(--color-badge-info-bg) shadow-sm">
                 <div class="m-2 rounded-xl border border-(--color-border) bg-(--color-surface-card) px-3 py-0.5">
                 <dl class="divide-y divide-(--color-border) text-2xs [&>div]:py-1.5">
@@ -293,6 +295,27 @@
                 </dl>
                 </div>
             </section>
+            @endunless
+            {{-- 📦 v2 (নমুনা ২৭ নভেম্বর): "মাল আনার খরচ" — আনলোডিং আর পরিবহন রঙিন টাইলে, নিচে মালের আসল খরচ (কেবল দেখানো, IAS 2 ধাঁচে); কেবল ABOS-এর রূপে --}}
+            @if (($abosLook ?? false))
+                <section class="pv2-cost" data-cost-in>
+                    <div class="pv2-ch">{{ __('purchase::field.cost_in_title') }} <small>{{ __('purchase::field.cost_in_sub') }}</small></div>
+                    <button type="button" @click="openUnloading()" class="pv2-ct pv2-ct-violet" data-unload-summary>
+                        <span class="pv2-ci"><x-ui.licon name="package" :size="18" /></span>
+                        <span class="pv2-cn">{{ __('purchase::field.unloading_tile') }}<small x-text="unloadSummary"></small></span>
+                        <span class="pv2-cv"><b class="num" x-text="money(unloadTotal)"></b></span>
+                    </button>
+                    <button type="button" @click="transportOpen = ! transportOpen" class="pv2-ct pv2-ct-amber" data-transport-tile>
+                        <span class="pv2-ci"><x-ui.licon name="truck" :size="18" /></span>
+                        <span class="pv2-cn">{{ __('purchase::field.transport_tile') }}<small x-text="carrierName || @js(__('purchase::field.transport_none'))"></small></span>
+                        <span class="pv2-cv"><b class="num" x-text="money(transportOurs)"></b></span>
+                    </button>
+                    <div class="pv2-landed" data-landed-cost>
+                        <span>{{ __('purchase::field.landed_title') }}<small x-text="landedNote"></small></span>
+                        <b class="num" x-text="'৳' + money(landedCost)"></b>
+                    </div>
+                </section>
+            @endif
 
             </div>{{-- pur-tot-scroll --}}
             <div class="pur-tot-foot space-y-2">
@@ -322,7 +345,9 @@
                         :aria-expanded="depositOpen"
                         class="rounded-(--radius-field) bg-(--color-success) px-1 py-2 text-2xs font-medium
                                leading-tight text-(--color-ink-inverse) hover:bg-(--color-success-hover)">
-                    {{ __('purchase::action.add_deposit_panel') }}
+                    @if (($abosLook ?? false))<x-ui.licon name="banknote" :size="16" />@endif
+                    <span>{{ __('purchase::action.add_deposit_panel') }}</span>
+                    @if (($abosLook ?? false))<small>F2</small>@endif
                 </button>
 
                 {{-- ⭐ "মন্তব্য"-র জায়গায় "আনলোডিং বিল" — মালিক, ২৬ নভেম্বর ২০২৬: "মন্তব্য দেওয়ার দরকার নাই" --}}
@@ -330,7 +355,9 @@
                         class="rounded-(--radius-field) px-1 py-2 text-2xs leading-tight font-medium
                                text-(--color-ink-inverse)"
                         style="background: var(--color-info)">
-                    {{ __('purchase::field.unloading_bill') }}
+                    @if (($abosLook ?? false))<x-ui.licon name="package" :size="16" />@endif
+                    <span>{{ __('purchase::field.unloading_bill') }}</span>
+                    @if (($abosLook ?? false))<small>F4</small>@endif
                 </button>
 
                 {{-- ⛔ "Chart Entry" আর "শিপমেন্ট" — দুইটা বোতামই মালিকের
@@ -348,13 +375,16 @@
                         class="rounded-(--radius-field) py-2 text-2xs font-medium
                                text-(--color-warning-ink)"
                         style="background: var(--color-warning)">
-                    {{ __('purchase::action.transportation') }}
+                    @if (($abosLook ?? false))<x-ui.licon name="truck" :size="16" />@endif
+                    <span>{{ __('purchase::action.transportation') }}</span>
+                    @if (($abosLook ?? false))<small>F7</small>@endif
                 </button>
 
                 <button type="button" @click="clearAll()"
                         class="rounded-(--radius-field) bg-(--color-danger) px-1 py-2 text-2xs leading-tight
                                font-medium text-(--color-ink-inverse) hover:bg-(--color-danger-hover)">
-                    {{ __('purchase::action.clear_all') }}
+                    @if (($abosLook ?? false))<x-ui.licon name="circle-x" :size="16" />@endif
+                    <span>{{ __('purchase::action.clear_all') }}</span>
                 </button>
             </div>
 
@@ -379,6 +409,14 @@
                 </div>
             @endif
 
+            {{-- ✓/⚠ নমুনার লাইন — জমা দেওয়ার মতো, নয়তো কী বাকি (কেবল ABOS-এর রূপে) --}}
+            @if (($abosLook ?? false))
+                <p class="pv2-okline" :class="readyProblem ? 'is-bad' : ''" role="status" aria-live="polite" data-ready-line>
+                    <span x-show="! readyProblem"><x-ui.licon name="circle-check-big" :size="15" /></span>
+                    <span x-show="readyProblem" x-cloak><x-ui.licon name="triangle-alert" :size="15" /></span>
+                    <span x-text="readyLine"></span>
+                </p>
+            @endif
             <x-ui.button type="submit" tone="primary" class="w-full" data-overview-trigger
                          ::class="(busy || lines.length === 0) && 'pointer-events-none opacity-50'">
                 {{ __('purchase::action.receive_goods') }} ·

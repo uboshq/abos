@@ -1044,6 +1044,50 @@ export default function directPurchase({
             return (Number(this.entry.qty) || 0) + (Number(this.entry.free_qty) || 0);
         },
 
+        // 🎨 v2 টাইলের লেখা (নমুনা ২৭ নভেম্বর) — CSP Alpine-এ গ্লোবাল (Number…) চলে না, তাই getter
+        get tileFree() {
+            return this.qty(Number(this.entry.free_qty) || 0);
+        },
+
+        get tileKeepsLot() {
+            return this.picked && this.picked.track_batch ? String(texts.yesMark ?? '✓') : String(texts.noWord ?? '—');
+        },
+
+        get tileLastRate() {
+            const r = Number(this.picked && this.picked.last_rate) || 0;
+            return r > 0 ? '৳' + this.money(r) : '—';
+        },
+
+        get tileSalePrice() {
+            const r = Number(this.picked && this.picked.sales_price) || 0;
+            return r > 0 ? '৳' + this.money(r) : '—';
+        },
+
+        // 📦 মালের আসল খরচ (IAS 2 ধাঁচে, কেবল দেখানো): বিলের দাম + আমাদের দেওয়া পরিবহন ভাড়া + আমাদের আনলোডিং
+        get transportOurs() {
+            return Number(this.transportCost) > 0 ? this.paisa(Number(this.transportCost)) : 0;
+        },
+
+        get landedCost() {
+            return this.paisa(this.netPayable + this.transportOurs + this.unloadTotal);
+        },
+
+        get landedNote() {
+            return String(texts.landedNote ?? '').replace(':price', this.money(this.netPayable));
+        },
+
+        // ✓/⚠ "মাল বুঝে নিন"-এর উপরের লাইন
+        get readyProblem() {
+            if (! this.supplierId) return String(texts.ready?.needSupplier ?? '');
+            if (this.lines.length === 0) return String(texts.ready?.needLines ?? '');
+            if (this.transportNeedsWho) return String(texts.ready?.needCarrier ?? '');
+            return '';
+        },
+
+        get readyLine() {
+            return this.readyProblem || String(texts.ready?.ok ?? '');
+        },
+
         toggleDiscountMode() {
             this.entry.discount_mode =
                 this.entry.discount_mode === 'percent' ? 'amount' : 'percent';

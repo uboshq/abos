@@ -18,7 +18,13 @@
     <x-slot:title>{{ __('purchase::menu.direct') }}</x-slot:title>
 
     {{-- ⓘ `data-confirm-overview` — নিশ্চিতের আগে সারাংশের পপ-আপ ([[confirm-overview.js]], ৪ অক্টোবর ২০২৬) --}}
-    <form method="POST" action="{{ route('purchase.direct.store') }}" data-confirm-overview="{{ route('purchase.direct.overview') }}"
+    {{-- ⭐ সরাসরি ক্রয় v2 — মালিকের নমুনা (২৭ নভেম্বর ২০২৬), কেবল ABOS-এর তিন রূপে (ABOS · Navy · Blue); SAP/Dynamics/Odoo আগের মতো --}}
+    @php
+        $abosLook = in_array(
+            \App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)),
+            \App\Core\Support\Ui::FOLD_MENU_LOOKS, true);
+    @endphp
+    <form method="POST" action="{{ route('purchase.direct.store') }}" data-confirm-overview="{{ route('purchase.direct.overview') }}" @if ($abosLook) data-abos-purchase @keydown.window.f2.prevent="depositOpen = ! depositOpen" @keydown.window.f4.prevent="openUnloading()" @keydown.window.f7.prevent="transportOpen = ! transportOpen" @endif
           x-data="directPurchase({
               catalogue: @js($products),
               vatEnabled: {{ $show['vat'] ? 'true' : 'false' }},
@@ -61,6 +67,15 @@
 
                   {{-- ⭐ পাঠানো থামার তিনটা কারণ — পর্দায় লেখার জন্য --}}
                   'needALine' => __('purchase::message.need_a_line'),
+                  'yesMark' => __('purchase::field.yes_mark'),
+                  'noWord' => __('purchase::field.no_word'),
+                  'landedNote' => __('purchase::field.landed_note'),
+                  'ready' => [
+                      'ok' => __('purchase::message.ready_ok'),
+                      'needSupplier' => __('purchase::message.ready_need_supplier'),
+                      'needLines' => __('purchase::message.ready_need_lines'),
+                      'needCarrier' => __('purchase::message.ready_need_carrier'),
+                  ],
                   'needACarrier' => __('purchase::message.need_a_carrier'),
 
                   {{-- ⛔ দর ০ বা বিক্রয়দর ছাড়া — কার্টে নয়, পাঠানোও নয় (মালিক, ৩ অক্টোবর ২০২৬) --}}
@@ -239,7 +254,7 @@
 
                  ⓘ সরবরাহকারী বাছলে ভিতরে চারটা সারি নামে, আর তখন
                  উচ্চতাটা এমনিতেই মিলে যায়। --}}
-                class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.1fr)]">
+                data-purchase-head class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.1fr)]">
             <div class="min-w-0">
         {{-- ⓘ শিরোনামটা নেই — মালিক: *"Supplier details likte hobe na"*।
 
