@@ -51,6 +51,14 @@
 # তৈরি, হাতে লেখা নয়। নতুন করে বানালে উপরের এই মন্তব্যটুকু মুছে যাবে —
 # তখন আবার বসিয়ে দেবেন, কারণ এই সংখ্যাটার মানে ছাড়া সে কেবল আটশো
 # সারি অভিযোগ।
+#
+# ── ২৮ নভেম্বর ২০২৬ (abos-b1): ৩৯৭ → ২৭১, কেবল ছাঁটা ─────────────────
+# casts() পড়া চালু হলো (parseModelCastsMethod), আর লুপ-মাইগ্রেশনের কলাম
+# মডেলে @property পেল — তাই ১২৬টা সারি আর কোনো ত্রুটির সাথে মেলে না
+# (PHPStan-এর ignore.unmatched), আর ১টার গোনা কমেছে। ওগুলো মোছা হলো
+# একটা লিপি দিয়ে, যেটা কেবল মোছে বা গোনা কমায় — কোনো সারি যোগ হয়নি,
+# কোনো গোনা বাড়েনি। যে ১০টা সারির ত্রুটি এখন বেশিবার ঘটে, তাদের গোনা
+# ইচ্ছা করেই বাড়ানো হয়নি: বাড়তিগুলো খোলা ত্রুটি হিসেবেই থাকে, সারানোর জন্য।
 
 parameters:
 	ignoreErrors:
@@ -145,24 +153,6 @@ parameters:
 			path: app/Core/Engines/Sync/SyncService.php
 
 		-
-			message: '#^Method App\\Core\\Engines\\Sync\\SyncService\:\:lastSync\(\) never returns Illuminate\\Support\\Carbon so it can be removed from the return type\.$#'
-			identifier: return.unusedType
-			count: 1
-			path: app/Core/Engines/Sync/SyncService.php
-
-		-
-			message: '#^Method App\\Core\\Engines\\Sync\\SyncService\:\:lastSync\(\) should return Illuminate\\Support\\Carbon\|null but returns string\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Core/Engines/Sync/SyncService.php
-
-		-
-			message: '#^Property App\\Models\\SyncDevice\:\:\$last_seen_at \(string\|null\) does not accept Illuminate\\Support\\Carbon\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: app/Core/Engines/Sync/SyncService.php
-
-		-
 			message: '#^Call to function is_string\(\) with string will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 9
@@ -209,12 +199,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Core/Security/CredentialCheck.php
-
-		-
-			message: '#^Empty array passed to foreach\.$#'
-			identifier: foreach.emptyArray
-			count: 1
-			path: app/Core/Security/MfaService.php
 
 		-
 			message: '#^Offset ''mime'' on array\{0\: int\<0, max\>, 1\: int\<0, max\>, 2\: int, 3\: string, mime\: string, channels\?\: int, bits\?\: int\} on left side of \?\? always exists and is not nullable\.$#'
@@ -343,18 +327,6 @@ parameters:
 			path: app/Core/Support/ProcessBand.php
 
 		-
-			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/Api/SyncController.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Http/Controllers/Api/SyncController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\AttachmentController\:\:document\(\) should return Illuminate\\Database\\Eloquent\\Model but returns App\\Core\\Contracts\\Drillable\.$#'
 			identifier: return.type
 			count: 1
@@ -367,30 +339,6 @@ parameters:
 			path: app/Http/Middleware/RefuseSwitchedOffScreens.php
 
 		-
-			message: '#^Call to function is_string\(\) with \*NEVER\* will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
-			count: 1
-			path: app/Models/CustomField.php
-
-		-
-			message: '#^Call to function is_scalar\(\) with non\-empty\-string will always evaluate to true\.$#'
-			identifier: function.alreadyNarrowedType
-			count: 1
-			path: app/Models/ExportLog.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between non\-empty\-string and array\{\} will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/ExportLog.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and null will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/ExportLog.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -401,36 +349,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Models/LoginAttempt.php
-
-		-
-			message: '#^Offset ''dark'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Models/LookSkin.php
-
-		-
-			message: '#^Offset ''light'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Models/LookSkin.php
-
-		-
-			message: '#^Offset ''dark'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Models/LookSkinVersion.php
-
-		-
-			message: '#^Offset ''light'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Models/LookSkinVersion.php
-
-		-
-			message: '#^Parameter \#1 \$array \(array\{0\?\: non\-falsy\-string\}\) of array_values is already a list, call has no effect\.$#'
-			identifier: arrayValues.list
-			count: 1
-			path: app/Models/ReportSchedule.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Relations\\Pivot\:\:\$default_branch_id\.$#'
@@ -451,12 +369,6 @@ parameters:
 			path: app/Modules/Accounts/Http/Controllers/AccountsSettingsController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$running_balance\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Http/Controllers/CashTillController.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>code" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -467,12 +379,6 @@ parameters:
 			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Modules/Accounts/Imports/OpeningBalanceImporter.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$running_balance\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Models/Account.php
 
 		-
 			message: '#^Method App\\Modules\\Accounts\\Models\\Account\:\:gather\(\) should return Illuminate\\Database\\Eloquent\\Collection\<int, App\\Modules\\Accounts\\Models\\Account\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, \$this\(App\\Modules\\Accounts\\Models\\Account\)\>\.$#'
@@ -487,40 +393,10 @@ parameters:
 			path: app/Modules/Accounts/Models/CostCenter.php
 
 		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Accounts/Models/DepreciationEntry.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Modules/Accounts/Models/DepreciationEntry.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Accounts/Models/DepreciationEntry.php
-
-		-
-			message: '#^Cannot call method lessThan\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Accounts/Models/Loan.php
-
-		-
-			message: '#^Cannot call method isBefore\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Accounts/Models/LoanInstalment.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Modules/Accounts/Models/LoanInstalment.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:pending\(\)\.$#'
@@ -541,82 +417,10 @@ parameters:
 			path: app/Modules/Accounts/Services/AccountsFacts.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Services/AccountsFacts.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Services/AccountsFacts.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Accounts/Services/BankReconciliationService.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Accounts/Services/CashCountService.php
-
-		-
-			message: '#^Cannot call method copy\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Accounts/Services/FixedAssetService.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 3
-			path: app/Modules/Accounts/Services/LoanService.php
-
-		-
-			message: '#^Cannot call method diffInDays\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Backup/Models/BackupDestination.php
-
-		-
-			message: '#^Comparison operation "\>" between 0 and 0 is always false\.$#'
-			identifier: greater.alwaysFalse
-			count: 2
-			path: app/Modules/Backup/Models/BackupVerification.php
-
-		-
-			message: '#^Offset ''rows'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Modules/Backup/Models/BackupVerification.php
-
-		-
-			message: '#^Offset ''tables'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Modules/Backup/Models/BackupVerification.php
-
-		-
-			message: '#^Result of \|\| is always false\.$#'
-			identifier: booleanOr.alwaysFalse
-			count: 1
-			path: app/Modules/Backup/Models/BackupVerification.php
-
-		-
 			message: '#^Offset ''tables'' on array\{database\: string, tables\: int\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Modules/Backup/Services/BackupRunner.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$running_balance\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Customer/Http/Controllers/CustomerController.php
 
 		-
 			message: '#^Strict comparison using \!\=\= between Illuminate\\Support\\Carbon\|null and false will always evaluate to true\.$#'
@@ -629,12 +433,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Customer/Imports/CustomerImporter.php
-
-		-
-			message: '#^Method App\\Modules\\Customer\\Models\\Customer\:\:activeConduct\(\) should return Illuminate\\Support\\Collection\<int, array\{label\: string, severity\: string, recorded_at\: Illuminate\\Support\\Carbon\|null\}\> but returns Illuminate\\Support\\Collection\<int, array\{label\: string, severity\: string, recorded_at\: string\}\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Modules/Customer/Models/Customer.php
 
 		-
 			message: '#^Method App\\Modules\\Customer\\Sync\\CustomerDueSync\:\:movedAt\(\) should return Illuminate\\Support\\Carbon but returns Carbon\\Carbon\.$#'
@@ -661,21 +459,9 @@ parameters:
 			path: app/Modules/Customer/Sync/CustomerSync.php
 
 		-
-			message: '#^Cannot call method translatedFormat\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Finance/Models/RentalAdjustment.php
-
-		-
 			message: '#^Access to an undefined property App\\Modules\\Finance\\Models\\CapitalEntry\:\:\$total\.$#'
 			identifier: property.notFound
 			count: 2
-			path: app/Modules/Finance/Services/CapitalService.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
 			path: app/Modules/Finance/Services/CapitalService.php
 
 		-
@@ -697,34 +483,10 @@ parameters:
 			path: app/Modules/Finance/Services/HandLoanService.php
 
 		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Finance/Services/WithdrawalService.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Governance/Dashboard/GovernanceDashboard.php
-
-		-
-			message: '#^Cannot call method endOfDay\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Hr/Models/Employee.php
-
-		-
-			message: '#^Cannot call method startOfDay\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Hr/Models/Employee.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Modules/Hr/Models/Employee.php
 
 		-
 			message: '#^Unsafe usage of new static\(\)\.$#'
@@ -739,12 +501,6 @@ parameters:
 			path: app/Modules/Hr/Models/LeaveType.php
 
 		-
-			message: '#^Cannot call method translatedFormat\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Hr/Models/PayrollRun.php
-
-		-
 			message: '#^PHPDoc tag @var for constant App\\Modules\\Hr\\Models\\SalaryHead\:\:FIXED with type list\<string\> is incompatible with value ''fixed''\.$#'
 			identifier: classConstant.phpDocType
 			count: 1
@@ -757,36 +513,6 @@ parameters:
 			path: app/Modules/Hr/Models/SalaryHead.php
 
 		-
-			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Modules/Hr/Services/EmployeeService.php
-
-		-
-			message: '#^Cannot call method copy\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Hr/Services/LeaveService.php
-
-		-
-			message: '#^Cannot call method copy\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Hr/Services/PayrollService.php
-
-		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 3
-			path: app/Modules/Hr/Services/PayrollService.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Hr/Sync/AttendanceSync.php
-
-		-
 			message: '#^Method App\\Modules\\Hr\\Sync\\AttendanceSync\:\:requiredPermission\(\) never returns null so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1
@@ -795,12 +521,6 @@ parameters:
 		-
 			message: '#^Parameter \$updatedAt of class App\\Core\\Engines\\Sync\\SyncRecord constructor expects Illuminate\\Support\\Carbon, Carbon\\Carbon given\.$#'
 			identifier: argument.type
-			count: 1
-			path: app/Modules/Hr/Sync/AttendanceSync.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Hr/Sync/AttendanceSync.php
 
@@ -821,30 +541,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Inventory/Http/Controllers/StorageLocationController.php
-
-		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Inventory/Models/Batch.php
-
-		-
-			message: '#^Cannot call method lt\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Inventory/Models/Batch.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockTransferLine\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Inventory/Models/StockTransferLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockTransferLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Inventory/Models/StockTransferLine.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
@@ -875,12 +571,6 @@ parameters:
 			identifier: return.type
 			count: 1
 			path: app/Modules/Inventory/Reports/StockReports.php
-
-		-
-			message: '#^Property App\\Modules\\Inventory\\Models\\CostLayer\:\:\$qty_remaining \(float\) does not accept string\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: app/Modules/Inventory/Services/CostLayerService.php
 
 		-
 			message: '#^Called ''count'' on Laravel collection, but could have been retrieved as a query\.$#'
@@ -1249,18 +939,6 @@ parameters:
 			path: app/Modules/Purchase/Models/PurchaseBillGiftLine.php
 
 		-
-			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseBillLine\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Purchase/Models/PurchaseBillLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseBillLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseBillLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -1271,18 +949,6 @@ parameters:
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Purchase/Models/PurchaseOrder.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseOrderLine\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Purchase/Models/PurchaseOrderLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseOrderLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseOrderLine.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
@@ -1297,18 +963,6 @@ parameters:
 			path: app/Modules/Purchase/Models/PurchaseReceipt.php
 
 		-
-			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseReceiptLine\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Purchase/Models/PurchaseReceiptLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseReceiptLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseReceiptLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -1319,18 +973,6 @@ parameters:
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Purchase/Models/PurchaseReturn.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseReturnLine\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Purchase/Models/PurchaseReturnLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseReturnLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseReturnLine.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
@@ -1399,12 +1041,6 @@ parameters:
 			path: app/Modules/Purchase/Services/PurchaseReturnService.php
 
 		-
-			message: '#^Cannot call method diffInMinutes\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Restaurant/Models/KitchenTicket.php
-
-		-
 			message: '#^Method App\\Modules\\Sales\\Auth\\CustomerProvider\:\:newModelQuery\(\) should return Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\> but returns Illuminate\\Database\\Eloquent\\Builder\<TModel of Illuminate\\Database\\Eloquent\\Model\>\.$#'
 			identifier: return.type
 			count: 1
@@ -1415,18 +1051,6 @@ parameters:
 			identifier: argument.type
 			count: 3
 			path: app/Modules/Sales/Dashboard/SalesActivity.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Sales/Events/InvoiceConfirmed.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Modules/Sales/Events/InvoiceConfirmed.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>is_inclusive" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -1441,39 +1065,9 @@ parameters:
 			path: app/Modules/Sales/Http/Controllers/DirectSaleController.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$running_balance\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/PortalController.php
-
-		-
-			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Modules\\Sales\\Models\\SalesInvoice\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
-			count: 8
+			count: 1
 			path: app/Modules/Sales/Http/Controllers/SalesPrintController.php
 
 		-
@@ -1501,12 +1095,6 @@ parameters:
 			path: app/Modules/Sales/Models/Collection.php
 
 		-
-			message: '#^Strict comparison using \=\=\= between float and null will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Modules/Sales/Models/CommissionRule.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -1519,34 +1107,10 @@ parameters:
 			path: app/Modules/Sales/Models/DeliveryChallan.php
 
 		-
-			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\DeliveryChallanGiftLine\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Sales/Models/DeliveryChallanGiftLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\DeliveryChallanGiftLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/DeliveryChallanGiftLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Sales/Models/DeliveryChallanGiftLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\DeliveryChallanLine\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Sales/Models/DeliveryChallanLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\DeliveryChallanLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/DeliveryChallanLine.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
@@ -1561,18 +1125,6 @@ parameters:
 			path: app/Modules/Sales/Models/SalesInvoice.php
 
 		-
-			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesInvoiceLine\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Sales/Models/SalesInvoiceLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesInvoiceLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesInvoiceLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -1583,18 +1135,6 @@ parameters:
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Sales/Models/SalesOrder.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesOrderLine\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Sales/Models/SalesOrderLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesOrderLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesOrderLine.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
@@ -1609,39 +1149,15 @@ parameters:
 			path: app/Modules/Sales/Models/SalesReturn.php
 
 		-
-			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesReturnLine\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Sales/Models/SalesReturnLine.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesReturnLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesReturnLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Sales/Models/SalesReturnLine.php
 
 		-
-			message: '#^Cannot call method isBefore\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Sales/Models/Scheme.php
-
-		-
 			message: '#^Result of && is always true\.$#'
 			identifier: booleanAnd.alwaysTrue
 			count: 1
-			path: app/Modules/Sales/Models/Scheme.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string and null will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 3
 			path: app/Modules/Sales/Models/Scheme.php
 
 		-
@@ -1675,12 +1191,6 @@ parameters:
 			path: app/Modules/Sales/Services/BatchTrace.php
 
 		-
-			message: '#^Strict comparison using \=\=\= between numeric\-string&uppercase\-string and '''' will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>customer_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -1705,22 +1215,10 @@ parameters:
 			path: app/Modules/Sales/Services/SalesReturnService.php
 
 		-
-			message: '#^Method App\\Modules\\Sales\\Services\\ShiftService\:\:figures\(\) should return array\{opening\: string, cash_in\: string, cash_out\: string, expected\: string, counted\: string\|null, difference\: string\|null, bills\: int, from\: Illuminate\\Support\\Carbon, \.\.\.\} but returns array\{opening\: numeric\-string, cash_in\: numeric\-string, cash_out\: numeric\-string, expected\: numeric\-string, counted\: numeric\-string\|null, difference\: numeric\-string\|null, bills\: int\<0, max\>, from\: string, \.\.\.\}\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Modules/Sales/Services/ShiftService.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>document_no" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Sales/Services/ShipmentService.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Modules/Sales/Sync/CollectionSync.php
 
 		-
 			message: '#^Method App\\Modules\\Sales\\Sync\\CollectionSync\:\:requiredPermission\(\) never returns null so it can be removed from the return type\.$#'
@@ -1735,22 +1233,10 @@ parameters:
 			path: app/Modules/Sales/Sync/CollectionSync.php
 
 		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Modules/Sales/Sync/CollectionSync.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>public_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Sales/Sync/CollectionSync.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Modules/Sales/Sync/SalesOrderSync.php
 
 		-
 			message: '#^Method App\\Modules\\Sales\\Sync\\SalesOrderSync\:\:requiredPermission\(\) never returns null so it can be removed from the return type\.$#'
@@ -1765,12 +1251,6 @@ parameters:
 			path: app/Modules/Sales/Sync/SalesOrderSync.php
 
 		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 1
-			path: app/Modules/Sales/Sync/SalesOrderSync.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>public_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -1781,12 +1261,6 @@ parameters:
 			identifier: arrayValues.list
 			count: 1
 			path: app/Modules/Supplier/Dashboard/SupplierWidgets.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$running_balance\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Supplier/Http/Controllers/SupplierController.php
 
 		-
 			message: '#^Strict comparison using \!\=\= between Illuminate\\Support\\Carbon\|null and false will always evaluate to true\.$#'
@@ -1828,12 +1302,6 @@ parameters:
 			message: '#^Offset 0 on non\-empty\-list\<string\> on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
-			path: app/Modules/SystemAdmin/Services/ScheduleService.php
-
-		-
-			message: '#^Property App\\Models\\ReportSchedule\:\:\$next_run_at \(string\|null\) does not accept Illuminate\\Support\\Carbon\.$#'
-			identifier: assign.propertyType
-			count: 2
 			path: app/Modules/SystemAdmin/Services/ScheduleService.php
 
 		-
@@ -1939,24 +1407,6 @@ parameters:
 			path: tests/Feature/Architecture/TheMenuAsksWhatTheRouteAsksTest.php
 
 		-
-			message: '#^Offset ''discount_percent'' does not exist on string\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: tests/Feature/Core/ApprovalEngineTest.php
-
-		-
-			message: '#^Offset ''reason_code'' does not exist on string\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: tests/Feature/Core/ApprovalEngineTest.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: tests/Feature/Core/ImportTest.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
 			identifier: property.notFound
 			count: 17
@@ -1987,26 +1437,8 @@ parameters:
 			path: tests/Feature/Design/WhatWeSayAboutACustomerStaysOnOurSideTest.php
 
 		-
-			message: '#^Offset ''secret'' does not exist on string\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: tests/Feature/Modules/ABackupOnOneDiskIsNotABackupTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNull\(\) with null will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
-			count: 1
-			path: tests/Feature/Modules/ACostFileLeavesATraceTest.php
-
-		-
-			message: '#^Offset ''from'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: tests/Feature/Modules/ACostFileLeavesATraceTest.php
-
-		-
-			message: '#^Offset ''to'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
 			count: 1
 			path: tests/Feature/Modules/ACostFileLeavesATraceTest.php
 
@@ -2053,22 +1485,10 @@ parameters:
 			path: tests/Feature/Modules/ControlPanelTest.php
 
 		-
-			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNotNull\(\) with string will always evaluate to true\.$#'
-			identifier: method.alreadyNarrowedType
-			count: 1
-			path: tests/Feature/Modules/Customer/ConductTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNotNull\(\) with App\\Modules\\Customer\\Models\\Customer will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 1
 			path: tests/Feature/Modules/CustomerTest.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: tests/Feature/Modules/DirectSaleTest.php
 
 		-
 			message: '#^Argument of an invalid type Illuminate\\Routing\\RouteCollectionInterface supplied for foreach, only iterables are supported\.$#'
@@ -2077,22 +1497,10 @@ parameters:
 			path: tests/Feature/Modules/Finance/EveryFinanceScreenIsOnTheMapTest.php
 
 		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: tests/Feature/Modules/Finance/TheAdvanceOnTheGodownWasOnlyInTheOwnersHeadTest.php
-
-		-
 			message: '#^Method Tests\\Feature\\Modules\\FreeGoodsTest\:\:floorQty\(\) is unused\.$#'
 			identifier: method.unused
 			count: 1
 			path: tests/Feature/Modules/FreeGoodsTest.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: tests/Feature/Modules/HrTest.php
 
 		-
 			message: '#^Offset ''groups'' on array\{code\: string, label\: string, icon\: string, section\: string, order\: int, under\: string\|null, codes\: list\<string\>, groups\: array\<string, list\<array\{label\: string, route\: string, url\: string\|null, active\: bool\}\>\>\} on left side of \?\? always exists and is not nullable\.$#'
@@ -2111,12 +1519,6 @@ parameters:
 			identifier: method.alreadyNarrowedType
 			count: 2
 			path: tests/Feature/Modules/Inventory/ProductDuplicateTest.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: tests/Feature/Modules/LotsArriveWithGoodsTest.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:auditTrail\(\)\.$#'
@@ -2143,82 +1545,16 @@ parameters:
 			path: tests/Feature/Modules/MasterDataTest.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/MoneyAtTheCounterTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/MoneyAtTheCounterTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/MoneyLentOnAWordIsNotALoanTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/MoneyLentOnAWordIsNotALoanTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/MoneyOnTheRoadTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/MoneyOnTheRoadTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/MoneyPutAwayIsNotMoneyLentTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/MoneyPutAwayIsNotMoneyLentTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNotNull\(\) with int will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 2
 			path: tests/Feature/Modules/OneCustomerTwoRowsAndHalfTheDuesTest.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/OneNumberOneSourceTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/OneNumberOneSourceTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 1
 			path: tests/Feature/Modules/OpeningStockScreenTest.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: tests/Feature/Modules/PrintedPriceOnSaleTest.php
 
 		-
 			message: '#^Method Tests\\Feature\\Modules\\PurchaseReturnTest\:\:availableQty\(\) is unused\.$#'
@@ -2263,42 +1599,6 @@ parameters:
 			path: tests/Feature/Modules/TheCustomerCouldNeverSeeHisOwnLedgerTest.php
 
 		-
-			message: '#^Cannot access property \$month on string\.$#'
-			identifier: property.nonObject
-			count: 3
-			path: tests/Feature/Modules/TheFirstDoorOpensOnlyOnceTest.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: tests/Feature/Modules/TheFirstDoorOpensOnlyOnceTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseBillLine\:\:\$tax_variance\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/TheFreeCartonCameBackAsTwelvePiecesTest.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 6
-			path: tests/Feature/Modules/TheFreeCartonCameBackAsTwelvePiecesTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/TheOwnerTookMoneyAndNobodyWroteItDownTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/TheOwnerTookMoneyAndNobodyWroteItDownTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNotNull\(\) with object and ''নতুন ইনস্টলে 2111…''\|''নতুন ইনস্টলে 2116…''\|''নতুন ইনস্টলে 2117…''\|''নতুন ইনস্টলে 2118…'' will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 1
@@ -2323,63 +1623,15 @@ parameters:
 			path: tests/Feature/Modules/TwoChecksWithOneNameTest.php
 
 		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/TwoThousandInBkashAndTheRestInCashTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/TwoThousandInBkashAndTheRestInCashTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 1
 			path: tests/Feature/Modules/VoucherTest.php
 
 		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: tests/Feature/Modules/WhatTheMonthWasSupposedToBeTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/YearEndTest.php
-
-		-
-			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/YearEndTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNotNull\(\) with App\\Models\\FinancialYear will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 2
-			path: tests/Feature/Modules/YearEndTest.php
-
-		-
-			message: '#^Cannot call method copy\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 5
-			path: tests/Feature/Modules/YearEndTest.php
-
-		-
-			message: '#^Cannot call method isSameDay\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: tests/Feature/Modules/YearEndTest.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 5
 			path: tests/Feature/Modules/YearEndTest.php
 
 		-
