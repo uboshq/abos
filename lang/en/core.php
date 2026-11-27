@@ -1967,6 +1967,7 @@ return [
         'contracts' => 'Contracts',
         'assets' => 'Assets',
         'staff' => 'Staff',
+        'payroll' => 'Payroll',
         'people' => 'People',
         'stock' => 'Stock',
         'inspect' => 'Inspect',

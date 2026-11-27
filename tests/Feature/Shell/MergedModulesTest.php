@@ -324,6 +324,22 @@ final class MergedModulesTest extends TestCase
         $this->assertSame('payable', $kindOf('purchase', 'purchase::due.title'), '⛔ পরিশোধের সূচি দেনার দলে নয়');
         $this->assertSame('reports', $kindOf('inventory', 'inventory::menu.stock_age'), '⛔ মজুদের দুইটা রিপোর্টের দল');
         $this->assertSame('inspect', $kindOf('inventory', 'inventory::menu.adjust'), '⛔ গণনা ও সমন্বয় গণনার দলে নয়');
+
+        // ⓘ বাকি মডিউলও একই নিয়মে (মালিক, ২৭ নভেম্বর ২০২৬: "অন্যান্য মডিউলগুলোও দেখো")
+        $this->assertSame(['start', 'staff', 'people', 'payroll', 'reports'], MenuLook::data()['order']['hr'], '⛔ HR: হাজিরা আর ছুটির পরে বেতন নয়');
+        $this->assertSame('people', $kindOf('hr', 'hr::menu.holidays'), '⛔ ছুটির দিন এখনো বেতনের দলে');
+        $this->assertSame('payroll', $kindOf('hr', 'hr::menu.payroll'), '⛔ বেতনের রান নিজের দলে নয়');
+        $this->assertSame(['start', 'docs', 'approve', 'keep', 'reports', 'setup'], MenuLook::data()['order']['documents'], '⛔ ডকুমেন্টে অনুমোদন আর্কাইভের আগে নয়');
+        $this->assertSame('docs', $kindOf('documents', 'documents::menu.search'), '⛔ উন্নত খোঁজ এখনো আর্কাইভের দলে');
+        $this->assertSame(['start', 'inbox', 'reports', 'setup'], MenuLook::data()['order']['approval'], '⛔ অনুমোদনে সেটিংস শেষে নয়');
+        foreach (['governance', 'system_admin'] as $host) {
+            $this->assertSame('audit', $kindOf($host, 'governance::menu.export_log'), "⛔ {$host}: রপ্তানির খাতা লগের দলে নয়");
+            $this->assertSame('audit', $kindOf($host, 'governance::menu.login_history'), "⛔ {$host}: ঢোকার খাতা লগের দলে নয়");
+        }
+        $this->assertSame('org', MenuLook::data()['order']['master_data'][1], '⛔ মাস্টার ডেটায় প্রতিষ্ঠানের কাঠামো প্রথমে নয়');
+        $this->assertSame('money', $kindOf('master_data', 'master_data::menu.payment_terms'), '⛔ পরিশোধের শর্ত টাকার দলে নয়');
+        $this->assertSame('start', $kindOf('executive', 'executive::menu.alerts'), '⛔ মালিকের ঘরে সতর্কতা শুরুতে নয়');
+        $this->assertSame('reports', $kindOf('notification', 'notification::report.menu.user-wise'), '⛔ নোটিশের রিপোর্ট এখনো সেটআপের দলে');
     }
 
     /**
@@ -365,7 +381,8 @@ final class MergedModulesTest extends TestCase
     public function test_communication_is_notifications_with_messages_and_calls_first(): void
     {
         $this->owner->forceFill(['ui' => 'rose'])->save();
-        $order = ['chat', 'start', 'my_notices', 'party_msg', 'setup_watch'];
+        // ⓘ ২৭ নভেম্বর ২০২৬ (মালিক): নোটিশের রিপোর্টগুলো সেটআপ থেকে আলাদা হয়ে শেষে — মেনুর ক্রম আন্তর্জাতিক নিয়মে
+        $order = ['chat', 'start', 'my_notices', 'party_msg', 'setup_watch', 'reports'];
         $this->assertSame($order, MenuLook::data()['order']['notification']);
 
         $entry = $this->entry($this->menu(), 'notification');
