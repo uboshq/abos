@@ -84,7 +84,7 @@ final class StockService
         string $reserved = '0',
         string $hold = '0',
         ?ReasonCode $reason = null,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?string $documentNo = null,
         ?string $narration = null,
         string $free = '0',
@@ -162,6 +162,8 @@ final class StockService
          */
         array $ownReservations = [],
     ): StockMovement {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         $this->assertSomethingMoves(
             $floor, $reserved, $hold, $free, $freeReserved, $unplaced, $unplacedFree,
         );
@@ -289,7 +291,7 @@ final class StockService
         int $sourceId,
         string $qty,
         string $reserved = '0',
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?string $documentNo = null,
         ?string $narration = null,
         string $hold = '0',
@@ -333,6 +335,8 @@ final class StockService
         // ⭐ ঘাটতি লেখা — লট না বললে মেয়াদ পেরোনো লটও, আগে-মেয়াদ আগে (মজুদ ছ১৩; [[BatchAllocator::allocate()]])
         bool $anyLot = false,
     ): array {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         $out = bcmul($qty, '-1', 4);
 
         if (! $product->track_batch) {
@@ -519,10 +523,12 @@ final class StockService
         string $sourceType,
         int $sourceId,
         string $reversedType,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?string $narration = null,
         ?callable $reservedFor = null,
     ): array {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         /*
          * ⭐ কেবল যা এখনো ফেরানো হয়নি — ১৯ সেপ্টেম্বর ২০২৬।
          *
@@ -617,7 +623,7 @@ final class StockService
         Warehouse $warehouse,
         string $qty,
         ReasonCode $reason,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?string $narration = null,
 
         /*
@@ -646,6 +652,8 @@ final class StockService
         ?string $sourceType = null,
         ?int $sourceId = null,
     ): StockMovement {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         if (bccomp($qty, '0', 4) <= 0) {
             throw ValidationException::withMessages([
                 'qty' => __('inventory::validation.hold_needs_quantity'),
@@ -730,11 +738,13 @@ final class StockService
         Warehouse $warehouse,
         string $qty,
         ReasonCode $reason,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?Batch $batch = null,
         ?string $sourceType = null,
         ?int $sourceId = null,
     ): StockMovement {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         // ⛔ ছ১ — শূন্য বা ঋণাত্মক "ছাড়" আসলে একটা যাচাইহীন আটকানো হত
         if (! is_numeric($qty) || bccomp($qty, '0', 4) <= 0) {
             throw ValidationException::withMessages([
@@ -1035,7 +1045,7 @@ final class StockService
          */
         string $sourceType,
         int $sourceId,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?string $documentNo = null,
         ?Batch $batch = null,
 
@@ -1062,6 +1072,8 @@ final class StockService
          */
         ?StorageLocation $location = null,
     ): StockMovement {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         if ($location !== null && (int) $location->warehouse_id !== (int) $warehouse->id) {
             throw ValidationException::withMessages([
                 'storage_location_id' => __('inventory::validation.location_not_in_warehouse'),

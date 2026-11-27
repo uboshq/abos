@@ -63,7 +63,7 @@ final class NumberSeriesEngine
     public function next(
         string $docType,
         ?int $branchId = null,
-        ?Carbon $date = null,
+        ?\Carbon\CarbonInterface $date = null,
         ?string $sourceType = null,
         ?int $sourceId = null,
     ): string {
@@ -73,7 +73,8 @@ final class NumberSeriesEngine
             throw new RuntimeException('Cannot issue a document number without a company in context.');
         }
 
-        $date = $date ?? Carbon::today();
+        // ⓘ যে কোনো Carbon → Illuminate\Support\Carbon, আগের মতোই ([[Dates::carbon()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::carbon($date) ?? Carbon::today();
         $branchId = $branchId ?? CompanyContext::branchId();
         $financialYear = FinancialYear::forDate($date);
 

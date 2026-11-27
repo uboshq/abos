@@ -48,9 +48,11 @@ final class CostLayerService
         string $sourceType,
         int $sourceId,
         ?string $documentNo = null,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?Batch $batch = null,
     ): string {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         return $this->issue($product, $qty, $sourceType, $sourceId, $documentNo, $date, $batch)['cost'];
     }
 
@@ -69,7 +71,7 @@ final class CostLayerService
         string $sourceType,
         int $sourceId,
         ?string $documentNo = null,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
 
         /*
          * ⭐ মালটা কোন লটের — চূড়ান্ত অডিট, ৩০ সেপ্টেম্বর ২০২৬।
@@ -82,6 +84,8 @@ final class CostLayerService
         // ⭐ মালটা কার (সরবরাহকারী/প্রিন্সিপাল) — ক্রয়ে উৎস থেকে, খোলা মজুদে মানুষের বাছাই; "আসল" কমিশন এটাই পড়ে
         ?int $supplierId = null,
     ): CostLayer {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('A cost layer needs a positive quantity.');
         }
@@ -135,10 +139,12 @@ final class CostLayerService
         string $sourceType,
         int $sourceId,
         ?string $documentNo = null,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?Batch $batch = null,
         ?int $supplierId = null,
     ): array {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('A cost layer needs a positive quantity.');
         }
@@ -222,9 +228,11 @@ final class CostLayerService
         string $sourceType,
         int $sourceId,
         ?string $documentNo = null,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?Batch $batch = null,
     ): array {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('Issuing stock needs a positive quantity.');
         }
@@ -381,7 +389,7 @@ final class CostLayerService
         string $sourceType,
         int $sourceId,
         ?string $documentNo = null,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
 
         /*
          * ⭐ কোন ফেরতগুলো **এই মূল নথিরই** — ২৭ সেপ্টেম্বর ২০২৬।
@@ -405,6 +413,8 @@ final class CostLayerService
          */
         ?Batch $batch = null,
     ): string {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         if (bccomp($qty, '0', 4) <= 0) {
             throw new RuntimeException('Returning stock needs a positive quantity.');
         }
@@ -662,8 +672,10 @@ final class CostLayerService
         string $sourceType,
         int $sourceId,
         ?string $documentNo = null,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
     ): array {
+        // ⓘ অন্য ধরনের Carbon এলে Illuminate\Support\Carbon; লেখা তারিখ আর null যেমন ছিল ([[Dates::sameKind()]], ২৮ নভেম্বর ২০২৬)
+        $date = \App\Core\Support\Dates::sameKind($date);
         return DB::transaction(function () use (
             $product, $qty, $fromSourceType, $fromSourceId, $sourceType, $sourceId, $documentNo, $date
         ) {

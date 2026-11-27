@@ -41,7 +41,7 @@ final class PostingEngine
     public function post(
         string $sourceType,
         int $sourceId,
-        Carbon|string $trxDate,
+        \Carbon\CarbonInterface|string $trxDate,
         array $lines,
         ?string $documentNo = null,
         ?int $branchId = null,
@@ -51,7 +51,8 @@ final class PostingEngine
             throw PostingException::said('Nothing to post — a document with no ledger lines has no effect on the books.', 'core.posting.nothing_to_post');
         }
 
-        $trxDate = $trxDate instanceof Carbon ? $trxDate : Carbon::parse($trxDate);
+        // ⓘ যে কোনো Carbon বা লেখা তারিখ → Illuminate\Support\Carbon, আগের মতোই ([[Dates::carbon()]], ২৮ নভেম্বর ২০২৬)
+        $trxDate = \App\Core\Support\Dates::carbon($trxDate);
 
         /*
          * বন্ধ মাস ও পেছনের জানালা — এক দরজার ঠিক ভেতরে।
@@ -255,7 +256,7 @@ final class PostingEngine
     public function reverse(
         string $sourceType,
         int $sourceId,
-        Carbon|string $reversalDate,
+        \Carbon\CarbonInterface|string $reversalDate,
         ?string $reason = null,
         ?int $userId = null,
         /*
@@ -303,7 +304,8 @@ final class PostingEngine
             );
         }
 
-        $reversalDate = $reversalDate instanceof Carbon ? $reversalDate : Carbon::parse($reversalDate);
+        // ⓘ যে কোনো Carbon বা লেখা তারিখ → Illuminate\Support\Carbon, আগের মতোই ([[Dates::carbon()]], ২৮ নভেম্বর ২০২৬)
+        $reversalDate = \App\Core\Support\Dates::carbon($reversalDate);
 
         /*
          * উল্টো এন্ট্রিও বন্ধ মাসে বসে না।
