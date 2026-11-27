@@ -112,6 +112,7 @@ class ProfileController extends Controller
             'login_id' => [
                 'required', 'string', 'min:3', 'max:40',
                 'regex:/^[a-z][a-z0-9._-]*$/',
+                // nosemgrep: php.laravel.security.laravel-unsafe-validator.laravel-unsafe-validator — id is the signed-in user's own, never request input (Semgrep, 28 Nov, checked by hand)
                 Rule::unique('users', 'login_id')->ignore($request->user()->id),
             ],
 
@@ -173,6 +174,7 @@ class ProfileController extends Controller
 
             'email' => [
                 'required', 'email', 'max:191',
+                // nosemgrep: php.laravel.security.laravel-unsafe-validator.laravel-unsafe-validator — $user is the signed-in user (Semgrep, 28 Nov, checked by hand)
                 Rule::unique('users', 'email')->ignore($user->id),
 
                 /*
@@ -181,6 +183,7 @@ class ProfileController extends Controller
                  * পেতেন, আর দ্বিতীয়জনের নিশ্চিতকরণ unique সূচকে ধাক্কা
                  * খেয়ে একটা কাঁচা ডাটাবেজ ত্রুটি হয়ে পর্দায় আসত।
                  */
+                // nosemgrep: php.laravel.security.laravel-unsafe-validator.laravel-unsafe-validator — $user is the signed-in user (Semgrep, 28 Nov, checked by hand)
                 Rule::unique('users', 'pending_email')->ignore($user->id),
             ],
         ]);
