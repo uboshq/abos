@@ -740,6 +740,7 @@ export function start(root) {
         if (d && dayKey(d) !== dayKey(dateOf(prev?.at))) html += `<span class="dsep">${esc(dayLabel(d))}</span>`
         // ⓘ a call drawn last breaks the run
         html += msgHtml(m, !!el.msgs.lastElementChild?.dataset.call || !sameRun(prev, m))
+        // nosemgrep: javascript.browser.security.insecure-document-method.insecure-document-method, react-unsanitized-method -- every value is esc()-ed; tick()/ic() take fixed names (Semgrep sweep 28 Nov 2026, read line by line)
         el.msgs.insertAdjacentHTML('beforeend', html)
         return undefined
     }
@@ -1390,6 +1391,7 @@ export function start(root) {
             html += `<div class="inf" data-info-lines><span>${ic('info')}${esc(w('info'))}</span>${line}</div>`
         }
         html += '</div>'
+        // nosemgrep: javascript.browser.security.insecure-document-method.insecure-document-method, react-unsanitized-method -- every value is esc()-ed; tick()/ic() take fixed names (Semgrep sweep 28 Nov 2026, read line by line)
         bub.querySelector('.chev').insertAdjacentHTML('afterend', html)
         const menu = bub.querySelector('.bm')
         const row = menu.querySelector('.delrow')
@@ -1430,6 +1432,7 @@ export function start(root) {
                 }
             }
             box.querySelectorAll('small').forEach((s) => s.remove())
+            // nosemgrep: javascript.browser.security.insecure-document-method.insecure-document-method, react-unsanitized-method -- every value is esc()-ed; tick()/ic() take fixed names (Semgrep sweep 28 Nov 2026, read line by line)
             box.insertAdjacentHTML('beforeend', lines)
         } catch {
             box?.querySelector('small')?.remove()
