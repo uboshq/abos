@@ -85,6 +85,8 @@ class TheMenuStandsInTheOrderTheOwnerAskedForTest extends TestCase
          * কেবল এই তালিকায় লেখা ছিল না, তাই ৩ সেপ্টেম্বর থেকে দুইটা
          * পরীক্ষা লাল ছিল। ⓘ কোডের ভুল নয়, একটা অমীমাংসিত প্রশ্ন।
          */
+        // ⭐ সেলস ইন্টেলিজেন্স (মালিক, ২৮ নভেম্বর ২০২৬) — বিক্রয়ের ঠিক পরে, রেস্তোরাঁর আগে (nav.order 55)
+        ['business', 'sales_intel'],
         ['business', 'restaurant'],
 
         ['people', 'hr'],

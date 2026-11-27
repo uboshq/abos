@@ -2009,6 +2009,8 @@ return [
         'my_notices' => 'My notices',
         'party_msg' => 'Messages to customers',
         'setup_watch' => 'Setup & monitoring',
+        'si_entry' => 'Field daily entry',
+        'si_dist' => 'Distributors',
     ],
 
     // ⭐ ছাঁকনি প্যানেল — সব তালিকায় এক ([[filter-layout]], [[FilterSet]]; ১৪ নভেম্বর ২০২৬)
