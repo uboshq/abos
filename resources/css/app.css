@@ -2595,6 +2595,35 @@ form[data-page-kind="contra"] input:not([type="checkbox"]):not([type="radio"]):n
     opacity: 1;
 }
 
+/* ⭐ ⓘ ছুঁলে বা কীবোর্ডে খোলা ছোট বাক্স ([[info-tap.js]]; WCAG 2.1.1, 1.4.13 — impeccable বিষয় ১, সমন্বয়কের "ok" ২৮ নভেম্বর ২০২৬)।
+   ⓘ চিহ্ন দেখতে একই; কেবল কীবোর্ডের রেখা আর হাতের কার্সর। */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) :is([data-page-info], [data-title-note])[data-info-ready] {
+    cursor: pointer;
+    border-radius: 999px;
+}
+
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) :is([data-page-info], [data-title-note])[data-info-ready]:focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+}
+
+[data-info-box] {
+    position: fixed;
+    z-index: 80;
+    max-width: min(320px, calc(100vw - 16px));
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-field);
+    background: var(--color-surface-card);
+    color: var(--color-ink);
+    box-shadow: 0 6px 20px rgb(15 23 42 / 0.16);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: start;
+    white-space: normal;
+}
+
 /* the page header's own note line — "ABOS Smart" already does this in abos-look.css */
 :root:is([data-ui='navy'], [data-ui='blue']) [data-page-subtitle] {
     display: none;
