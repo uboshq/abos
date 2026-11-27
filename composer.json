@@ -19,6 +19,8 @@
     "require-dev": {
         "composer/semver": "^3.4",
         "fakerphp/faker": "^1.23",
+        "giorgiosironi/eris": "^1.0",
+        "infection/infection": "^0.31",
         "larastan/larastan": "^3.12",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
@@ -89,7 +91,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
-            "php-http/discovery": true
+            "php-http/discovery": true,
+            "infection/extension-installer": false
         }
     },
     "minimum-stability": "stable",
