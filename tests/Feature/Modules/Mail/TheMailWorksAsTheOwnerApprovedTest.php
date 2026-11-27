@@ -184,7 +184,17 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
 
         $this->assertSame(19, MailFestival::query()->count());
         $this->assertTrue(MailFestival::query()->where('key', 'victory')->value('quiet'), '⛔ বিজয় দিবস শ্রদ্ধার দিন — অফার নয়।');
-        $this->assertGreaterThanOrEqual(13 + 19, MailTemplate::query()->count());
+        $this->assertGreaterThanOrEqual(23 + 19, MailTemplate::query()->count());
+        // ⭐ ERP-র শুরুর সেটের বাকি ১০টা (NEXUS-এর পর্যালোচনা R5) — আর আগের কোম্পানিতেও বসে
+        foreach (['quotation', 'order_confirm', 'due_soon', 'delivered', 'return_credit', 'welcome', 'remittance', 'rfq', 'payslip', 'leave_reply'] as $key) {
+            $this->assertTrue(MailTemplate::query()->whereNull('user_id')->where('key', $key)->exists(), "⛔ টেমপ্লেট {$key} বসেনি।");
+        }
+        CompanyContext::forCompany($this->co->id, function () {
+            MailTemplate::query()->whereNull('user_id')->where('key', 'rfq')->delete();
+            app(\App\Modules\Mail\Services\MailDefaults::class)->ensure();
+        });
+        $this->assertSame(1, MailTemplate::query()->whereNull('user_id')->where('key', 'rfq')->count(), '⛔ আগের কোম্পানিতে নতুন টেমপ্লেট বসেনি, বা দুবার বসেছে।');
+        $this->assertSame(19, MailTemplate::query()->whereNull('user_id')->where('category', 'festival')->count(), '⛔ উৎসবের টেমপ্লেট দুবার বসেছে।');
         // ⛔ শোকের দিন কেবল একুশে; বিজয় দিবস গর্বের শুভেচ্ছা — অফার ছাড়া (NEXUS-এর পর্যালোচনা R3)
         $this->assertStringContainsString('শ্রদ্ধায়', (string) MailTemplate::query()->where('key', 'fest_ekushe')->value('body'));
         $victory = (string) MailTemplate::query()->where('key', 'fest_victory')->value('body');
