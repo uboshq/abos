@@ -3,7 +3,7 @@
     অথচ মিলে যাওয়াটাই স্বাভাবিক অবস্থা।
 --}}
 @if ($count->matches())
-    <span class="text-(--color-success)" aria-label="{{ __('accounts::message.count_matches') }}">✓</span>
+    <span class="text-(--color-success)" aria-label="{{ __('accounts::message.count_matches') }}" role="img">✓</span>
 @else
     <span class="num font-semibold text-(--color-danger)">
         {{ $count->isSurplus() ? '+' : '' }}{{ \App\Core\Support\Money::format($count->difference) }}

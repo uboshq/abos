@@ -22,7 +22,7 @@
             </label>
 
             <label class="block">
-                <span class="{{ $label }}">{{ __('customer::binding.or_area') }}<span class="ms-1 inline-block align-middle" title="{{ __('customer::binding.area_hint') }}" aria-label="{{ __('customer::binding.area_hint') }}" tabindex="0"><x-ui.icon name="info" :size="14" /></span></span>
+                <span class="{{ $label }}">{{ __('customer::binding.or_area') }}<span class="ms-1 inline-block align-middle" title="{{ __('customer::binding.area_hint') }}" aria-label="{{ __('customer::binding.area_hint') }}" tabindex="0" role="img"><x-ui.icon name="info" :size="14" /></span></span>
                 <select name="location_id" class="{{ $field }}">
                     <option value="">—</option>
                     @foreach ($areas as $area)
