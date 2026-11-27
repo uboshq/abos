@@ -625,6 +625,15 @@ export default function directSale({
             return '';
         },
 
+        /* 🚚 খরচের টাইলের ছোট লেখা (v2) */
+        get transportTileSub() {
+            return this.vehicleText || String(texts.cardNothing ?? '');
+        },
+
+        get noteTileText() {
+            return this.noteText || String(texts.cardNothing ?? '');
+        },
+
         get confirmLine() {
             return this.confirmProblem || String(texts.confirm?.ready ?? '');
         },
@@ -1099,6 +1108,20 @@ export default function directSale({
         },
 
         /** ⭐ পরিমাণের সারিতে Enter = কার্টে দিন — কেবল ঘর থেকে, বোতাম থেকে নয় (মালিক, ২৬ নভেম্বর ২০২৬) */
+        /**
+         * ⛔ Enter কখনো ফর্ম জমা দেয় না (২৮ নভেম্বর ২০২৬)। ফর্মের প্রথম জমা-বোতাম "খসড়া রাখুন", তাই সাধারণ ঘরে Enter
+         * চাপলে ব্রাউজার নিজে ঐ বোতাম চাপত — কার্টে পণ্য থাকলে প্রশ্ন ছাড়াই খসড়া সেভ হত (Mac-এর পরীক্ষার কপিতে ধরা)।
+         * ⓘ কেবল ব্রাউজারের নিজের জমা থামে; ঘরের নিজের Enter-কাজ (বাছাই, কার্টে যোগ) আগেই চলে গেছে, ঘটনা থামে না।
+         * নিশ্চিত = বোতাম চাপা বা F10; খসড়া = নিজের বোতাম। বোতাম, চেকবক্স আর মন্তব্যের লম্বা ঘর ছোঁয়া হয় না।
+         */
+        stopEnterSubmit(e) {
+            const t = e && e.target;
+            if (! t) return;
+            const type = String(t.type || '').toLowerCase();
+            const plainInput = t.tagName === 'INPUT' && ! ['submit', 'button', 'checkbox', 'radio', 'reset', 'image'].includes(type);
+            if (plainInput || t.tagName === 'SELECT') e.preventDefault();
+        },
+
         enterAdds(e) {
             const t = e.target;
 
@@ -3292,7 +3315,9 @@ export default function directSale({
         get creditUsedPct() {
             const limit = Number(this.customer.limit) || 0;
             if (limit <= 0) return 0;
-            const pct = Math.round(((limit - this.creditLeft) / limit) * 100);
+            const raw = ((limit - this.creditLeft) / limit) * 100;
+            // ⓘ ১০%-এর নিচে এক দশমিক — ০.৫% কে "১%" দেখালে সংখ্যাটা মিথ্যা বলে (abos-82-এর হাতে মেলানো, ২৮ নভেম্বর)
+            const pct = raw < 10 ? Math.round(raw * 10) / 10 : Math.round(raw);
             return pct < 0 ? 0 : (pct > 100 ? 100 : pct);
         },
 
@@ -3303,6 +3328,14 @@ export default function directSale({
         get creditBarTone() {
             const p = this.creditUsedPct;
             return p >= 90 ? 'is-over' : (p >= 70 ? 'is-warn' : '');
+        },
+
+        get customerDueText() {
+            return '৳' + this.money(Number(this.customer.due) || 0);
+        },
+
+        get creditLeftText() {
+            return '৳' + this.money(this.creditLeft > 0 ? this.creditLeft : 0);
         },
 
         get creditLimitText() {

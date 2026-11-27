@@ -60,7 +60,7 @@
                 </div>
 
                 @if ($show['sub_total'])
-                    <x-sales::panel-row :label="__('sales::field.sub_total_no_vat')" data-row="sub" tone="w">
+                    <x-sales::panel-row :label="($abosLook ?? false) ? __('sales::field.v2_sub_total') : __('sales::field.sub_total_no_vat')" data-row="sub" tone="w">
                         <span class="num" x-text="'৳' + money(subTotal)"></span>
                     </x-sales::panel-row>
                 @endif
@@ -89,7 +89,7 @@
                     **টাকা** পাঠায়, শতাংশ নয়। পর্দা হিসাব করে, সার্ভার
                     আগের মতোই টাকা পায় — উপহারের সাথে একই কৌশল।
                 --}}
-                <x-sales::panel-row :label="__('sales::field.discount_amount')" data-row="disc" tone="l">
+                <x-sales::panel-row :label="($abosLook ?? false) ? __('sales::field.v2_bill_discount') : __('sales::field.discount_amount')" data-row="disc" tone="l">
                     <span class="flex flex-1 items-center gap-2">
                         <input type="text" inputmode="decimal" x-model="discountInput"
                                placeholder="{{ __('sales::field.amount_or_pct') }}"
@@ -294,7 +294,7 @@
                     </x-sales::panel-row>
                 </div>
 
-                <x-sales::panel-row :label="__('sales::field.net_payable')" data-row="pay" strong tone="net">
+                <x-sales::panel-row :label="($abosLook ?? false) ? __('sales::field.v2_total_payable') : __('sales::field.net_payable')" data-row="pay" strong tone="net">
                     <span class="num text-sm" x-text="'৳' + money(netPayable)"></span>
                 </x-sales::panel-row>
 
@@ -324,7 +324,7 @@
                     @endif
                 @endif
 
-                <x-sales::panel-row :label="__('sales::field.invoice_due')" data-row="bal" strong tone="due">
+                <x-sales::panel-row :label="($abosLook ?? false) ? __('sales::field.v2_bill_left') : __('sales::field.invoice_due')" data-row="bal" strong tone="due">
                     <span class="num" x-text="'৳' + money(invoiceDue)"></span>
                 </x-sales::panel-row>
 
@@ -410,7 +410,7 @@
                     <span class="text-2xs font-semibold uppercase tracking-wide"
                           x-text="outstanding < 0
                             ? @js(__('sales::field.advance'))
-                            : @js(__('sales::field.due'))"></span>
+                            : @js(($abosLook ?? false) ? __('sales::field.total_owed') : __('sales::field.due'))"></span>
 
                     <span class="num text-sm font-bold"
                           x-text="'৳' + money($abs(outstanding))"></span>
@@ -446,7 +446,8 @@
                         </div>
                     </template>
 
-                    <div class="ds-limit flex items-center justify-between gap-2">
+                    {{-- ABOS-এ সীমা থাকলে "আরো ৳…" দাগের পাশেই (নমুনা) — এই সারি কেবল সীমা না থাকলে ("বাকি বন্ধ") --}}
+                    <div class="ds-limit flex items-center justify-between gap-2" @if (($abosLook ?? false)) x-show="! hasCreditLimit" @endif>
                         <span class="text-(--color-ink-muted)">
                             {{ __('sales::field.credit_left') }}
                         </span>
@@ -473,7 +474,7 @@
                             <div class="ds-cbar" data-credit-bar>
                                 <div class="ds-cbar-l">
                                     <span>{{ __('sales::field.credit_limit') }} <b class="num" x-text="creditLimitText"></b></span>
-                                    <span><b class="num" x-text="creditUsedPct + '%'"></b> {{ __('sales::field.credit_used') }}</span>
+                                    <span><b class="num" x-text="creditUsedPct + '%'"></b> {{ __('sales::field.credit_used') }} · {{ __('sales::field.credit_left_more') }} <span class="num" x-text="creditLeftText"></span></span>
                                 </div>
                                 <div class="ds-cbar-t" role="meter" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="creditUsedPct"
                                      aria-label="{{ __('sales::field.credit_used') }}"><i :style="creditBarStyle" :class="creditBarTone"></i></div>
@@ -528,32 +529,26 @@
                  (মালিক, ২৬ নভেম্বর ২০২৬: নিচের চার কার্ডের বদলে) --}}
             @if (($abosLook ?? false))
                 {{-- ⭐ গাড়ি ও ভাড়া আলাদা আলাদা লাইনে — গাড়ি · চালক · পরিবহন · ভাড়া আর কে দেবে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
-                <div class="ds-details" data-counter-details>
+                {{-- 🚚 v2 (নমুনা ২৭ নভেম্বর): "মাল পৌঁছানো ও খরচ" — রঙিন টাইল, প্রতিটা চাপলে নিজের পপআপ (আগের লাইনগুলোর বদলে) --}}
+                <div class="ds-cost" data-counter-details>
+                    <div class="ds-ch">{{ __("sales::field.cost_card_title") }} <small>{{ __("sales::field.cost_card_sub") }}</small></div>
+                    <button type="button" @click="openPanel('delivery')" class="ds-ct ds-ct-cyan" data-tile="delivery">
+                        <span class="ds-ci"><x-ui.licon name="package" :size="18" /></span>
+                        <span class="ds-cn">{{ __("sales::field.btn_delivery") }}<small x-text="deliveryModeLabel"></small></span>
+                        <span class="ds-cv"><small class="ds-st">F7</small></span>
+                    </button>
                     @if ($show['transport'])
-                        <button type="button" @click="openPanel('transport')" class="ds-sec-h" data-transport-line>
-                            <span>{{ __('sales::field.btn_transport') }}</span><span>✎ F4</span>
-                        </button>
-                        <div class="ds-veh-none" x-show="! transportLine" x-cloak>{{ __('sales::field.card_nothing') }}</div>
-                        <div x-show="transportLine" x-cloak>
-                            <div class="ds-tr">
-                                <span>{{ __('sales::field.det_vehicle') }}</span><span x-text="vehicleText || '—'"></span>
-                                <span>{{ __('sales::field.det_driver') }}</span><span x-text="driverText || '—'"></span>
-                                <span x-show="carrierText">{{ __('sales::field.det_carrier') }}</span><span x-show="carrierText" x-text="carrierText"></span>
-                            </div>
-                            <div class="ds-fare">
-                                <span>{{ __('sales::field.det_fare') }}<i class="ds-who-pays" x-show="farePaidBy" x-text="farePayText"></i></span>
-                                <b class="num" x-text="fareText"></b>
-                            </div>
-                        </div>
+                    <button type="button" @click="openPanel('transport')" class="ds-ct ds-ct-amber" data-tile="transport" data-transport-line>
+                        <span class="ds-ci"><x-ui.licon name="truck" :size="18" /></span>
+                        <span class="ds-cn">{{ __("sales::field.btn_transport") }}<small x-text="transportTileSub"></small></span>
+                        <span class="ds-cv"><b class="num" x-text="fareText"></b><small class="ds-st" x-show="farePaidBy" x-text="farePayText"></small></span>
+                    </button>
                     @endif
-                    <div class="ds-mini">
-                        <button type="button" @click="openPanel('delivery')" class="ds-det">
-                            <b>{{ __('sales::field.btn_delivery') }}</b><span x-text="deliveryModeLabel"></span>
-                        </button>
-                        <button type="button" @click="openPanel('note')" class="ds-det">
-                            <b>{{ __('sales::field.note') }}</b><span :title="noteText" x-text="noteText || @js(__('sales::field.card_nothing'))"></span>
-                        </button>
-                    </div>
+                    <button type="button" @click="openPanel('note')" class="ds-ct ds-ct-blue ds-ct-wide" data-tile="note">
+                        <span class="ds-ci"><x-ui.licon name="file-text" :size="18" /></span>
+                        <span class="ds-cn">{{ __("sales::field.note") }}<small>{{ __("sales::field.note_prints") }}</small></span>
+                        <span class="ds-cv ds-cv-text" :title="noteText" x-text="noteTileText"></span>
+                    </button>
                 </div>
             @endif
 

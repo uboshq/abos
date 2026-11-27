@@ -224,6 +224,7 @@
                   'lastRateFull' => __('sales::field.last_rate_full'),
                   'lastRateNone' => __('sales::field.last_rate_none'),
                   'lotsShort' => __('sales::field.lots_short'),
+                  'cardNothing' => __('sales::field.card_nothing'),
                   'confirm' => [
                       'ready' => __('sales::message.confirm_ready'),
                       'viewOnly' => __('sales::message.confirm_view_only'),
@@ -329,6 +330,8 @@
               করে, আর কোনটা কখন তা ঘরটাই ঠিক করে।**
           --}}
           @keydown.window.enter="! panel && picked && addToCart()"
+          {{-- ⛔ Enter কখনো ফর্ম জমা দেয় না — প্রথম জমা-বোতাম "খসড়া রাখুন", তাই সাধারণ ঘরে Enter নীরবে খসড়া সেভ করত (২৮ নভেম্বর ২০২৬) --}}
+          @keydown.enter="stopEnterSubmit($event)"
           @keydown.window.f10.prevent="canConfirm && $press($refs.confirm)"
           @keydown.window.escape="escape()"
 
