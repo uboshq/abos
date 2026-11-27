@@ -289,12 +289,41 @@ final class MergedModulesTest extends TestCase
 
         $this->assertSame(MenuLook::data()['order']['accounts'], $kinds, '⛔ নয়টা ভাগ মালিকের ক্রমে নয়, বা একটা ভাগ দুইবার');
 
-        foreach (['sales' => ['customers', 'credit', 'promo'], 'purchase' => ['suppliers']] as $host => $guestKinds) {
-            $rows = MenuLook::arrange($host, collect($this->entry($this->menu(), $host)['groups'])->flatten(1)->values()->all());
-            $tail = array_values(array_unique(array_filter(array_map(fn (array $l) => $l['kind'], array_slice(MenuLook::forRows($host, $rows), -40)),
-                fn (?string $k) => in_array($k, $guestKinds, true))));
-            $this->assertSame($guestKinds, $tail, "⛔ {$host}: অতিথিদের দল শেষে, এই ক্রমে নয়");
+        /*
+         * ⭐ বিক্রয়, ক্রয় আর মজুদ আন্তর্জাতিক ধারায় (মালিক, ২৭ নভেম্বর ২০২৬; মালিকের-ফাইল/মেনুর-ক্রম-পরিকল্পনা-২৭-নভেম্বর.html) — মূল তালিকা
+         *   (গ্রাহক, সরবরাহকারী) শুরুর ঠিক পরে, রিপোর্ট সবার শেষে; আগের "অতিথিরা শেষে" দাবিটা এখানেই বদলেছে। প্রতিটা দল একবার, এই ক্রমে।
+         */
+        $owners = [
+            'sales' => ['start', 'customers', 'price', 'promo', 'crm', 'quote', 'orders', 'direct', 'deliver', 'bill', 'returns', 'credit', 'target', 'control', 'reports'],
+            'purchase' => ['start', 'suppliers', 'source', 'papers', 'payable', 'settle', 'control', 'reports'],
+            'inventory' => ['start', 'master', 'stock', 'inspect', 'control', 'reports'],
+        ];
+        foreach ($owners as $host => $order) {
+            $this->assertSame($order, MenuLook::data()['order'][$host], "⛔ {$host}: মালিকের ক্রম বদলেছে");
+
+            $rows = MenuLook::arrange($host, collect($this->entry($this->menu(), $host)['groups'])->flatten(1)->values()->all(), true);
+            $kinds = [];
+            foreach (MenuLook::forRows($host, $rows) as $look) {
+                $this->assertNotNull($look['kind'], "⛔ {$host}: একটা সারি কোনো দলে নেই");
+                if ($look['starts']) {
+                    $kinds[] = $look['kind'];
+                }
+            }
+            // ⓘ সুইচ বন্ধ থাকলে কোনো দল না-ও থাকতে পারে — যা আছে তা এই ক্রমে, একবার করে; মূল তালিকা শুরুর ঠিক পরে, রিপোর্ট শেষে
+            $this->assertSame(array_values(array_intersect($order, $kinds)), $kinds, "⛔ {$host}: দলগুলো মালিকের ক্রমে নয়, বা একটা দল দুইবার");
+            $this->assertSame([$order[0], $order[1]], array_slice($kinds, 0, 2), "⛔ {$host}: মূল তালিকা শুরুর ঠিক পরে নয়");
+            $this->assertSame('reports', end($kinds), "⛔ {$host}: রিপোর্ট সবার শেষে নয়");
         }
+
+        // ⓘ যে সারিগুলো জায়গা বদলেছে, সেগুলো নিজের নতুন দলে
+        $kindOf = fn (string $host, string $key): ?string => MenuLook::data()['modules'][$host][$key][0] ?? null;
+        $this->assertSame('direct', $kindOf('sales', 'sales::menu.pos'), '⛔ কাউন্টার সরাসরি বিক্রয়ের পাশে নয়');
+        $this->assertSame('credit', $kindOf('sales', 'sales::menu.deposit_match'), '⛔ জমা মেলানো এখনো লক্ষ্যের দলে');
+        $this->assertSame('credit', $kindOf('sales', 'customer::menu.due_list'), '⛔ বকেয়া তালিকা বাকির দলে নয়');
+        $this->assertSame('payable', $kindOf('purchase', 'supplier::menu.payable_list'), '⛔ প্রদেয় তালিকা দেনার দলে নয়');
+        $this->assertSame('payable', $kindOf('purchase', 'purchase::due.title'), '⛔ পরিশোধের সূচি দেনার দলে নয়');
+        $this->assertSame('reports', $kindOf('inventory', 'inventory::menu.stock_age'), '⛔ মজুদের দুইটা রিপোর্টের দল');
+        $this->assertSame('inspect', $kindOf('inventory', 'inventory::menu.adjust'), '⛔ গণনা ও সমন্বয় গণনার দলে নয়');
     }
 
     /**
