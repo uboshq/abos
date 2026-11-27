@@ -372,6 +372,7 @@ return [
     'discount_reason' => 'ছাড়ের কারণ',
     'discount_reason_hint' => 'যেমন: পুরনো ক্রেতা, একসাথে বেশি মাল — বিলে ছাপা হবে',
     'lots_short' => 'টা লট',
+    'swap_product' => 'বদলান',
     'last_rate' => 'শেষ দর',
     'last_rate_full' => 'এই ক্রেতার কাছে শেষ বিক্রির দর',
     'last_rate_none' => 'এই ক্রেতার কাছে এই পণ্য আগে বিক্রি হয়নি',

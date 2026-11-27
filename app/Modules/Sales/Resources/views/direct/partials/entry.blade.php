@@ -161,6 +161,16 @@
                                                  px-2 py-0.5 text-2xs font-medium text-(--color-ink-muted)"
                                           x-text="(picked && picked.code)"></span>
 
+                                    {{-- 🔍 অন্য পণ্য — নমুনার "বদলান" (v2 A3)। ⚠️ নমুনায় F3, কিন্তু এই
+                                         পাতায় F3 আগে থেকেই "দাম দেখা" — কর্মীদের হাতে বসা চাবি তাই বদলানো হয়নি। --}}
+                                    @if (($abosLook ?? false))
+                                    <button type="button" x-show="picked && ! viewOnly" x-cloak @click="openPicker()"
+                                            class="ds-pswap" data-picked-swap>
+                                        <x-ui.licon name="search" :size="14" />
+                                        <span>{{ __('sales::field.swap_product') }}</span>
+                                    </button>
+                                    @endif
+
                                     {{-- ⭐ লট বাছাই — পণ্যের নামের পাশে, মালিকের
                                          নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
 
