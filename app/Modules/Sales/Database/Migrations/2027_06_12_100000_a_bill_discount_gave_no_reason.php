@@ -15,18 +15,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('delivery_challans', function (Blueprint $table) {
+        Schema::table('sal_challans', function (Blueprint $table) {
             $table->string('discount_reason', 300)->nullable()->after('discount_amount');
         });
 
-        Schema::table('sales_invoices', function (Blueprint $table) {
+        Schema::table('sal_invoices', function (Blueprint $table) {
             $table->string('discount_reason', 300)->nullable()->after('bill_discount');
         });
     }
 
     public function down(): void
     {
-        Schema::table('sales_invoices', fn (Blueprint $table) => $table->dropColumn('discount_reason'));
-        Schema::table('delivery_challans', fn (Blueprint $table) => $table->dropColumn('discount_reason'));
+        Schema::table('sal_invoices', fn (Blueprint $table) => $table->dropColumn('discount_reason'));
+        Schema::table('sal_challans', fn (Blueprint $table) => $table->dropColumn('discount_reason'));
     }
 };
