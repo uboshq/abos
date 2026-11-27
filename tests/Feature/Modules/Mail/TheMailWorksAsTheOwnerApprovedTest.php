@@ -117,6 +117,9 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->get('/mail')->assertOk();
         MailFestival::query()->where('key', 'eid_ul_fitr')->update(['on_date' => null]);
         MailFestival::query()->where('key', 'christmas')->update(['on_date' => null]);
+        // ⓘ ক্রনে কেউ ঢুকে থাকে না — ঢোকা থাকলে নিজের কাজের খবর নিজেকে যায় না ([[NotificationService::send]] evenToSelf)
+        $this->app['auth']->forgetGuards();
+        CompanyContext::clear();
 
         $this->artisan('abos:mail-daily')->assertSuccessful();
         $this->artisan('abos:mail-daily')->assertSuccessful();
