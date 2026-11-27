@@ -67,6 +67,15 @@ parameters:
         - database/migrations
         - app/Modules/*/Database/Migrations
 
+    # ── মডেলের `casts()` পড়া (২৮ নভেম্বর ২০২৬, abos-b1) ────────────────
+    # larastan-এর নিজের মান false: তখন সে `casts(): array`-এর কেবল ঘোষিত
+    # ধরন দেখে — খালি `array`, তাই ভিতরের 'date'/'decimal'/'boolean' কিছুই
+    # পড়ে না, আর কলামের ধরন আসে কেবল মাইগ্রেশন থেকে (date = string)।
+    # ফল: `$fy->starts_on->toDateString()`-এ "Cannot call method on string" —
+    # ৩৪৮ + ১০৯ + … মিথ্যা অভিযোগ, আর আসল ভুল তার ভিড়ে হারায়।
+    # true করলে সে মেথডের দেহ পড়ে আসল cast নেয় — যাচাই ঢিলা নয়, বরং আসল ধরন।
+    parseModelCastsMethod: true
+
     # ── কোন PHP সংস্করণ ধরে বিশ্লেষণ ───────────────────────────────────
     # composer.json বলে `"php": "^8.3"`, CI চালায় ৮.৩, আর এই লেখার দিনে
     # ডেভেলপারের মেশিনে চলছে ৮.৫.১০। ফাঁকটা আসল: ৮.৫-এ লেখা কোনো সিনট্যাক্স
