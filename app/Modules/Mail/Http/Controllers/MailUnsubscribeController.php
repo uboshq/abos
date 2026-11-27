@@ -21,6 +21,12 @@ use Illuminate\View\View;
  */
 final class MailUnsubscribeController extends Controller
 {
+    /** ⓘ এক রুট, দুই পথ — GET পাতা দেখায়, POST বন্ধ করে */
+    public function __invoke(Request $request, MailOptOuts $optOuts): View|Response
+    {
+        return $request->isMethod('POST') ? $this->stop($request, $optOuts) : $this->show($request);
+    }
+
     public function show(Request $request): View
     {
         return view('mail::unsubscribe', ['email' => (string) $request->query('e'), 'done' => false, 'action' => $request->fullUrl()]);
