@@ -235,6 +235,24 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
             ->assertSessionHasErrors('discount_reason');
     }
 
+    /**
+     * ⭐ এই ক্রেতার শেষ দর — নতুন কাউন্টারের নীল বাক্স ([[LastSaleRates]]): শেষ পাকা বিলের দর, পণ্য ধরে; ⛔ না-থাকা ক্রেতা ৪০৪।
+     */
+    public function test_the_counter_knows_this_customers_last_rate(): void
+    {
+        $biscuit = $this->product('DVR-LAST', '150', null, '20', '100');
+
+        $this->sell([$this->line($biscuit, '2', '150')])->assertSessionHasNoErrors();
+        $this->sell([$this->line($biscuit, '3', '162.5')])->assertSessionHasNoErrors();
+        $last = $this->lastInvoice();
+
+        $rates = $this->getJson(route('sales.direct.last_rates', ['customer_id' => $this->dealer->id]))->assertOk()->json('rates');
+        $this->assertSame('162.50', $rates[(string) $biscuit->id]['rate'] ?? null, '⛔ শেষ বিলের দর আসেনি — আগেরটা বা কিছুই না।');
+        $this->assertSame((string) $last->document_no, $rates[(string) $biscuit->id]['invoiceNo']);
+
+        $this->getJson(route('sales.direct.last_rates', ['customer_id' => 999999]))->assertNotFound();
+    }
+
     // ══ গ · সারির ছাড় + বিলের ছাড় + ভ্যাট (দামের বাইরে) ══════════════════
 
     /**
