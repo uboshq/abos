@@ -164,6 +164,11 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->assertSame(19, MailFestival::query()->count());
         $this->assertTrue(MailFestival::query()->where('key', 'victory')->value('quiet'), '⛔ বিজয় দিবস শ্রদ্ধার দিন — অফার নয়।');
         $this->assertGreaterThanOrEqual(13 + 19, MailTemplate::query()->count());
+        // ⛔ শোকের দিন কেবল একুশে; বিজয় দিবস গর্বের শুভেচ্ছা — অফার ছাড়া (NEXUS-এর পর্যালোচনা R3)
+        $this->assertStringContainsString('শ্রদ্ধায়', (string) MailTemplate::query()->where('key', 'fest_ekushe')->value('body'));
+        $victory = (string) MailTemplate::query()->where('key', 'fest_victory')->value('body');
+        $this->assertStringNotContainsString('শ্রদ্ধায় স্মরণ', $victory, '⛔ বিজয় দিবসের শুভেচ্ছা শোকের সুরে।');
+        $this->assertStringContainsString('বিজয়', $victory);
 
         $j = $this->getJson('/mail/compose?to=karim@example.com')->assertOk()->json();
         $due = collect($j['templates'])->firstWhere('name', 'বকেয়ার বিনীত স্মরণ');

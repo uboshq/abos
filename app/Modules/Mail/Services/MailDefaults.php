@@ -37,6 +37,12 @@ final class MailDefaults
         ['may_day', 'মে দিবস', 'মহান মে দিবস', 'শ্রমজীবী মানুষের প্রতি শ্রদ্ধা', '1 মে', ['#8a0e12', '#c40d16', '#ffffff'], '✊', true, '05-01'],
     ];
 
+    /**
+     * ⛔ শোকের দিন — কেবল অমর একুশে (NEXUS-এর পর্যালোচনা R3, ২৭ নভেম্বর)। এদিনে লেখা সংযত, "শুভ" নয়, অফার নয়।
+     * ⓘ বাকি `quiet` দিন (স্বাধীনতা, বিজয়, মে দিবস) = অফার নয়, কিন্তু গর্বের শুভেচ্ছা।
+     */
+    public const MOURNING = ['ekushe'];
+
     /** [category, key, name, colour, subject, body, button, attach_paper] */
     public const TEMPLATES = [
         ['collect', 'due_reminder', 'বকেয়ার বিনীত স্মরণ', '#1a3fd0', 'আপনার হিসাবে বাকি {বাকি টাকা}',
@@ -95,9 +101,9 @@ final class MailDefaults
                     MailTemplate::query()->create([
                         'category' => 'festival', 'key' => 'fest_'.$f->key, 'name' => $f->name, 'colour' => $f->colours[1] ?? null,
                         'subject' => $f->greeting, 'format' => 'designed', 'locale' => 'bn',
-                        'body' => $f->quiet
+                        'body' => in_array($f->key, self::MOURNING, true)
                             ? "প্রিয় {গ্রাহকের নাম},\nএই দিনে আমরা গভীর শ্রদ্ধায় স্মরণ করি।"
-                            : "প্রিয় {গ্রাহকের নাম},\n".$f->line.'।',
+                            : "প্রিয় {গ্রাহকের নাম},\n".$f->greeting.' — '.$f->line.'।',
                         'auto' => ['on' => false, 'rule' => 'festival', 'at' => '09:00'],
                     ]);
                 }
