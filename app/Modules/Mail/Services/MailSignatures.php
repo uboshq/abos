@@ -232,7 +232,7 @@ final class MailSignatures
             : '<div style="width:'.$w.'px;height:'.$h.'px;border-radius:'.$radius.';background:'.$c1.';color:#fff;font:700 '.max(14, (int) ($w / 2.6)).'px/'.$h.'px Segoe UI,Arial,Nirmala UI,Noto Sans Bengali,Vrinda,sans-serif;text-align:center;'.$ring.'">'.$e('initials').'</div>';
         // ⓘ লোগো না থাকলে (বা SVG হলে) ছবির ঘরই বাদ — ফাঁকা src মানে ভাঙা ছবি; তখন শুধু কোম্পানির নাম
         $logo = $this->logoBytes() !== null
-            ? '<img src="'.self::LOGO.'" alt="'.$e('company').'" height="22" style="height:22px;vertical-align:middle;border:0">'
+            ? '<img src="'.self::LOGO.'" alt="'.$e('company').'" height="22" style="height:22px;vertical-align:middle;border:0;background:#ffffff;padding:3px;border-radius:5px">'
             : '';
         $brand = '<span style="font:800 15px Segoe UI,Arial,Nirmala UI,Noto Sans Bengali,Vrinda,sans-serif;color:'.$c1.'">'.$e('company').'</span>';
         $mark = $logo.' '.$brand;

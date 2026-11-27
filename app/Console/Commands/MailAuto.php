@@ -73,6 +73,12 @@ final class MailAuto extends Command
                             continue;
                         }
 
+                        // ⓘ ধীরে ধীরে — মিনিটে 30টার বেশি নয় (NEXUS-এর পর্যালোচনা S1): মেইল সার্ভার একসাথে অনেক মেইলকে স্প্যাম ধরে।
+                        //   সময় কোম্পানির ঘড়িতে (config app.timezone = Asia/Dhaka)।
+                        if ($sent > 0) {
+                            \Illuminate\Support\Sleep::for(2)->seconds();
+                        }
+
                         try {
                             $id = $server->send($box, ['to' => [(string) $c->email], 'subject' => $mail['subject'] ?: $t->name,
                                 'html' => MailController::safe($mail['html'], true), 'fromName' => $box->sender_name ?: $company]);
