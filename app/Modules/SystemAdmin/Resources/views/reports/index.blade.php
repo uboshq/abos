@@ -16,8 +16,9 @@
         ['key' => 'report', 'label' => __('system_admin::schedule.report'), 'render' => fn ($s) => new \Illuminate\Support\HtmlString(
             '<span class="font-medium text-(--color-ink)">'.e($reportTitles[$s->report_key] ?? $s->report_key).'</span>'
             .'<span class="block text-2xs uppercase text-(--color-ink-muted)">'.e((string) $s->format).'</span>')],
-        ['key' => 'frequency', 'label' => __('system_admin::schedule.frequency'), 'render' => fn ($s) => __('system_admin::schedule.freq.'.$s->frequency).' · '
-            .($s->at_time ? \Illuminate\Support\Carbon::createFromFormat('H:i', substr((string) $s->at_time, 0, 5))->format(\App\Core\Support\DateFormat::time()) : '—')],
+        ['key' => 'frequency', 'label' => __('system_admin::schedule.frequency'), 'render' => fn ($s) => new \Illuminate\Support\HtmlString(e(__('system_admin::schedule.freq.'.$s->frequency)).' · '
+            // ⓘ কোম্পানির সময়ের ছকে, অঙ্কের ঘরে (num) — পুরনো সারির মতোই (Mac run srt of 05d74158c)
+            .'<span class="num">'.e($s->at_time ? \Illuminate\Support\Carbon::createFromFormat('H:i', substr((string) $s->at_time, 0, 5))->format(\App\Core\Support\DateFormat::time()) : '—').'</span>')],
         ['key' => 'next_run', 'label' => __('system_admin::schedule.next_run'), 'render' => fn ($s) => $s->next_run_at ? \App\Core\Support\DateFormat::spoken($s->next_run_at) : '—'],
         ['key' => 'status', 'label' => __('system_admin::schedule.status_col'), 'render' => fn ($s) => new \Illuminate\Support\HtmlString(
             '<span class="rounded-(--radius-badge) px-2 py-0.5 text-2xs '.($s->is_active ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' : 'bg-(--color-badge-draft-bg) text-(--color-badge-draft-ink)').'">'
