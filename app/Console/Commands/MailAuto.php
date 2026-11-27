@@ -63,7 +63,22 @@ final class MailAuto extends Command
                             continue;
                         }
 
+                        // ⛔ অফারের মেইল বন্ধ রাখা ঠিকানায় অফার/উৎসবের মেইল নয় (NEXUS-এর পর্যালোচনা R2; RFC 8058)
+                        $marketing = \App\Modules\Mail\Services\MailOptOuts::isMarketing($t);
+                        $optOuts = app(\App\Modules\Mail\Services\MailOptOuts::class);
+
+                        if ($marketing && $optOuts->stopped((string) $c->email)) {
+                            continue;
+                        }
+
                         $mail = $templates->render($t, $fields->forCustomer($c) + $fields->values(new \App\Models\User(['name' => $company]), null), $company);
+                        $headers = [];
+
+                        if ($marketing) {
+                            $link = $optOuts->link((string) $c->email, (string) $t->key);
+                            $mail['html'] .= $optOuts->footer($link);
+                            $headers = $optOuts->headers($link);
+                        }
 
                         // ⛔ ভরেনি এমন ঘর থাকলে এই গ্রাহককে যায় না — বাদ পড়ার কারণ খাতায় নয়, লগে (NEXUS-এর পর্যালোচনা R1)
                         if (($gaps = MailFields::missing($mail['subject'], $mail['html'])) !== []) {
@@ -81,7 +96,7 @@ final class MailAuto extends Command
 
                         try {
                             $id = $server->send($box, ['to' => [(string) $c->email], 'subject' => $mail['subject'] ?: $t->name,
-                                'html' => MailController::safe($mail['html'], true), 'fromName' => $box->sender_name ?: $company]);
+                                'html' => MailController::safe($mail['html'], true), 'fromName' => $box->sender_name ?: $company, 'headers' => $headers]);
                             $sends->record($box, null, ['to' => [mb_strtolower((string) $c->email)], 'subject' => $mail['subject'] ?: $t->name,
                                 'messageId' => $id, 'template_id' => $t->id, 'auto' => true]);
                             $templates->used($t);

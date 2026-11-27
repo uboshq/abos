@@ -337,6 +337,50 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->assertTrue(MailSend::query()->where('auto', true)->where('template_id', $tpl->id)->exists());
     }
 
+    public function test_offer_mail_carries_one_click_unsubscribe_and_a_stopped_address_gets_no_more(): void
+    {
+        // ⭐ NEXUS-এর পর্যালোচনা R2 (Gmail/Yahoo ২০২৪, RFC 8058)
+        Customer::query()->update(['email' => null]);
+        $customer = Customer::query()->firstOrFail();
+        $customer->forceFill(['email' => 'karim@example.com', 'is_active' => true])->save();
+        $box = $this->box(null, MailAccount::SHARED, 'info@adi.test');
+        $this->as($this->clerk);
+        $this->get('/mail')->assertOk();
+
+        CompanyContext::forCompany($this->co->id, function () use ($box) {
+            app(SettingsService::class)->set('mail.auto_from', $box->public_id);
+            MailFestival::query()->where('key', 'victory')->update(['on_date' => now()->toDateString()]);
+        });
+        MailTemplate::query()->where('key', 'fest_victory')->firstOrFail()->forceFill(['auto' => ['on' => true, 'rule' => 'festival', 'at' => '09:00']])->save();
+        $this->travelTo(now()->setTime(9, 5));
+        $this->artisan('abos:mail-auto')->assertSuccessful();
+
+        $mail = collect($this->fake->sent)->firstWhere('to', ['karim@example.com']);
+        $this->assertNotNull($mail, '⛔ উৎসবের মেইল যায়নি।');
+        $this->assertSame('List-Unsubscribe=One-Click', $mail['headers']['List-Unsubscribe-Post'] ?? null, '⛔ এক চাপে বন্ধের header নেই।');
+        $this->assertMatchesRegularExpression('#^<https?://[^>]+/mail/stop\?[^>]*signature=[^>]+>$#', (string) ($mail['headers']['List-Unsubscribe'] ?? ''));
+        $this->assertStringContainsString('/mail/stop?', $mail['html'], '⛔ মেইলের নিচে বন্ধের লিংক নেই।');
+        $link = html_entity_decode(trim((string) $mail['headers']['List-Unsubscribe'], '<>'));
+
+        // ⓘ খুললে বন্ধ হয় না — কেবল বোতাম; ⛔ সই ছাড়া লিংক চলে না
+        $this->app['auth']->forgetGuards();
+        $this->get($link)->assertOk()->assertSee(__('mail::field.unsubscribe.button'));
+        $this->assertSame(0, \App\Modules\Mail\Models\MailOptOut::query()->withoutGlobalScopes()->count());
+        $this->post(preg_replace('/signature=[0-9a-f]+/', 'signature=bad', $link), ['List-Unsubscribe' => 'One-Click'])->assertForbidden();
+
+        // ⭐ মেইল প্রোগ্রামের এক চাপ — কুকি ছাড়া POST
+        $this->post($link, ['List-Unsubscribe' => 'One-Click'])->assertOk();
+        $this->assertTrue(\App\Modules\Mail\Models\MailOptOut::query()->withoutGlobalScopes()->where('company_id', $this->co->id)->where('email', 'karim@example.com')->exists());
+
+        // ⛔ পরের উৎসবে আর যায় না; ⓘ লেনদেনের মেইল (বকেয়ার স্মরণ) এই নিয়মের বাইরে
+        $this->fake->sent = [];
+        CompanyContext::forCompany($this->co->id, fn () => MailFestival::query()->where('key', 'christmas')->update(['on_date' => now()->toDateString()]));
+        MailTemplate::query()->where('key', 'fest_christmas')->firstOrFail()->forceFill(['auto' => ['on' => true, 'rule' => 'festival', 'at' => '09:00']])->save();
+        $this->artisan('abos:mail-auto')->assertSuccessful();
+        $this->assertNull(collect($this->fake->sent)->firstWhere('to', ['karim@example.com']), '⛔ বন্ধ করা ঠিকানায় আবার অফারের মেইল।');
+        $this->assertFalse(\App\Modules\Mail\Services\MailOptOuts::isMarketing(MailTemplate::query()->where('key', 'due_reminder')->first()));
+    }
+
     public function test_every_mail_page_opens(): void
     {
         $this->as($this->owner);

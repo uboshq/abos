@@ -252,6 +252,10 @@ final class ImapMailServer implements MailServer
         foreach (($mail['embeds'] ?? []) as $file) {
             $email->embed($file['bytes'], $file['cid'], $file['mime']);
         }
+        // ⓘ বাড়তি header — যেমন অফারের মেইলে RFC 8058-এর List-Unsubscribe ([[MailOptOuts]])
+        foreach (($mail['headers'] ?? []) as $name => $value) {
+            $email->getHeaders()->addTextHeader((string) $name, (string) $value);
+        }
         if (! empty($mail['inReplyTo'])) {
             $email->getHeaders()->addIdHeader('In-Reply-To', trim($mail['inReplyTo'], '<>'));
             $email->getHeaders()->addIdHeader('References', trim($mail['inReplyTo'], '<>'));

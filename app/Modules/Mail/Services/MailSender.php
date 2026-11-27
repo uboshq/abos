@@ -51,6 +51,18 @@ final class MailSender
             $embeds = array_merge($embeds, $this->signatures->embeds($user, $html));
         }
 
+        // ⭐ অফারের মেইল (উৎসব, অফার, দামের তালিকা) — নিচে "বন্ধ করুন" লিংক আর RFC 8058 header (NEXUS-এর পর্যালোচনা R2)
+        // ⓘ লিংক একজন প্রাপকের নামে হয় — একজনকে পাঠালে তবে বসে; অনেককে একসাথে পাঠানোর পথ নিজে থেকে পাঠানো ([[MailAuto]])
+        $template = ! empty($mail['template']) ? MailTemplate::query()->where('public_id', $mail['template'])->first() : null;
+        $headers = [];
+
+        if (MailOptOuts::isMarketing($template) && count($mail['to']) === 1 && empty($mail['cc']) && empty($mail['bcc'])) {
+            $optOuts = app(MailOptOuts::class);
+            $link = $optOuts->link((string) $mail['to'][0], (string) $template->key);
+            $html .= $optOuts->footer($link);
+            $headers = $optOuts->headers($link);
+        }
+
         $fromName = $box->kind === MailAccount::SHARED
             ? trim(($box->sender_with_person ? $user->name.' · ' : '').($box->sender_name ?: $box->boxTitle()))
             : (string) $user->name;
@@ -58,10 +70,8 @@ final class MailSender
         $id = $this->server->send($box, [
             'to' => $mail['to'], 'cc' => $mail['cc'] ?? [], 'bcc' => $mail['bcc'] ?? [],
             'subject' => $mail['subject'], 'html' => $html, 'inReplyTo' => $mail['inReplyTo'] ?? null,
-            'attachments' => $files, 'embeds' => $embeds, 'fromName' => $fromName,
+            'attachments' => $files, 'embeds' => $embeds, 'fromName' => $fromName, 'headers' => $headers,
         ]);
-
-        $template = ! empty($mail['template']) ? MailTemplate::query()->where('public_id', $mail['template'])->first() : null;
 
         if ($template) {
             $this->templates->used($template);
