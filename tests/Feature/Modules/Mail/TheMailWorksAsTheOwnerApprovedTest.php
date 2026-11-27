@@ -110,6 +110,24 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->assertSame([], MailFields::missing('{x} {অজানা}'));
     }
 
+    public function test_a_moon_festival_without_a_date_asks_the_admin_once_a_month(): void
+    {
+        // ⭐ NEXUS-এর পর্যালোচনা S2: ঈদের তারিখ না বসালে কিছুই যায় না — প্রশাসকের কাছে কাজ, মাসে একবার
+        $this->as($this->owner);
+        $this->get('/mail')->assertOk();
+        MailFestival::query()->where('key', 'eid_ul_fitr')->update(['on_date' => null]);
+        MailFestival::query()->where('key', 'christmas')->update(['on_date' => null]);
+
+        $this->artisan('abos:mail-daily')->assertSuccessful();
+        $this->artisan('abos:mail-daily')->assertSuccessful();
+
+        $asked = \App\Models\Notification::query()->withoutGlobalScopes()->where('type', 'mail.festival_date')->where('user_id', $this->owner->id)->get();
+        $this->assertTrue($asked->contains(fn ($n) => str_contains((string) $n->title, 'ঈদুল ফিতর')), '⛔ ঈদের তারিখ চাওয়া হয়নি।');
+        $this->assertFalse($asked->contains(fn ($n) => str_contains((string) $n->title, 'বড়দিন')), '⛔ নির্দিষ্ট তারিখের উৎসবেও তারিখ চাওয়া হলো।');
+        $this->assertSame(1, $asked->filter(fn ($n) => str_contains((string) $n->title, 'ঈদুল ফিতর'))->count(), '⛔ একই মাসে দুবার চাওয়া হলো।');
+        $this->assertSame(0, \App\Models\Notification::query()->withoutGlobalScopes()->where('type', 'mail.festival_date')->where('user_id', $this->clerk->id)->count(), '⛔ চাবি ছাড়া কর্মীকেও চাওয়া হলো।');
+    }
+
     public function test_white_text_on_a_template_colour_always_meets_contrast(): void
     {
         // ⛔ NEXUS-এর পর্যালোচনা S4: সবুজ #00ab3f-এ সাদা লেখা 2.9:1 — WCAG AA 4.5:1 চাই

@@ -37,9 +37,58 @@ final class MailDaily extends Command
             $this->backup($a);
         });
 
-        $this->info("expired {$expired}, resumed {$done['resumed']}, deleted {$done['deleted']}");
+        $asked = $this->askForMoonDates();
+
+        $this->info("expired {$expired}, resumed {$done['resumed']}, deleted {$done['deleted']}, moon dates asked {$asked}");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * ⭐ চাঁদের তারিখের উৎসব (ঈদ, রমজান, পূজা…) — তারিখ না বসালে কিছুই যায় না, তাই প্রশাসককে কাজ হিসেবে মনে করানো
+     *   (NEXUS-এর পর্যালোচনা S2, ২৭ নভেম্বর)। চাঁদের বছর ≈ 354 দিন: আগের বছরের তারিখ থেকে আন্দাজ, তার 30 দিন আগে থেকে;
+     *   কখনো তারিখ না বসলে মাসে একবার। ⓘ একই উৎসবের খবর একই মাসে একবারই (`key`)।
+     */
+    private function askForMoonDates(): int
+    {
+        $moon = array_column(array_filter(\App\Modules\Mail\Services\MailDefaults::FESTIVALS, fn ($f) => $f[8] === null), 1, 0);
+        $asked = 0;
+
+        foreach (\App\Models\Company::query()->where('is_active', true)->pluck('id') as $companyId) {
+            CompanyContext::forCompany((int) $companyId, function () use ($moon, &$asked) {
+                $due = \App\Modules\Mail\Models\MailFestival::query()->where('active', true)->whereIn('key', array_keys($moon))->get()
+                    ->filter(function ($f) {
+                        if ($f->on_date !== null && ! $f->on_date->isPast()) {
+                            return false;
+                        }
+
+                        return $f->on_date === null || now()->gte($f->on_date->copy()->addDays(354 - 30));
+                    });
+
+                if ($due->isEmpty()) {
+                    return;
+                }
+
+                $admins = \App\Models\User::query()->where('is_active', true)->get()->filter(fn ($u) => $u->can('mail.manage'));
+
+                foreach ($due as $f) {
+                    foreach ($admins as $u) {
+                        app(\App\Core\Services\NotificationService::class)->send(
+                            $u,
+                            'mail.festival_date',
+                            __('mail::message.festival_date', ['name' => $f->name, 'when' => $f->when]),
+                            null,
+                            \Illuminate\Support\Facades\Route::has('mail.templates') ? route('mail.templates') : null,
+                            key: 'mail:festival-date:'.$f->key.':'.now()->format('Y-m'),
+                        );
+                    }
+
+                    $asked++;
+                }
+            });
+        }
+
+        return $asked;
     }
 
     /**
