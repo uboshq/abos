@@ -317,4 +317,11 @@ return [
     'total_leaves_out_quotation' => 'Total leaves out rejected, cancelled and superseded',
     'total_leaves_out_delivery_order' => 'Total leaves out rejected and cancelled',
     'total_leaves_out_order' => 'Total leaves out rejected and cancelled',
+    'edit_line_hint' => 'Change it and press "Update" — the entry fields above stay empty',
+    'confirm_ready' => 'Ready to confirm — every field is in order',
+    'confirm_view_only' => 'Awaiting approval — view only; send it back to draft to change it',
+    'confirm_need_customer' => 'No customer chosen',
+    'confirm_need_lines' => 'The cart is empty',
+    'confirm_need_fare' => 'The fare amount is still blank (F4)',
+    'confirm_credit_over' => 'Credit limit exceeded by :amount — confirming will be stopped; take money or reduce goods',
 ];

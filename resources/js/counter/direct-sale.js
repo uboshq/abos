@@ -80,6 +80,7 @@ export default function directSale({
     pendingDrafts, resume, pendingUrl, transferModes, approvalNotice,
     margin = { costs: {}, floor: 0, words: {} },
     pricesUrl = '',
+    lastRatesUrl = '',
 }) {
     /*
      * ⓘ লটের তালিকা — পণ্যের আইডি ধরে, মেয়াদের ক্রমে সাজানো।
@@ -173,6 +174,8 @@ export default function directSale({
 
         /* ⭐ কার্টের যে সারিটা উপরে খোলা — `null` মানে নতুন সারি; নইলে সারির `key` ([[editLine()]]) */
         editingKey: null,
+        deleteArmed: false,
+        deleteArmTimer: null,
         picked: null,
         showCosting: false,
         /*
@@ -255,6 +258,11 @@ export default function directSale({
         creditTerm: paymentTermDefault,
         dueOn: '',
         discountInput: '',
+        // ⭐ বিলের ছাড়ের কারণ — 📝 চাপলে খোলে, কাগজে ছাপা হয় (নতুন কাউন্টার, ২৮ নভেম্বর ২০২৬)
+        discountReason: '',
+        reasonOpen: false,
+        // ⭐ এই ক্রেতার শেষ দর — পণ্য ধরে ([[loadLastRates]])
+        lastRates: {},
 
         // পুরো কাগজের ভ্যাট-বদল — খালি মানে পণ্য অনুযায়ী
         vatMode: '',
@@ -461,6 +469,7 @@ export default function directSale({
                 dueOn: this.dueOn,
                 lines: this.lines,
                 discountInput: this.discountInput,
+                discountReason: this.discountReason,
                 vatMode: this.vatMode,
                 vatRate: this.vatRate,
                 expenseInput: this.expenseInput,
@@ -599,6 +608,36 @@ export default function directSale({
             return list.length > 0 && ! list.some(d => String(d.id) === this.resumeId);
         },
 
+        /*
+         * ✓/⚠ "নিশ্চিত করুন"-এর ঠিক উপরের লাইন (v2 A5–A6, নমুনার .ok)।
+         * ⓘ canConfirm-এর প্রতিটা শর্তের নিজের কথা — বোতাম ধূসর থাকলে কেন, সেটা চোখের সামনে।
+         * ⚠️ সীমা পার বোতাম আটকায় না (সার্ভার আটকায়, CreditExposure) — তাই শেষ সারিতে কেবল সতর্কতা।
+         */
+        get confirmProblem() {
+            if (this.viewOnly) return String(texts.confirm?.viewOnly ?? '');
+            if (this.customerId === '') return String(texts.confirm?.needCustomer ?? '');
+            if (this.lines.length === 0) return String(texts.confirm?.needLines ?? '');
+            if (this.customerHasOpenDraft) return this.openDraftText;
+            if (this.fareMissing) return String(texts.confirm?.needFare ?? '');
+            if (this.hasCreditLimit && this.termUsesCredit && this.creditOver > 0) {
+                return String(texts.confirm?.creditOver ?? '').replace(':amount', '৳' + this.money(this.creditOver));
+            }
+            return '';
+        },
+
+        /* 🚚 খরচের টাইলের ছোট লেখা (v2) */
+        get transportTileSub() {
+            return this.vehicleText || String(texts.cardNothing ?? '');
+        },
+
+        get noteTileText() {
+            return this.noteText || String(texts.cardNothing ?? '');
+        },
+
+        get confirmLine() {
+            return this.confirmProblem || String(texts.confirm?.ready ?? '');
+        },
+
         get openDraftText() {
             if (! this.customerHasOpenDraft) return '';
 
@@ -687,6 +726,8 @@ export default function directSale({
                 this.dueOn = d.dueOn ?? '';
                 this.lines = d.lines ?? [];
                 this.discountInput = d.discountInput ?? '';
+                this.discountReason = d.discountReason ?? '';
+                this.reasonOpen = this.discountReason !== '';
                 this.vatMode = d.vatMode ?? '';
                 this.vatRate = d.vatRate ?? '';
                 this.expenseInput = d.expenseInput ?? d.expenseAmount ?? '';
@@ -1067,6 +1108,20 @@ export default function directSale({
         },
 
         /** ⭐ পরিমাণের সারিতে Enter = কার্টে দিন — কেবল ঘর থেকে, বোতাম থেকে নয় (মালিক, ২৬ নভেম্বর ২০২৬) */
+        /**
+         * ⛔ Enter কখনো ফর্ম জমা দেয় না (২৮ নভেম্বর ২০২৬)। ফর্মের প্রথম জমা-বোতাম "খসড়া রাখুন", তাই সাধারণ ঘরে Enter
+         * চাপলে ব্রাউজার নিজে ঐ বোতাম চাপত — কার্টে পণ্য থাকলে প্রশ্ন ছাড়াই খসড়া সেভ হত (Mac-এর পরীক্ষার কপিতে ধরা)।
+         * ⓘ কেবল ব্রাউজারের নিজের জমা থামে; ঘরের নিজের Enter-কাজ (বাছাই, কার্টে যোগ) আগেই চলে গেছে, ঘটনা থামে না।
+         * নিশ্চিত = বোতাম চাপা বা F10; খসড়া = নিজের বোতাম। বোতাম, চেকবক্স আর মন্তব্যের লম্বা ঘর ছোঁয়া হয় না।
+         */
+        stopEnterSubmit(e) {
+            const t = e && e.target;
+            if (! t) return;
+            const type = String(t.type || '').toLowerCase();
+            const plainInput = t.tagName === 'INPUT' && ! ['submit', 'button', 'checkbox', 'radio', 'reset', 'image'].includes(type);
+            if (plainInput || t.tagName === 'SELECT') e.preventDefault();
+        },
+
         enterAdds(e) {
             const t = e.target;
 
@@ -1346,6 +1401,7 @@ export default function directSale({
 
             /* ⭐ গ্রাহকের দর তালিকা — তালিকা আর কার্টের আপনা-আপনি দর এই গ্রাহকের দরে (দর তালিকা, ৫ অক্টোবর ২০২৬; [[customer-prices.js]]) */
             this.repriceFor(this.customerId);
+            this.loadLastRates(this.customerId);
 
             /*
              * ক্রেতার নিজের মেয়াদ থাকলে সেটাই বসে।
@@ -1407,6 +1463,46 @@ export default function directSale({
             if (! prices || String(this.customerId) !== String(customerId)) return;
 
             applyPrices(this.catalogue, this.lines, this.entry, this.picked, prices);
+        },
+
+        /**
+         * ⭐ এই ক্রেতার শেষ দর — নীল বাক্স (নতুন কাউন্টার, ২৮ নভেম্বর ২০২৬; [[LastSaleRates]])। ⓘ ক্রেতা বদলালে পুরনো উত্তর ফেলা হয়;
+         *   ⛔ না এলে বাক্সে "—", কাজ থামে না।
+         */
+        async loadLastRates(customerId) {
+            this.lastRates = {};
+            if (! lastRatesUrl || ! customerId) return;
+
+            try {
+                const r = await fetch(lastRatesUrl + '?customer_id=' + encodeURIComponent(customerId), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                const j = r.ok ? await r.json() : null;
+                if (j && String(this.customerId) === String(customerId)) this.lastRates = j.rates || {};
+            } catch (e) { this.lastRates = {}; }
+        },
+
+        get pickedLastRate() {
+            return (this.picked && this.lastRates[String(this.picked.id)]) || null;
+        },
+
+        // ⓘ তথ্যের বাক্সের লেখা — CSP Alpine-এ লম্বা expression নয়, getter
+        get lastRateText() {
+            const r = this.pickedLastRate;
+            return r ? '৳' + this.money(r.rate) : '—';
+        },
+
+        get lastRateTitle() {
+            const r = this.pickedLastRate;
+            return r ? String(texts.lastRateFull ?? '') + ' — ' + r.invoiceNo + ' · ' + r.onDate : String(texts.lastRateNone ?? '');
+        },
+
+        get lotBoxText() {
+            if (this.chosenLot) return String(this.chosenLot.no ?? '');
+            return this.entryLots.length ? this.entryLots.length + ' ' + String(texts.lotsShort ?? '') : '—';
+        },
+
+        get lotExpiryText() {
+            const e = this.chosenLot && this.chosenLot.expiry;
+            return e ? String(e).split('-').reverse().join('/') : '—';
         },
 
         /** খোলা খসড়াটা এই পর্দাতেই খোলা — সম্পাদনা করে পাকা করার জন্য। */
@@ -2134,6 +2230,7 @@ export default function directSale({
 
         clearEntry() {
             this.editingKey = null;
+            this.deleteArmed = false;
             this.picked = null;
             this.entry = { qty: '', freeQty: '', rate: '', discountInput: '', unitId: '', gifts: [], batchId: '' };
             this.giftDraft = null;
@@ -2141,9 +2238,16 @@ export default function directSale({
             this.showCosting = false;
         },
 
+        // ⭐ ছাড়ের কারণের ঘর খোলা/বন্ধ (📝) — CSP Alpine-এ এক কাজ এক পদ্ধতিতে
+        toggleReason() {
+            this.reasonOpen = ! this.reasonOpen;
+        },
+
         clearAll() {
             this.lines = [];
             this.discountInput = '';
+            this.discountReason = '';
+            this.reasonOpen = false;
             this.expenseInput = '';
             this.roundingInput = '';
             this.deposits = [];
@@ -3206,6 +3310,38 @@ export default function directSale({
             return this.creditLeft < 0 ? -this.creditLeft : 0;
         },
 
+        /* 📊 বাকির সীমার দাগ (v2 A5) — সীমার কত % খাটছে: (সীমা − অবশিষ্ট) ÷ সীমা, ০–১০০-তে আটকানো।
+         * ⓘ অবশিষ্টটা creditLeft-ই — সেবার হিসাবের আয়না, তাই দাগ আর "অবশিষ্ট সীমা" সংখ্যা কখনো আলাদা কথা বলে না। */
+        get creditUsedPct() {
+            const limit = Number(this.customer.limit) || 0;
+            if (limit <= 0) return 0;
+            const raw = ((limit - this.creditLeft) / limit) * 100;
+            // ⓘ ১০%-এর নিচে এক দশমিক — ০.৫% কে "১%" দেখালে সংখ্যাটা মিথ্যা বলে (abos-82-এর হাতে মেলানো, ২৮ নভেম্বর)
+            const pct = raw < 10 ? Math.round(raw * 10) / 10 : Math.round(raw);
+            return pct < 0 ? 0 : (pct > 100 ? 100 : pct);
+        },
+
+        get creditBarStyle() {
+            return 'width: ' + this.creditUsedPct + '%';
+        },
+
+        get creditBarTone() {
+            const p = this.creditUsedPct;
+            return p >= 90 ? 'is-over' : (p >= 70 ? 'is-warn' : '');
+        },
+
+        get customerDueText() {
+            return '৳' + this.money(Number(this.customer.due) || 0);
+        },
+
+        get creditLeftText() {
+            return '৳' + this.money(this.creditLeft > 0 ? this.creditLeft : 0);
+        },
+
+        get creditLimitText() {
+            return '৳' + this.money(Number(this.customer.limit) || 0);
+        },
+
         /*
          * এই বিলের যতটুকু বাকি থেকে যাবে।
          *
@@ -3328,6 +3464,8 @@ export default function directSale({
             this.lines = [];
             this.deposits = [];
             this.discountInput = '';
+            this.discountReason = '';
+            this.reasonOpen = false;
             this.expenseInput = '';
             this.roundingInput = '';
             this.customerId = '';
@@ -3461,9 +3599,36 @@ export default function directSale({
                 this.pickerOpen = false;
                 this.listShown = false;
                 this.customerPickerOpen = false;
+            } else if (this.editingKey !== null) {
+                // ✎ মাঝের পপআপ — Esc মানে বাতিল, সারি যেমন ছিল তেমন থাকে
+                this.clearEntry();
             } else {
                 this.helping = false;
             }
+        },
+
+        /** ✎ পপআপের মাথা: কার্টের কত নম্বর সারি */
+        get editingLineNo() {
+            const at = this.editingKey === null ? -1 : this.lines.findIndex(l => l.key === this.editingKey);
+            return at < 0 ? '' : String(at + 1);
+        },
+
+        /**
+         * 🗑 দুই চাপে মোছা — প্রথম চাপে বোতাম লাল হয়ে "আবার চাপুন", ৩ সেকেন্ডে না চাপলে ফিরে যায়।
+         * ⓘ ভুল আঙুলে একটা পুরো সারি না যায়; প্রশ্নের পপআপের চেয়ে দ্রুত।
+         */
+        deleteEditingLine() {
+            const at = this.editingKey === null ? -1 : this.lines.findIndex(l => l.key === this.editingKey);
+            if (at < 0) return;
+            if (! this.deleteArmed) {
+                this.deleteArmed = true;
+                clearTimeout(this.deleteArmTimer);
+                this.deleteArmTimer = setTimeout(() => { this.deleteArmed = false; }, 3000);
+                return;
+            }
+            clearTimeout(this.deleteArmTimer);
+            this.deleteArmed = false;
+            this.dropLine(at);
         },
 
         /** F6 — হিসাবের খাত থেকে পণ্য বাছার বোতাম */

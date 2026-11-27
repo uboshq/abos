@@ -88,4 +88,8 @@ return [
     'pause_draft' => 'নিষ্ক্রিয়',
     'resume_draft' => 'সক্রিয়',
     'delete_draft' => 'মুছুন',
+    'delete_line' => 'লাইন মুছুন',
+    'delete_line_again' => 'আবার চাপুন — মুছবে',
+    'cancel_esc' => 'বাতিল · Esc',
+    'edit_line_title' => 'লাইন বদলান',
 ];

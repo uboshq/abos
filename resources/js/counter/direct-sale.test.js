@@ -2633,3 +2633,29 @@ describe('ক্রেতা খোঁজা — নাম, মোবাইল, 
         expect(found('')).toEqual(['7', '8'])
     })
 })
+
+/*
+ * ⛔ Enter কখনো ফর্ম জমা দেয় না — ২৮ নভেম্বর ২০২৬, Mac-এর পরীক্ষার কপিতে ধরা।
+ * ফর্মের প্রথম জমা-বোতাম "খসড়া রাখুন", তাই "বিক্রি নম্বর"-এর মতো সাধারণ ঘরে Enter চাপলে ব্রাউজার
+ * ঐ বোতামটাই চাপত — কার্টে পণ্য থাকলে কোনো প্রশ্ন ছাড়াই খসড়া সেভ হয়ে পাতা খালি হত।
+ */
+describe('Enter in a plain field never submits the counter form', () => {
+    const press = (target) => {
+        let prevented = false
+        counter().stopEnterSubmit({ target, preventDefault: () => { prevented = true } })
+        return prevented
+    }
+
+    it('stops it in a text, number or date box', () => {
+        expect(press({ tagName: 'INPUT', type: 'text' })).toBe(true)
+        expect(press({ tagName: 'INPUT', type: 'number' })).toBe(true)
+        expect(press({ tagName: 'INPUT', type: 'search' })).toBe(true)
+        expect(press({ tagName: 'SELECT' })).toBe(true)
+    })
+
+    it('leaves buttons and the note box alone', () => {
+        expect(press({ tagName: 'BUTTON', type: 'submit' })).toBe(false)
+        expect(press({ tagName: 'TEXTAREA' })).toBe(false)
+        expect(press({ tagName: 'INPUT', type: 'checkbox' })).toBe(false)
+    })
+})

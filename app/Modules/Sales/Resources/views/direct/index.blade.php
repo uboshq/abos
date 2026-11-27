@@ -179,6 +179,7 @@
               catalogue: @js($products),
               margin: @js($margin),
               pricesUrl: @js(route('sales.price_list.quote')),
+              lastRatesUrl: @js(route('sales.direct.last_rates')),
               lots: @js($lots),
               customers: @js($customerTerms),
               walkinId: {{ $walkinId }},
@@ -220,6 +221,18 @@
                   'lotOnShelf' => __('sales::field.lot_on_shelf'),
                   'lotFree' => __('sales::field.free_short'),
                   'openDraftBlocks' => __('sales::validation.open_draft_blocks_new_bill'),
+                  'lastRateFull' => __('sales::field.last_rate_full'),
+                  'lastRateNone' => __('sales::field.last_rate_none'),
+                  'lotsShort' => __('sales::field.lots_short'),
+                  'cardNothing' => __('sales::field.card_nothing'),
+                  'confirm' => [
+                      'ready' => __('sales::message.confirm_ready'),
+                      'viewOnly' => __('sales::message.confirm_view_only'),
+                      'needCustomer' => __('sales::message.confirm_need_customer'),
+                      'needLines' => __('sales::message.confirm_need_lines'),
+                      'needFare' => __('sales::message.confirm_need_fare'),
+                      'creditOver' => __('sales::message.confirm_credit_over'),
+                  ],
               ]),
               pendingDrafts: @js($pendingDrafts ?? []),
               resume: @js($resume ?? $sourceResume ?? null),
@@ -317,6 +330,8 @@
               করে, আর কোনটা কখন তা ঘরটাই ঠিক করে।**
           --}}
           @keydown.window.enter="! panel && picked && addToCart()"
+          {{-- ⛔ Enter কখনো ফর্ম জমা দেয় না — প্রথম জমা-বোতাম "খসড়া রাখুন", তাই সাধারণ ঘরে Enter নীরবে খসড়া সেভ করত (২৮ নভেম্বর ২০২৬) --}}
+          @keydown.enter="stopEnterSubmit($event)"
           @keydown.window.f10.prevent="canConfirm && $press($refs.confirm)"
           @keydown.window.escape="escape()"
 

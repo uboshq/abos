@@ -16,6 +16,7 @@ return [
     'paid' => 'পরিশোধিত',
     'invoice_due' => 'এই বিলের বকেয়া',
     'bill_discount' => 'বিলের ছাড়',
+    'discount_reason' => 'ছাড়ের কারণ',
     'previous_due' => 'আগের বকেয়া',
     'previous_advance' => 'আগের অগ্রিম',
     'outstanding' => 'সব মিলিয়ে পাওনা',

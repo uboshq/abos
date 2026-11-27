@@ -60,7 +60,7 @@
                 </div>
 
                 @if ($show['sub_total'])
-                    <x-sales::panel-row :label="__('sales::field.sub_total_no_vat')" tone="w">
+                    <x-sales::panel-row :label="($abosLook ?? false) ? __('sales::field.v2_sub_total') : __('sales::field.sub_total_no_vat')" data-row="sub" tone="w">
                         <span class="num" x-text="'৳' + money(subTotal)"></span>
                     </x-sales::panel-row>
                 @endif
@@ -89,7 +89,7 @@
                     **টাকা** পাঠায়, শতাংশ নয়। পর্দা হিসাব করে, সার্ভার
                     আগের মতোই টাকা পায় — উপহারের সাথে একই কৌশল।
                 --}}
-                <x-sales::panel-row :label="__('sales::field.discount_amount')" tone="l">
+                <x-sales::panel-row :label="($abosLook ?? false) ? __('sales::field.v2_bill_discount') : __('sales::field.discount_amount')" data-row="disc" tone="l">
                     <span class="flex flex-1 items-center gap-2">
                         <input type="text" inputmode="decimal" x-model="discountInput"
                                placeholder="{{ __('sales::field.amount_or_pct') }}"
@@ -98,12 +98,28 @@
 
                         {{-- হিসাব হওয়া টাকাটা — "৬%" লিখে কত হলো তা না
                              দেখালে শতাংশ দেওয়াটা অন্ধ বাজি হয়ে যেত --}}
+                        {{-- ⭐ ছাড়ের কারণ (📝) — নতুন কাউন্টারের নমুনা, মালিকের অনুমোদন ২৭–২৮ নভেম্বর ২০২৬; কাগজে ছাপা, অডিটে --}}
+                        <button type="button" @click="toggleReason" data-discount-reason-toggle
+                                :aria-expanded="reasonOpen ? 'true' : 'false'" aria-controls="discount-reason"
+                                aria-label="{{ __('sales::field.discount_reason') }}" title="{{ __('sales::field.discount_reason') }}"
+                                class="grid size-7 shrink-0 place-items-center rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) hover:bg-(--color-surface-hover)">
+                            <x-ui.licon name="file-text" :size="15" />
+                        </button>
+
                         <span class="num ms-auto w-16 text-end"
                               x-text="discountValue > 0 ? '৳' + money(discountValue) : '—'"></span>
                     </span>
 
                     <input type="hidden" name="discount_amount" :value="discountValue">
                 </x-sales::panel-row>
+
+                <div id="discount-reason" x-show="reasonOpen" x-cloak class="px-3 pb-2" data-discount-reason>
+                    <label for="discount-reason-text" class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.discount_reason') }}</label>
+                    <textarea id="discount-reason-text" name="discount_reason" x-model="discountReason" maxlength="300" rows="2"
+                              placeholder="{{ __('sales::field.discount_reason_hint') }}"
+                              class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1 text-sm"></textarea>
+                </div>
 
                 {{-- ⭐ হাতের ছাড়ের সীমা — কোম্পানির সেটিং থাকলে চোখের সামনে (৫ অক্টোবর ২০২৬; সার্ভার নিজে আটকায়, [[DiscountCap]]) --}}
                 @if (($discountCapHint = app(\App\Modules\Sales\Services\DiscountCap::class)->hint()) !== null)
@@ -138,7 +154,7 @@
                         অনুযায়ী"-র পাশে একটা হার মানে **এমন একটা সংখ্যা যেটা
                         কোথাও বসে না**, আর "ভ্যাট নেই"-এর পাশে হার অর্থহীন।
                     --}}
-                    <x-sales::panel-row :label="__('sales::field.vat')" tone="s">
+                    <x-sales::panel-row :label="__('sales::field.vat')" data-row="tax" tone="s">
                         <span class="flex flex-1 flex-wrap items-center gap-1">
                             <select x-model="vatMode" name="vat_mode"
                                     title="{{ __('sales::field.vat_per_product_hint') }}"
@@ -186,7 +202,7 @@
                     আর দরকার নেই।
                 --}}
                 @if ($show['expense'])
-                    <x-sales::panel-row :label="__('sales::field.expense')" tone="w">
+                    <x-sales::panel-row :label="__('sales::field.expense')" data-row="tax" tone="w">
                         {{-- ⚠️ টাকা **বা** শতাংশ — মালিকের নির্দেশ
                              (৩ সেপ্টেম্বর ২০২৬): *"Expense e discount er moto
                              Amount o % thakbe"*।
@@ -249,7 +265,7 @@
                     দিকটা একটা বাছাই — ভুল করা কঠিন।
                 --}}
                 @if ($show['rounding'])
-                    <x-sales::panel-row :label="__('sales::field.rounding')" tone="l">
+                    <x-sales::panel-row :label="__('sales::field.rounding')" data-row="tax" tone="l">
                         <span class="flex flex-1 items-center gap-1">
                             <select x-model="roundingSign"
                                     class="h-(--spacing-inline) w-12 rounded-(--radius-field) border
@@ -273,12 +289,12 @@
 
                 {{-- ⭐ "আমরা দিয়ে বিলে যোগ" হলে ভাড়াটা বিলে আলাদা লাইনে (সার্ভারে `freight_charge`, af) --}}
                 <div x-show="freightOnBill > 0" x-cloak>
-                    <x-sales::panel-row :label="__('sales::field.fare_on_bill')" tone="s">
+                    <x-sales::panel-row :label="__('sales::field.fare_on_bill')" data-row="tax" tone="s">
                         <span class="num" x-text="money(freightOnBill)"></span>
                     </x-sales::panel-row>
                 </div>
 
-                <x-sales::panel-row :label="__('sales::field.net_payable')" strong tone="net">
+                <x-sales::panel-row :label="($abosLook ?? false) ? __('sales::field.v2_total_payable') : __('sales::field.net_payable')" data-row="pay" strong tone="net">
                     <span class="num text-sm" x-text="'৳' + money(netPayable)"></span>
                 </x-sales::panel-row>
 
@@ -299,7 +315,7 @@
                     জায়গা "জমা যোগ" বোতামের প্যানেল, আর এখানে কেবল **যোগফল**।
                 --}}
                 @if ($show['deposit'])
-                    <x-sales::panel-row :label="__('sales::field.received_deposit')" tone="l">
+                    <x-sales::panel-row :label="__('sales::field.received_deposit')" data-row="paid" tone="l">
                         <span class="num" x-text="$num(deposit) > 0 ? '৳' + money(deposit) : '—'"></span>
                     </x-sales::panel-row>
                     {{-- ⭐ কোন পথে কত — "টাকা নিন"-এর বিস্তারিত এখানেই (মালিক, ২৬ নভেম্বর ২০২৬) --}}
@@ -308,7 +324,7 @@
                     @endif
                 @endif
 
-                <x-sales::panel-row :label="__('sales::field.invoice_due')" strong tone="due">
+                <x-sales::panel-row :label="($abosLook ?? false) ? __('sales::field.v2_bill_left') : __('sales::field.invoice_due')" data-row="bal" strong tone="due">
                     <span class="num" x-text="'৳' + money(invoiceDue)"></span>
                 </x-sales::panel-row>
 
@@ -321,13 +337,13 @@
                      ⓘ সবুজ, লাল নয়: উদ্বৃত্ত জমা কোনো সমস্যা নয়, ওটা
                      গ্রাহকের পাওনা — পরের চালানে কাটা যাবে। --}}
                 <template x-if="excessToOldDue > 0">
-                    <x-sales::panel-row :label="__('sales::field.excess_to_old_due')" tone="w">
+                    <x-sales::panel-row :label="__('sales::field.excess_to_old_due')" data-row="paid" tone="w">
                         <span class="num font-semibold text-(--color-success)" data-excess-old-due
                               x-text="'৳' + money(excessToOldDue)"></span>
                     </x-sales::panel-row>
                 </template>
                 <template x-if="excessKept > 0">
-                    <x-sales::panel-row :label="__('sales::field.kept_as_advance')" tone="w">
+                    <x-sales::panel-row :label="__('sales::field.kept_as_advance')" data-row="paid" tone="w">
                         <span class="num font-semibold text-(--color-success)" data-excess-kept
                               x-text="'৳' + money(excessKept)"></span>
                     </x-sales::panel-row>
@@ -352,7 +368,7 @@
                      বদলাত না, আর কোনো ত্রুটিও হত না।
 
                      এখানে লেবেলটাই বদলায়, তাই সারিটা নিজে হাতে লেখা। --}}
-                <div class="flex items-center justify-between gap-2" data-tone="w">
+                <div class="flex items-center justify-between gap-2" data-tone="w" data-row="prev">
                     <span class="text-(--color-ink-muted)"
                           x-text="customer.due < 0
                             ? @js(__('sales::field.previous_advance'))
@@ -394,7 +410,7 @@
                     <span class="text-2xs font-semibold uppercase tracking-wide"
                           x-text="outstanding < 0
                             ? @js(__('sales::field.advance'))
-                            : @js(__('sales::field.due'))"></span>
+                            : @js(($abosLook ?? false) ? __('sales::field.total_owed') : __('sales::field.due'))"></span>
 
                     <span class="num text-sm font-bold"
                           x-text="'৳' + money($abs(outstanding))"></span>
@@ -430,7 +446,8 @@
                         </div>
                     </template>
 
-                    <div class="ds-limit flex items-center justify-between gap-2">
+                    {{-- ABOS-এ সীমা থাকলে "আরো ৳…" দাগের পাশেই (নমুনা) — এই সারি কেবল সীমা না থাকলে ("বাকি বন্ধ") --}}
+                    <div class="ds-limit flex items-center justify-between gap-2" @if (($abosLook ?? false)) x-show="! hasCreditLimit" @endif>
                         <span class="text-(--color-ink-muted)">
                             {{ __('sales::field.credit_left') }}
                         </span>
@@ -451,6 +468,19 @@
                                   x-text="'৳' + money(creditLeft > 0 ? creditLeft : 0)"></span>
                         </template>
                     </div>
+
+                    @if (($abosLook ?? false))
+                        <template x-if="hasCreditLimit">
+                            <div class="ds-cbar" data-credit-bar>
+                                <div class="ds-cbar-l">
+                                    <span>{{ __('sales::field.credit_limit') }} <b class="num" x-text="creditLimitText"></b></span>
+                                    <span><b class="num" x-text="creditUsedPct + '%'"></b> {{ __('sales::field.credit_used') }} · {{ __('sales::field.credit_left_more') }} <span class="num" x-text="creditLeftText"></span></span>
+                                </div>
+                                <div class="ds-cbar-t" role="meter" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="creditUsedPct"
+                                     aria-label="{{ __('sales::field.credit_used') }}"><i :style="creditBarStyle" :class="creditBarTone"></i></div>
+                            </div>
+                        </template>
+                    @endif
 
                     <template x-if="hasCreditLimit && creditOver > 0">
                         <div class="flex items-center justify-between gap-2 rounded-(--radius-field)
@@ -499,32 +529,26 @@
                  (মালিক, ২৬ নভেম্বর ২০২৬: নিচের চার কার্ডের বদলে) --}}
             @if (($abosLook ?? false))
                 {{-- ⭐ গাড়ি ও ভাড়া আলাদা আলাদা লাইনে — গাড়ি · চালক · পরিবহন · ভাড়া আর কে দেবে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
-                <div class="ds-details" data-counter-details>
+                {{-- 🚚 v2 (নমুনা ২৭ নভেম্বর): "মাল পৌঁছানো ও খরচ" — রঙিন টাইল, প্রতিটা চাপলে নিজের পপআপ (আগের লাইনগুলোর বদলে) --}}
+                <div class="ds-cost" data-counter-details>
+                    <div class="ds-ch">{{ __("sales::field.cost_card_title") }} <small>{{ __("sales::field.cost_card_sub") }}</small></div>
+                    <button type="button" @click="openPanel('delivery')" class="ds-ct ds-ct-cyan" data-tile="delivery">
+                        <span class="ds-ci"><x-ui.licon name="package" :size="18" /></span>
+                        <span class="ds-cn">{{ __("sales::field.btn_delivery") }}<small x-text="deliveryModeLabel"></small></span>
+                        <span class="ds-cv"><small class="ds-st">F7</small></span>
+                    </button>
                     @if ($show['transport'])
-                        <button type="button" @click="openPanel('transport')" class="ds-sec-h" data-transport-line>
-                            <span>{{ __('sales::field.btn_transport') }}</span><span>✎ F4</span>
-                        </button>
-                        <div class="ds-veh-none" x-show="! transportLine" x-cloak>{{ __('sales::field.card_nothing') }}</div>
-                        <div x-show="transportLine" x-cloak>
-                            <div class="ds-tr">
-                                <span>{{ __('sales::field.det_vehicle') }}</span><span x-text="vehicleText || '—'"></span>
-                                <span>{{ __('sales::field.det_driver') }}</span><span x-text="driverText || '—'"></span>
-                                <span x-show="carrierText">{{ __('sales::field.det_carrier') }}</span><span x-show="carrierText" x-text="carrierText"></span>
-                            </div>
-                            <div class="ds-fare">
-                                <span>{{ __('sales::field.det_fare') }}<i class="ds-who-pays" x-show="farePaidBy" x-text="farePayText"></i></span>
-                                <b class="num" x-text="fareText"></b>
-                            </div>
-                        </div>
+                    <button type="button" @click="openPanel('transport')" class="ds-ct ds-ct-amber" data-tile="transport" data-transport-line>
+                        <span class="ds-ci"><x-ui.licon name="truck" :size="18" /></span>
+                        <span class="ds-cn">{{ __("sales::field.btn_transport") }}<small x-text="transportTileSub"></small></span>
+                        <span class="ds-cv"><b class="num" x-text="fareText"></b><small class="ds-st" x-show="farePaidBy" x-text="farePayText"></small></span>
+                    </button>
                     @endif
-                    <div class="ds-mini">
-                        <button type="button" @click="openPanel('delivery')" class="ds-det">
-                            <b>{{ __('sales::field.btn_delivery') }}</b><span x-text="deliveryModeLabel"></span>
-                        </button>
-                        <button type="button" @click="openPanel('note')" class="ds-det">
-                            <b>{{ __('sales::field.note') }}</b><span :title="noteText" x-text="noteText || @js(__('sales::field.card_nothing'))"></span>
-                        </button>
-                    </div>
+                    <button type="button" @click="openPanel('note')" class="ds-ct ds-ct-blue ds-ct-wide" data-tile="note">
+                        <span class="ds-ci"><x-ui.licon name="file-text" :size="18" /></span>
+                        <span class="ds-cn">{{ __("sales::field.note") }}<small>{{ __("sales::field.note_prints") }}</small></span>
+                        <span class="ds-cv ds-cv-text" :title="noteText" x-text="noteTileText"></span>
+                    </button>
                 </div>
             @endif
 
@@ -602,6 +626,7 @@
                     @if ($show['deposit'])
                     <button type="button" @click="openPanel('deposit')" class="ds-b8 ds-b8-success" data-counter-button="deposit"
                             :class="panel === 'deposit' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="banknote" :size="18" />@endif
                         <span>{{ __('sales::field.btn_money') }}</span>
                         <small>F2</small>
                     </button>
@@ -609,18 +634,21 @@
                     @if ($show['transport'])
                     <button type="button" @click="openPanel('transport')" class="ds-b8 ds-b8-pending" data-counter-button="transport"
                             :class="panel === 'transport' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="truck" :size="18" />@endif
                         <span>{{ __('sales::field.btn_transport') }}</span>
                         <small>F4</small>
                     </button>
                     @endif
                     <button type="button" @click="openPanel('delivery')" class="ds-b8 ds-b8-inventory" data-counter-button="delivery"
                             :class="panel === 'delivery' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="package" :size="18" />@endif
                         <span>{{ __('sales::field.btn_delivery') }}</span>
                         <small><span x-text="'F7 · ' + deliveryModeLabel"></span></small>
                     </button>
                     @unless (($abosLook ?? false))
                     <button type="button" @click="openPanel('return')" class="ds-b8 ds-b8-draft" data-counter-button="return"
                             :class="panel === 'return' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="undo-2" :size="18" />@endif
                         <span>{{ __('sales::field.btn_return') }}</span>
                         <small>F9</small>
                     </button>
@@ -629,32 +657,38 @@
                     {{-- সারি ২ — "খসড়া রাখুন" ফর্মের নিজের submit (নাম আর মান কেবল চাপলে যায় — নিচের ব্যাখ্যা দেখুন) --}}
                     <button type="submit" name="save_as_draft" value="1" class="ds-b8 ds-b8-grey bg-(--color-border-strong)" data-counter-button="save_draft"
                             :disabled="! canConfirm">
+                        @if (($abosLook ?? false))<x-ui.licon name="archive" :size="18" />@endif
                         <span>{{ __('sales::action.save_draft') }}</span>
                     </button>
                     @if (($abosLook ?? false))
                     <button type="button" @click="openPanel('note')" class="ds-b8 ds-b8-info" data-counter-button="note"
                             :class="panel === 'note' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="file-text" :size="18" />@endif
                         <span>{{ __('sales::field.note') }}</span>
                         <small x-show="noteText !== ''" x-cloak>✓</small>
                     </button>
                     <button type="button" @click="openPanel('return')" class="ds-b8 ds-b8-draft" data-counter-button="return"
                             :class="panel === 'return' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="undo-2" :size="18" />@endif
                         <span>{{ __('sales::field.btn_return') }}</span>
                         <small>F9</small>
                     </button>
                     @endif
                     <button type="button" @click="openPanel('drafts')" class="ds-b8 ds-b8-neutral" data-counter-button="drafts"
                             :class="panel === 'drafts' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="folder-open" :size="18" />@endif
                         <span>{{ __('sales::field.btn_drafts') }}</span>
                         <small>F6</small>
                     </button>
                     <button type="button" @click="openPanel('reprint')" class="ds-b8 ds-b8-neutral" data-counter-button="reprint"
                             :class="panel === 'reprint' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="printer" :size="18" />@endif
                         <span>{{ __('sales::field.btn_reprint') }}</span>
                         <small>F8</small>
                     </button>
                     <button type="button" @click="openPanel('cancel')" class="ds-b8 ds-b8-danger" data-counter-button="cancel"
                             :class="panel === 'cancel' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="circle-x" :size="18" />@endif
                         <span>{{ __('sales::field.btn_cancel') }}</span>
                         <small>Ctrl+X</small>
                     </button>
@@ -714,6 +748,14 @@
                 {{-- ⛔ "মাল কীভাবে যাবে" এখানে নেই — মালিক, ৩ অক্টোবর ২০২৬: *"ekhane thakbena kotobar bolechi"*। পরিবহন
                      ডেলিভারি প্রসেসিংয়ে, নয়তো চালান বা বিল ছাপার আগে পপআপে ([[RequireTransportBeforePrint]])। --}}
                 {{-- ⭐ সারি ৩ — "নিশ্চিত করুন" একা, পুরো প্রস্থে (মালিক, ৪ অক্টোবর ২০২৬)। "খসড়া রাখুন" উপরে, সারি ২-এ। --}}
+                {{-- ✓/⚠ নমুনার .ok লাইন — বোতাম ধূসর কেন, বা সব ঠিক (v2 A6, কেবল ABOS-এর রূপে) --}}
+                @if (($abosLook ?? false))
+                    <p class="ds-okline" :class="confirmProblem ? 'is-bad' : ''" role="status" aria-live="polite" data-confirm-line>
+                        <span x-show="! confirmProblem"><x-ui.licon name="circle-check-big" :size="15" /></span>
+                        <span x-show="confirmProblem" x-cloak><x-ui.licon name="triangle-alert" :size="15" /></span>
+                        <span x-text="confirmLine"></span>
+                    </p>
+                @endif
                 <div class="mt-2 grid grid-cols-1 gap-2">
                     {{-- ⭐ `data-opens-print` — চাপার মুহূর্তে ছাপার ট্যাব খোলে, কাউন্টার এখানেই থাকে (মালিক, ২৩ নভেম্বর ২০২৬; [[print-tab.js]]) --}}
                     <x-ui.button type="submit" tone="primary" class="py-2" x-ref="confirm" data-overview-trigger data-opens-print

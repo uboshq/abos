@@ -419,6 +419,13 @@
                                                    class="shrink-0 text-(--color-ink-muted)" />
                                         <span class="num font-semibold" x-text="customer.phone"></span>
                                     </span>
+                                    {{-- 💳 v2 (নমুনা): ক্রেতার ঘরেই বাকি আর সীমা — কাউন্টারে প্রথম প্রশ্ন "কত পাবো, কত দেওয়া যায়" --}}
+                                    @if (($abosLook ?? false))
+                                        <span class="ds-pmeta" data-customer-due>{{ __('sales::field.due') }} <b class="num" x-text="customerDueText"></b></span>
+                                        @if ($show['credit_limit'])
+                                            <span class="ds-pmeta" x-show="hasCreditLimit" data-customer-limit>{{ __('sales::field.credit_limit') }} <b class="num" x-text="creditLimitText"></b></span>
+                                        @endif
+                                    @endif
                                 </div>
 
                                 {{-- ── সারি ৩ · ঠিকানা ───────────────────────────
@@ -719,7 +726,7 @@
                             @if ($show['do_no'])
                                 <label class="min-w-0 ds-f-ref">
                                     <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
-                                                 text-(--color-ink-muted)">{{ __('sales::field.do_no') }}</span>
+                                                 text-(--color-ink-muted)">{{ ($abosLook ?? false) ? __('sales::field.challan_do_no') : __('sales::field.do_no') }}</span>
                                     <input type="text" name="do_no" value="{{ old('do_no', $resume['fields']['do_no'] ?? '') }}"
                                            class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-sm">

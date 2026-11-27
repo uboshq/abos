@@ -2077,6 +2077,11 @@ class SalesPrintController extends Controller implements HasMiddleware
 
         if (bccomp($billDiscount, '0', 4) > 0) {
             $rows['sales::print.bill_discount'] = $this->money($billDiscount);
+
+            // ⭐ ছাড়ের কারণ — ছাড়ের ঠিক নিচে (নতুন কাউন্টার, ২৮ নভেম্বর ২০২৬); ক্রেতা কাগজেই দেখেন কেন ছাড়
+            if (trim((string) ($document->discount_reason ?? '')) !== '') {
+                $rows['sales::print.discount_reason'] = (string) $document->discount_reason;
+            }
         }
 
         /*

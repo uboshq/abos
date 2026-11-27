@@ -133,6 +133,8 @@ final class DirectSaleRules
             // ⭐ বিক্রি নম্বর (S) — হাতে দেওয়া হলে সেটাই; অনন্যতা সেবায় ([[SaleNumber::begin()]])
             'challan_no' => ['nullable', 'string', 'max:32'],
             'discount_amount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
+            // ⭐ বিলের ছাড়ের কারণ — ৩০০ অক্ষর পর্যন্ত, ঐচ্ছিক (নতুন কাউন্টার, ২৮ নভেম্বর ২০২৬)
+            'discount_reason' => ['nullable', 'string', 'max:300'],
             'expense_amount' => ['nullable', 'numeric', PlainNumber::RULE, 'min:0'],
             /*
              * খরচটা কীসের — টাকার অঙ্কের পাশে বাধ্যতামূলক নয়, কিন্তু

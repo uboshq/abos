@@ -496,6 +496,23 @@ class DirectSaleController extends Controller implements HasMiddleware
     }
 
     /**
+     * ⭐ এই ক্রেতার শেষ দর — নতুন কাউন্টারের নীল বাক্স ([[LastSaleRates]]; মালিকের অনুমোদিত নমুনা, ২৭–২৮ নভেম্বর ২০২৬)।
+     * ⓘ ক্রেতা বাছা হলে একবার; ⛔ অন্য শাখার বা অন্য কোম্পানির ক্রেতা নয় — দেখা শাখার সীমা ([[Customer::inViewedBranch]])।
+     * ⓘ যাচাই নিজে হাতে, freeAllowed-এর একই কারণে (`sales/direct/…`-এ validate() ৩০২ দিত)।
+     */
+    public function lastRates(Request $request, \App\Modules\Sales\Services\LastSaleRates $rates): JsonResponse
+    {
+        $id = (int) $request->query('customer_id', 0);
+        $customer = $id > 0 ? Customer::query()->inViewedBranch()->whereKey($id)->first() : null;
+
+        if ($customer === null) {
+            return response()->json(['ok' => false, 'rates' => []], 404);
+        }
+
+        return response()->json(['ok' => true, 'rates' => $rates->forCustomer((int) $customer->id)]);
+    }
+
+    /**
      * ⭐ এই মালে কতটা ফ্রি দেওয়া যাবে — সারি যোগ করার **আগে**।
      *
      * ── ⭐ মালিকের নির্দেশ, ২৪ সেপ্টেম্বর ২০২৬ ────────────────────
