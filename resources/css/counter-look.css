@@ -254,6 +254,29 @@
     form[data-abos-counter] .ds-tot-card [data-tone='net'] { background: #e6f8fb; }
     form[data-abos-counter] .ds-tot-card [data-tone='net'], form[data-abos-counter] .ds-tot-card [data-tone='net'] * { color: #0b6c7a !important; font-weight: 800; }
     form[data-abos-counter] .ds-tot-card [data-tone='due'], form[data-abos-counter] .ds-tot-card [data-tone='due'] * { color: #b45309 !important; font-weight: 700; }
+    /* 🎨 মোটের সারি অর্থের রঙে — নমুনার মতো (v2 A5): ছাড় কমলা · কর/ভাড়া/রাউন্ডিং বেগুনি · জমা সবুজ · আগের বকেয়া ধূসর ·
+       মোট দেয় গাঢ় টিলের পটি · বিলের বাকি লাল। ⓘ অর্থ আগে, রং পরে: লেবেল বদলায় না, কেবল রং। */
+    form[data-abos-counter] .ds-tot-card [data-row] { border-radius: 8px; margin: 1px .5rem; padding: .12rem .5rem; border-top: 0 !important; }
+    form[data-abos-counter] .ds-tot-card [data-row='disc'] { background: #fff7ed; }
+    form[data-abos-counter] .ds-tot-card [data-row='disc'] > span:first-child, form[data-abos-counter] .ds-tot-card [data-row='disc'] .num { color: #c2410c !important; font-weight: 600; }
+    form[data-abos-counter] .ds-tot-card [data-row='tax'] { background: #faf5ff; }
+    form[data-abos-counter] .ds-tot-card [data-row='tax'] > span:first-child { color: #7e22ce !important; }
+    form[data-abos-counter] .ds-tot-card [data-row='paid'] { background: #ecfdf5; }
+    form[data-abos-counter] .ds-tot-card [data-row='paid'] > span:first-child, form[data-abos-counter] .ds-tot-card [data-row='paid'] .num { color: #047857 !important; font-weight: 600; }
+    form[data-abos-counter] .ds-tot-card [data-row='prev'] { background: #f1f5f9; }
+    form[data-abos-counter] .ds-tot-card [data-row='pay'] { background: linear-gradient(90deg, #0b3b5c, #0b6c7a); margin-block: 4px; padding-block: .3rem; }
+    form[data-abos-counter] .ds-tot-card [data-row='pay'], form[data-abos-counter] .ds-tot-card [data-row='pay'] * { color: #fff !important; }
+    form[data-abos-counter] .ds-tot-card [data-row='bal'] { background: #fee2e2; padding-block: .3rem; }
+    form[data-abos-counter] .ds-tot-card [data-row='bal'] > span:first-child { color: #991b1b !important; }
+    form[data-abos-counter] .ds-tot-card [data-row='bal'] .num { color: #b91c1c !important; }
+    /* 📊 বাকির সীমার দাগ — কতটা ব্যবহার হলো; ৭০%-এর নিচে সবুজ, ৯০% পর্যন্ত হলুদ, তার উপরে লাল */
+    form[data-abos-counter] .ds-cbar { margin-top: .3rem; padding: .3rem .6rem; border: 1px solid #e2e8f0; border-radius: 10px; font-size: .72rem; }
+    form[data-abos-counter] .ds-cbar-l { display: flex; justify-content: space-between; gap: .5rem; color: #475569; }
+    form[data-abos-counter] .ds-cbar-t { height: 6px; margin-top: .25rem; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    form[data-abos-counter] .ds-cbar-t > i { display: block; height: 100%; border-radius: inherit; background: #15803d; transition: width .2s ease-out; }
+    form[data-abos-counter] .ds-cbar-t > i.is-warn { background: #d97706; }
+    form[data-abos-counter] .ds-cbar-t > i.is-over { background: #b91c1c; }
+    @media (prefers-reduced-motion: reduce) { form[data-abos-counter] .ds-cbar-t > i { transition: none; } }
     form[data-abos-counter] .ds-dep-sub { background: #fff; padding: 0 1rem .3rem !important; margin-top: -.2rem !important; font-size: .68rem; color: #5b6b82; }
     form[data-abos-counter] .ds-out { background: #fff; padding: .2rem .75rem .3rem !important; }
     form[data-abos-counter] .ds-out > div { border-radius: 12px !important; padding: .22rem .9rem !important; border: 1px solid #e3e8f0; }

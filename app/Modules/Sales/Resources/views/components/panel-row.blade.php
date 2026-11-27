@@ -33,7 +33,7 @@
     **বাকি তেরোটাও বদলায়**। ঘর-সহ সারিগুলোকে আলাদা করে সামলানোই ঠিক পথ —
     ওরা নিজের slot-এ `flex-1` দিয়ে ঘরটাকে বাঁয়ে টেনে রাখে।
 --}}
-<div class="flex items-center justify-between gap-2 {{ $strong ? 'font-semibold' : '' }}" @if ($tone) data-tone="{{ $tone }}" @endif>
+<div class="flex items-center justify-between gap-2 {{ $strong ? 'font-semibold' : '' }}" @if ($tone) data-tone="{{ $tone }}" @endif {{ $attributes }}>
     <span class="{{ $strong ? '' : 'text-(--color-ink-muted)' }}">{{ $label }}</span>
     {{ $slot }}
 </div>

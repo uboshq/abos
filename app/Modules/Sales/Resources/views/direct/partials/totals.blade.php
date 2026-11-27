@@ -60,7 +60,7 @@
                 </div>
 
                 @if ($show['sub_total'])
-                    <x-sales::panel-row :label="__('sales::field.sub_total_no_vat')" tone="w">
+                    <x-sales::panel-row :label="__('sales::field.sub_total_no_vat')" data-row="sub" tone="w">
                         <span class="num" x-text="'৳' + money(subTotal)"></span>
                     </x-sales::panel-row>
                 @endif
@@ -89,7 +89,7 @@
                     **টাকা** পাঠায়, শতাংশ নয়। পর্দা হিসাব করে, সার্ভার
                     আগের মতোই টাকা পায় — উপহারের সাথে একই কৌশল।
                 --}}
-                <x-sales::panel-row :label="__('sales::field.discount_amount')" tone="l">
+                <x-sales::panel-row :label="__('sales::field.discount_amount')" data-row="disc" tone="l">
                     <span class="flex flex-1 items-center gap-2">
                         <input type="text" inputmode="decimal" x-model="discountInput"
                                placeholder="{{ __('sales::field.amount_or_pct') }}"
@@ -154,7 +154,7 @@
                         অনুযায়ী"-র পাশে একটা হার মানে **এমন একটা সংখ্যা যেটা
                         কোথাও বসে না**, আর "ভ্যাট নেই"-এর পাশে হার অর্থহীন।
                     --}}
-                    <x-sales::panel-row :label="__('sales::field.vat')" tone="s">
+                    <x-sales::panel-row :label="__('sales::field.vat')" data-row="tax" tone="s">
                         <span class="flex flex-1 flex-wrap items-center gap-1">
                             <select x-model="vatMode" name="vat_mode"
                                     title="{{ __('sales::field.vat_per_product_hint') }}"
@@ -202,7 +202,7 @@
                     আর দরকার নেই।
                 --}}
                 @if ($show['expense'])
-                    <x-sales::panel-row :label="__('sales::field.expense')" tone="w">
+                    <x-sales::panel-row :label="__('sales::field.expense')" data-row="tax" tone="w">
                         {{-- ⚠️ টাকা **বা** শতাংশ — মালিকের নির্দেশ
                              (৩ সেপ্টেম্বর ২০২৬): *"Expense e discount er moto
                              Amount o % thakbe"*।
@@ -265,7 +265,7 @@
                     দিকটা একটা বাছাই — ভুল করা কঠিন।
                 --}}
                 @if ($show['rounding'])
-                    <x-sales::panel-row :label="__('sales::field.rounding')" tone="l">
+                    <x-sales::panel-row :label="__('sales::field.rounding')" data-row="tax" tone="l">
                         <span class="flex flex-1 items-center gap-1">
                             <select x-model="roundingSign"
                                     class="h-(--spacing-inline) w-12 rounded-(--radius-field) border
@@ -289,12 +289,12 @@
 
                 {{-- ⭐ "আমরা দিয়ে বিলে যোগ" হলে ভাড়াটা বিলে আলাদা লাইনে (সার্ভারে `freight_charge`, af) --}}
                 <div x-show="freightOnBill > 0" x-cloak>
-                    <x-sales::panel-row :label="__('sales::field.fare_on_bill')" tone="s">
+                    <x-sales::panel-row :label="__('sales::field.fare_on_bill')" data-row="tax" tone="s">
                         <span class="num" x-text="money(freightOnBill)"></span>
                     </x-sales::panel-row>
                 </div>
 
-                <x-sales::panel-row :label="__('sales::field.net_payable')" strong tone="net">
+                <x-sales::panel-row :label="__('sales::field.net_payable')" data-row="pay" strong tone="net">
                     <span class="num text-sm" x-text="'৳' + money(netPayable)"></span>
                 </x-sales::panel-row>
 
@@ -315,7 +315,7 @@
                     জায়গা "জমা যোগ" বোতামের প্যানেল, আর এখানে কেবল **যোগফল**।
                 --}}
                 @if ($show['deposit'])
-                    <x-sales::panel-row :label="__('sales::field.received_deposit')" tone="l">
+                    <x-sales::panel-row :label="__('sales::field.received_deposit')" data-row="paid" tone="l">
                         <span class="num" x-text="$num(deposit) > 0 ? '৳' + money(deposit) : '—'"></span>
                     </x-sales::panel-row>
                     {{-- ⭐ কোন পথে কত — "টাকা নিন"-এর বিস্তারিত এখানেই (মালিক, ২৬ নভেম্বর ২০২৬) --}}
@@ -324,7 +324,7 @@
                     @endif
                 @endif
 
-                <x-sales::panel-row :label="__('sales::field.invoice_due')" strong tone="due">
+                <x-sales::panel-row :label="__('sales::field.invoice_due')" data-row="bal" strong tone="due">
                     <span class="num" x-text="'৳' + money(invoiceDue)"></span>
                 </x-sales::panel-row>
 
@@ -337,13 +337,13 @@
                      ⓘ সবুজ, লাল নয়: উদ্বৃত্ত জমা কোনো সমস্যা নয়, ওটা
                      গ্রাহকের পাওনা — পরের চালানে কাটা যাবে। --}}
                 <template x-if="excessToOldDue > 0">
-                    <x-sales::panel-row :label="__('sales::field.excess_to_old_due')" tone="w">
+                    <x-sales::panel-row :label="__('sales::field.excess_to_old_due')" data-row="paid" tone="w">
                         <span class="num font-semibold text-(--color-success)" data-excess-old-due
                               x-text="'৳' + money(excessToOldDue)"></span>
                     </x-sales::panel-row>
                 </template>
                 <template x-if="excessKept > 0">
-                    <x-sales::panel-row :label="__('sales::field.kept_as_advance')" tone="w">
+                    <x-sales::panel-row :label="__('sales::field.kept_as_advance')" data-row="paid" tone="w">
                         <span class="num font-semibold text-(--color-success)" data-excess-kept
                               x-text="'৳' + money(excessKept)"></span>
                     </x-sales::panel-row>
@@ -368,7 +368,7 @@
                      বদলাত না, আর কোনো ত্রুটিও হত না।
 
                      এখানে লেবেলটাই বদলায়, তাই সারিটা নিজে হাতে লেখা। --}}
-                <div class="flex items-center justify-between gap-2" data-tone="w">
+                <div class="flex items-center justify-between gap-2" data-tone="w" data-row="prev">
                     <span class="text-(--color-ink-muted)"
                           x-text="customer.due < 0
                             ? @js(__('sales::field.previous_advance'))
@@ -467,6 +467,19 @@
                                   x-text="'৳' + money(creditLeft > 0 ? creditLeft : 0)"></span>
                         </template>
                     </div>
+
+                    @if (($abosLook ?? false))
+                        <template x-if="hasCreditLimit">
+                            <div class="ds-cbar" data-credit-bar>
+                                <div class="ds-cbar-l">
+                                    <span>{{ __('sales::field.credit_limit') }} <b class="num" x-text="creditLimitText"></b></span>
+                                    <span><b class="num" x-text="creditUsedPct + '%'"></b> {{ __('sales::field.credit_used') }}</span>
+                                </div>
+                                <div class="ds-cbar-t" role="meter" aria-valuemin="0" aria-valuemax="100" :aria-valuenow="creditUsedPct"
+                                     aria-label="{{ __('sales::field.credit_used') }}"><i :style="creditBarStyle" :class="creditBarTone"></i></div>
+                            </div>
+                        </template>
+                    @endif
 
                     <template x-if="hasCreditLimit && creditOver > 0">
                         <div class="flex items-center justify-between gap-2 rounded-(--radius-field)

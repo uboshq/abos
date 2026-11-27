@@ -414,6 +414,7 @@ return [
     'discount_reason_hint' => 'e.g. old customer, bulk order — printed on the bill',
     'lots_short' => 'lots',
     'swap_product' => 'Change',
+    'credit_used' => 'used',
     'last_rate' => 'Last rate',
     'last_rate_full' => 'Last rate sold to this customer',
     'last_rate_none' => 'Not sold to this customer before',

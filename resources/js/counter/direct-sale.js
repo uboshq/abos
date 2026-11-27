@@ -3266,6 +3266,28 @@ export default function directSale({
             return this.creditLeft < 0 ? -this.creditLeft : 0;
         },
 
+        /* 📊 বাকির সীমার দাগ (v2 A5) — সীমার কত % খাটছে: (সীমা − অবশিষ্ট) ÷ সীমা, ০–১০০-তে আটকানো।
+         * ⓘ অবশিষ্টটা creditLeft-ই — সেবার হিসাবের আয়না, তাই দাগ আর "অবশিষ্ট সীমা" সংখ্যা কখনো আলাদা কথা বলে না। */
+        get creditUsedPct() {
+            const limit = Number(this.customer.limit) || 0;
+            if (limit <= 0) return 0;
+            const pct = Math.round(((limit - this.creditLeft) / limit) * 100);
+            return pct < 0 ? 0 : (pct > 100 ? 100 : pct);
+        },
+
+        get creditBarStyle() {
+            return 'width: ' + this.creditUsedPct + '%';
+        },
+
+        get creditBarTone() {
+            const p = this.creditUsedPct;
+            return p >= 90 ? 'is-over' : (p >= 70 ? 'is-warn' : '');
+        },
+
+        get creditLimitText() {
+            return '৳' + this.money(Number(this.customer.limit) || 0);
+        },
+
         /*
          * এই বিলের যতটুকু বাকি থেকে যাবে।
          *
