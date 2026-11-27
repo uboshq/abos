@@ -36,6 +36,7 @@ final class NoticeTarget extends Model
 
     protected $fillable = ['company_id', 'notice_id', 'match_key'];
 
+    /** @return BelongsTo<Notice, $this> */
     public function notice(): BelongsTo
     {
         return $this->belongsTo(Notice::class);

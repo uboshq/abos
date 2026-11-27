@@ -90,6 +90,7 @@ class OpportunityStage extends Model
         return ! $this->is_won && ! $this->is_lost;
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

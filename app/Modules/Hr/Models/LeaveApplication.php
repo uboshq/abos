@@ -73,11 +73,13 @@ class LeaveApplication extends Model
         return $this->belongsTo(LeaveType::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function decider(): BelongsTo
     {
         return $this->belongsTo(User::class, 'decided_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

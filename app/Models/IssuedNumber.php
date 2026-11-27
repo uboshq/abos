@@ -37,6 +37,7 @@ class IssuedNumber extends Model
         ];
     }
 
+    /** @return BelongsTo<NumberSeries, $this> */
     public function series(): BelongsTo
     {
         return $this->belongsTo(NumberSeries::class, 'number_series_id');

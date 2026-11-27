@@ -37,6 +37,7 @@ final class NoticeTemplate extends Model
         ];
     }
 
+    /** @return BelongsTo<NoticeCategory, $this> */
     public function category(): BelongsTo
     {
         return $this->belongsTo(NoticeCategory::class, 'notice_category_id');

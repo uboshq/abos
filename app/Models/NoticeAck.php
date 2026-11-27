@@ -30,11 +30,13 @@ final class NoticeAck extends Model
         return ['acknowledged_at' => 'datetime'];
     }
 
+    /** @return BelongsTo<Notice, $this> */
     public function notice(): BelongsTo
     {
         return $this->belongsTo(Notice::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

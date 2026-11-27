@@ -31,6 +31,7 @@ class DocumentLink extends Model
         return ['updated_by'];
     }
 
+    /** @return BelongsTo<Document, $this> */
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'document_id');

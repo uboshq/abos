@@ -38,6 +38,7 @@ class ApprovalLimit extends Model
         return ['max_amount' => 'decimal:4'];
     }
 
+    /** @return BelongsTo<Role, $this> */
     public function role(): BelongsTo
     {
         /*
@@ -53,6 +54,7 @@ class ApprovalLimit extends Model
         return $this->belongsTo(Role::class, 'role_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'branch_id');

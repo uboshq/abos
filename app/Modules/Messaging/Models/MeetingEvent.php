@@ -29,6 +29,7 @@ class MeetingEvent extends Model
         return [];
     }
 
+    /** @return BelongsTo<Meeting, $this> */
     public function meeting(): BelongsTo
     {
         return $this->belongsTo(Meeting::class);

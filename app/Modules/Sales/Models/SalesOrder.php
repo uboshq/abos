@@ -87,43 +87,53 @@ class SalesOrder extends Model implements \App\Modules\Sales\Contracts\CounterSa
         ];
     }
 
+    /** @return HasMany<SalesOrderLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(SalesOrderLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
-    /** ⓘ যে উদ্ধৃতি থেকে এই আদেশ এসেছে — না এলে নাল ([[SalesQuotationService::convert()]]) */
+    /** ⓘ যে উদ্ধৃতি থেকে এই আদেশ এসেছে — না এলে নাল ([[SalesQuotationService::convert()]]) *
+     * @return BelongsTo<SalesQuotation, $this>
+     */
     public function quotation(): BelongsTo
     {
         return $this->belongsTo(SalesQuotation::class, 'sales_quotation_id');
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return HasMany<DeliveryChallan, $this> */
     public function challans(): HasMany
     {
         return $this->hasMany(DeliveryChallan::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** ⓘ কে আদেশটা বন্ধ করলেন — পাতায় নাম ([[SalesOrderService::close()]]) */
+    /** ⓘ কে আদেশটা বন্ধ করলেন — পাতায় নাম ([[SalesOrderService::close()]]) *
+     * @return BelongsTo<User, $this>
+     */
     public function closer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by');

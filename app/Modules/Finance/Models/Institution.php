@@ -99,17 +99,21 @@ class Institution extends Model
         return $kind === null ? $query : $query->where('kind', $kind);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** জোড়া দেওয়া ব্যাংক/MFS খাত — [[InstitutionAccount]] */
+    /** জোড়া দেওয়া ব্যাংক/MFS খাত — [[InstitutionAccount]] *
+     * @return HasMany<InstitutionAccount, $this>
+     */
     public function accountLinks(): HasMany
     {
         return $this->hasMany(InstitutionAccount::class);
     }
 
+    /** @return HasMany<InsurancePolicy, $this> */
     public function insurancePolicies(): HasMany
     {
         return $this->hasMany(InsurancePolicy::class);

@@ -78,11 +78,13 @@ class ApprovalFlow extends Model
         static::deleted(fn () => ApprovalEngine::flowsChanged());
     }
 
+    /** @return HasMany<ApprovalCondition, $this> */
     public function conditions(): HasMany
     {
         return $this->hasMany(ApprovalCondition::class, 'approval_flow_id');
     }
 
+    /** @return HasMany<ApprovalFlowStep, $this> */
     public function steps(): HasMany
     {
         return $this->hasMany(ApprovalFlowStep::class)->orderBy('level');

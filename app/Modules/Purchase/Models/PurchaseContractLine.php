@@ -41,11 +41,13 @@ class PurchaseContractLine extends Model
         ];
     }
 
+    /** @return BelongsTo<PurchaseContract, $this> */
     public function contract(): BelongsTo
     {
         return $this->belongsTo(PurchaseContract::class, 'contract_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

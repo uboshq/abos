@@ -62,26 +62,31 @@ class PurchaseRequisition extends Model
         ];
     }
 
+    /** @return HasMany<PurchaseRequisitionLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(PurchaseRequisitionLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<PurchaseOrder, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

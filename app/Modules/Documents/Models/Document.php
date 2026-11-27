@@ -88,66 +88,79 @@ class Document extends Model implements \App\Core\Contracts\NothingToPostAfterSi
         return (string) ($this->attributes['name'] ?? '');
     }
 
+    /** @return HasMany<DocumentVersion, $this> */
     public function versions(): HasMany
     {
         return $this->hasMany(DocumentVersion::class, 'document_id');
     }
 
+    /** @return BelongsTo<DocumentVersion, $this> */
     public function currentVersion(): BelongsTo
     {
         return $this->belongsTo(DocumentVersion::class, 'current_version_id');
     }
 
+    /** @return HasMany<DocumentGrant, $this> */
     public function grants(): HasMany
     {
         return $this->hasMany(DocumentGrant::class, 'document_id');
     }
 
+    /** @return HasMany<DocumentSignature, $this> */
     public function signatures(): HasMany
     {
         return $this->hasMany(DocumentSignature::class, 'document_id');
     }
 
+    /** @return HasMany<DocumentOcr, $this> */
     public function ocrTexts(): HasMany
     {
         return $this->hasMany(DocumentOcr::class, 'document_id');
     }
 
+    /** @return HasMany<DocumentLink, $this> */
     public function links(): HasMany
     {
         return $this->hasMany(DocumentLink::class, 'document_id');
     }
 
+    /** @return HasMany<DocumentMetadata, $this> */
     public function metadata(): HasMany
     {
         return $this->hasMany(DocumentMetadata::class, 'document_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function deleter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'deleted_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function archiver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'archived_by');
     }
 
+    /** @return BelongsTo<Department, $this> */
     public function department(): BelongsTo
     {
         return $this->belongsTo(Department::class, 'department_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'branch_id');

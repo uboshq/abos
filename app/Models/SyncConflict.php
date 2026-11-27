@@ -53,6 +53,7 @@ class SyncConflict extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function resolver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'resolved_by');

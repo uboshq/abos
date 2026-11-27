@@ -56,29 +56,37 @@ class Promotion extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
-    /** ⓘ কার জন্য, কোন পণ্যে — সারি না থাকা মানে *"সব"*। */
+    /** ⓘ কার জন্য, কোন পণ্যে — সারি না থাকা মানে *"সব"*। *
+     * @return HasMany<PromotionScope, $this>
+     */
     public function scopes(): HasMany
     {
         return $this->hasMany(PromotionScope::class);
     }
 
-    /** ⓘ কত কিনলে — স্ল্যাবের ধাপগুলো, ক্রমে। */
+    /** ⓘ কত কিনলে — স্ল্যাবের ধাপগুলো, ক্রমে। *
+     * @return HasMany<PromotionCondition, $this>
+     */
     public function conditions(): HasMany
     {
         return $this->hasMany(PromotionCondition::class)->orderBy('step_order');
     }
 
-    /** ⓘ কী পাবেন — শর্তের সাথে জোড়া, বা শর্তহীন। */
+    /** ⓘ কী পাবেন — শর্তের সাথে জোড়া, বা শর্তহীন। *
+     * @return HasMany<PromotionBenefit, $this>
+     */
     public function benefits(): HasMany
     {
         return $this->hasMany(PromotionBenefit::class);

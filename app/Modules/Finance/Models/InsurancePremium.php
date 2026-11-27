@@ -65,11 +65,13 @@ class InsurancePremium extends Model implements Drillable, SettledByAVoucher, \A
         return $due < $today ? 'overdue' : ($due === $today ? 'today' : 'upcoming');
     }
 
+    /** @return BelongsTo<InsurancePolicy, $this> */
     public function policy(): BelongsTo
     {
         return $this->belongsTo(InsurancePolicy::class, 'policy_id');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);

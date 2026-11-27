@@ -46,11 +46,13 @@ class Member extends Model
         ];
     }
 
+    /** @return BelongsTo<Thread, $this> */
     public function thread(): BelongsTo
     {
         return $this->belongsTo(Thread::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

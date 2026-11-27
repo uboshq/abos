@@ -215,6 +215,8 @@ class Approval extends Model implements Drillable, \App\Core\Contracts\GuardsFie
      *
      * ⚠️ খালি হলে ছকের স্বাভাবিক নিয়ম চলে; ভরা থাকলে **কেবল ইনিই**
      * এই স্তরে সই দিতে পারেন ([[ApprovalEngine::canDecide()]])।
+     *
+     * @return BelongsTo<User, $this>
      */
     public function assignee(): BelongsTo
     {
@@ -243,6 +245,8 @@ class Approval extends Model implements Drillable, \App\Core\Contracts\GuardsFie
      * বদলেছে"* সারিটা কখনো আসত না, আর শাখা ধরে বসানো
      * কর্তৃত্বের সীমা কোনোদিন খাটত না। ⓘ দুইটাই মেপে ধরা পড়েছে,
      * পড়ে নয়।
+     *
+     * @return MorphTo<\Illuminate\Database\Eloquent\Model, $this>
      */
     public function approvable(): MorphTo
     {
@@ -337,11 +341,13 @@ class Approval extends Model implements Drillable, \App\Core\Contracts\GuardsFie
         });
     }
 
+    /** @return HasMany<ApprovalDecision, $this> */
     public function decisions(): HasMany
     {
         return $this->hasMany(ApprovalDecision::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');

@@ -58,16 +58,19 @@ class BankStatementLine extends Model
         ];
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function bankAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'bank_account_id');
     }
 
+    /** @return BelongsTo<VoucherLine, $this> */
     public function matchedLine(): BelongsTo
     {
         return $this->belongsTo(VoucherLine::class, 'matched_line_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function matcher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'matched_by');
@@ -76,6 +79,8 @@ class BankStatementLine extends Model
     /**
      * ⭐ খাতার যে সারিগুলোর সাথে মিলেছে — এক ব্যাংক-সারি, কয়েকটা কাগজ (মালিক, ২১ নভেম্বর ২০২৬; [[BankStatementMatch]])।
      * ⓘ `matched_line_id` থাকে "খাতায় মিলেছে" চিহ্ন হয়ে (দলের প্রথম সারি) — পুরনো ছাঁকনি আর বোর্ড বদলায় না।
+     *
+     * @return HasMany<BankStatementMatch, $this>
      */
     public function matches(): HasMany
     {

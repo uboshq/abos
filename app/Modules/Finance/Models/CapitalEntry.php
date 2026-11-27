@@ -181,11 +181,13 @@ class CapitalEntry extends Model implements Drillable, SettledByAVoucher, Settle
         return $this->belongsTo(Voucher::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'received_into_account_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -33,11 +33,13 @@ class NotificationTemplate extends Model
         ];
     }
 
+    /** @return HasMany<NotificationTemplateVersion, $this> */
     public function versions(): HasMany
     {
         return $this->hasMany(NotificationTemplateVersion::class, 'template_id')->orderByDesc('version');
     }
 
+    /** @return BelongsTo<NotificationTemplateVersion, $this> */
     public function published(): BelongsTo
     {
         return $this->belongsTo(NotificationTemplateVersion::class, 'published_version_id');

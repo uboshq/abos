@@ -28,11 +28,13 @@ class RfqLine extends Model
         return ['qty' => 'decimal:4'];
     }
 
+    /** @return BelongsTo<Rfq, $this> */
     public function rfq(): BelongsTo
     {
         return $this->belongsTo(Rfq::class, 'rfq_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

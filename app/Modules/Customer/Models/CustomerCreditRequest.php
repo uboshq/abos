@@ -119,16 +119,19 @@ class CustomerCreditRequest extends Model implements ShowsItselfForSigning
         ];
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class)->withoutGlobalScopes();
     }
 
+    /** @return BelongsTo<Approval, $this> */
     public function approval(): BelongsTo
     {
         return $this->belongsTo(Approval::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');

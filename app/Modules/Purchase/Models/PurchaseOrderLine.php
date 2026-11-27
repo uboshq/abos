@@ -69,16 +69,19 @@ class PurchaseOrderLine extends Model
         return 'order';
     }
 
+    /** @return BelongsTo<PurchaseOrder, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return HasMany<PurchaseReceiptLine, $this> */
     public function receiptLines(): HasMany
     {
         return $this->hasMany(PurchaseReceiptLine::class, 'purchase_order_line_id');
@@ -102,6 +105,7 @@ class PurchaseOrderLine extends Model
         return bccomp($pending, '0', 4) > 0 ? $pending : '0.0000';
     }
 
+    /** @return HasMany<PurchaseBillLine, $this> */
     public function billLines(): HasMany
     {
         return $this->hasMany(PurchaseBillLine::class, 'purchase_order_line_id');

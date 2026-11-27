@@ -23,11 +23,13 @@ class DocumentMetadata extends Model
 
     protected $fillable = ['company_id', 'document_id', 'field_id', 'value'];
 
+    /** @return BelongsTo<MetadataField, $this> */
     public function field(): BelongsTo
     {
         return $this->belongsTo(MetadataField::class, 'field_id');
     }
 
+    /** @return BelongsTo<Document, $this> */
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'document_id');

@@ -61,6 +61,7 @@ class LoanInstalment extends Model implements Drillable
         return 'loan';
     }
 
+    /** @return BelongsTo<Loan, $this> */
     public function loan(): BelongsTo
     {
         return $this->belongsTo(Loan::class);

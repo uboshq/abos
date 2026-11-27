@@ -48,32 +48,38 @@ class Opportunity extends Model
         ];
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<Lead, $this> */
     public function lead(): BelongsTo
     {
         return $this->belongsTo(Lead::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function salesperson(): BelongsTo
     {
         return $this->belongsTo(User::class, 'salesperson_user_id');
     }
 
+    /** @return BelongsTo<OpportunityStage, $this> */
     public function stage(): BelongsTo
     {
         // ⓘ বন্ধ করা বা মুছে ফেলা ধাপও পুরনো সুযোগে নাম দেখায়
         return $this->belongsTo(OpportunityStage::class, 'stage_id')->withTrashed();
     }
 
+    /** @return HasMany<OpportunityLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(OpportunityLine::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

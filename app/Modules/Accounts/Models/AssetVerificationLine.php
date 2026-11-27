@@ -47,16 +47,19 @@ class AssetVerificationLine extends Model implements Drillable
         return ['checked_at' => 'datetime'];
     }
 
+    /** @return BelongsTo<AssetVerification, $this> */
     public function verification(): BelongsTo
     {
         return $this->belongsTo(AssetVerification::class, 'verification_id');
     }
 
+    /** @return BelongsTo<FixedAsset, $this> */
     public function asset(): BelongsTo
     {
         return $this->belongsTo(FixedAsset::class, 'fixed_asset_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function checker(): BelongsTo
     {
         return $this->belongsTo(User::class, 'checked_by');

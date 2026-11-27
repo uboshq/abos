@@ -40,11 +40,13 @@ class DepreciationEntry extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<FixedAsset, $this> */
     public function asset(): BelongsTo
     {
         return $this->belongsTo(FixedAsset::class, 'fixed_asset_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

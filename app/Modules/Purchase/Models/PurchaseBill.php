@@ -187,6 +187,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
         return \App\Modules\Purchase\Support\PurchaseSigningSheet::ofBill($this);
     }
 
+    /** @return HasMany<PurchaseBillLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(PurchaseBillLine::class)->orderBy('line_no');
@@ -282,18 +283,23 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
      * ⚠️ [[lines]]-এর সাথে মিশিয়ে ফেলা যাবে না। বিলের যোগফল কেবল
      * `lines` থেকে আসে; এই সারিগুলোর কোনো দর নেই বলে তারা যোগ হয় না,
      * অথচ গুদামে ঠিকই ঢোকে (ফ্রি ভাণ্ডারে)।
+     *
+     * @return HasMany<PurchaseBillGiftLine, $this>
      */
     public function giftLines(): HasMany
     {
         return $this->hasMany(PurchaseBillGiftLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Supplier, $this> */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
-    /** এই বিলের বিপরীতে যত পরিশোধ বসেছে। */
+    /** এই বিলের বিপরীতে যত পরিশোধ বসেছে। *
+     * @return HasMany<PaymentLine, $this>
+     */
     public function paymentLines(): HasMany
     {
         return $this->hasMany(PaymentLine::class, 'purchase_bill_id');
@@ -507,17 +513,21 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
         return bccomp($due, '0', 4) > 0 ? $due : '0.0000';
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** মাল যে গুদামে ঢুকেছে — ক্রয়-বিলের তালিকার "গুদাম" কলাম (মালিক, ১ অক্টোবর ২০২৬)। */
+    /** মাল যে গুদামে ঢুকেছে — ক্রয়-বিলের তালিকার "গুদাম" কলাম (মালিক, ১ অক্টোবর ২০২৬)। *
+     * @return BelongsTo<Warehouse, $this>
+     */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);

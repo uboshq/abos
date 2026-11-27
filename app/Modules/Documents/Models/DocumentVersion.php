@@ -74,21 +74,25 @@ class DocumentVersion extends Model
         return 'v'.$this->label();
     }
 
+    /** @return BelongsTo<Document, $this> */
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'document_id');
     }
 
+    /** @return BelongsTo<Attachment, $this> */
     public function attachment(): BelongsTo
     {
         return $this->belongsTo(Attachment::class, 'attachment_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<self, $this> */
     public function restoredFrom(): BelongsTo
     {
         return $this->belongsTo(self::class, 'restored_from_id');

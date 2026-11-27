@@ -62,21 +62,25 @@ class SalesInvoiceCancellation extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<SalesInvoice, $this> */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(SalesInvoice::class, 'sales_invoice_id');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function confirmer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'confirmed_by');

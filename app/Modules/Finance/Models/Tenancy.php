@@ -72,16 +72,19 @@ class Tenancy extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function incomeAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'income_account_id');
     }
 
+    /** @return HasMany<TenancyCharge, $this> */
     public function charges(): HasMany
     {
         return $this->hasMany(TenancyCharge::class)->orderBy('for_month');
     }
 
+    /** @return HasMany<TenancyMove, $this> */
     public function moves(): HasMany
     {
         return $this->hasMany(TenancyMove::class)->orderBy('moved_on')->orderBy('id');

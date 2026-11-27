@@ -55,22 +55,27 @@ class PromotionApplication extends Model
         ];
     }
 
+    /** @return BelongsTo<Promotion, $this> */
     public function promotion(): BelongsTo
     {
         return $this->belongsTo(Promotion::class);
     }
 
-    /** ⓘ কোন ধাপের সুবিধা — উপহারের পণ্যটা এখান থেকেই আসে, ফর্ম থেকে নয় */
+    /** ⓘ কোন ধাপের সুবিধা — উপহারের পণ্যটা এখান থেকেই আসে, ফর্ম থেকে নয় *
+     * @return BelongsTo<PromotionBenefit, $this>
+     */
     public function benefit(): BelongsTo
     {
         return $this->belongsTo(PromotionBenefit::class, 'promotion_benefit_id');
     }
 
+    /** @return HasMany<PromotionGiftIssue, $this> */
     public function gifts(): HasMany
     {
         return $this->hasMany(PromotionGiftIssue::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function applier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'applied_by');

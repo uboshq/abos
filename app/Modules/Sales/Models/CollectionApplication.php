@@ -88,11 +88,13 @@ class CollectionApplication extends Model
         return $row === null ? [] : ['company_id' => $row->company_id, 'branch_id' => $row->branch_id];
     }
 
+    /** @return BelongsTo<Collection, $this> */
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);
     }
 
+    /** @return BelongsTo<SalesInvoice, $this> */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(SalesInvoice::class, 'target_invoice_id');

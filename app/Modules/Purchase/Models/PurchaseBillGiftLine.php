@@ -57,16 +57,19 @@ class PurchaseBillGiftLine extends Model
         return 'bill';
     }
 
+    /** @return BelongsTo<PurchaseBill, $this> */
     public function bill(): BelongsTo
     {
         return $this->belongsTo(PurchaseBill::class, 'purchase_bill_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function againstProduct(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'against_product_id');

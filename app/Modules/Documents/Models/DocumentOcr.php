@@ -37,6 +37,7 @@ class DocumentOcr extends Model
         return ['text', 'updated_by'];
     }
 
+    /** @return BelongsTo<DocumentVersion, $this> */
     public function version(): BelongsTo
     {
         return $this->belongsTo(DocumentVersion::class, 'version_id');

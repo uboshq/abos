@@ -37,11 +37,13 @@ class OpportunityLine extends Model
         ];
     }
 
+    /** @return BelongsTo<Opportunity, $this> */
     public function opportunity(): BelongsTo
     {
         return $this->belongsTo(Opportunity::class);
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

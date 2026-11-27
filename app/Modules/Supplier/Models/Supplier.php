@@ -79,27 +79,33 @@ class Supplier extends Model implements Drillable, IsAMasterRecord
         ];
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
-    /** ⭐ যে শাখার আদায়ের উপর এই প্রিন্সিপালের কমিশন গোনা হয় ([[PrincipalCommission]]) */
+    /** ⭐ যে শাখার আদায়ের উপর এই প্রিন্সিপালের কমিশন গোনা হয় ([[PrincipalCommission]]) *
+     * @return BelongsTo<Branch, $this>
+     */
     public function principalBranch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'principal_branch_id');
     }
 
+    /** @return BelongsTo<PartyType, $this> */
     public function partyType(): BelongsTo
     {
         return $this->belongsTo(PartyType::class, 'party_type_id');
     }
 
+    /** @return BelongsTo<PaymentTerm, $this> */
     public function paymentTerm(): BelongsTo
     {
         return $this->belongsTo(PaymentTerm::class, 'payment_term_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

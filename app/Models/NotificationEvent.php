@@ -45,21 +45,25 @@ class NotificationEvent extends Model
         ];
     }
 
+    /** @return BelongsTo<NotificationTemplateVersion, $this> */
     public function template(): BelongsTo
     {
         return $this->belongsTo(NotificationTemplateVersion::class, 'template_version_id');
     }
 
+    /** @return HasMany<Notification, $this> */
     public function deliveries(): HasMany
     {
         return $this->hasMany(Notification::class, 'event_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');

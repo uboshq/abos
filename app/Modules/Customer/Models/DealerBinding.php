@@ -42,17 +42,21 @@ class DealerBinding extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /** ⓘ দেয়াল ছাড়া — বাঁধার পর্দা অন্য কর্মীর ডিলারও দেখায় */
+    /** ⓘ দেয়াল ছাড়া — বাঁধার পর্দা অন্য কর্মীর ডিলারও দেখায় *
+     * @return BelongsTo<Customer, $this>
+     */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class)->withoutGlobalScope(Customer::DEALER_WALL);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

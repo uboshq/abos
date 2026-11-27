@@ -46,16 +46,19 @@ class AssetTransfer extends Model implements Drillable
         return ['moved_on' => 'date'];
     }
 
+    /** @return BelongsTo<FixedAsset, $this> */
     public function asset(): BelongsTo
     {
         return $this->belongsTo(FixedAsset::class, 'asset_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function fromBranch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'from_branch_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function toBranch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'to_branch_id');
@@ -66,6 +69,7 @@ class AssetTransfer extends Model implements Drillable
         return (int) $this->from_branch_id !== (int) $this->to_branch_id;
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -44,6 +44,7 @@ class Notification extends Model
         ];
     }
 
+    /** @return BelongsTo<NotificationEvent, $this> */
     public function event(): BelongsTo
     {
         return $this->belongsTo(NotificationEvent::class, 'event_id');
@@ -86,6 +87,7 @@ class Notification extends Model
         return $query;
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -108,7 +110,9 @@ class Notification extends Model
         return $query->where('user_id', $userId);
     }
 
-    /** ছুটিতে থাকা যাঁর হয়ে এই কপিটা এল */
+    /** ছুটিতে থাকা যাঁর হয়ে এই কপিটা এল *
+     * @return BelongsTo<User, $this>
+     */
     public function onBehalfOf(): BelongsTo
     {
         return $this->belongsTo(User::class, 'on_behalf_of');

@@ -46,6 +46,7 @@ class MailTemplate extends Model
         return ['used'];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');

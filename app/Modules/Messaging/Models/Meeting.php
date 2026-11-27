@@ -63,16 +63,19 @@ class Meeting extends Model
         return $this->ended_at !== null;
     }
 
+    /** @return HasMany<MeetingPerson, $this> */
     public function people(): HasMany
     {
         return $this->hasMany(MeetingPerson::class);
     }
 
+    /** @return BelongsTo<Thread, $this> */
     public function thread(): BelongsTo
     {
         return $this->belongsTo(Thread::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function host(): BelongsTo
     {
         return $this->belongsTo(User::class, 'host_id');

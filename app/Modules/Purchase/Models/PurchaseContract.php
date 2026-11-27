@@ -60,21 +60,25 @@ class PurchaseContract extends Model
         ];
     }
 
+    /** @return HasMany<PurchaseContractLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(PurchaseContractLine::class, 'contract_id')->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Supplier, $this> */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -61,6 +61,7 @@ class Vehicle extends Model implements Drillable
      */
     public const OWNER_TYPES = ['own', 'rented'];
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

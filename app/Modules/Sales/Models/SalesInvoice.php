@@ -124,37 +124,45 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
         ];
     }
 
+    /** @return HasMany<SalesInvoiceLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(SalesInvoiceLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return HasMany<CollectionLine, $this> */
     public function collectionLines(): HasMany
     {
         return $this->hasMany(CollectionLine::class, 'sales_invoice_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** ⭐ দায়িত্বে থাকা বিক্রয়কর্মী — কৃতিত্ব এঁর (মালিক, ২৩ নভেম্বর ২০২৬)। */
+    /** ⭐ দায়িত্বে থাকা বিক্রয়কর্মী — কৃতিত্ব এঁর (মালিক, ২৩ নভেম্বর ২০২৬)। *
+     * @return BelongsTo<User, $this>
+     */
     public function salesPerson(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sales_person_id');
@@ -233,6 +241,8 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
      *
      * ⓘ শর্তগুলো `paidByReceiptVouchers()`-এর হুবহু — তালিকা আর যোগফল
      * আলাদা হলে পাঠক দুইটা আলাদা সত্য পেতেন।
+     *
+     * @return HasMany<Voucher, $this>
      */
     public function receiptVouchers(): HasMany
     {

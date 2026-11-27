@@ -31,6 +31,7 @@ class AssistantDismissal extends Model
         return ['until' => 'date'];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

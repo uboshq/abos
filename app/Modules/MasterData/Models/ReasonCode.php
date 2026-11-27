@@ -57,6 +57,7 @@ class ReasonCode extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -114,6 +115,8 @@ class ReasonCode extends Model implements Drillable
      * না বললে null — তখন মজুদ ঘাটতি ও উদ্বৃত্তে যায়, যা গণনার
      * পার্থক্যের জন্য ঠিক। কিন্তু আপ্যায়ন বা মালিকের ব্যবহারের জন্য নয়,
      * আর সেখানেই এই ঘরটা লাগে।
+     *
+     * @return BelongsTo<Account, $this>
      */
     public function account(): BelongsTo
     {

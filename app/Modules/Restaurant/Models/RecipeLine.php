@@ -58,11 +58,13 @@ class RecipeLine extends Model
         ];
     }
 
+    /** @return BelongsTo<Recipe, $this> */
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

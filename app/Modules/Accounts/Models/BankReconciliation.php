@@ -66,27 +66,33 @@ class BankReconciliation extends Model
         ];
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function bankAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'bank_account_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function confirmer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'confirmed_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** যে লাইনগুলোতে এই মিলকরণ টিক দিয়েছে। */
+    /** যে লাইনগুলোতে এই মিলকরণ টিক দিয়েছে। *
+     * @return HasMany<VoucherLine, $this>
+     */
     public function lines(): HasMany
     {
         return $this->hasMany(VoucherLine::class, 'reconciliation_id');

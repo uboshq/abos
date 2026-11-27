@@ -68,11 +68,13 @@ class TradeVoucher extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<TradeVoucherLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(TradeVoucherLine::class, 'trade_voucher_id')->orderBy('line_no');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

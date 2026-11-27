@@ -62,6 +62,7 @@ class SmsOutbox extends Model
         ];
     }
 
+    /** @return BelongsTo<SmsGatewayPhone, $this> */
     public function gatewayPhone(): BelongsTo
     {
         return $this->belongsTo(SmsGatewayPhone::class, 'gateway_phone_id');

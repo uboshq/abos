@@ -53,11 +53,13 @@ class MailAddress extends Model
         return ['resume_on' => 'date', 'delete_on' => 'date', 'quota_mb' => 'integer', 'user_id' => 'integer', 'auto_reply' => 'array'];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<MailAccount, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(MailAccount::class, 'mail_account_id');

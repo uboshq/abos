@@ -70,21 +70,25 @@ class CostLayer extends Model
         ];
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<Batch, $this> */
     public function batch(): BelongsTo
     {
         return $this->belongsTo(Batch::class);
     }
 
+    /** @return HasMany<CostLayerUse, $this> */
     public function uses(): HasMany
     {
         return $this->hasMany(CostLayerUse::class);

@@ -63,21 +63,25 @@ class AssetCategory extends Model
         return $this->code.' — '.$this->name();
     }
 
+    /** @return HasMany<FixedAsset, $this> */
     public function assets(): HasMany
     {
         return $this->hasMany(FixedAsset::class, 'category_id');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function assetAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'asset_account_id');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function accumulatedAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'accumulated_account_id');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function expenseAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'expense_account_id');

@@ -42,11 +42,13 @@ class QuotationLine extends Model
         ];
     }
 
+    /** @return BelongsTo<Quotation, $this> */
     public function quotation(): BelongsTo
     {
         return $this->belongsTo(Quotation::class, 'quotation_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

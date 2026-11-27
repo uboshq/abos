@@ -24,11 +24,13 @@ final class BranchModulePackage extends Model
         return ['is_custom' => 'boolean'];
     }
 
+    /** @return BelongsTo<ModulePackage, $this> */
     public function package(): BelongsTo
     {
         return $this->belongsTo(ModulePackage::class, 'package_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

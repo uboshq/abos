@@ -113,16 +113,19 @@ class Company extends Model
         return ! $this->canChangeCode();
     }
 
+    /** @return HasMany<Branch, $this> */
     public function branches(): HasMany
     {
         return $this->hasMany(Branch::class);
     }
 
+    /** @return HasMany<FinancialYear, $this> */
     public function financialYears(): HasMany
     {
         return $this->hasMany(FinancialYear::class);
     }
 
+    /** @return BelongsToMany<User, $this> */
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)

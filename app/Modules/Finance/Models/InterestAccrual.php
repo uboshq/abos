@@ -42,16 +42,19 @@ class InterestAccrual extends Model
         ];
     }
 
+    /** @return BelongsTo<BankFacility, $this> */
     public function facility(): BelongsTo
     {
         return $this->belongsTo(BankFacility::class, 'bank_facility_id');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function reversalVoucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'reversal_voucher_id');

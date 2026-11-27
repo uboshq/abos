@@ -30,11 +30,13 @@ final class NoticeVersion extends Model
         return ['revision' => 'integer'];
     }
 
+    /** @return BelongsTo<Notice, $this> */
     public function notice(): BelongsTo
     {
         return $this->belongsTo(Notice::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

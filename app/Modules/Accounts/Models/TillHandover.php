@@ -52,21 +52,25 @@ class TillHandover extends Model
         ];
     }
 
+    /** @return BelongsTo<CashTill, $this> */
     public function till(): BelongsTo
     {
         return $this->belongsTo(CashTill::class, 'cash_till_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function fromHolder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'from_holder_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function toHolder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'to_holder_id');
     }
 
+    /** @return BelongsTo<CashCount, $this> */
     public function cashCount(): BelongsTo
     {
         return $this->belongsTo(CashCount::class, 'cash_count_id');

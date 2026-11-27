@@ -37,11 +37,13 @@ class RentalAccrual extends Model
         ];
     }
 
+    /** @return BelongsTo<RentalContract, $this> */
     public function contract(): BelongsTo
     {
         return $this->belongsTo(RentalContract::class, 'rental_contract_id');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);

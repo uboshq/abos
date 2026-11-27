@@ -118,6 +118,7 @@ class HandLoanAccount extends Model implements Drillable
         return $this->belongsTo(Person::class, 'person_id');
     }
 
+    /** @return HasMany<HandLoanMovement, $this> */
     public function movements(): HasMany
     {
         return $this->hasMany(HandLoanMovement::class, 'account_id');

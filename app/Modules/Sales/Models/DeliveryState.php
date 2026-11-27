@@ -49,17 +49,20 @@ class DeliveryState extends Model
         return ['stage_at' => 'datetime'];
     }
 
+    /** @return BelongsTo<DeliveryChallan, $this> */
     public function challan(): BelongsTo
     {
         return $this->belongsTo(DeliveryChallan::class, 'delivery_challan_id');
     }
 
+    /** @return HasMany<DeliveryEvent, $this> */
     public function events(): HasMany
     {
         return $this->hasMany(DeliveryEvent::class, 'delivery_challan_id', 'delivery_challan_id')
             ->orderBy('occurred_at')->orderBy('id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function updater(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');

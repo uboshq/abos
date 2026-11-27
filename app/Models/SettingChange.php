@@ -40,11 +40,13 @@ class SettingChange extends Model implements Drillable
         return ['decided_at' => 'datetime'];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function decider(): BelongsTo
     {
         return $this->belongsTo(User::class, 'decided_by');

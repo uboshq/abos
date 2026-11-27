@@ -54,11 +54,13 @@ class SalesQuotationLine extends Model
         return 'quotation';
     }
 
+    /** @return BelongsTo<SalesQuotation, $this> */
     public function quotation(): BelongsTo
     {
         return $this->belongsTo(SalesQuotation::class, 'sales_quotation_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

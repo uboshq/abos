@@ -82,31 +82,37 @@ class Shipment extends Model implements \App\Core\Contracts\ExplainsItsCostVouch
         ];
     }
 
+    /** @return HasMany<ShipmentLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(ShipmentLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<Vehicle, $this> */
     public function vehicle(): BelongsTo
     {
         return $this->belongsTo(Vehicle::class);
     }
 
+    /** @return BelongsTo<Location, $this> */
     public function route(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'route_location_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -115,12 +121,15 @@ class Shipment extends Model implements \App\Core\Contracts\ExplainsItsCostVouch
     /**
      * ⭐ ট্রিপের ভাড়া — বাহক আর ভাড়ার ভাউচার (মালিক, ৭ অক্টোবর ২০২৬; সিদ্ধান্ত ঘ; [[FarePayment]])।
      * ⓘ ভাড়ার ঘরগুলো fillable নয়: কেবল সেবা বসায় (forceFill), অনুরোধের ভর-বসানো দিয়ে নয়।
+     *
+     * @return BelongsTo<\App\Modules\Supplier\Models\Supplier, $this>
      */
     public function carrier(): BelongsTo
     {
         return $this->belongsTo(\App\Modules\Supplier\Models\Supplier::class, 'carrier_id');
     }
 
+    /** @return BelongsTo<\App\Modules\Accounts\Models\Voucher, $this> */
     public function fareVoucher(): BelongsTo
     {
         return $this->belongsTo(\App\Modules\Accounts\Models\Voucher::class, 'fare_voucher_id');

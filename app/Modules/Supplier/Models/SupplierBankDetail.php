@@ -53,16 +53,19 @@ class SupplierBankDetail extends Model
         ];
     }
 
+    /** @return BelongsTo<Supplier, $this> */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function signer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'signed_by');

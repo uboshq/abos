@@ -75,21 +75,25 @@ class Message extends Model
         ];
     }
 
+    /** @return BelongsTo<Thread, $this> */
     public function thread(): BelongsTo
     {
         return $this->belongsTo(Thread::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sender_id');
     }
 
+    /** @return BelongsTo<self, $this> */
     public function replyTo(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reply_to_id');
     }
 
+    /** @return HasOne<MessageFile, $this> */
     public function file(): HasOne
     {
         return $this->hasOne(MessageFile::class);

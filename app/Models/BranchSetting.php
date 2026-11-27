@@ -23,6 +23,7 @@ class BranchSetting extends Model
 
     protected $fillable = ['company_id', 'branch_id', 'key', 'type', 'value'];
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

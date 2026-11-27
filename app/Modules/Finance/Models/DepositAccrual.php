@@ -41,16 +41,19 @@ class DepositAccrual extends Model
         ];
     }
 
+    /** @return BelongsTo<Deposit, $this> */
     public function deposit(): BelongsTo
     {
         return $this->belongsTo(Deposit::class);
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function reversalVoucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'reversal_voucher_id');

@@ -39,11 +39,13 @@ class PromotionCondition extends Model
         ];
     }
 
+    /** @return BelongsTo<Promotion, $this> */
     public function promotion(): BelongsTo
     {
         return $this->belongsTo(Promotion::class);
     }
 
+    /** @return HasMany<PromotionBenefit, $this> */
     public function benefits(): HasMany
     {
         return $this->hasMany(PromotionBenefit::class);

@@ -33,17 +33,21 @@ class HeldWagePayment extends Model
         return ['amount' => 'decimal:4'];
     }
 
+    /** @return BelongsTo<Payslip, $this> */
     public function payslip(): BelongsTo
     {
         return $this->belongsTo(Payslip::class);
     }
 
+    /** @return BelongsTo<PayrollRun, $this> */
     public function paidIn(): BelongsTo
     {
         return $this->belongsTo(PayrollRun::class, 'paid_in_run_id');
     }
 
-    /** ⓘ বকেয়ার নিজের কাগজে দেওয়া হলে তার খসড়া পরিশোধ ভাউচার ([[HeldWages::pay()]]) */
+    /** ⓘ বকেয়ার নিজের কাগজে দেওয়া হলে তার খসড়া পরিশোধ ভাউচার ([[HeldWages::pay()]]) *
+     * @return BelongsTo<\App\Modules\Accounts\Models\Voucher, $this>
+     */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(\App\Modules\Accounts\Models\Voucher::class);

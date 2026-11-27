@@ -52,16 +52,19 @@ class DeliveryChallanGiftLine extends Model
         return 'challan';
     }
 
+    /** @return BelongsTo<DeliveryChallan, $this> */
     public function challan(): BelongsTo
     {
         return $this->belongsTo(DeliveryChallan::class, 'delivery_challan_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function againstProduct(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'against_product_id');

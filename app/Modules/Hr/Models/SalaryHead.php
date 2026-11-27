@@ -79,11 +79,13 @@ class SalaryHead extends Model
     /** @var list<string> */
     public const CALCULATIONS = [self::FIXED, self::PERCENT_OF_BASIC];
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);

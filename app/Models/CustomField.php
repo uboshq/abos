@@ -39,6 +39,7 @@ class CustomField extends Model
         ];
     }
 
+    /** @return HasMany<CustomFieldValue, $this> */
     public function values(): HasMany
     {
         return $this->hasMany(CustomFieldValue::class);

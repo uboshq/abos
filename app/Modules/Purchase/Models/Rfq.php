@@ -60,11 +60,13 @@ class Rfq extends Model
         ];
     }
 
+    /** @return HasMany<RfqLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(RfqLine::class, 'rfq_id')->orderBy('line_no');
     }
 
+    /** @return HasMany<Quotation, $this> */
     public function quotations(): HasMany
     {
         return $this->hasMany(Quotation::class, 'rfq_id');
@@ -77,6 +79,8 @@ class Rfq extends Model
      * পরিণত করে। ⛔ ছাড়া কেবল যাঁরা জবাব দিয়েছেন তাঁদের জানা যেত, আর
      * যিনি দেননি তিনি ইতিহাস থেকেই মুছে যেতেন — অথচ *"ওঁরা কেউ জবাব
      * দেননি"* কথাটাও একটা তথ্য।
+     *
+     * @return BelongsToMany<Supplier, $this>
      */
     public function suppliers(): BelongsToMany
     {
@@ -85,21 +89,25 @@ class Rfq extends Model
             ->withTimestamps();
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<PurchaseRequisition, $this> */
     public function requisition(): BelongsTo
     {
         return $this->belongsTo(PurchaseRequisition::class, 'purchase_requisition_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

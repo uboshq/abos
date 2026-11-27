@@ -55,16 +55,19 @@ class TenancyMove extends Model
         ];
     }
 
+    /** @return BelongsTo<Tenancy, $this> */
     public function tenancy(): BelongsTo
     {
         return $this->belongsTo(Tenancy::class);
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function moneyAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'money_account_id');

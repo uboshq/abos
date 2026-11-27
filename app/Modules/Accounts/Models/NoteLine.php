@@ -57,11 +57,13 @@ class NoteLine extends Model
         ];
     }
 
+    /** @return BelongsTo<Note, $this> */
     public function note(): BelongsTo
     {
         return $this->belongsTo(Note::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);

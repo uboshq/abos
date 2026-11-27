@@ -61,16 +61,19 @@ class NotificationJob extends Model
         ];
     }
 
+    /** @return BelongsTo<Notification, $this> */
     public function notification(): BelongsTo
     {
         return $this->belongsTo(Notification::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return HasMany<NotificationDeliveryAttempt, $this> */
     public function attemptRows(): HasMany
     {
         return $this->hasMany(NotificationDeliveryAttempt::class, 'job_id');

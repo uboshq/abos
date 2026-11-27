@@ -86,26 +86,31 @@ class ExpenseClaim extends Model implements Drillable, SettledByAVoucher, Settle
         ];
     }
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class)->withoutGlobalScopes();
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function expenseAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'expense_account_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function paymentVoucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'payment_voucher_id');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function settleVoucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'settle_voucher_id');

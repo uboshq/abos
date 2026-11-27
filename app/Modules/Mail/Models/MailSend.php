@@ -32,11 +32,13 @@ class MailSend extends Model
         return ['sent_at' => 'datetime', 'auto' => 'boolean', 'files' => 'integer', 'paper_id' => 'integer'];
     }
 
+    /** @return BelongsTo<MailAccount, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(MailAccount::class, 'mail_account_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sent_by');

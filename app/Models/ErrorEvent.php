@@ -53,16 +53,19 @@ class ErrorEvent extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function acknowledger(): BelongsTo
     {
         return $this->belongsTo(User::class, 'acknowledged_by');
     }
 
+    /** @return BelongsTo<Company, $this> */
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);

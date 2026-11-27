@@ -41,6 +41,7 @@ class SisterLink extends Model
         ];
     }
 
+    /** @return BelongsTo<Company, $this> */
     public function sister(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'sister_company_id');

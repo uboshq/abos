@@ -36,6 +36,7 @@ final class NoticeRole extends Model
 
     protected $fillable = ['notice_id', 'role'];
 
+    /** @return BelongsTo<Notice, $this> */
     public function notice(): BelongsTo
     {
         return $this->belongsTo(Notice::class);

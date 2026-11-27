@@ -63,11 +63,13 @@ class MeetingPerson extends Model
         return in_array($this->role, [self::HOST, self::COHOST], true);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<Meeting, $this> */
     public function meeting(): BelongsTo
     {
         return $this->belongsTo(Meeting::class);

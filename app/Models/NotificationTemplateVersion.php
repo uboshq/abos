@@ -31,11 +31,13 @@ class NotificationTemplateVersion extends Model
         ];
     }
 
+    /** @return BelongsTo<NotificationTemplate, $this> */
     public function template(): BelongsTo
     {
         return $this->belongsTo(NotificationTemplate::class, 'template_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

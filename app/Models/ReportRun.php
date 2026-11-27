@@ -36,6 +36,7 @@ class ReportRun extends Model
         ];
     }
 
+    /** @return BelongsTo<ReportSchedule, $this> */
     public function schedule(): BelongsTo
     {
         return $this->belongsTo(ReportSchedule::class, 'report_schedule_id');

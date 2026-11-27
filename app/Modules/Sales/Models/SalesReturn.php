@@ -70,42 +70,51 @@ class SalesReturn extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<SalesReturnLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(SalesReturnLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<SalesInvoice, $this> */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(SalesInvoice::class, 'sales_invoice_id');
     }
 
+    /** @return BelongsTo<ReasonCode, $this> */
     public function reasonCode(): BelongsTo
     {
         return $this->belongsTo(ReasonCode::class, 'reason_code_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** ⭐ দায়িত্বে থাকা বিক্রয়কর্মী — মূল বিলের জনই, ফেরতও তাঁর খাতায় (মালিক, ২৩ নভেম্বর ২০২৬)। */
+    /** ⭐ দায়িত্বে থাকা বিক্রয়কর্মী — মূল বিলের জনই, ফেরতও তাঁর খাতায় (মালিক, ২৩ নভেম্বর ২০২৬)। *
+     * @return BelongsTo<User, $this>
+     */
     public function salesPerson(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sales_person_id');

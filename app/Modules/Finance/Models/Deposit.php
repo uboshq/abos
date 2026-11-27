@@ -157,22 +157,27 @@ class Deposit extends Model implements Drillable
         return $this->belongsTo(Person::class, 'person_id');
     }
 
-    /** কোথায় রাখা — তালিকা থেকে ([[Institution]]); পুরনো `institution` লেখাটা থেকে যায় */
+    /** কোথায় রাখা — তালিকা থেকে ([[Institution]]); পুরনো `institution` লেখাটা থেকে যায় *
+     * @return BelongsTo<Institution, $this>
+     */
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
     }
 
+    /** @return BelongsTo<DepositKind, $this> */
     public function kind(): BelongsTo
     {
         return $this->belongsTo(DepositKind::class, 'kind_id');
     }
 
+    /** @return HasMany<DepositMovement, $this> */
     public function movements(): HasMany
     {
         return $this->hasMany(DepositMovement::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function payoutAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'payout_account_id');
@@ -239,6 +244,8 @@ class Deposit extends Model implements Drillable
      * বন্ধনটা তাই সাথে আসছে -- নাহলে একটা দরজা বন্ধ করতে গিয়ে "আমার
      * FD-টা ঋণের বিপরীতে বাঁধা" কথাটা বলার জায়গাই থাকত না, আর ওটা
      * পরিষ্কার করা নয়, ক্ষমতা হারানো।
+     *
+     * @return BelongsTo<Loan, $this>
      */
     public function pledgedToLoan(): BelongsTo
     {

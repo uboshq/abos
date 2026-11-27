@@ -100,6 +100,7 @@ final class Notice extends Model
         return $this->hasMany(NoticeTarget::class);
     }
 
+    /** @return BelongsTo<NoticeCategory, $this> */
     public function category(): BelongsTo
     {
         return $this->belongsTo(NoticeCategory::class, 'notice_category_id');
@@ -110,6 +111,8 @@ final class Notice extends Model
      *
      * ⓘ মোছার বদলে ঢাকা — ⚠️ সুতোটা থাকলে ছয় মাস পরেও বলা
      * যায় ভুলটা কী ছিল আর কে শুধরেছেন।
+     *
+     * @return BelongsTo<self, $this>
      */
     public function supersededBy(): BelongsTo
     {
@@ -140,6 +143,7 @@ final class Notice extends Model
         return $this->hasMany(NoticeRead::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

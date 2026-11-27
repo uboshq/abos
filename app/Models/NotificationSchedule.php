@@ -43,11 +43,13 @@ class NotificationSchedule extends Model
         return ['last_run_at', 'runs'];
     }
 
+    /** @return BelongsTo<NotificationTemplate, $this> */
     public function template(): BelongsTo
     {
         return $this->belongsTo(NotificationTemplate::class, 'template_id');
     }
 
+    /** @return BelongsTo<NotificationRecipientGroup, $this> */
     public function group(): BelongsTo
     {
         return $this->belongsTo(NotificationRecipientGroup::class, 'group_id');

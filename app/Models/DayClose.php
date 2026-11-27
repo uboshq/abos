@@ -45,16 +45,19 @@ class DayClose extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function closer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function reopener(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reopened_by');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

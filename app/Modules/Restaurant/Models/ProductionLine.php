@@ -42,11 +42,13 @@ class ProductionLine extends Model
         ];
     }
 
+    /** @return BelongsTo<Production, $this> */
     public function production(): BelongsTo
     {
         return $this->belongsTo(Production::class);
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

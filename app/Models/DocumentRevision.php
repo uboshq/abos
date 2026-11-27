@@ -74,6 +74,7 @@ class DocumentRevision extends Model
             ->where('document_id', (int) $document->getKey());
     }
 
+    /** @return BelongsTo<User, $this> */
     public function editor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'edited_by');

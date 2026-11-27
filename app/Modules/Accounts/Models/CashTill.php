@@ -158,22 +158,26 @@ class CashTill extends Model implements Drillable, IsAMasterRecord
         ];
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         // ⓘ টিলের নিজের খাত সবসময় খুঁজে পাওয়া চাই — অন্য শাখার হস্তান্তর গ্রহণেও ([[Account::booted()]])
         return $this->belongsTo(Account::class)->withoutGlobalScope('viewed-branch-till');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function holder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'holder_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

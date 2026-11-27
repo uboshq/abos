@@ -52,28 +52,35 @@ class SalesReturnLine extends Model
         ];
     }
 
+    /** @return BelongsTo<SalesReturn, $this> */
     public function return(): BelongsTo
     {
         return $this->belongsTo(SalesReturn::class, 'sales_return_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
-    /** লাইনের নিজের কারণ — খালি মানে হেডারেরটাই। */
+    /** লাইনের নিজের কারণ — খালি মানে হেডারেরটাই। *
+     * @return BelongsTo<ReasonCode, $this>
+     */
     public function reasonCode(): BelongsTo
     {
         return $this->belongsTo(ReasonCode::class, 'reason_code_id');
     }
 
-    /** কোন লটের মাল ফিরল — মেয়াদোত্তীর্ণ মালে সরবরাহকারীর দাবি আর রিকল এটা ধরেই। */
+    /** কোন লটের মাল ফিরল — মেয়াদোত্তীর্ণ মালে সরবরাহকারীর দাবি আর রিকল এটা ধরেই। *
+     * @return BelongsTo<Batch, $this>
+     */
     public function batch(): BelongsTo
     {
         return $this->belongsTo(Batch::class);
     }
 
+    /** @return BelongsTo<SalesInvoiceLine, $this> */
     public function invoiceLine(): BelongsTo
     {
         return $this->belongsTo(SalesInvoiceLine::class, 'sales_invoice_line_id');

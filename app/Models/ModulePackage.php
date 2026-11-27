@@ -29,6 +29,7 @@ final class ModulePackage extends Model
         return app()->getLocale() === 'bn' && filled($this->name_bn) ? (string) $this->name_bn : (string) $this->name_en;
     }
 
+    /** @return HasMany<BranchModulePackage, $this> */
     public function branches(): HasMany
     {
         return $this->hasMany(BranchModulePackage::class, 'package_id');

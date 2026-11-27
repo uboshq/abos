@@ -76,16 +76,19 @@ class SalesOrderLine extends Model
         return 'order';
     }
 
+    /** @return BelongsTo<SalesOrder, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(SalesOrder::class, 'sales_order_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return HasMany<DeliveryChallanLine, $this> */
     public function challanLines(): HasMany
     {
         return $this->hasMany(DeliveryChallanLine::class, 'sales_order_line_id');

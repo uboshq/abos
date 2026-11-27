@@ -65,31 +65,37 @@ class CashCount extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<CashTill, $this> */
     public function till(): BelongsTo
     {
         return $this->belongsTo(CashTill::class, 'cash_till_id');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function adjustment(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'adjustment_voucher_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function counter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'counted_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

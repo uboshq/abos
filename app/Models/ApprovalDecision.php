@@ -106,23 +106,29 @@ class ApprovalDecision extends Model
         return null;
     }
 
+    /** @return BelongsTo<Approval, $this> */
     public function approval(): BelongsTo
     {
         return $this->belongsTo(Approval::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /** ⓘ ফরওয়ার্ড হলে কার হাতে গেল — নাহলে `null`। */
+    /** ⓘ ফরওয়ার্ড হলে কার হাতে গেল — নাহলে `null`। *
+     * @return BelongsTo<User, $this>
+     */
     public function forwardedTo(): BelongsTo
     {
         return $this->belongsTo(User::class, 'forwarded_to');
     }
 
-    /** ⭐ দায়িত্ব হস্তান্তরে কার হয়ে সিদ্ধান্ত — যাত্রাপথে "রহিমের হয়ে" লেখার জন্য (অনুমোদন পর্দা ভাগ ২, দফা ১০); নিজের হলে `null`। */
+    /** ⭐ দায়িত্ব হস্তান্তরে কার হয়ে সিদ্ধান্ত — যাত্রাপথে "রহিমের হয়ে" লেখার জন্য (অনুমোদন পর্দা ভাগ ২, দফা ১০); নিজের হলে `null`। *
+     * @return BelongsTo<User, $this>
+     */
     public function onBehalfOf(): BelongsTo
     {
         return $this->belongsTo(User::class, 'on_behalf_of');

@@ -44,6 +44,7 @@ class AssetCostPart extends Model
         return ['amount' => 'decimal:4'];
     }
 
+    /** @return BelongsTo<FixedAsset, $this> */
     public function asset(): BelongsTo
     {
         return $this->belongsTo(FixedAsset::class, 'fixed_asset_id');

@@ -34,6 +34,7 @@ class AssetTaxYear extends Model
         ];
     }
 
+    /** @return BelongsTo<FixedAsset, $this> */
     public function asset(): BelongsTo
     {
         return $this->belongsTo(FixedAsset::class, 'fixed_asset_id');

@@ -29,6 +29,7 @@ class StaffPosition extends Model
 
     protected $fillable = ['company_id', 'user_id', 'position', 'created_by'];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

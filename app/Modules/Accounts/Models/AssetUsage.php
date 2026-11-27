@@ -28,6 +28,7 @@ class AssetUsage extends Model
         return ['period_end' => 'date', 'units' => 'decimal:4'];
     }
 
+    /** @return BelongsTo<FixedAsset, $this> */
     public function asset(): BelongsTo
     {
         return $this->belongsTo(FixedAsset::class, 'fixed_asset_id');

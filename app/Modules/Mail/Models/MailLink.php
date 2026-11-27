@@ -28,11 +28,13 @@ class MailLink extends Model
         return ['sent_at' => 'datetime', 'linkable_id' => 'integer'];
     }
 
+    /** @return BelongsTo<MailAccount, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(MailAccount::class, 'mail_account_id');
     }
 
+    /** @return MorphTo<\Illuminate\Database\Eloquent\Model, $this> */
     public function linkable(): MorphTo
     {
         return $this->morphTo();

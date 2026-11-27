@@ -58,11 +58,13 @@ class PriceList extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<PartyType, $this> */
     public function partyType(): BelongsTo
     {
         return $this->belongsTo(PartyType::class, 'party_type_id');

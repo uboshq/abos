@@ -143,29 +143,37 @@ class Note extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function confirmer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'confirmed_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** পক্ষের খাত — ক্রেডিট নোটে Cr, ডেবিট নোটে Dr ([[NoteAccounts]]) */
+    /** পক্ষের খাত — ক্রেডিট নোটে Cr, ডেবিট নোটে Dr ([[NoteAccounts]]) *
+     * @return BelongsTo<Account, $this>
+     */
     public function controlAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'control_account_id');
     }
 
-    /** অন্য পাশের খাত */
+    /** অন্য পাশের খাত *
+     * @return BelongsTo<Account, $this>
+     */
     public function otherAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'other_account_id');
     }
 
-    /** ⭐ নোটের সারি — পণ্য / সেবা / খাত (নকশা v5); পুরনো নোটে সারি নেই, একটাই অঙ্ক */
+    /** ⭐ নোটের সারি — পণ্য / সেবা / খাত (নকশা v5); পুরনো নোটে সারি নেই, একটাই অঙ্ক *
+     * @return HasMany<NoteLine, $this>
+     */
     public function lines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(NoteLine::class)->orderBy('line_no');

@@ -62,21 +62,25 @@ class Thread extends Model
         return $this->kind === self::GROUP;
     }
 
+    /** @return HasMany<Member, $this> */
     public function members(): HasMany
     {
         return $this->hasMany(Member::class);
     }
 
+    /** @return HasMany<Message, $this> */
     public function messages(): HasMany
     {
         return $this->hasMany(Message::class);
     }
 
+    /** @return BelongsTo<Message, $this> */
     public function lastMessage(): BelongsTo
     {
         return $this->belongsTo(Message::class, 'last_message_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

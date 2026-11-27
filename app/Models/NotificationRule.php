@@ -44,16 +44,19 @@ class NotificationRule extends Model
         ];
     }
 
+    /** @return BelongsTo<NotificationTemplate, $this> */
     public function template(): BelongsTo
     {
         return $this->belongsTo(NotificationTemplate::class, 'template_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return HasMany<NotificationRuleVersion, $this> */
     public function versions(): HasMany
     {
         return $this->hasMany(NotificationRuleVersion::class, 'rule_id')->orderByDesc('version');

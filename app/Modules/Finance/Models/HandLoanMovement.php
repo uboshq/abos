@@ -61,16 +61,19 @@ class HandLoanMovement extends Model implements Drillable, SettledByAVoucher, \A
         ];
     }
 
+    /** @return BelongsTo<HandLoanAccount, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(HandLoanAccount::class, 'account_id');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function moneyAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'money_account_id');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);

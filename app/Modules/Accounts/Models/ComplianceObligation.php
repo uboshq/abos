@@ -55,6 +55,7 @@ class ComplianceObligation extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function doneBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'done_by');

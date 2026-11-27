@@ -125,16 +125,19 @@ class CustomerCreditChange extends Model
         });
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class)->withoutGlobalScopes();
     }
 
+    /** @return BelongsTo<Approval, $this> */
     public function approval(): BelongsTo
     {
         return $this->belongsTo(Approval::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function changer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by');

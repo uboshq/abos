@@ -43,16 +43,19 @@ class CostLayerUse extends Model
         ];
     }
 
+    /** @return BelongsTo<CostLayer, $this> */
     public function layer(): BelongsTo
     {
         return $this->belongsTo(CostLayer::class, 'cost_layer_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -243,12 +243,15 @@ class Customer extends Model implements AuthenticatableContract, Drillable, IsAM
     /** ⭐ বাকি বন্ধের ধরন — চেক ফেরতে নিজে থেকে বসা; খোলেন কেবল মালিক ([[CustomerService::clearCreditBlock()]]); খালি = হাতে বসানো */
     public const BLOCK_BOUNCED_CHEQUE = 'bounced_cheque';
 
-    /** কে বাকি বন্ধ করেছেন */
+    /** কে বাকি বন্ধ করেছেন *
+     * @return BelongsTo<User, $this>
+     */
     public function creditBlocker(): BelongsTo
     {
         return $this->belongsTo(User::class, 'credit_blocked_by');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
@@ -261,13 +264,17 @@ class Customer extends Model implements AuthenticatableContract, Drillable, IsAM
      * string, আর কেউ "খুচরা", কেউ "Retail", কেউ শেষে একটা স্পেস দিয়ে
      * লিখত। "কোন ধরনের গ্রাহক সবচেয়ে বেশি" প্রশ্নের উত্তর তখন বের করা
      * যেত না।
+     *
+     * @return BelongsTo<PartyType, $this>
      */
     public function partyType(): BelongsTo
     {
         return $this->belongsTo(PartyType::class, 'party_type_id');
     }
 
-    /** বিক্রয়ের পথ — কাগজে বিক্রির দিনেরটাই বসে (CarriesTheSalesChannel), তাই এটা বদলালে ইতিহাস বদলায় না। */
+    /** বিক্রয়ের পথ — কাগজে বিক্রির দিনেরটাই বসে (CarriesTheSalesChannel), তাই এটা বদলালে ইতিহাস বদলায় না। *
+     * @return BelongsTo<\App\Modules\MasterData\Models\SalesChannel, $this>
+     */
     public function channel(): BelongsTo
     {
         return $this->belongsTo(\App\Modules\MasterData\Models\SalesChannel::class, 'channel_id')->withTrashed();
@@ -284,12 +291,15 @@ class Customer extends Model implements AuthenticatableContract, Drillable, IsAM
         return $this->partyType?->name() ?? $this->customer_type;
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** সব আচরণ-নোট — চলমান ও নামানো, নতুন আগে (গ্রাহকের পাতার ইতিহাসে)। */
+    /** সব আচরণ-নোট — চলমান ও নামানো, নতুন আগে (গ্রাহকের পাতার ইতিহাসে)। *
+     * @return HasMany<CustomerConduct, $this>
+     */
     public function conductNotes(): HasMany
     {
         return $this->hasMany(CustomerConduct::class)->latest('recorded_at');
@@ -300,6 +310,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable, IsAM
      *
      * সম্পর্ক (কোয়েরি নয়) বলেই `Customer::with('activeConductNotes')` দিয়ে
      * সব গ্রাহকের পতাকা এক কোয়েরিতে ওঠে — ৯১ পার্টি, ৯১ রিকোয়েস্ট নয়।
+     *
+     * @return HasMany<CustomerConduct, $this>
      */
     public function activeConductNotes(): HasMany
     {
@@ -381,6 +393,8 @@ class Customer extends Model implements AuthenticatableContract, Drillable, IsAM
 
     /**
      * দোকানটা গাছের কোন ধাপে বসে — সচরাচর পয়েন্ট।
+     *
+     * @return BelongsTo<Location, $this>
      */
     public function location(): BelongsTo
     {

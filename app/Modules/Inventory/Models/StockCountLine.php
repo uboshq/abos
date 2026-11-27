@@ -45,6 +45,7 @@ class StockCountLine extends Model
         ];
     }
 
+    /** @return BelongsTo<StockCount, $this> */
     public function count(): BelongsTo
     {
         return $this->belongsTo(StockCount::class, 'stock_count_id');
@@ -55,17 +56,21 @@ class StockCountLine extends Model
      *
      * ⓘ ঘাটতির সারিতে খালি, আর সেটাই ঠিক — কোন লট থেকে মাল
      * যাবে তা মানুষ বলে না, FEFO বলে।
+     *
+     * @return BelongsTo<Batch, $this>
      */
     public function batch(): BelongsTo
     {
         return $this->belongsTo(Batch::class);
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<ReasonCode, $this> */
     public function reason(): BelongsTo
     {
         return $this->belongsTo(ReasonCode::class, 'reason_code_id');

@@ -65,16 +65,19 @@ class BackupRun extends Model
         ];
     }
 
+    /** @return BelongsTo<BackupPolicy, $this> */
     public function policy(): BelongsTo
     {
         return $this->belongsTo(BackupPolicy::class, 'policy_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return HasMany<BackupVerification, $this> */
     public function verifications(): HasMany
     {
         return $this->hasMany(BackupVerification::class, 'run_id');

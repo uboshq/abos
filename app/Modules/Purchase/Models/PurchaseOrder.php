@@ -65,31 +65,37 @@ class PurchaseOrder extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<PurchaseOrderLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(PurchaseOrderLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Supplier, $this> */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return HasMany<PurchaseReceipt, $this> */
     public function receipts(): HasMany
     {
         return $this->hasMany(PurchaseReceipt::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

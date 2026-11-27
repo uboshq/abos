@@ -53,21 +53,25 @@ final class VoucherExpenseLine extends Model
         return bcadd((string) $this->amount, (string) $this->vat_amount, 4);
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function expenseAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'expense_account_id');
     }
 
+    /** @return BelongsTo<CostCenter, $this> */
     public function costCenter(): BelongsTo
     {
         return $this->belongsTo(CostCenter::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

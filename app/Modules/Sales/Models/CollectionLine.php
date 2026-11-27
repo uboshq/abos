@@ -38,11 +38,13 @@ class CollectionLine extends Model
         return 'collection';
     }
 
+    /** @return BelongsTo<Collection, $this> */
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);
     }
 
+    /** @return BelongsTo<SalesInvoice, $this> */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(SalesInvoice::class, 'sales_invoice_id');

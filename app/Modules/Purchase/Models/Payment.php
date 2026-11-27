@@ -87,16 +87,19 @@ class Payment extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<PaymentLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(PaymentLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Supplier, $this> */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
@@ -108,17 +111,21 @@ class Payment extends Model implements Drillable
      * ⓘ জোড়াটা এই দিকে বসে, চেকের টেবিলে নয়: **Accounts কারও উপর
      * দাঁড়ায় না**, সবাই তার উপর দাঁড়ায়। `acc_cheques`-এ `payment_id`
      * বসালে Accounts-কে Purchase-এর নাম জানতে হত।
+     *
+     * @return BelongsTo<Cheque, $this>
      */
     public function cheque(): BelongsTo
     {
         return $this->belongsTo(Cheque::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

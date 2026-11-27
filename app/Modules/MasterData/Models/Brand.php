@@ -51,6 +51,7 @@ class Brand extends Model implements Drillable
         return ['is_active' => 'boolean'];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

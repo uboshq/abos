@@ -78,16 +78,19 @@ class InsuranceClaim extends Model implements Drillable, SettledByAVoucher, Sett
         ];
     }
 
+    /** @return BelongsTo<InsurancePolicy, $this> */
     public function policy(): BelongsTo
     {
         return $this->belongsTo(InsurancePolicy::class, 'policy_id');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function approvalVoucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'approval_voucher_id');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function closeVoucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'close_voucher_id');

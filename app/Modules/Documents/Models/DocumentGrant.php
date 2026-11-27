@@ -73,6 +73,7 @@ class DocumentGrant extends Model
         return $this->expires_at !== null && $this->expires_at->isPast();
     }
 
+    /** @return BelongsTo<Document, $this> */
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'document_id');

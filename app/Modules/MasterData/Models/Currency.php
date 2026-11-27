@@ -73,6 +73,7 @@ class Currency extends Model implements Drillable
         return $this->makeDefaultOfTheList();
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

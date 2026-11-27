@@ -162,6 +162,7 @@ class Warehouse extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

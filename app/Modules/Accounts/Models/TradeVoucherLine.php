@@ -37,11 +37,13 @@ class TradeVoucherLine extends Model
         ];
     }
 
+    /** @return BelongsTo<TradeVoucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(TradeVoucher::class, 'trade_voucher_id');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);

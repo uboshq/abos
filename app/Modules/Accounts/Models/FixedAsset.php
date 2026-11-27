@@ -115,53 +115,65 @@ class FixedAsset extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<DepreciationEntry, $this> */
     public function depreciation(): HasMany
     {
         return $this->hasMany(DepreciationEntry::class)->orderBy('period_end');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function assetAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'asset_account_id');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function accumulatedAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'accumulated_account_id');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function expenseAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'expense_account_id');
     }
 
+    /** @return BelongsTo<AssetCategory, $this> */
     public function category(): BelongsTo
     {
         return $this->belongsTo(AssetCategory::class, 'category_id');
     }
 
-    /** ⓘ অংশ হলে তার মূল সম্পদ (IAS 16.43) */
+    /** ⓘ অংশ হলে তার মূল সম্পদ (IAS 16.43) *
+     * @return BelongsTo<self, $this>
+     */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
+    /** @return HasMany<self, $this> */
     public function components(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id')->orderBy('id');
     }
 
+    /** @return HasMany<AssetUsage, $this> */
     public function usages(): HasMany
     {
         return $this->hasMany(AssetUsage::class, 'fixed_asset_id')->orderBy('period_end');
     }
 
+    /** @return HasMany<AssetEstimateChange, $this> */
     public function estimateChanges(): HasMany
     {
         return $this->hasMany(AssetEstimateChange::class, 'fixed_asset_id')->orderByDesc('changed_on')->orderByDesc('id');
     }
 
-    /** ⭐ দায়িত্বে থাকা কর্মীর "বুঝে নিয়েছি" — নতুনটা আগে (ধাপ ৪) */
+    /** ⭐ দায়িত্বে থাকা কর্মীর "বুঝে নিয়েছি" — নতুনটা আগে (ধাপ ৪) *
+     * @return HasMany<AssetAcknowledgement, $this>
+     */
     public function acknowledgements(): HasMany
     {
         return $this->hasMany(AssetAcknowledgement::class, 'fixed_asset_id')->orderByDesc('acknowledged_at')->orderByDesc('id');
@@ -177,16 +189,19 @@ class FixedAsset extends Model implements Drillable
         return $this->acknowledgements->firstWhere('employee_id', (int) $this->custodian_id);
     }
 
+    /** @return HasMany<AssetCostPart, $this> */
     public function costParts(): HasMany
     {
         return $this->hasMany(AssetCostPart::class, 'fixed_asset_id')->orderBy('id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -287,6 +302,7 @@ class FixedAsset extends Model implements Drillable
             ->when($upTo !== null, fn ($q) => $q->where('happened_on', '<=', $upTo->toDateString()));
     }
 
+    /** @return HasMany<AssetEvent, $this> */
     public function events(): HasMany
     {
         return $this->hasMany(AssetEvent::class, 'fixed_asset_id')->withoutGlobalScope('user-branch')

@@ -67,21 +67,25 @@ class PurchaseReceiptLine extends Model
         return 'receipt';
     }
 
+    /** @return BelongsTo<PurchaseReceipt, $this> */
     public function receipt(): BelongsTo
     {
         return $this->belongsTo(PurchaseReceipt::class, 'purchase_receipt_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<PurchaseOrderLine, $this> */
     public function orderLine(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrderLine::class, 'purchase_order_line_id');
     }
 
+    /** @return HasMany<PurchaseBillLine, $this> */
     public function billLines(): HasMany
     {
         return $this->hasMany(PurchaseBillLine::class, 'purchase_receipt_line_id');

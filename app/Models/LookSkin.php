@@ -65,11 +65,13 @@ class LookSkin extends Model
         ];
     }
 
+    /** @return BelongsTo<Company, $this> */
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -81,7 +83,9 @@ class LookSkin extends Model
         return $query->whereNotNull('published_at');
     }
 
-    /** এই রূপের প্রকাশিত সংস্করণগুলো, নতুনটা আগে। */
+    /** এই রূপের প্রকাশিত সংস্করণগুলো, নতুনটা আগে। *
+     * @return HasMany<LookSkinVersion, $this>
+     */
     public function versions(): HasMany
     {
         return $this->hasMany(LookSkinVersion::class, 'look_skin_id')

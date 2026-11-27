@@ -111,26 +111,31 @@ class Loan extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<LoanInstalment, $this> */
     public function instalments(): HasMany
     {
         return $this->hasMany(LoanInstalment::class)->orderBy('no');
     }
 
+    /** @return HasMany<LoanMovement, $this> */
     public function movements(): HasMany
     {
         return $this->hasMany(LoanMovement::class)->orderBy('trx_date')->orderBy('id');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function principalAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'principal_account_id');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function interestAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'interest_account_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

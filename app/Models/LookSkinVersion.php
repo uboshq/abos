@@ -43,11 +43,13 @@ class LookSkinVersion extends Model
         ];
     }
 
+    /** @return BelongsTo<LookSkin, $this> */
     public function skin(): BelongsTo
     {
         return $this->belongsTo(LookSkin::class, 'look_skin_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function publisher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'published_by');

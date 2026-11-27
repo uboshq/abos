@@ -50,6 +50,7 @@ class PeriodLock extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function locker(): BelongsTo
     {
         return $this->belongsTo(User::class, 'locked_by');

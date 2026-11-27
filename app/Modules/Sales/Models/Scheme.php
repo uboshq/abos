@@ -87,11 +87,13 @@ class Scheme extends Model
         ];
     }
 
+    /** @return HasMany<CommissionRule, $this> */
     public function rules(): HasMany
     {
         return $this->hasMany(CommissionRule::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

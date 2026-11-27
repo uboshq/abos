@@ -68,42 +68,51 @@ class DeliveryOrder extends Model implements CounterSaleSource
         ];
     }
 
+    /** @return HasMany<DeliveryOrderLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(DeliveryOrderLine::class)->orderBy('id');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<SalesOrder, $this> */
     public function salesOrder(): BelongsTo
     {
         return $this->belongsTo(SalesOrder::class);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** ডিলার নিজে লিখলে তিনি */
+    /** ডিলার নিজে লিখলে তিনি *
+     * @return BelongsTo<Customer, $this>
+     */
     public function dealerWriter(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'created_by_customer_id');
     }
 
+    /** @return BelongsTo<SalesInvoice, $this> */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(SalesInvoice::class, 'sales_invoice_id');

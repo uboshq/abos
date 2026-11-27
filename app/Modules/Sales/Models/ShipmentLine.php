@@ -79,11 +79,13 @@ class ShipmentLine extends Model
         return ['settled_at' => 'datetime'];
     }
 
+    /** @return BelongsTo<Shipment, $this> */
     public function shipment(): BelongsTo
     {
         return $this->belongsTo(Shipment::class);
     }
 
+    /** @return BelongsTo<DeliveryChallan, $this> */
     public function challan(): BelongsTo
     {
         return $this->belongsTo(DeliveryChallan::class, 'delivery_challan_id');

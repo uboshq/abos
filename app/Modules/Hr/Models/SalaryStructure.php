@@ -56,6 +56,7 @@ class SalaryStructure extends Model
         return $this->belongsTo(SalaryHead::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

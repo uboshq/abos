@@ -52,11 +52,13 @@ class DocumentDelivery extends Model
         'variant',
     ];
 
+    /** @return BelongsTo<DocumentShare, $this> */
     public function share(): BelongsTo
     {
         return $this->belongsTo(DocumentShare::class, 'share_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

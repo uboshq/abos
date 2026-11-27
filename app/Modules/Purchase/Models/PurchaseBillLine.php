@@ -89,16 +89,19 @@ class PurchaseBillLine extends Model
         return 'bill';
     }
 
+    /** @return BelongsTo<PurchaseBill, $this> */
     public function bill(): BelongsTo
     {
         return $this->belongsTo(PurchaseBill::class, 'purchase_bill_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<PurchaseReceiptLine, $this> */
     public function receiptLine(): BelongsTo
     {
         return $this->belongsTo(PurchaseReceiptLine::class, 'purchase_receipt_line_id');
@@ -110,6 +113,8 @@ class PurchaseBillLine extends Model
      * দুইটা জোড়া পরস্পর-বিকল্প: সারিটা হয় চালান ধরে আসে, নয় আদেশ ধরে,
      * নয় কোনোটাই। আদেশ ধরে এলে মালটা এই বিল কনফার্ম করার সময়েই গুদামে
      * ঢোকে — ঠিক সরাসরি ক্রয়ের মতো, কারণ মাল গ্রহণের কোনো কাগজ হয়নি।
+     *
+     * @return BelongsTo<PurchaseOrderLine, $this>
      */
     public function orderLine(): BelongsTo
     {

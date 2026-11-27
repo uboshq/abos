@@ -118,16 +118,19 @@ class PartyMessage extends Model
         $this->forceFill($change)->save();
     }
 
+    /** @return BelongsTo<self, $this> */
     public function fallbackOf(): BelongsTo
     {
         return $this->belongsTo(self::class, 'fallback_of_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function sender(): BelongsTo
     {
         return $this->belongsTo(User::class, 'sent_by');
     }
 
+    /** @return BelongsTo<PartyMessageTemplate, $this> */
     public function template(): BelongsTo
     {
         return $this->belongsTo(PartyMessageTemplate::class, 'template_id');

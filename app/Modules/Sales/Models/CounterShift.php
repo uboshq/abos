@@ -60,11 +60,13 @@ class CounterShift extends Model
         ];
     }
 
+    /** @return BelongsTo<CashTill, $this> */
     public function till(): BelongsTo
     {
         return $this->belongsTo(CashTill::class, 'cash_till_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

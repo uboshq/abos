@@ -28,11 +28,13 @@ class PaymentLine extends Model
         return ['amount' => 'decimal:4', 'ait_amount' => 'decimal:4', 'vds_amount' => 'decimal:4'];
     }
 
+    /** @return BelongsTo<Payment, $this> */
     public function payment(): BelongsTo
     {
         return $this->belongsTo(Payment::class);
     }
 
+    /** @return BelongsTo<PurchaseBill, $this> */
     public function bill(): BelongsTo
     {
         return $this->belongsTo(PurchaseBill::class, 'purchase_bill_id');

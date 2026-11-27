@@ -67,11 +67,13 @@ class Unit extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<self, $this> */
     public function baseUnit(): BelongsTo
     {
         return $this->belongsTo(self::class, 'base_unit_id');

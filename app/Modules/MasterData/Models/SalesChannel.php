@@ -57,6 +57,7 @@ class SalesChannel extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

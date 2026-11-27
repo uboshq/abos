@@ -74,11 +74,13 @@ class Recipe extends Model
         ];
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return HasMany<RecipeLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(RecipeLine::class)->orderBy('sort')->orderBy('id');

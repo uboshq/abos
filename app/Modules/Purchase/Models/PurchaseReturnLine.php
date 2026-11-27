@@ -39,16 +39,19 @@ class PurchaseReturnLine extends Model
         ];
     }
 
+    /** @return BelongsTo<PurchaseReturn, $this> */
     public function return(): BelongsTo
     {
         return $this->belongsTo(PurchaseReturn::class, 'purchase_return_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<PurchaseBillLine, $this> */
     public function billLine(): BelongsTo
     {
         return $this->belongsTo(PurchaseBillLine::class, 'purchase_bill_line_id');

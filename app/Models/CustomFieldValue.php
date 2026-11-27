@@ -26,6 +26,7 @@ class CustomFieldValue extends Model
         'company_id', 'custom_field_id', 'entity', 'entity_id', 'value',
     ];
 
+    /** @return BelongsTo<CustomField, $this> */
     public function field(): BelongsTo
     {
         return $this->belongsTo(CustomField::class, 'custom_field_id');

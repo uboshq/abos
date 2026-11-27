@@ -36,11 +36,13 @@ class RouteTarget extends Model
         ];
     }
 
+    /** @return BelongsTo<Location, $this> */
     public function route(): BelongsTo
     {
         return $this->belongsTo(Location::class, 'route_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

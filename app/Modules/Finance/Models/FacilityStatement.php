@@ -37,6 +37,7 @@ class FacilityStatement extends Model
         ];
     }
 
+    /** @return BelongsTo<BankFacility, $this> */
     public function facility(): BelongsTo
     {
         return $this->belongsTo(BankFacility::class, 'bank_facility_id');

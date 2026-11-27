@@ -78,6 +78,7 @@ class BackupVerification extends Model
         return 'run';
     }
 
+    /** @return BelongsTo<BackupRun, $this> */
     public function run(): BelongsTo
     {
         return $this->belongsTo(BackupRun::class, 'run_id');

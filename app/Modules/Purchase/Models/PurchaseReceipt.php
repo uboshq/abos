@@ -65,6 +65,7 @@ class PurchaseReceipt extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<PurchaseReceiptLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(PurchaseReceiptLine::class)->orderBy('line_no');
@@ -88,26 +89,31 @@ class PurchaseReceipt extends Model implements Drillable
         return bcadd((string) $this->total, $this->taxTotal(), 4);
     }
 
+    /** @return BelongsTo<Supplier, $this> */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<PurchaseOrder, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

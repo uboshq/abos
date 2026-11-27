@@ -49,6 +49,7 @@ final class VoucherAllocation extends Model
         return $this->voucher?->branch_id;
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);

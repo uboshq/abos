@@ -50,22 +50,27 @@ class BankUnpaidLine extends Model implements ShownInOwnerSelfReport
         ];
     }
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
     }
 
+    /** @return BelongsTo<Payslip, $this> */
     public function payslip(): BelongsTo
     {
         return $this->belongsTo(Payslip::class);
     }
 
-    /** ⓘ যে বাতিল রানের ব্যাংক ফাইল লাইনটা বহন করেছিল */
+    /** ⓘ যে বাতিল রানের ব্যাংক ফাইল লাইনটা বহন করেছিল *
+     * @return BelongsTo<PayrollRun, $this>
+     */
     public function run(): BelongsTo
     {
         return $this->belongsTo(PayrollRun::class, 'payroll_run_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');

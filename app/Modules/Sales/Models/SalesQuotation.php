@@ -160,54 +160,67 @@ class SalesQuotation extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<SalesQuotationLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(SalesQuotationLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<PriceList, $this> */
     public function priceList(): BelongsTo
     {
         return $this->belongsTo(PriceList::class);
     }
 
+    /** @return BelongsTo<PaymentTerm, $this> */
     public function paymentTerm(): BelongsTo
     {
         return $this->belongsTo(PaymentTerm::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<SalesOrder, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(SalesOrder::class, 'sales_order_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    /** মূল উদ্ধৃতি — মূলটার নিজের ঘর খালি। */
+    /** মূল উদ্ধৃতি — মূলটার নিজের ঘর খালি। *
+     * @return BelongsTo<self, $this>
+     */
     public function root(): BelongsTo
     {
         return $this->belongsTo(self::class, 'root_quotation_id');
     }
 
-    /** ঠিক আগের সংস্করণ। */
+    /** ঠিক আগের সংস্করণ। *
+     * @return BelongsTo<self, $this>
+     */
     public function revisedFrom(): BelongsTo
     {
         return $this->belongsTo(self::class, 'revised_from_id');
     }
 
-    /** যে সংস্করণ এটাকে বদলেছে — পুরনোটার পাতা নতুনটার দিকে আঙুল তোলে। */
+    /** যে সংস্করণ এটাকে বদলেছে — পুরনোটার পাতা নতুনটার দিকে আঙুল তোলে। *
+     * @return HasOne<self, $this>
+     */
     public function supersededBy(): HasOne
     {
         return $this->hasOne(self::class, 'revised_from_id');

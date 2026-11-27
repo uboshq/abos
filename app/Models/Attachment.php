@@ -39,11 +39,13 @@ class Attachment extends Model
         return ['size_bytes' => 'integer', 'version' => 'integer'];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
+    /** @return BelongsTo<self, $this> */
     public function previous(): BelongsTo
     {
         return $this->belongsTo(self::class, 'replaces_id');

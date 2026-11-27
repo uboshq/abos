@@ -72,31 +72,37 @@ class Lead extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_user_id');
     }
 
+    /** @return BelongsTo<Location, $this> */
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function converter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'converted_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return HasMany<Opportunity, $this> */
     public function opportunities(): HasMany
     {
         return $this->hasMany(Opportunity::class);

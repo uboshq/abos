@@ -62,11 +62,13 @@ class BackupPolicy extends Model
         ];
     }
 
+    /** @return HasMany<BackupRun, $this> */
     public function runs(): HasMany
     {
         return $this->hasMany(BackupRun::class, 'policy_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

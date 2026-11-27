@@ -44,21 +44,25 @@ class PromotionGiftIssue extends Model
         ];
     }
 
+    /** @return BelongsTo<PromotionApplication, $this> */
     public function application(): BelongsTo
     {
         return $this->belongsTo(PromotionApplication::class, 'promotion_application_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<Batch, $this> */
     public function batch(): BelongsTo
     {
         return $this->belongsTo(Batch::class);
@@ -67,12 +71,15 @@ class PromotionGiftIssue extends Model
     /**
      * ⓘ এই উপহারে যাওয়া পিসগুলো — মজুদের নকশায় যোগটা পিসের সারিতে
      * (`out_source_type` + `out_source_id`), উপহারের কাগজে নয়।
+     *
+     * @return HasMany<SerialNumber, $this>
      */
     public function serials(): HasMany
     {
         return $this->hasMany(SerialNumber::class, 'out_source_id')->where('out_source_type', 'promotion:gift');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function issuer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'issued_by');

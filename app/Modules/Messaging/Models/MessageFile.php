@@ -55,6 +55,7 @@ class MessageFile extends Model
         ];
     }
 
+    /** @return BelongsTo<Message, $this> */
     public function message(): BelongsTo
     {
         return $this->belongsTo(Message::class);

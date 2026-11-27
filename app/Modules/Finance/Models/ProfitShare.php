@@ -72,11 +72,13 @@ class ProfitShare extends Model
         ];
     }
 
+    /** @return BelongsTo<Person, $this> */
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);

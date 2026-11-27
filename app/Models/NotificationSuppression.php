@@ -25,6 +25,7 @@ class NotificationSuppression extends Model
 
     protected $fillable = ['company_id', 'user_id', 'event_id', 'rule_id', 'type', 'channel', 'reason'];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

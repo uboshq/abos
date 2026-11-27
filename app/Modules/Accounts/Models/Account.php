@@ -199,16 +199,19 @@ class Account extends Model implements Drillable, IsAMasterRecord
         return \App\Modules\Accounts\Services\StandardChart::isStandardCode($code);
     }
 
+    /** @return BelongsTo<self, $this> */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
+    /** @return HasMany<self, $this> */
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id')->orderBy('code');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -219,6 +222,8 @@ class Account extends Model implements Drillable, IsAMasterRecord
      *
      * ⓘ কেবল নগদ খাতে ভরা থাকে। ব্যাংক বা MFS-এ খালি, আর সেটা ফাঁক নয় —
      * ব্যাংকের টাকা কারও ড্রয়ারে থাকে না, ওটা ব্যাংকের কাছে।
+     *
+     * @return BelongsTo<User, $this>
      */
     public function keeper(): BelongsTo
     {

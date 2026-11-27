@@ -146,28 +146,34 @@ class DepositClaim extends Model
         ];
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
     /** ⭐ কে পাঠালেন — টাকার পরিকল্পনা ৩ */
-    /** ⭐ একই চেহারার স্লিপের আগের দাবি — হোয়াটসঅ্যাপে আবার আসা স্লিপ ([[DepositSlip::markLookalike()]], ১৬ নভেম্বর ২০২৬) */
+    /** ⭐ একই চেহারার স্লিপের আগের দাবি — হোয়াটসঅ্যাপে আবার আসা স্লিপ ([[DepositSlip::markLookalike()]], ১৬ নভেম্বর ২০২৬) *
+     * @return BelongsTo<self, $this>
+     */
     public function lookalike(): BelongsTo
     {
         return $this->belongsTo(self::class, 'lookalike_claim_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function submitter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'submitted_by');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function bankAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'bank_account_id');
     }
 
+    /** @return BelongsTo<Collection, $this> */
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class, 'collection_id');
@@ -176,6 +182,8 @@ class DepositClaim extends Model
     /**
      * ⭐ যে রসিদ ভাউচারে এই খবরের টাকা খাতায় ওঠে — মালিক, ২০ নভেম্বর ২০২৬ ([[DepositClaimService::accept()]])।
      * ⓘ শাখার দেয়াল ছাড়া — খবর দেখা গেলে তার রসিদের নম্বরও দেখা যায় (রসিদ খবরের শাখায় বসে, পাতা খোলার নাগাল রসিদের নিজের নিয়মে)।
+     *
+     * @return BelongsTo<\App\Modules\Accounts\Models\Voucher, $this>
      */
     public function voucher(): BelongsTo
     {
@@ -188,22 +196,27 @@ class DepositClaim extends Model
         return $this->voucher_id !== null ? $this->voucher?->document_no : $this->collection?->document_no;
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function decider(): BelongsTo
     {
         return $this->belongsTo(User::class, 'decided_by');
     }
 
-    /** ⭐ ব্যাংক স্টেটমেন্টের যে সারিতে মিলেছে ([[DepositMatchService::match()]]) */
+    /** ⭐ ব্যাংক স্টেটমেন্টের যে সারিতে মিলেছে ([[DepositMatchService::match()]]) *
+     * @return BelongsTo<\App\Modules\Accounts\Models\BankStatementLine, $this>
+     */
     public function statementLine(): BelongsTo
     {
         return $this->belongsTo(\App\Modules\Accounts\Models\BankStatementLine::class, 'statement_line_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function matcher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'matched_by');

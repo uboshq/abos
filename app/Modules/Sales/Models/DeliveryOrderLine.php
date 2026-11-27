@@ -58,11 +58,13 @@ class DeliveryOrderLine extends Model
         return $this->deliveryOrder?->branch_id;
     }
 
+    /** @return BelongsTo<DeliveryOrder, $this> */
     public function deliveryOrder(): BelongsTo
     {
         return $this->belongsTo(DeliveryOrder::class);
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

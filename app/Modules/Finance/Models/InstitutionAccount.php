@@ -27,11 +27,13 @@ class InstitutionAccount extends Model
 
     protected $fillable = ['company_id', 'institution_id', 'account_id', 'created_by'];
 
+    /** @return BelongsTo<Institution, $this> */
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);

@@ -44,16 +44,19 @@ class AssetVerification extends Model
         return ['started_on' => 'date', 'closed_on' => 'date'];
     }
 
+    /** @return HasMany<AssetVerificationLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(AssetVerificationLine::class, 'verification_id')->orderBy('id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

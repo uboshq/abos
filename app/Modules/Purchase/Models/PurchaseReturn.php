@@ -66,36 +66,43 @@ class PurchaseReturn extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<PurchaseReturnLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(PurchaseReturnLine::class);
     }
 
+    /** @return BelongsTo<Supplier, $this> */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<PurchaseBill, $this> */
     public function bill(): BelongsTo
     {
         return $this->belongsTo(PurchaseBill::class, 'purchase_bill_id');
     }
 
+    /** @return BelongsTo<ReasonCode, $this> */
     public function reasonCode(): BelongsTo
     {
         return $this->belongsTo(ReasonCode::class, 'reason_code_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

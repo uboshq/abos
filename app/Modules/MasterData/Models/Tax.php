@@ -51,6 +51,7 @@ class Tax extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -59,6 +60,7 @@ class Tax extends Model implements Drillable
     /** @var list<string> */
     public const KINDS = ['vat', 'ait', 'vds', 'sd'];
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);

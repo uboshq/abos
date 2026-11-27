@@ -39,16 +39,19 @@ class PromotionBenefit extends Model
         ];
     }
 
+    /** @return BelongsTo<Promotion, $this> */
     public function promotion(): BelongsTo
     {
         return $this->belongsTo(Promotion::class);
     }
 
+    /** @return BelongsTo<PromotionCondition, $this> */
     public function condition(): BelongsTo
     {
         return $this->belongsTo(PromotionCondition::class, 'promotion_condition_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function giftProduct(): BelongsTo
     {
         return $this->belongsTo(Product::class, 'gift_product_id');

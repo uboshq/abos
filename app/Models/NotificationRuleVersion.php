@@ -24,6 +24,7 @@ class NotificationRuleVersion extends Model
         return ['snapshot' => 'array'];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function changer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'changed_by');

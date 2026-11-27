@@ -38,16 +38,19 @@ class BankStatementMatch extends Model
         ];
     }
 
+    /** @return BelongsTo<BankStatementLine, $this> */
     public function statementLine(): BelongsTo
     {
         return $this->belongsTo(BankStatementLine::class, 'statement_line_id');
     }
 
+    /** @return BelongsTo<VoucherLine, $this> */
     public function voucherLine(): BelongsTo
     {
         return $this->belongsTo(VoucherLine::class, 'voucher_line_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function matcher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'matched_by');

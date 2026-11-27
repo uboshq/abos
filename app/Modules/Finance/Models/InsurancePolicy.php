@@ -86,16 +86,19 @@ class InsurancePolicy extends Model
         ];
     }
 
+    /** @return BelongsTo<Institution, $this> */
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
     }
 
+    /** @return HasMany<InsurancePremium, $this> */
     public function premiums(): HasMany
     {
         return $this->hasMany(InsurancePremium::class, 'policy_id')->orderByDesc('period_from');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

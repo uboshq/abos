@@ -56,6 +56,7 @@ class WppfProvision extends Model implements Drillable, ShownInOwnerSelfReport
         ];
     }
 
+    /** @return BelongsTo<FinancialYear, $this> */
     public function financialYear(): BelongsTo
     {
         return $this->belongsTo(FinancialYear::class);

@@ -355,16 +355,19 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
         return $this->hasMany(VoucherAllocation::class)->orderBy('id');
     }
 
+    /** @return HasMany<VoucherLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(VoucherLine::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<FinancialYear, $this> */
     public function financialYear(): BelongsTo
     {
         return $this->belongsTo(FinancialYear::class);
@@ -393,16 +396,19 @@ class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsIts
         return $this->belongsTo(MoneyCategory::class, 'money_subcategory_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function canceller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cancelled_by');

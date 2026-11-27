@@ -68,26 +68,31 @@ class GatePass extends Model
         ];
     }
 
+    /** @return BelongsTo<DeliveryChallan, $this> */
     public function challan(): BelongsTo
     {
         return $this->belongsTo(DeliveryChallan::class, 'delivery_challan_id');
     }
 
+    /** @return BelongsTo<DeliveryEvent, $this> */
     public function event(): BelongsTo
     {
         return $this->belongsTo(DeliveryEvent::class, 'delivery_event_id');
     }
 
+    /** @return BelongsTo<Shipment, $this> */
     public function shipment(): BelongsTo
     {
         return $this->belongsTo(Shipment::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function issuer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'issued_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function canceller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cancelled_by');

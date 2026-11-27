@@ -127,6 +127,8 @@ class Product extends Model implements Drillable, IsAMasterRecord
      *
      * ⓘ খালি মানে **সব শাখায়**; ভরা মানে কেবল সেগুলোয়। পণ্য একটাই — দাম, লট আর খরচের
      * স্তর ভাগ হয় না ([[each_branch_sells_its_own_goods]] মাইগ্রেশন)।
+     *
+     * @return BelongsToMany<Branch, $this>
      */
     public function branches(): BelongsToMany
     {
@@ -158,6 +160,7 @@ class Product extends Model implements Drillable, IsAMasterRecord
                 ->where('inv_product_branches.branch_id', $branch)));
     }
 
+    /** @return BelongsTo<Unit, $this> */
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class, 'unit_id');
@@ -167,6 +170,8 @@ class Product extends Model implements Drillable, IsAMasterRecord
      * এই পণ্যের প্যাকগুলো — base সহ, বড়টা আগে।
      *
      * ⓘ [[ProductUnit]] দেখুন: কার্টনের মাপ পণ্যের, এককের মাস্টারের নয়।
+     *
+     * @return HasMany<ProductUnit, $this>
      */
     public function packs(): HasMany
     {
@@ -186,6 +191,8 @@ class Product extends Model implements Drillable, IsAMasterRecord
      * যাচাই করে। তাই `<img src>` ওই রুটেই যায়, কোনো public পথে নয়:
      * public হলে URL অনুমান করেই অন্য কোম্পানির লোক পণ্যের ছবি দেখতে
      * পারতেন।
+     *
+     * @return BelongsTo<Attachment, $this>
      */
     public function primaryImage(): BelongsTo
     {
@@ -200,26 +207,31 @@ class Product extends Model implements Drillable, IsAMasterRecord
      * সম্পর্কটার নাম `brand` রাখলে Eloquent ওই কলামটাই ঢেকে দিত, আর
      * পুরনো মানটা পড়ার কোনো উপায় থাকত না।
      */
+    /** @return BelongsTo<Brand, $this> */
     public function brandRow(): BelongsTo
     {
         return $this->belongsTo(Brand::class, 'brand_id');
     }
 
+    /** @return BelongsTo<ProductCategory, $this> */
     public function categoryRow(): BelongsTo
     {
         return $this->belongsTo(ProductCategory::class, 'category_id');
     }
 
+    /** @return BelongsTo<Tax, $this> */
     public function tax(): BelongsTo
     {
         return $this->belongsTo(Tax::class, 'tax_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return HasMany<StockMovement, $this> */
     public function movements(): HasMany
     {
         return $this->hasMany(StockMovement::class);

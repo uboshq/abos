@@ -49,16 +49,19 @@ class DocumentSignature extends Model
         });
     }
 
+    /** @return BelongsTo<Document, $this> */
     public function document(): BelongsTo
     {
         return $this->belongsTo(Document::class, 'document_id');
     }
 
+    /** @return BelongsTo<DocumentVersion, $this> */
     public function version(): BelongsTo
     {
         return $this->belongsTo(DocumentVersion::class, 'version_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function signer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');

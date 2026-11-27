@@ -75,32 +75,39 @@ class StockCount extends Model
         ];
     }
 
+    /** @return HasMany<StockCountLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(StockCountLine::class)->orderBy('id');
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function counter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'counted_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
-    /** ⓘ বের করার কাগজের কারণ — টাকা কোন খাতে যাবে, সেটা এটাই বলে */
+    /** ⓘ বের করার কাগজের কারণ — টাকা কোন খাতে যাবে, সেটা এটাই বলে *
+     * @return BelongsTo<ReasonCode, $this>
+     */
     public function reason(): BelongsTo
     {
         return $this->belongsTo(ReasonCode::class, 'reason_code_id');
@@ -116,11 +123,13 @@ class StockCount extends Model
         return $this->kind === self::KIND_FREE;
     }
 
+    /** @return BelongsTo<User, $this> */
     public function canceller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cancelled_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

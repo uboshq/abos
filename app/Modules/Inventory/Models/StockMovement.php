@@ -67,6 +67,7 @@ class StockMovement extends Model
         ];
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
@@ -77,12 +78,15 @@ class StockMovement extends Model
      *
      * বেশিরভাগ সারিতে খালি, আর সেটাই স্বাভাবিক: চাল, সাবান, বিস্কুটে
      * লট বলে কিছু নেই। যে পণ্যে আছে, সেখানে এই সূত্রটাই রিকলের উত্তর।
+     *
+     * @return BelongsTo<Batch, $this>
      */
     public function batch(): BelongsTo
     {
         return $this->belongsTo(Batch::class);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
@@ -93,22 +97,27 @@ class StockMovement extends Model
      *
      * ⓘ `null` মানে "এই গুদামে তাক নেই", "জানা নেই" নয়। ছোট দোকানের
      * প্রতিটা সারিতেই এটা `null`, আর সেটাই সঠিক।
+     *
+     * @return BelongsTo<StorageLocation, $this>
      */
     public function storageLocation(): BelongsTo
     {
         return $this->belongsTo(StorageLocation::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<ReasonCode, $this> */
     public function reasonCode(): BelongsTo
     {
         return $this->belongsTo(ReasonCode::class, 'reason_code_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -30,11 +30,13 @@ class MailOutbox extends Model
         return ['payload' => 'encrypted:array', 'send_at' => 'datetime', 'tries' => 'integer'];
     }
 
+    /** @return BelongsTo<MailAccount, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(MailAccount::class, 'mail_account_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

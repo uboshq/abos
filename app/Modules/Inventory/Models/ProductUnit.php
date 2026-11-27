@@ -50,17 +50,21 @@ class ProductUnit extends Model
         ];
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<Unit, $this> */
     public function unit(): BelongsTo
     {
         return $this->belongsTo(Unit::class);
     }
 
-    /** "১ কার্টন = ১২ **বক্স**" — কিসের হিসাবে লেখা হয়েছিল। */
+    /** "১ কার্টন = ১২ **বক্স**" — কিসের হিসাবে লেখা হয়েছিল। *
+     * @return BelongsTo<Unit, $this>
+     */
     public function perUnit(): BelongsTo
     {
         return $this->belongsTo(Unit::class, 'per_unit_id');

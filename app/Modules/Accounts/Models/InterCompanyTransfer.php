@@ -64,30 +64,39 @@ class InterCompanyTransfer extends Model
         ];
     }
 
-    /** যে কোম্পানি টাকা দিল। */
+    /** যে কোম্পানি টাকা দিল। *
+     * @return BelongsTo<Company, $this>
+     */
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
 
-    /** যে কোম্পানি পেল। */
+    /** যে কোম্পানি পেল। *
+     * @return BelongsTo<Company, $this>
+     */
     public function counterCompany(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'counter_company_id');
     }
 
-    /** দেওয়ার দিকের ভাউচার — টাকা যার খাতা থেকে বেরোল। */
+    /** দেওয়ার দিকের ভাউচার — টাকা যার খাতা থেকে বেরোল। *
+     * @return BelongsTo<Voucher, $this>
+     */
     public function outVoucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'out_voucher_id');
     }
 
-    /** পাওয়ার দিকের ভাউচার — যার খাতায় ঢুকল। */
+    /** পাওয়ার দিকের ভাউচার — যার খাতায় ঢুকল। *
+     * @return BelongsTo<Voucher, $this>
+     */
     public function inVoucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'in_voucher_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

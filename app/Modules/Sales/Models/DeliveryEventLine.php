@@ -35,11 +35,13 @@ class DeliveryEventLine extends Model
         return ['delivered_qty' => 'decimal:4', 'damaged_qty' => 'decimal:4'];
     }
 
+    /** @return BelongsTo<DeliveryEvent, $this> */
     public function event(): BelongsTo
     {
         return $this->belongsTo(DeliveryEvent::class, 'delivery_event_id');
     }
 
+    /** @return BelongsTo<DeliveryChallanLine, $this> */
     public function challanLine(): BelongsTo
     {
         return $this->belongsTo(DeliveryChallanLine::class, 'delivery_challan_line_id');

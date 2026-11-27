@@ -68,34 +68,43 @@ class LoyaltyEntry extends Model
         ];
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<PromotionApplication, $this> */
     public function application(): BelongsTo
     {
         return $this->belongsTo(PromotionApplication::class, 'promotion_application_id');
     }
 
-    /** ⓘ এই সারি কোন সারির ফেরত বা মেয়াদ-শেষ */
+    /** ⓘ এই সারি কোন সারির ফেরত বা মেয়াদ-শেষ *
+     * @return BelongsTo<self, $this>
+     */
     public function target(): BelongsTo
     {
         return $this->belongsTo(self::class, 'reverses_entry_id');
     }
 
-    /** ⭐ এই সারির ফেরত — থাকলে আর ফেরানো যায় না */
+    /** ⭐ এই সারির ফেরত — থাকলে আর ফেরানো যায় না *
+     * @return HasOne<self, $this>
+     */
     public function reversal(): HasOne
     {
         return $this->hasOne(self::class, 'reverses_entry_id')->where('kind', LoyaltyKind::REVERSE->value);
     }
 
-    /** ⭐ এই অর্জনের মেয়াদ-শেষ — থাকলে আর ফুরোয় না */
+    /** ⭐ এই অর্জনের মেয়াদ-শেষ — থাকলে আর ফুরোয় না *
+     * @return HasOne<self, $this>
+     */
     public function expiry(): HasOne
     {
         return $this->hasOne(self::class, 'reverses_entry_id')->where('kind', LoyaltyKind::EXPIRE->value);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

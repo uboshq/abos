@@ -61,6 +61,7 @@ class AssistantConversation extends Model
         return $query->where($this->getTable().'.user_id', $user->id);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

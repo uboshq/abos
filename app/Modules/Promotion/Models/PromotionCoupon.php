@@ -46,21 +46,25 @@ class PromotionCoupon extends Model
         ];
     }
 
+    /** @return BelongsTo<Promotion, $this> */
     public function promotion(): BelongsTo
     {
         return $this->belongsTo(Promotion::class);
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return HasMany<PromotionCouponRedemption, $this> */
     public function redemptions(): HasMany
     {
         return $this->hasMany(PromotionCouponRedemption::class, 'coupon_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function issuer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'issued_by');

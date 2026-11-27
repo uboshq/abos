@@ -56,6 +56,7 @@ class ApprovalCondition extends Model
         static::deleted(fn () => ApprovalEngine::flowsChanged());
     }
 
+    /** @return BelongsTo<ApprovalFlow, $this> */
     public function flow(): BelongsTo
     {
         return $this->belongsTo(ApprovalFlow::class, 'approval_flow_id');

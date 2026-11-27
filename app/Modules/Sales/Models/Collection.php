@@ -71,12 +71,15 @@ class Collection extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<CollectionLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(CollectionLine::class)->orderBy('line_no');
     }
 
-    /** ⭐ খোলা ক্রেডিটের প্রয়োগ আর ডেবিট নোটের শোধ — দফা ৩ ([[CollectionApplication]]) */
+    /** ⭐ খোলা ক্রেডিটের প্রয়োগ আর ডেবিট নোটের শোধ — দফা ৩ ([[CollectionApplication]]) *
+     * @return HasMany<CollectionApplication, $this>
+     */
     public function applications(): HasMany
     {
         return $this->hasMany(CollectionApplication::class)->orderBy('id');
@@ -91,21 +94,25 @@ class Collection extends Model implements Drillable
             (string) ($this->difference_amount ?? '0'), 4);
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

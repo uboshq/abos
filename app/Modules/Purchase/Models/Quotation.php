@@ -58,26 +58,31 @@ class Quotation extends Model
         ];
     }
 
+    /** @return HasMany<QuotationLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(QuotationLine::class, 'quotation_id')->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Rfq, $this> */
     public function rfq(): BelongsTo
     {
         return $this->belongsTo(Rfq::class, 'rfq_id');
     }
 
+    /** @return BelongsTo<Supplier, $this> */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

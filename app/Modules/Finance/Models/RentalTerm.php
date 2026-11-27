@@ -38,6 +38,7 @@ class RentalTerm extends Model
         ];
     }
 
+    /** @return BelongsTo<RentalContract, $this> */
     public function contract(): BelongsTo
     {
         return $this->belongsTo(RentalContract::class, 'rental_contract_id');

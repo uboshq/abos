@@ -64,27 +64,32 @@ class StockTransfer extends Model implements Drillable
         ];
     }
 
+    /** @return HasMany<StockTransferLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(StockTransferLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function fromWarehouse(): BelongsTo
     {
         // ⓘ দুই দিকের গুদাম নাম ধরে — শাখার আর নাগালের দেয়ালের বাইরে ([[ScopedToUserWarehouse]])
         return $this->belongsTo(Warehouse::class, 'from_warehouse_id')->withoutGlobalScopes(['user-warehouse', Warehouse::VIEWED_BRANCH]);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function toWarehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'to_warehouse_id')->withoutGlobalScopes(['user-warehouse', Warehouse::VIEWED_BRANCH]);
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -64,11 +64,13 @@ class DepositMovement extends Model implements Drillable, SettledByAVoucher, \Ap
         ];
     }
 
+    /** @return BelongsTo<Deposit, $this> */
     public function deposit(): BelongsTo
     {
         return $this->belongsTo(Deposit::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function moneyAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'money_account_id');
@@ -79,6 +81,8 @@ class DepositMovement extends Model implements Drillable, SettledByAVoucher, \Ap
      *
      * বাতিল দাখিলা মুছে গেলে জোড়াটা null হয়, আর সারিটা তবু থাকে:
      * ঘটনাটা সত্যিই ঘটেছিল।
+     *
+     * @return BelongsTo<Voucher, $this>
      */
     public function voucher(): BelongsTo
     {

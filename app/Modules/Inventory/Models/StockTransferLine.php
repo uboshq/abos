@@ -36,11 +36,13 @@ class StockTransferLine extends Model
         return ['qty' => 'decimal:4', 'entered_qty' => 'decimal:4'];
     }
 
+    /** @return BelongsTo<StockTransfer, $this> */
     public function transfer(): BelongsTo
     {
         return $this->belongsTo(StockTransfer::class, 'stock_transfer_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

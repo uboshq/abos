@@ -57,11 +57,13 @@ class PaymentChange extends Model implements ShownInOwnerSelfReport
         ];
     }
 
+    /** @return BelongsTo<Employee, $this> */
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');
@@ -73,6 +75,7 @@ class PaymentChange extends Model implements ShownInOwnerSelfReport
         return [Employee::drillSourceType(), 'employee_id'];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function decider(): BelongsTo
     {
         return $this->belongsTo(User::class, 'decided_by');

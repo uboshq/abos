@@ -36,6 +36,7 @@ class NotificationAuditLog extends Model
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');

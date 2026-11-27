@@ -29,11 +29,13 @@ class StaffSupervisor extends Model
 
     protected $fillable = ['company_id', 'user_id', 'supervisor_id', 'created_by'];
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function supervisor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'supervisor_id');

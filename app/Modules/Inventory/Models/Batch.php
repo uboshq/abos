@@ -65,6 +65,7 @@ class Batch extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

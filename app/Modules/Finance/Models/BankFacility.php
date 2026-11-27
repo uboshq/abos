@@ -171,6 +171,7 @@ class BankFacility extends Model implements Drillable, \App\Core\Contracts\Accep
         ];
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function liabilityAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'liability_account_id');
@@ -182,18 +183,23 @@ class BankFacility extends Model implements Drillable, \App\Core\Contracts\Accep
      * ⓘ পুরনো `bank` ঘরটা থেকে যায়: মানুষ যা টাইপ করেছিলেন সেটাই
      * ঐতিহাসিক সত্য। নতুন সারিতে ঘরটা আর চাওয়া হয় না।
      */
-    /** ⭐ ব্যাংকের বিবরণীর জের — পুরনো থেকে নতুন ([[FacilityStatement]], পরিকল্পনা ৩.৬) */
+    /** ⭐ ব্যাংকের বিবরণীর জের — পুরনো থেকে নতুন ([[FacilityStatement]], পরিকল্পনা ৩.৬) *
+     * @return HasMany<FacilityStatement, $this>
+     */
     public function statements(): HasMany
     {
         return $this->hasMany(FacilityStatement::class, 'bank_facility_id')->orderBy('statement_on');
     }
 
+    /** @return BelongsTo<Institution, $this> */
     public function institution(): BelongsTo
     {
         return $this->belongsTo(Institution::class);
     }
 
-    /** CC-র নিজের ব্যাংক হিসাব — বাকি চারটায় `null`। */
+    /** CC-র নিজের ব্যাংক হিসাব — বাকি চারটায় `null`। *
+     * @return BelongsTo<Account, $this>
+     */
     public function moneyAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'money_account_id');

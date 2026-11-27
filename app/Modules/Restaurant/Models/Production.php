@@ -70,26 +70,31 @@ class Production extends Model
         ];
     }
 
+    /** @return BelongsTo<Recipe, $this> */
     public function recipe(): BelongsTo
     {
         return $this->belongsTo(Recipe::class);
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return HasMany<ProductionLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(ProductionLine::class)->orderBy('sort')->orderBy('id');

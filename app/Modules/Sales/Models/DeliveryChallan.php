@@ -95,6 +95,7 @@ class DeliveryChallan extends Model implements \App\Core\Contracts\ExplainsItsCo
         ];
     }
 
+    /** @return HasMany<DeliveryChallanLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(DeliveryChallanLine::class)->orderBy('line_no');
@@ -114,17 +115,21 @@ class DeliveryChallan extends Model implements \App\Core\Contracts\ExplainsItsCo
         return ['lines', 'giftLines'];
     }
 
-    /** উপহারের সারি — অন্য পণ্য, বিক্রির জন্য নয়। */
+    /** উপহারের সারি — অন্য পণ্য, বিক্রির জন্য নয়। *
+     * @return HasMany<DeliveryChallanGiftLine, $this>
+     */
     public function giftLines(): HasMany
     {
         return $this->hasMany(DeliveryChallanGiftLine::class)->orderBy('line_no');
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<Warehouse, $this> */
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
@@ -171,7 +176,9 @@ class DeliveryChallan extends Model implements \App\Core\Contracts\ExplainsItsCo
         return $this->carrier_id !== null ? (string) $this->carrier?->name() : '';
     }
 
-    /** ⓘ তালিকার বাহক — সম্পর্ক, যাতে পাতায় একবারে আসে ([[transportLabel()]]) */
+    /** ⓘ তালিকার বাহক — সম্পর্ক, যাতে পাতায় একবারে আসে ([[transportLabel()]]) *
+     * @return BelongsTo<\App\Modules\Supplier\Models\Supplier, $this>
+     */
     public function carrier(): BelongsTo
     {
         return $this->belongsTo(\App\Modules\Supplier\Models\Supplier::class, 'carrier_id');
@@ -180,12 +187,15 @@ class DeliveryChallan extends Model implements \App\Core\Contracts\ExplainsItsCo
     /**
      * ⭐ ভাড়ার ভাউচার (EV, বা পরে দিলে PV) আর টাকার খাত — মালিক, ৭ অক্টোবর ২০২৬ ([[FarePayment]])।
      * ⓘ ঘরগুলো fillable নয়: কেবল সেবা বসায় (forceFill), অনুরোধের ভর-বসানো দিয়ে নয়।
+     *
+     * @return BelongsTo<\App\Modules\Accounts\Models\Voucher, $this>
      */
     public function fareVoucher(): BelongsTo
     {
         return $this->belongsTo(\App\Modules\Accounts\Models\Voucher::class, 'fare_voucher_id');
     }
 
+    /** @return BelongsTo<\App\Modules\Accounts\Models\Account, $this> */
     public function fareAccount(): BelongsTo
     {
         return $this->belongsTo(\App\Modules\Accounts\Models\Account::class, 'fare_account_id');
@@ -223,16 +233,19 @@ class DeliveryChallan extends Model implements \App\Core\Contracts\ExplainsItsCo
         ];
     }
 
+    /** @return BelongsTo<SalesOrder, $this> */
     public function order(): BelongsTo
     {
         return $this->belongsTo(SalesOrder::class, 'sales_order_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -57,6 +57,7 @@ class NotificationChoice extends Model
             ->all();
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

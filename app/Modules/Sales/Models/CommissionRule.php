@@ -49,6 +49,7 @@ class CommissionRule extends Model
         ];
     }
 
+    /** @return BelongsTo<Scheme, $this> */
     public function scheme(): BelongsTo
     {
         return $this->belongsTo(Scheme::class);

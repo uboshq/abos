@@ -88,42 +88,50 @@ class MoneyTransfer extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<CashTill, $this> */
     public function fromTill(): BelongsTo
     {
         // ⓘ দুই দিকের টিল নাম ধরে — শাখার দেয়ালের বাইরে ([[CashTill::booted()]])
         return $this->belongsTo(CashTill::class, 'from_till_id')->withoutGlobalScope('viewed-branch');
     }
 
+    /** @return BelongsTo<CashTill, $this> */
     public function toTill(): BelongsTo
     {
         return $this->belongsTo(CashTill::class, 'to_till_id')->withoutGlobalScope('viewed-branch');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function toAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'to_account_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function giver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'given_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function receiver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'received_by');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function confirmer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'confirmed_by');

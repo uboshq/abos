@@ -87,11 +87,13 @@ class MailAccount extends Model
         return ['checked_at', 'last_error'];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
+    /** @return BelongsToMany<User, $this> */
     public function members(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'mail_account_members', 'mail_account_id', 'user_id')

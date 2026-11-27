@@ -58,17 +58,21 @@ class VoucherLine extends Model
         return 'voucher';
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
-    /** কোন মিলকরণে এই সারিতে টিক পড়েছে — null মানে ব্যাংক এখনো দেখেনি। */
+    /** কোন মিলকরণে এই সারিতে টিক পড়েছে — null মানে ব্যাংক এখনো দেখেনি। *
+     * @return BelongsTo<BankReconciliation, $this>
+     */
     public function reconciliation(): BelongsTo
     {
         return $this->belongsTo(BankReconciliation::class, 'reconciliation_id');

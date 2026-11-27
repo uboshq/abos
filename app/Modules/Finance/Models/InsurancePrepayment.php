@@ -44,26 +44,31 @@ class InsurancePrepayment extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<InsurancePolicy, $this> */
     public function policy(): BelongsTo
     {
         return $this->belongsTo(InsurancePolicy::class, 'policy_id');
     }
 
+    /** @return BelongsTo<InsurancePremium, $this> */
     public function premium(): BelongsTo
     {
         return $this->belongsTo(InsurancePremium::class, 'premium_id');
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function expenseAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'expense_account_id');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function reversalVoucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class, 'reversal_voucher_id');

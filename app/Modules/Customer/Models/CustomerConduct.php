@@ -44,16 +44,19 @@ class CustomerConduct extends Model
         ];
     }
 
+    /** @return BelongsTo<Customer, $this> */
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function recorder(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function retirer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'retired_by');

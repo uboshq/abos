@@ -99,27 +99,33 @@ class RentalContract extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function expenseAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'expense_account_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return HasMany<RentalAdjustment, $this> */
     public function adjustments(): HasMany
     {
         return $this->hasMany(RentalAdjustment::class);
     }
 
-    /** ⭐ শর্তের ইতিহাস — কোন মাস থেকে কত ভাড়া ([[RentalTerm]]) */
+    /** ⭐ শর্তের ইতিহাস — কোন মাস থেকে কত ভাড়া ([[RentalTerm]]) *
+     * @return HasMany<RentalTerm, $this>
+     */
     public function terms(): HasMany
     {
         return $this->hasMany(RentalTerm::class)->orderBy('effective_from');

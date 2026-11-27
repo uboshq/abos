@@ -66,16 +66,19 @@ class SalesInvoiceLine extends Model
         return 'invoice';
     }
 
+    /** @return BelongsTo<SalesInvoice, $this> */
     public function invoice(): BelongsTo
     {
         return $this->belongsTo(SalesInvoice::class, 'sales_invoice_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
+    /** @return BelongsTo<DeliveryChallanLine, $this> */
     public function challanLine(): BelongsTo
     {
         return $this->belongsTo(DeliveryChallanLine::class, 'delivery_challan_line_id');

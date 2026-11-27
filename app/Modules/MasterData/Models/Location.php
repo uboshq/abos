@@ -102,27 +102,33 @@ class Location extends Model implements Drillable
         return ['is_active' => 'boolean'];
     }
 
+    /** @return BelongsTo<self, $this> */
     public function parent(): BelongsTo
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
 
+    /** @return HasMany<self, $this> */
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id')->orderBy('code');
     }
 
-    /** রুটে কে যায় — ডেলিভারি ও আদায়ের দায়িত্ব। */
+    /** রুটে কে যায় — ডেলিভারি ও আদায়ের দায়িত্ব। *
+     * @return BelongsTo<User, $this>
+     */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

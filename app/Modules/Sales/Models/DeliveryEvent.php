@@ -58,26 +58,31 @@ class DeliveryEvent extends Model
         return ['occurred_at' => 'datetime'];
     }
 
+    /** @return BelongsTo<DeliveryChallan, $this> */
     public function challan(): BelongsTo
     {
         return $this->belongsTo(DeliveryChallan::class, 'delivery_challan_id');
     }
 
+    /** @return BelongsTo<Shipment, $this> */
     public function shipment(): BelongsTo
     {
         return $this->belongsTo(Shipment::class);
     }
 
+    /** @return BelongsTo<ReasonCode, $this> */
     public function reasonCode(): BelongsTo
     {
         return $this->belongsTo(ReasonCode::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return HasMany<DeliveryEventLine, $this> */
     public function lines(): HasMany
     {
         return $this->hasMany(DeliveryEventLine::class)->orderBy('id');

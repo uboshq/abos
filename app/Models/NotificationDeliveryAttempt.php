@@ -34,6 +34,7 @@ class NotificationDeliveryAttempt extends Model
         ];
     }
 
+    /** @return BelongsTo<NotificationJob, $this> */
     public function job(): BelongsTo
     {
         return $this->belongsTo(NotificationJob::class, 'job_id');

@@ -41,11 +41,13 @@ class DepreciationRun extends Model implements Drillable
         return ['period_end' => 'date', 'total' => 'decimal:4', 'assets_count' => 'integer'];
     }
 
+    /** @return HasMany<DepreciationEntry, $this> */
     public function entries(): HasMany
     {
         return $this->hasMany(DepreciationEntry::class, 'run_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);

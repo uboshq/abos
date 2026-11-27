@@ -66,11 +66,13 @@ class DeliveryChallanLine extends Model
         return 'challan';
     }
 
+    /** @return BelongsTo<DeliveryChallan, $this> */
     public function challan(): BelongsTo
     {
         return $this->belongsTo(DeliveryChallan::class, 'delivery_challan_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
@@ -82,17 +84,21 @@ class DeliveryChallanLine extends Model
      * ⓘ `null` হলে মালটা FEFO ধরে বেরোবে, অর্থাৎ আগের আচরণ। ⚠️ সাধারণ
      * চালানে (অর্ডার থেকে, পোর্টাল থেকে) লট বাছা হয় না, আর হওয়ারও
      * দরকার নেই — কাউন্টারেই কেবল মানুষটা কার্টনটা হাতে ধরে দেখেন।
+     *
+     * @return BelongsTo<Batch, $this>
      */
     public function batch(): BelongsTo
     {
         return $this->belongsTo(Batch::class);
     }
 
+    /** @return BelongsTo<SalesOrderLine, $this> */
     public function orderLine(): BelongsTo
     {
         return $this->belongsTo(SalesOrderLine::class, 'sales_order_line_id');
     }
 
+    /** @return HasMany<SalesInvoiceLine, $this> */
     public function invoiceLines(): HasMany
     {
         return $this->hasMany(SalesInvoiceLine::class, 'delivery_challan_line_id');

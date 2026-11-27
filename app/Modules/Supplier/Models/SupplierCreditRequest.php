@@ -92,16 +92,19 @@ class SupplierCreditRequest extends Model implements ShowsItselfForSigning
         ];
     }
 
+    /** @return BelongsTo<Supplier, $this> */
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class)->withoutGlobalScopes();
     }
 
+    /** @return BelongsTo<Approval, $this> */
     public function approval(): BelongsTo
     {
         return $this->belongsTo(Approval::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function requester(): BelongsTo
     {
         return $this->belongsTo(User::class, 'requested_by');

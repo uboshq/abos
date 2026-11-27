@@ -69,11 +69,13 @@ class Call extends Model
         return 'call-'.$this->public_id;
     }
 
+    /** @return BelongsTo<User, $this> */
     public function caller(): BelongsTo
     {
         return $this->belongsTo(User::class, 'caller_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function callee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'callee_id');

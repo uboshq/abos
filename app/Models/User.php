@@ -440,7 +440,9 @@ class User extends Authenticatable
         return $name === '' ? '?' : mb_strtoupper(mb_substr($name, 0, 1));
     }
 
-    /** যে কোম্পানিগুলোতে এই ব্যবহারকারী ঢুকতে পারে। */
+    /** যে কোম্পানিগুলোতে এই ব্যবহারকারী ঢুকতে পারে। *
+     * @return BelongsToMany<Company, $this>
+     */
     public function companies(): BelongsToMany
     {
         return $this->belongsToMany(Company::class)
@@ -449,11 +451,13 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    /** @return BelongsTo<Company, $this> */
     public function currentCompany(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'current_company_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function currentBranch(): BelongsTo
     {
         return $this->belongsTo(Branch::class, 'current_branch_id');

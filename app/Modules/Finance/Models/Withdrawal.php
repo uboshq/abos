@@ -90,6 +90,7 @@ class Withdrawal extends Model implements Drillable, SettledByAVoucher, Settleme
         ];
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function moneyAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'money_account_id');
@@ -118,6 +119,7 @@ class Withdrawal extends Model implements Drillable, SettledByAVoucher, Settleme
         return $this->belongsTo(Person::class, 'person_id');
     }
 
+    /** @return BelongsTo<Voucher, $this> */
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);

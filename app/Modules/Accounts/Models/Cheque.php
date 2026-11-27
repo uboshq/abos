@@ -80,16 +80,19 @@ class Cheque extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function bankAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'bank_account_id');
     }
 
+    /** @return BelongsTo<Branch, $this> */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

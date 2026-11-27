@@ -43,11 +43,13 @@ class PurchaseRequisitionLine extends Model
         ];
     }
 
+    /** @return BelongsTo<PurchaseRequisition, $this> */
     public function requisition(): BelongsTo
     {
         return $this->belongsTo(PurchaseRequisition::class, 'purchase_requisition_id');
     }
 
+    /** @return BelongsTo<Product, $this> */
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

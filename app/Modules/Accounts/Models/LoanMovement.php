@@ -68,16 +68,19 @@ class LoanMovement extends Model implements Drillable
         ];
     }
 
+    /** @return BelongsTo<Loan, $this> */
     public function loan(): BelongsTo
     {
         return $this->belongsTo(Loan::class);
     }
 
+    /** @return BelongsTo<Account, $this> */
     public function counterAccount(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'counter_account_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

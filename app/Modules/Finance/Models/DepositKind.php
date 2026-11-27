@@ -79,6 +79,8 @@ class DepositKind extends Model
      * ⭐ ধরনের পর্দা এসেছে ২০ সেপ্টেম্বর ২০২৬-এ (মানচিত্র §১৪ক), আর ওখানে
      * প্রশ্নটা একটাই: ⚠️ এটা কি ব্যবহার হয়ে গেছে? ⛔ ব্যবহৃত ধরন মোছা
      * যায় না — পুরনো কাগজ অনাথ হত — কেবল নিষ্ক্রিয় করা যায়।
+     *
+     * @return HasMany<Deposit, $this>
      */
     public function deposits(): \Illuminate\Database\Eloquent\Relations\HasMany
     {

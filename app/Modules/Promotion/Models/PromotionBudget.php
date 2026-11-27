@@ -58,6 +58,7 @@ class PromotionBudget extends Model
         ];
     }
 
+    /** @return BelongsTo<Promotion, $this> */
     public function promotion(): BelongsTo
     {
         return $this->belongsTo(Promotion::class);
