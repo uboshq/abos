@@ -485,6 +485,15 @@ return [
             'notification::report.menu.template-usage' => ['reports', 'layout-template'],
             'notification::report.menu.channel-availability' => ['reports', 'wifi'],
         ],
+        // ⭐ মেইল (মালিক, ২৬ নভেম্বর; মেনু-ক্রম ২৭ নভেম্বর): মেইলবক্স আগে, তারপর নিজের টেমপ্লেট ও স্বাক্ষর, তারপর প্রশাসন, শেষে খাতা
+        'mail' => [
+            'mail::menu.mail' => ['inbox', 'mail-open'],
+            'mail::menu.templates' => ['setup', 'layout-template'],
+            'mail::menu.signature' => ['setup', 'signature'],
+            'mail::menu.addresses' => ['setup', 'globe'],
+            'mail::menu.sent' => ['audit', 'send'],
+            'mail::menu.history' => ['audit', 'history'],
+        ],
         'promotion' => [
             'promotion::dashboard.title' => ['start', 'layout-dashboard'],
             'promotion::menu.promotions' => ['offers', 'badge-percent'],
