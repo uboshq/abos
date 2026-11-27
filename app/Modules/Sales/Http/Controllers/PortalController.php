@@ -64,6 +64,7 @@ class PortalController extends Controller
      * ⓘ [[CredentialCheck::verify()]]-এর হুবহু একই কৌশল: bcrypt-এর আকারে
      * একটা hash, খরচ ১২, যাতে যাচাইটা আসলটার মতোই সময় নেয়।
      */
+    // nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash — a dots-only dummy for equal timing, no real password (Semgrep, 28 Nov, checked by hand)
     private const DUMMY_HASH = '$2y$12$.....................................................';
 
     public function __construct(

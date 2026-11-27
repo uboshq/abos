@@ -116,6 +116,9 @@ return [
         // ⓘ messages and calls (owner "ok", 21 Nov 2026)
         'messaging' => 'Messages and calls',
         'messaging.group' => 'Message groups',
+        'mail' => 'Whole mail module',
+        'mail.personal' => 'Personal mail requests',
+        'mail.addresses' => 'Mail addresses',
         'notification.templates' => 'Notification templates',
         'notification.archive' => 'Notification archive',
         'notification.reports' => 'Notification reports',

@@ -22,7 +22,7 @@
 
     <div class="mailx mx-page" data-mail-tpl>
         <div class="mx-head">
-            <h1>📄 {{ $T('title') }}</h1><span class="sp"></span>
+            <h1 data-page-title>📄 {{ $T('title') }}</h1><span class="sp"></span>
             <a class="mx-btn" href="{{ route('mail.index', ['counter' => 1]) }}" target="abos-mail">✉️ {{ __('mail::field.title') }} ↗</a>
         </div>
         @if (session('mail_flash'))<div class="mx-ok">{{ session('mail_flash') }}</div>@endif
@@ -86,8 +86,9 @@
                         <div class="var">@foreach ($fields as $f)<span class="mx-pill t-blue">{{ $f }}</span>@endforeach</div></div>
                     <form method="GET" action="{{ route('mail.templates') }}" class="muted" style="font-size:12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
                         <input type="hidden" name="t" value="{{ $sel->public_id }}">@if ($category)<input type="hidden" name="cat" value="{{ $category }}">@endif
-                        {{ $T('see_as') }}
-                        <select name="customer" class="mx-in mx-h28" style="width:auto;max-width:260px" data-auto-submit>
+                        {{-- ⓘ নামসহ ঘর — পর্দা-পাঠক যেন "কার চোখে দেখুন" পড়ে (axe select-name, critical; ২৮ নভেম্বর) --}}
+                        <label for="tpl-see-as">{{ $T('see_as') }}</label>
+                        <select id="tpl-see-as" name="customer" class="mx-in mx-h28" style="width:auto;max-width:260px" data-auto-submit>
                             <option value="">{{ $T('see_none') }}</option>
                             @foreach ($customers as $c)<option value="{{ $c->id }}" @selected($customer?->id === $c->id)>{{ $c->nameWithPoint() }}</option>@endforeach
                         </select>

@@ -184,9 +184,9 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
 
         $this->assertSame(19, MailFestival::query()->count());
         $this->assertTrue(MailFestival::query()->where('key', 'victory')->value('quiet'), '⛔ বিজয় দিবস শ্রদ্ধার দিন — অফার নয়।');
-        $this->assertGreaterThanOrEqual(23 + 19, MailTemplate::query()->count());
+        $this->assertGreaterThanOrEqual(24 + 19, MailTemplate::query()->count());
         // ⭐ ERP-র শুরুর সেটের বাকি ১০টা (NEXUS-এর পর্যালোচনা R5) — আর আগের কোম্পানিতেও বসে
-        foreach (['quotation', 'order_confirm', 'due_soon', 'delivered', 'return_credit', 'welcome', 'remittance', 'rfq', 'payslip', 'leave_reply'] as $key) {
+        foreach (['quotation', 'order_confirm', 'due_soon', 'delivered', 'return_credit', 'welcome', 'remittance', 'rfq', 'payslip', 'leave_reply', 'docs_sent'] as $key) {
             $this->assertTrue(MailTemplate::query()->whereNull('user_id')->where('key', $key)->exists(), "⛔ টেমপ্লেট {$key} বসেনি।");
         }
         CompanyContext::forCompany($this->co->id, function () {

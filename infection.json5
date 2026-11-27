@@ -1,0 +1,14 @@
+{
+    // ⭐ মান-যাচাইয়ের যন্ত্র ৩ (মালিক, ২৮ নভেম্বর ২০২৬): টাকা, মজুদ, খাতা, কর আর নম্বরের কোডে mutation testing।
+    // ⓘ চলে কেবল Mac mini-তে; coverage phpdbg দিয়ে (সার্ভারের PHP-তে নতুন extension নয়)।
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": ["app/Core/Support"]
+    },
+    "phpUnit": { "configDir": ".", "customPath": "vendor/bin/phpunit" },
+    "testFrameworkOptions": "-c phpunit.infect.xml",
+    "logs": { "text": "storage/logs/infection.txt", "summary": "storage/logs/infection-summary.txt" },
+    "mutators": { "@default": true },
+    "timeout": 60,
+    "threads": 1
+}
