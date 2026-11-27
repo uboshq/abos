@@ -294,8 +294,12 @@ class IconSetTest extends TestCase
                 continue;
             }
 
-            // মোড়কের ভেতরের অক্ষরটাই চিহ্ন
+            // মোড়কের ভেতরের অক্ষরটাই চিহ্ন; ⭐ ABOS-এর তিন রূপে রঙিন পটের আঁকা চিহ্ন (মালিক, ২৮ নভেম্বর) — তার Lucide নামটাই চিহ্ন
             $glyph = trim(strip_tags($html));
+
+            if ($glyph === '' && preg_match('/data-licon="([^"]+)"/', $html, $m)) {
+                $glyph = 'licon:'.$m[1];
+            }
 
             $marks[$glyph][] = $code;
         }
@@ -321,5 +325,45 @@ class IconSetTest extends TestCase
             '',
             'দুইটা মডিউলে এক চিহ্ন মানে চোখ ভুল জিনিস শেখে।',
         ]));
+    }
+
+    /**
+     * ⭐ মালিক, ২৮ নভেম্বর ২০২৬: "প্রত্যেকটার জন্য ইউনিক আইকন … প্রত্যেকটারই ইউনিক কালার" — ABOS-এর তিন নিজের রূপে প্রতিটা মডিউলের
+     *   চিহ্ন নিজের রঙের পটে আঁকা; রং tokens.css-এর `--module-*`। ⛔ দুই মডিউলে একই রং নয়, ⛔ কোনো মডিউল রং ছাড়া নয়,
+     *   ⛔ সাদা চিহ্নের সাথে ৩:১-এর কম নয় (WCAG ১.৪.১১), ⛔ ABOS রূপে আর emoji নয়।
+     */
+    public function test_every_module_wears_its_own_colour_and_drawn_mark_in_the_abos_looks(): void
+    {
+        $css = (string) file_get_contents(resource_path('css/tokens.css'));
+        preg_match_all('/--module-([a-z_]+):\s*(#[0-9a-f]{6})/i', $css, $m, PREG_SET_ORDER);
+        $colours = [];
+        foreach ($m as [, $code, $hex]) {
+            $colours[$code] = strtolower($hex);
+        }
+
+        $modules = collect(app(ModuleRegistry::class)->all())->map(fn ($d) => $d->code)->push('dashboard')->all();
+        $lum = function (string $hex): float {
+            $c = array_map(fn ($x) => hexdec($x) / 255, str_split(ltrim($hex, '#'), 2));
+            $c = array_map(fn ($s) => $s <= 0.03928 ? $s / 12.92 : (($s + 0.055) / 1.055) ** 2.4, $c);
+
+            return 0.2126 * $c[0] + 0.7152 * $c[1] + 0.0722 * $c[2];
+        };
+
+        foreach ($modules as $code) {
+            $this->assertArrayHasKey($code, $colours, "⛔ মডিউল {$code}-এর নিজের রং (--module-{$code}) নেই।");
+            $this->assertGreaterThanOrEqual(3.0, 1.05 / ($lum($colours[$code]) + 0.05), "⛔ {$code}: সাদা চিহ্ন এই রঙে পড়া যায় না।");
+
+            if ($code === 'assistant') {
+                continue; // ⓘ কোপাইলট ABOS রূপে জীবন্ত "Ai" চিহ্ন (মালিক, ২১ নভেম্বর) — রঙিন পট নয়
+            }
+
+            $html = Blade::render('<x-ui.icon name="'.$code.'" />');
+            $this->assertStringContainsString('data-module-tile="'.$code.'"', $html, "⛔ {$code}: ABOS রূপে রঙিন পটের চিহ্ন বসেনি।");
+            $this->assertStringContainsString('var(--module-'.$code.')', $html);
+            $this->assertMatchesRegularExpression('/<svg\b/', $html, "⛔ {$code}: আঁকা চিহ্ন নেই।");
+        }
+
+        $used = array_intersect_key($colours, array_flip($modules));
+        $this->assertSame(count($used), count(array_unique($used)), '⛔ দুই মডিউলে একই রং: '.json_encode(array_diff_assoc($used, array_unique($used))));
     }
 }

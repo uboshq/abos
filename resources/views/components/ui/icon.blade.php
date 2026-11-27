@@ -129,10 +129,34 @@
     /* ⭐ Copilot's mark — in the ABOS looks the living "Ai" mark replaces the brain everywhere (owner, 21 Nov 2026);
        SAP, Dynamic and the other looks keep the brain exactly as before ([[AiMark]]) */
     $aiMark = in_array($name, ['brain', 'assistant'], true) && \App\Core\Support\AiMark::shows();
+
+    /*
+     * ⭐ ABOS-এর তিন নিজের রূপে মডিউলের চিহ্ন = নিজের রঙের পটে সাদা আঁকা চিহ্ন, emoji নয় (মালিক, ২৮ নভেম্বর ২০২৬:
+     *   "প্রত্যেকটার জন্য ইউনিক আইকন … প্রত্যেকটারই ইউনিক কালার"; নমুনা মালিকের-ফাইল/মডিউলের-চিহ্ন-নমুনা-২৮-নভেম্বর.html)।
+     * ⓘ উপরের ৫ সেপ্টেম্বরের যুক্তি (১৮px-এ সাদামাটা আউটলাইন একে অপরের মতো) রঙিন পটে আর খাটে না — রঙই প্রথম চেনায়,
+     *   চিহ্ন দ্বিতীয়বার। Lucide (ISC) — [[LucideIcons]]; রং tokens.css-এর `--module-*` (২৪টা আলাদা, সাদার সাথে ≥ ৩:১)।
+     * ⛔ নকল রূপে (SAP, Dynamics, Odoo…) আগের মতো — সেখানে সেই কোম্পানির নিজের চিহ্ন বসবে, ABOS-এর নকশা নয়।
+     * ⛔ চিহ্নগুলো অনন্য — একটা নাম দুই মডিউলে নয় ([[EveryModuleWearsItsOwnTileTest]])।
+     */
+    $moduleTiles = [
+        'dashboard' => 'layout-dashboard', 'master_data' => 'library', 'customer' => 'handshake', 'promotion' => 'gift',
+        'supplier' => 'factory', 'sales' => 'truck', 'purchase' => 'package-open', 'inventory' => 'warehouse',
+        'accounts' => 'book-open', 'finance' => 'landmark', 'hr' => 'users', 'restaurant' => 'utensils',
+        'approval' => 'circle-check-big', 'governance' => 'scale', 'system_admin' => 'shield-check', 'backup' => 'database-backup',
+        'documents' => 'folder-open', 'fixed_assets' => 'building-2', 'executive' => 'gauge', 'assistant' => 'brain',
+        'notification' => 'bell', 'messaging' => 'messages-square', 'mail' => 'mail-open', 'credit_control' => 'credit-card',
+    ];
+    $tile = ! $aiMark && ! $drawn && isset($moduleTiles[$name]) && \App\Core\Support\AiMark::shows() ? $moduleTiles[$name] : null;
 @endphp
 
 @if ($aiMark)
     <x-ui.ai-mark :size="$size" {{ $attributes }} />
+@elseif ($tile)
+    {{-- রঙিন পট, সাদা চিহ্ন — পটের কোণ মাপের ~২৮%, চিহ্ন পটের ~৭০% --}}
+    <span aria-hidden="true" data-module-tile="{{ $name }}"
+          style="width: {{ $size }}px; height: {{ $size }}px; border-radius: {{ max(5, (int) round($size * 0.28)) }}px; background: var(--module-{{ $name }}); color: white"
+          {{ $attributes->class('icon inline-grid shrink-0 place-items-center') }}
+    ><x-ui.licon :name="$tile" :size="(int) round($size * 0.7)" /></span>
 @elseif ($glyph)
     {{-- ইমোজি একটা অক্ষর, তাই মাপটা `font-size`-এ। মোড়কে সেই একই
          `.icon` ক্লাস, যাতে আঁকাগুলোর চারপাশের সব নিয়ম এখানেও খাটে। --}}
