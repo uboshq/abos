@@ -16,7 +16,7 @@
                 <span class="inline-flex size-10 items-center justify-center rounded-(--radius-card) bg-(--color-brand-500) text-white" aria-hidden="true"><x-ui.icon name="brain" :size="24" /></span>
             @endif
             <div class="min-w-0">
-                <h1 class="text-lg font-semibold">{{ __('assistant::ask.title', ['name' => $name]) }}<x-ui.page-info :text="$modelOn ? __('assistant::ask.model_on') : __('assistant::ask.model_off')" /></h1>
+                <h1 data-page-title class="text-lg font-semibold">{{ __('assistant::ask.title', ['name' => $name]) }}<x-ui.page-info :text="$modelOn ? __('assistant::ask.model_on') : __('assistant::ask.model_off')" /></h1>
                 {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) --}}
                 <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ $modelOn ? __('assistant::ask.model_on') : __('assistant::ask.model_off') }}</p>
             </div>

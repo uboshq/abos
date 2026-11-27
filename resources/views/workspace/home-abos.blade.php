@@ -135,14 +135,17 @@
                 $headDate = strtr(now()->locale(app()->getLocale())->translatedFormat('j M Y'), $digits);
                 $branchLabel = app(\App\Core\Services\ShellFacts::class)->branchLabel($headUser, $headUser->currentBranch);
                 $year = $headUser->currentCompany?->currentFinancialYear();
+                $headNote = implode(' · ', array_filter([
+                    $headUser->currentCompany?->name(),
+                    $branchLabel,
+                    $year ? strtr((string) ($year->name ?? ''), $digits) : null,
+                    $headDate,
+                ]));
             @endphp
-            <h1 data-home-title class="shrink-0 truncate text-xl font-bold" style="line-height: 1.75rem">{{ $greet }}, {{ $headUser->name }}</h1>
-            <p data-home-company class="min-w-0 truncate text-sm text-(--color-ink-muted)">{{ implode(' · ', array_filter([
-                $headUser->currentCompany?->name(),
-                $branchLabel,
-                $year ? strtr((string) ($year->name ?? ''), $digits) : null,
-                $headDate,
-            ])) }}</p>
+            {{-- ⓘ কোম্পানি · শাখা · বছর · তারিখের লাইন শিরোনামের ⓘ-তে (মালিক, ২৪ নভেম্বর ২০২৬: "কোনো পাতায় এই লাইন নয়"; ২৭ নভেম্বর
+                 জরিপে ok) — লাইনটা `data-page-subtitle` ধরে লুকায় --}}
+            <h1 data-page-title data-home-title class="shrink-0 truncate text-xl font-bold" style="line-height: 1.75rem">{{ $greet }}, {{ $headUser->name }}<x-ui.page-info :text="$headNote" /></h1>
+            <p data-home-company data-page-subtitle class="min-w-0 truncate text-sm text-(--color-ink-muted)">{{ $headNote }}</p>
 
             <div data-home-controls class="ms-auto flex shrink-0 flex-wrap items-center gap-2 xl:flex-nowrap">
                 {{-- ⭐ ছাঁকনি — শাখা (উপরের বারে বাছা; এখানে কেবল লেখা), গুদাম, এলাকা (আর SR); বদলায় বিক্রি আর বকেয়া ([[HomeFilter]]),

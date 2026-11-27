@@ -27,7 +27,7 @@
     <x-slot:header>
         {{-- ⓘ হেডারটা মূলধনের হুবহু — একই খাতা, তাই একই নাম। --}}
         <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 class="text-lg font-semibold">{{ __('finance::field.capital_book_name') }}</h1>
+            <h1 data-page-title class="text-lg font-semibold">{{ __('finance::field.capital_book_name') }}</h1>
 
             <span class="text-sm text-(--color-ink-muted)">
                 {{ __('finance::field.capital_book_tag') }}

@@ -13,7 +13,7 @@
     <div class="grid gap-3" data-tracking-story data-live
          x-data="liveRefresh({ url: '{{ route('sales.tracking.show', [$sale['kind'], $sale['id']]) }}', seconds: 30 })">
         <div>
-            <h1 class="text-lg font-semibold">{{ $sale['no'] }}</h1>
+            <h1 data-page-title class="text-lg font-semibold">{{ $sale['no'] }}</h1>
             <div class="text-sm">{{ $sale['customer'] }}</div>
             <div class="text-sm text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::format($sale['date']) }}</div>
             <div class="num text-sm">{{ \App\Core\Support\Money::format($sale['total']) }}</div>

@@ -97,7 +97,7 @@
     <div data-me-profile class="mx-auto max-w-[1600px] pb-10">
         {{-- মাথা এক সারিতে: নাম … বোতাম (বিবরণের লাইন নেই) --}}
         <div class="mb-4 flex flex-wrap items-center gap-2.5">
-            <h1 class="me-auto text-2xl font-bold text-(--color-ink)">{{ $title }}</h1>
+            <h1 data-page-title class="me-auto text-2xl font-bold text-(--color-ink)">{{ $title }}</h1>
 
             @if ($self)
                 <a href="{{ route('people.profile', ['user' => $p['public_id'], 'as' => 'other']) }}" class="{{ $btn }}" data-me-as-others>

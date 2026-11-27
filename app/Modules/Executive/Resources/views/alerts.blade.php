@@ -17,7 +17,7 @@
     <div data-executive-alerts class="flex flex-col gap-3">
         <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: var(--exec-bar)">
-            <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::alerts_page.title') }}</h1>
+            <h1 data-page-title class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::alerts_page.title') }}</h1>
             <form method="POST" action="{{ route('executive.refresh') }}" class="flex flex-wrap items-center gap-2">
                 @csrf
                 <span class="text-2xs text-(--color-ink-muted)">{{ __('executive::today.cached_note') }}</span>

@@ -114,17 +114,20 @@
                 $greet = __('auth.greeting.'.($hour < 12 ? 'morning' : ($hour < 17 ? 'afternoon' : 'evening')));
             @endphp
             {{-- ⭐ নাম ধরে সম্ভাষণ (মালিকের অনুমোদিত নমুনা, ১ নভেম্বর ২০২৬); পাতার নাম "ড্যাশবোর্ড" ট্যাবে আর পথে থাকে --}}
-            <h1 data-home-title class="truncate text-xl font-bold" style="line-height: 1.75rem">{{ $greet }}, {{ auth()->user()->name }}</h1>
             @php
                 $headUser = auth()->user();
                 $headDate = strtr(now()->locale(app()->getLocale())->translatedFormat('l, j F Y · g:i A'),
                     ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
+                $headNote = implode(' · ', array_filter([
+                    $headDate,
+                    $headUser->currentCompany?->name(),
+                    app(\App\Core\Services\ShellFacts::class)->branchLabel($headUser, $headUser->currentBranch),
+                ]));
             @endphp
-            <p data-home-company class="min-w-0 text-sm text-(--color-ink-muted)">{{ implode(' · ', array_filter([
-                $headDate,
-                $headUser->currentCompany?->name(),
-                app(\App\Core\Services\ShellFacts::class)->branchLabel($headUser, $headUser->currentBranch),
-            ])) }}</p>
+            {{-- ⓘ তারিখ · কোম্পানি · শাখার লাইন ABOS-এর তিন রূপে (আর Dynamic-এ) শিরোনামের ⓘ-তে (মালিক, ২৪ নভেম্বর ২০২৬: "কোনো পাতায়
+                 এই লাইন নয়"; ২৭ নভেম্বর জরিপে ok) — লাইনটা `data-page-subtitle` ধরে লুকায়, বাকি রূপে যেমন ছিল --}}
+            <h1 data-page-title data-home-title class="truncate text-xl font-bold" style="line-height: 1.75rem">{{ $greet }}, {{ auth()->user()->name }}<x-ui.page-info :text="$headNote" /></h1>
+            <p data-home-company data-page-subtitle class="min-w-0 text-sm text-(--color-ink-muted)">{{ $headNote }}</p>
 
             {{-- ⭐ ফিল্টার · লেআউট সাজান · সময় — একই সারির ডান কোণে (নমুনার চিপ) --}}
             <div data-home-controls class="ms-auto flex flex-wrap items-center gap-2">

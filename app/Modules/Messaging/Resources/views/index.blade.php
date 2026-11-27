@@ -58,7 +58,7 @@
         {{-- ── the list (left pane) ── --}}
         <section class="mlist" aria-label="{{ __('messaging::web.title') }}">
             <div class="mlh">
-                <h1>{{ __('messaging::web.title') }}</h1>
+                <h1 data-page-title>{{ __('messaging::web.title') }}</h1>
                 <button type="button" class="newb" data-act="new">
                     <svg aria-hidden="true"><use href="#mg-pencil"/></svg>{{ __('messaging::web.new_message') }}
                 </button>

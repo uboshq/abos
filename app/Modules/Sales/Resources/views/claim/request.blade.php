@@ -15,7 +15,7 @@
 
         {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) —
              ফর্মের ভিতরে বলে foldPageNotes() এটা ধরত না --}}
-        <h1 class="text-lg font-semibold">{{ __('sales::slip.title') }}<x-ui.page-info :text="__('sales::slip.hint')" /></h1>
+        <h1 data-page-title class="text-lg font-semibold">{{ __('sales::slip.title') }}<x-ui.page-info :text="__('sales::slip.hint')" /></h1>
         <p data-page-subtitle class="text-sm text-(--color-ink-muted)">{{ __('sales::slip.hint') }}</p>
 
         <x-ui.errors />

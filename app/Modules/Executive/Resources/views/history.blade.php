@@ -40,7 +40,7 @@
     <div data-executive-history class="flex flex-col gap-3">
         <div data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: var(--exec-bar)">
-            <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::history.title') }}@if (\App\Core\Support\AbosHead::on())<x-ui.page-info :text="__('executive::history.as_kept', ['date' => \App\Core\Engines\Dashboard\DateRange::label($date, $date)])" />@endif</h1>
+            <h1 data-page-title class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::history.title') }}@if (\App\Core\Support\AbosHead::on())<x-ui.page-info :text="__('executive::history.as_kept', ['date' => \App\Core\Engines\Dashboard\DateRange::label($date, $date)])" />@endif</h1>
             <form method="GET" action="{{ route('executive.history') }}" class="flex flex-wrap items-center gap-2">
                 <label for="hist-date" class="text-sm text-(--color-ink-muted)">{{ __('executive::history.date') }}</label>
                 <x-ui.date id="hist-date" name="date" :value="$date" :max="now()->toDateString()" />

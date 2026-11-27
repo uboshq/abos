@@ -40,7 +40,7 @@
         <div data-topbar data-fit class="flex flex-wrap items-center justify-between gap-3 rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) px-4"
              style="height: var(--exec-bar)">
             <div class="min-w-0">
-                <h1 class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::today.title') }}</h1>
+                <h1 data-page-title class="truncate text-lg font-bold text-(--color-ink)">{{ __('executive::today.title') }}</h1>
             </div>
 
             <form method="GET" action="{{ route('executive.today') }}" class="flex flex-wrap items-center gap-2">

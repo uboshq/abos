@@ -7,7 +7,7 @@
              data-challan-transport>
         {{-- ⭐ ব্যাখ্যা নামের পাশে ⓘ-এ, লাইনটা "ABOS"/"Dynamic"-এ লুকায় ([[ui/page-info]]; মালিক, ১৯ নভেম্বর ২০২৬ রাত) —
              বাক্সের ভিতরে বলে foldPageNotes() এটা ধরত না; চালান নম্বর পাতার শিরোনামে (ট্যাবে) আছে, ⓘ-এও থাকে --}}
-        <h1 class="mb-1 text-lg font-semibold">{{ __('sales::transport.title') }}<x-ui.page-info :text="$challan->document_no.' · '.__('sales::transport.why')" /></h1>
+        <h1 data-page-title class="mb-1 text-lg font-semibold">{{ __('sales::transport.title') }}<x-ui.page-info :text="$challan->document_no.' · '.__('sales::transport.why')" /></h1>
         <p data-page-subtitle class="mb-4 text-sm text-(--color-ink-muted)">{{ $challan->document_no }} · {{ __('sales::transport.why') }}</p>
 
         @if ($locked)
