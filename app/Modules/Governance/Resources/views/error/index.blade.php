@@ -101,7 +101,7 @@
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
             {{-- খাতাটা রপ্তানি হয় না — ভিতরের পথ ও ট্রেস বাইরে যাওয়ার জিনিস নয় --}}
-            <x-ui.toolbar :title="__('governance::menu.error_log')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :title="__('governance::menu.error_log')"
                           :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])"
                           :info="$abosHead ? trim(__('governance::message.error_why').' '.($freshCount > 0 ? __('governance::message.errors_today', ['count' => $freshCount]) : '')) : null"
                           :export="false" :search="false" :facets="$facetPanel">

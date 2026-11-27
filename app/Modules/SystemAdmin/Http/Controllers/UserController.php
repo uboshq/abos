@@ -151,7 +151,8 @@ class UserController extends Controller implements HasMiddleware
                         ->where('name', 'like', $like)
                         ->orWhere('email', 'like', $like));
                 })
-                ->orderBy('name')
+                // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+                ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['name_az' => ['name', 'asc'], 'name_za' => ['name', 'desc'], 'newest' => ['id', 'desc'], 'oldest' => ['id', 'asc']]))
                 ->paginate(\App\Core\Support\PerPage::of())
                 // ⓘ পাতা বদলালে খোঁজা আর ঘনত্ব হারায় না
                 ->withQueryString(),

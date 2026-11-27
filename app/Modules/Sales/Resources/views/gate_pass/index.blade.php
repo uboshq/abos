@@ -68,7 +68,7 @@
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :title="__('sales::gate_pass.title')" :count="__('sales::gate_pass.subtitle')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :title="__('sales::gate_pass.title')" :count="__('sales::gate_pass.subtitle')"
                           :columns="$columns" :search-placeholder="__('sales::gate_pass.search')" :facets="$facetPanel" />
         </form>
 

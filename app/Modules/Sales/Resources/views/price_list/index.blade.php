@@ -73,7 +73,7 @@
         {{-- ⭐ সাধারণ টুলবার (মালিক, ৩ অক্টোবর ২০২৬: "sob jaygay toolbar dibe"); খোঁজার ঘর নেই — এই পাতার নিয়ন্ত্রক খোঁজে না --}}
         @if ($abosHead)
             <form id="list-form" method="GET" class="contents">
-                <x-ui.toolbar :title="__('sales::price_list.title')" :info="__('sales::price_list.subtitle').' '.__('sales::price_list.history_note')"
+                <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['name_az', 'name_za', 'code', 'amount_high', 'amount_low'])" :title="__('sales::price_list.title')" :info="__('sales::price_list.subtitle').' '.__('sales::price_list.history_note')"
                               :search-placeholder="__('sales::price_list.search')" :columns="$columns" :facets="$facetPanel" />
             </form>
         @else

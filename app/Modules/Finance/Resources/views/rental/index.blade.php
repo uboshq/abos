@@ -93,7 +93,7 @@
                 <input type="hidden" name="tab" value="closed">
             @endif
 
-            <x-ui.toolbar :facets="$filters" :title="__('finance::menu.rental')"
+            <x-ui.toolbar :facets="$filters" :title="__('finance::menu.rental')" :sort="\App\Core\ListFilter\ListSort::labels(['due_soon', 'newest', 'oldest', 'amount_high', 'amount_low'])"
                 :subtitle="__('finance::message.rental_note')"
                 :columns="$rentColumns"
                 :search-placeholder="__('finance::message.rental_search')"

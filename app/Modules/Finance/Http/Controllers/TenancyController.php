@@ -66,7 +66,11 @@ class TenancyController extends Controller implements HasMiddleware
                 fn ($w) => $w->where('tenant', 'like', "%{$term}%")->orWhere('document_no', 'like', "%{$term}%")
                     ->orWhere('premises', 'like', "%{$term}%")->orWhere('tenant_phone', 'like', "%{$term}%")
             ))
-            ->orderBy('ends_on')->orderBy('id');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, [
+                'due_soon' => ['ends_on', 'asc'], 'newest' => ['id', 'desc'], 'oldest' => ['id', 'asc'],
+                'amount_high' => ['monthly_rent', 'desc'], 'amount_low' => ['monthly_rent', 'asc'],
+            ]));
 
         // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
         $filters = \App\Core\ListFilter\Columns::set([

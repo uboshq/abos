@@ -38,7 +38,7 @@ final class PriceBookService
      *
      * @return LengthAwarePaginator<PriceList>
      */
-    public function lists(string $target, ?string $q, ?bool $active = null): LengthAwarePaginator
+    public function lists(string $target, ?string $q, ?bool $active = null, mixed $sort = null): LengthAwarePaginator
     {
         $query = PriceList::query();
 
@@ -55,7 +55,8 @@ final class PriceBookService
                 $like = '%'.str_replace(['%', '_'], ['\%', '\_'], trim((string) $q)).'%';
                 $w->where(fn ($x) => $x->where('code', 'like', $like)->orWhere('name_en', 'like', $like)->orWhere('name_bn', 'like', $like));
             })
-            ->orderBy('code')
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($w) => \App\Core\ListFilter\ListSort::apply($w, $sort, ['code' => ['code', 'asc'], 'name_az' => ['name_en', 'asc'], 'name_za' => ['name_en', 'desc'], 'newest' => ['id', 'desc']]))
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
     }

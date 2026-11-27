@@ -70,7 +70,8 @@ class ExportLogController extends Controller implements HasMiddleware
                 fn (Builder $q, string $d) => $q->whereDate('created_at', '>=', $d))
             ->when($this->readDate($request->query('to')),
                 fn (Builder $q, string $d) => $q->whereDate('created_at', '<=', $d))
-            ->latestFirst()
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['created_at', 'desc'], 'oldest' => ['created_at', 'asc']]))
             ->paginate(\App\Core\Support\PerPage::of())
             ->withQueryString();
 

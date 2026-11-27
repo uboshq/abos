@@ -62,7 +62,13 @@ class InsuranceController extends Controller implements HasMiddleware
             'grand' => $this->grandTotals($this->picked($tab, $request), ['sum_insured' => 't.sum_insured', 'premium' => 't.premium']),
             'policies' => $this->picked($tab, $request)
                 ->with(['institution', 'premiums'])
-                ->orderBy('ends_on')
+                // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম (মেয়াদ শেষ আগে)
+                ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, [
+                    'due_soon' => ['ends_on', 'asc'],
+                    'newest' => ['created_at', 'desc'],
+                    'amount_high' => ['sum_insured', 'desc'],
+                    'amount_low' => ['sum_insured', 'asc'],
+                ]))
                 ->paginate(\App\Core\Support\PerPage::of())
                 ->withQueryString(),
         ]);

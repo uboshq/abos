@@ -74,7 +74,7 @@
 
                  ⓘ খোঁজা কোড আর দুই ভাষার নামে (CompanyController::index);
                  গোনাটা খোঁজার পরের সংখ্যা, তাই তালিকার সাথে মেলে। --}}
-            <x-ui.toolbar :title="__('system_admin::menu.companies')" :info="__('system_admin::message.company_note')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['name_az', 'name_za', 'code', 'newest'])" :title="__('system_admin::menu.companies')" :info="__('system_admin::message.company_note')"
                           :count="trans_choice('core.count.records', $companies->total(), ['count' => $companies->total()])"
                           :search-placeholder="__('system_admin::message.company_search')"
                           :columns="$columns" :facets="$facetPanel">

@@ -47,7 +47,7 @@
     @endphp
     <x-ui.filter-layout :filters="$facetPanel" form="list-form">
     <form id="list-form" method="GET" class="contents">
-        <x-ui.toolbar :title="__('sales::route.title')" :subtitle="__('sales::route.subtitle')"
+        <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['code', 'name_az', 'name_za', 'newest'])" :title="__('sales::route.title')" :subtitle="__('sales::route.subtitle')"
                       :search-placeholder="__('sales::route.search')" :export="false" :facets="$facetPanel" />
     </form>
     </x-ui.filter-layout>

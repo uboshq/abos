@@ -81,7 +81,7 @@
         {{-- ⭐ ছাঁকনির সারি আর খোঁজা — মালিকের নির্দেশ, ২৮ সেপ্টেম্বর ২০২৬: অন্য তালিকার
              মতোই টুলবার ([[ApprovalInboxController::searched()]])। --}}
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :facets="$filters" />
+            <x-ui.toolbar :facets="$filters" :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" />
         </form>
 
         <x-ui.table

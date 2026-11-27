@@ -70,7 +70,7 @@ class BankChargeController extends Controller implements HasMiddleware
             'byBank' => $this->charges->byBank($from, $to),
             'total' => $this->charges->total($from, $to),
             'bank_id' => $bankId,
-            'rows' => $this->charges->rows($from, $to, bankId: $bankId),
+            'rows' => $this->charges->rows($from, $to, bankId: $bankId, sort: $request->query('sort')),
         ]);
     }
 

@@ -74,7 +74,9 @@ class FixedAssetController extends Controller implements HasMiddleware
                     ->orWhere('document_no', 'like', "%{$term}%")
                     ->orWhere('tag_no', 'like', "%{$term}%")
             ))
-            ->orderByDesc('acquired_on');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['acquired_on', 'desc'], 'oldest' => ['acquired_on', 'asc'],
+                'amount_high' => ['cost', 'desc'], 'amount_low' => ['cost', 'asc'], 'code' => ['code', 'asc']]));
 
         return view('accounts::asset.index', [
             'menu' => $this->menu->forUser($request->user()),

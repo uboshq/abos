@@ -35,7 +35,7 @@
     <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :facets="$filters" :title="__('accounts::menu.asset_categories')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['code', 'name_az', 'name_za', 'newest'])" :facets="$filters" :title="__('accounts::menu.asset_categories')"
                           :subtitle="__('accounts::asset.category_subtitle')"
                           :columns="$columns">
                 <x-slot:actions>

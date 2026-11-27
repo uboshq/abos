@@ -200,7 +200,7 @@
                  ⓘ খোঁজা নাম ও ইমেইলে (UserController::index)। সাজানো নেই —
                  তালিকা সবসময় নামের ক্রমে, আর অন্য কোনো ক্রম কন্ট্রোলার
                  জানে না। --}}
-            <x-ui.toolbar :title="__('system_admin::menu.users')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['name_az', 'name_za', 'newest', 'oldest'])" :title="__('system_admin::menu.users')"
                           :subtitle="__('system_admin::message.users_note')"
                           :search-placeholder="__('system_admin::message.user_search')"
                           :columns="$columns" :facets="$facetPanel">

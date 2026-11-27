@@ -83,8 +83,8 @@ final class TransportAssignmentController extends Controller implements HasMiddl
 
         $query = self::inTab(clone $base, $tab)
             ->with(['customer.location.parent', 'customer.branch', 'vehicle'])
-            ->orderByDesc('sal_challans.trx_date')
-            ->orderByDesc('sal_challans.id');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['sal_challans.trx_date', 'desc'], 'oldest' => ['sal_challans.trx_date', 'asc']], 'sal_challans.id'));
 
         $grand = $this->grandTotals($query, ['transport_cost' => 't.transport_cost']);
         $challans = $query->paginate(\App\Core\Support\PerPage::of())->withQueryString();

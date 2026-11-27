@@ -96,7 +96,7 @@
                 <input type="hidden" name="status" value="{{ $status }}">
             @endif
 
-            <x-ui.toolbar :facets="$filters" :title="__('sales::portal.desk_title')"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest', 'amount_high', 'amount_low'])" :facets="$filters" :title="__('sales::portal.desk_title')"
                 :subtitle="__('sales::portal.desk_subtitle')"
                 :columns="$columns"
                 :search-placeholder="__('sales::message.claim_search')"

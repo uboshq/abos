@@ -63,7 +63,8 @@ class LoanController extends Controller implements HasMiddleware
                     ->orWhere('lender', 'like', "%{$term}%")
                     ->orWhere('account_no', 'like', "%{$term}%")
             ))
-            ->orderByDesc('id');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['id', 'desc'], 'oldest' => ['id', 'asc']]));
 
         // ⭐ সব তালিকার একই ছাঁকনি, ডান পাশের প্যানেলে (মালিকের অডিট, ২৫ নভেম্বর ২০২৬; [[Columns]])
         $filters = \App\Core\ListFilter\Columns::set([

@@ -151,7 +151,7 @@
         <form id="list-form" method="GET" class="contents">
             <input type="hidden" name="tab" value="{{ $tab }}">
 
-            <x-ui.toolbar :title="__('sales::transport_board.tab_'.$tab)" :quiet="['tab']"
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :title="__('sales::transport_board.tab_'.$tab)" :quiet="['tab']"
                           :count="__('sales::transport_board.subtitle')"
                           :columns="$columns" :search-placeholder="__('sales::message.challan_search')" :facets="$facetPanel" />
         </form>

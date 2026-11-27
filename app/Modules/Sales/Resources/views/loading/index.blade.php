@@ -44,7 +44,7 @@
     <x-ui.filter-layout :filters="$filters" form="list-form">
     <div data-boxed class="overflow-hidden rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card)">
         <form id="list-form" method="GET" class="contents">
-            <x-ui.toolbar :facets="$filters" :title="__('sales::loading.title')" :count="__('sales::loading.subtitle')" :columns="$columns" />
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :facets="$filters" :title="__('sales::loading.title')" :count="__('sales::loading.subtitle')" :columns="$columns" />
         </form>
 
         <x-ui.table :view-url="fn ($r) => route('sales.loading_sheet.show', $r)" :empty="__('sales::loading.empty')" :rows="$trips" :columns="$columns" />

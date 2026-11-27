@@ -62,7 +62,7 @@
                 ঢাকতে চান, তাঁর প্রথম কাজই হত পুরো খাতাটা নামিয়ে দেখা
                 কী কী ধরা পড়েছে।
             --}}
-            <x-ui.toolbar :title="__('governance::menu.export_log')" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :search="false" :facets="$facetPanel">
+            <x-ui.toolbar :sort="\App\Core\ListFilter\ListSort::labels(['newest', 'oldest'])" :title="__('governance::menu.export_log')" :count="trans_choice('core.count.records', $rows->total(), ['count' => $rows->total()])" :export="false" :search="false" :facets="$facetPanel">
             </x-ui.toolbar>
         </form>
 

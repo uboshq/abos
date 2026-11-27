@@ -171,7 +171,9 @@ class CapitalController extends Controller implements HasMiddleware
                             ->orWhere('name_bn', 'like', "%{$term}%")
                             ->orWhere('code', 'like', "%{$term}%")),
                 ))
-                ->orderByDesc('trx_date')->orderByDesc('id'), ['amount' => 't.amount']),
+                // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+                ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, ['newest' => ['trx_date', 'desc'], 'oldest' => ['trx_date', 'asc'],
+                    'amount_high' => ['amount', 'desc'], 'amount_low' => ['amount', 'asc']])), ['amount' => 't.amount']),
             'entries' => $list->paginate(\App\Core\Support\PerPage::of())->withQueryString(),
             /*
              * ⓘ মুনাফাটা স্থিতিপত্র থেকে — **একটাই উৎস**।

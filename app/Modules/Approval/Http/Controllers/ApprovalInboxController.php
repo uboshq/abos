@@ -530,8 +530,11 @@ class ApprovalInboxController extends Controller implements HasMiddleware
         $filters = $this->ownListFilters(withStatus: true);
         $approvals = $base();
         $filters->apply($approvals, $request);
-        $approvals = $approvals->with(['decisions.user'])
-            ->orderByDesc('id')
+        // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+        // ⓘ ক্রম একই প্রশ্নে বসে — ফেরত মান নয়, $approvals-ই চলে, তাই তার ধরন (Approval) হারায় না (PHPStan, ২৮ নভেম্বর ২০২৬)
+        $approvals = $approvals->with(['decisions.user']);
+        \App\Core\ListFilter\ListSort::apply($approvals, $request, ['newest' => ['id', 'desc'], 'oldest' => ['id', 'asc']]);
+        $approvals = $approvals
             ->paginate(\App\Core\Support\PerPage::of())->withQueryString();
 
         return view('approval::inbox.mine', [

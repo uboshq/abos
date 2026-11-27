@@ -15,6 +15,19 @@
         \App\Core\ListFilter\Facets::dates(__('core.list_filter.date')),
         \App\Core\ListFilter\Facets::flag('archived', __('notification::center.archived_only')),
     ]);
+    $columns = array_values(array_filter([
+        $canManage ? ['key' => 'pick', 'label' => '', 'width' => '2rem',
+            'render' => fn ($event) => new \Illuminate\Support\HtmlString('<input type="checkbox" name="ids[]" value="'.e((string) $event->id).'" aria-label="'.e((string) $event->title).'">')] : null,
+        ['key' => 'title', 'label' => __('notification::center.col_title'), 'render' => fn ($event) => new \Illuminate\Support\HtmlString(
+            '<a href="'.e(route('notification.center.show', $event)).'" class="hover:underline">'.e((string) $event->title).'</a>'
+            .'<span class="block text-2xs text-(--color-ink-muted)">'.e(__('core.notify.category.'.$event->category)).'</span>')],
+        ['key' => 'source', 'label' => __('notification::center.col_source'), 'render' => fn ($event) => \App\Core\Support\NotificationKinds::sourceLabel($event->module)],
+        ['key' => 'priority', 'label' => __('notification::center.col_priority'), 'render' => fn ($event) => __('core.notify.priority.'.$event->priority)],
+        ['key' => 'branch', 'label' => __('notification::center.col_branch'), 'render' => fn ($event) => $event->branch?->name() ?? __('notification::center.no_branch')],
+        ['key' => 'recipients', 'label' => __('notification::center.col_recipients'), 'numeric' => true, 'render' => fn ($event) => $event->recipients],
+        ['key' => 'read', 'label' => __('notification::center.col_read'), 'numeric' => true, 'render' => fn ($event) => $event->read_count],
+        ['key' => 'when', 'label' => __('notification::center.col_when'), 'width' => '10rem', 'render' => fn ($event) => \App\Core\Support\DateFormat::formatWithTime($event->created_at)],
+    ]));
 @endphp
 <x-layouts.app :menu="$menu">
     <x-slot:title>{{ __('notification::center.title') }}</x-slot:title>
@@ -25,7 +38,7 @@
         <x-ui.toolbar :title="__('notification::center.title')" :info="__('notification::center.note')"
                       :search-placeholder="__('notification::center.search')"
                       :sort="['newest' => __('core.notify.sort.newest'), 'oldest' => __('core.notify.sort.oldest'), 'priority' => __('core.notify.sort.priority'), 'recipients' => __('notification::center.sort_recipients')]"
-                      :export="false" :share="false" :facets="$facetPanel">
+                      :export="false" :share="false" :facets="$facetPanel" :columns="$columns">
         </x-ui.toolbar>
         </form>
 
@@ -55,43 +68,9 @@
                     </div>
                 @endif
 
-                <div class="overflow-x-auto">
-                    <table class="ui-grid">
-                        <thead class="bg-(--color-surface-sunken) text-2xs text-(--color-ink-muted)">
-                            <tr>
-                                @if ($canManage)
-                                    <th class="w-8"></th>
-                                @endif
-                                <th class="text-start">{{ __('notification::center.col_title') }}</th>
-                                <th class="text-start">{{ __('notification::center.col_source') }}</th>
-                                <th class="text-start">{{ __('notification::center.col_priority') }}</th>
-                                <th class="text-start">{{ __('notification::center.col_branch') }}</th>
-                                <th class="text-end">{{ __('notification::center.col_recipients') }}</th>
-                                <th class="text-end">{{ __('notification::center.col_read') }}</th>
-                                <th class="text-start">{{ __('notification::center.col_when') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($rows as $event)
-                                <tr class="border-t border-(--color-border)" data-center-event="{{ $event->id }}">
-                                    @if ($canManage)
-                                        <td><input type="checkbox" name="ids[]" value="{{ $event->id }}" aria-label="{{ $event->title }}"></td>
-                                    @endif
-                                    <td>
-                                        <a href="{{ route('notification.center.show', $event) }}" class="hover:underline">{{ $event->title }}</a>
-                                        <span class="block text-2xs text-(--color-ink-muted)">{{ __('core.notify.category.'.$event->category) }}</span>
-                                    </td>
-                                    <td class="text-2xs">{{ \App\Core\Support\NotificationKinds::sourceLabel($event->module) }}</td>
-                                    <td class="text-2xs">{{ __('core.notify.priority.'.$event->priority) }}</td>
-                                    <td class="text-2xs">{{ $event->branch?->name() ?? __('notification::center.no_branch') }}</td>
-                                    <td class="num text-end tabular-nums">{{ $event->recipients }}</td>
-                                    <td class="num text-end tabular-nums">{{ $event->read_count }}</td>
-                                    <td class="whitespace-nowrap text-2xs text-(--color-ink-muted)">{{ \App\Core\Support\DateFormat::formatWithTime($event->created_at) }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                {{-- ⭐ পুরো বার — সাধারণ টেবিল, কলাম বাছাই (মালিক, ২৪ নভেম্বর ২০২৬; ২৭ নভেম্বর); বাছার ঘর আগের মতোই এই ফর্মের --}}
+                <x-ui.table :rows="$rows" :columns="$columns" :empty="__('notification::center.empty')"
+                            :row-attributes="fn ($event) => ['data-center-event' => $event->id]" />
             </form>
         @endif
 

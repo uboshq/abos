@@ -175,7 +175,11 @@ class BankFacilityController extends Controller implements HasMiddleware
             ->when(in_array($request->query('kind'), BankFacility::KINDS, true), fn ($q) => $q->where('kind', $request->query('kind')))
             ->when($day('from'), fn ($q, $d) => $q->whereDate('renews_on', '>=', $d))
             ->when($day('to'), fn ($q, $d) => $q->whereDate('renews_on', '<=', $d))
-            ->latest('id');
+            // ⭐ পুরো বারের সাজানো ([[ListSort]], ২৭ নভেম্বর ২০২৬) — প্রথমটা আগের ক্রম
+            ->tap(fn ($q) => \App\Core\ListFilter\ListSort::apply($q, $request, [
+                'newest' => ['id', 'desc'], 'oldest' => ['id', 'asc'], 'due_soon' => ['renews_on', 'asc'],
+                'amount_high' => ['limit_amount', 'desc'], 'amount_low' => ['limit_amount', 'asc'],
+            ]));
     }
 
     /**
