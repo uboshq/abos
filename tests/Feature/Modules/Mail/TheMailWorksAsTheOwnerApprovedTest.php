@@ -20,6 +20,7 @@ use App\Modules\Mail\Models\MailTemplate;
 use App\Modules\Mail\Services\FakeMailHost;
 use App\Modules\Mail\Services\FakeMailServer;
 use App\Modules\Mail\Services\MailAddresses;
+use App\Modules\Mail\Services\MailFields;
 use App\Modules\Mail\Services\MailHost;
 use App\Modules\Mail\Services\MailServer;
 use Database\Seeders\DemoSeeder;
@@ -86,6 +87,40 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
 
         Storage::disk('public')->put('logos/sig-test.png', $png);
         $this->assertNotNull((new \App\Modules\Mail\Services\MailSignatures)->logoBytes(), '⛔ ছোট লোগোও সইয়ে বসছে না।');
+    }
+
+    public function test_an_unfilled_field_never_reaches_the_customer_and_a_fallback_fills_it(): void
+    {
+        // ⛔ NEXUS-এর পর্যালোচনা R1 (২৭ নভেম্বর): "প্রিয় {গ্রাহকের নাম}" গ্রাহকের কাছে যায় না
+        $box = $this->box($this->clerk, MailAccount::OWN, 'clerk@adi.test');
+        $this->as($this->clerk);
+
+        $this->postJson("/mail/{$box->public_id}/send", ['to' => ['karim@example.com'], 'subject' => 'বাকি {বাকি টাকা}',
+            'html' => '<p>প্রিয় {গ্রাহকের নাম}</p>', 'signature' => 'none'])
+            ->assertStatus(422)->assertJsonPath('missing', ['{বাকি টাকা}', '{গ্রাহকের নাম}']);
+        $this->assertCount(0, $this->fake->sent, '⛔ ভরেনি এমন ঘর নিয়ে মেইল চলে গেছে।');
+        $this->assertSame(0, MailSend::query()->count());
+
+        $fields = app(MailFields::class);
+        $this->assertSame('প্রিয় গ্রাহক', $fields->fill('প্রিয় {গ্রাহকের নাম|গ্রাহক}', []), '⛔ বিকল্প লেখা বসেনি।');
+        $this->assertSame('প্রিয় করিম', $fields->fill('প্রিয় {গ্রাহকের নাম|গ্রাহক}', ['{গ্রাহকের নাম}' => 'করিম']));
+        // ⓘ ফাঁকা মান = তথ্য নেই — ঘরটা থাকে, পাঠানো আটকায়
+        $this->assertSame(['{বাকি টাকা}'], MailFields::missing($fields->fill('{বাকি টাকা}', ['{বাকি টাকা}' => ''])));
+        // ⓘ লেখার সাধারণ বন্ধনী আটকায় না
+        $this->assertSame([], MailFields::missing('{x} {অজানা}'));
+    }
+
+    public function test_white_text_on_a_template_colour_always_meets_contrast(): void
+    {
+        // ⛔ NEXUS-এর পর্যালোচনা S4: সবুজ #00ab3f-এ সাদা লেখা 2.9:1 — WCAG AA 4.5:1 চাই
+        foreach (['#00ab3f', '#f5121d', '#f8cb46', '#0b7a70', '#1a3fd0', '#ffffff'] as $hex) {
+            $out = \App\Modules\Mail\Services\MailTemplates::underWhiteText($hex);
+            $rgb = array_map('hexdec', str_split(ltrim($out, '#'), 2));
+            $this->assertGreaterThanOrEqual(4.5, \App\Modules\Mail\Services\MailTemplates::contrastWithWhite($rgb), "⛔ {$hex} → {$out}: সাদা লেখা পড়া যায় না।");
+        }
+
+        // ⓘ যে রং আগেই পড়া যায়, সেটা বদলায় না — কোম্পানির রং যেমন তেমন
+        $this->assertSame('#1a3fd0', \App\Modules\Mail\Services\MailTemplates::underWhiteText('#1a3fd0'));
     }
 
     public function test_a_send_is_logged_audited_and_carries_the_signature_and_template(): void

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'fields_missing' => 'Some fields are not filled — :fields. Fill them in, write a fallback ({name|customer}) or remove them, then send.',
     'no_imap' => 'Mail reading (IMAP) is not available on this server.',
     'cannot_connect' => 'Could not sign in to the mail server — check the address and password. (:why)',
     'personal_off' => 'Adding personal mail is off in this company.',

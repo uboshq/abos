@@ -38,9 +38,10 @@ final class MailAuto extends Command
     public function handle(MailServer $server, MailTemplates $templates, MailFields $fields, MailSends $sends, SettingsService $settings): int
     {
         $sent = 0;
+        $skipped = [];
 
         foreach (Company::query()->where('is_active', true)->pluck('id') as $companyId) {
-            CompanyContext::forCompany((int) $companyId, function () use (&$sent, $server, $templates, $fields, $sends, $settings, $companyId) {
+            CompanyContext::forCompany((int) $companyId, function () use (&$sent, &$skipped, $server, $templates, $fields, $sends, $settings, $companyId) {
                 $from = (string) $settings->get('mail.auto_from', '');
                 $box = $from !== '' ? MailAccount::query()->where('public_id', $from)->first() : null;
 
@@ -64,6 +65,14 @@ final class MailAuto extends Command
 
                         $mail = $templates->render($t, $fields->forCustomer($c) + $fields->values(new \App\Models\User(['name' => $company]), null), $company);
 
+                        // ⛔ ভরেনি এমন ঘর থাকলে এই গ্রাহককে যায় না — বাদ পড়ার কারণ খাতায় নয়, লগে (NEXUS-এর পর্যালোচনা R1)
+                        if (($gaps = MailFields::missing($mail['subject'], $mail['html'])) !== []) {
+                            $skipped[] = $c->id;
+                            $this->warn("skip customer {$c->id} ({$t->key}): ".implode(', ', $gaps));
+
+                            continue;
+                        }
+
                         try {
                             $id = $server->send($box, ['to' => [(string) $c->email], 'subject' => $mail['subject'] ?: $t->name,
                                 'html' => MailController::safe($mail['html'], true), 'fromName' => $box->sender_name ?: $company]);
@@ -79,7 +88,7 @@ final class MailAuto extends Command
             });
         }
 
-        $this->info("sent {$sent}");
+        $this->info("sent {$sent}, skipped ".count($skipped).' (fields not filled)');
 
         return self::SUCCESS;
     }

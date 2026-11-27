@@ -276,6 +276,11 @@ final class MailController extends Controller implements HasMiddleware
             'send_at' => 'nullable|date|after:+4 minutes|before:+90 days',
         ]);
 
+        // ⛔ ভরেনি এমন ঘর নিয়ে মেইল যায় না — গ্রাহক "প্রিয় {গ্রাহকের নাম}" পান না (NEXUS-এর পর্যালোচনা R1, ২৭ নভেম্বর)
+        if (($gaps = MailFields::missing($data['subject'], $data['html'])) !== []) {
+            return response()->json(['message' => __('mail::message.fields_missing', ['fields' => implode(', ', $gaps)]), 'missing' => $gaps], 422);
+        }
+
         $user = $request->user();
         $mail = array_intersect_key($data, array_flip(['to', 'cc', 'bcc', 'subject', 'html', 'inReplyTo', 'signature', 'template', 'papers']));
 

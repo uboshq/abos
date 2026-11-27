@@ -93,12 +93,36 @@ final class MailFields
         return $out;
     }
 
-    /** ⓘ লেখায় ঘর বসানো — HTML-এ বসার আগে মানগুলো নিরাপদ করা হয় */
+    /**
+     * ⓘ লেখায় ঘর বসানো — HTML-এ বসার আগে মানগুলো নিরাপদ করা হয়।
+     * ⭐ বিকল্প লেখা (NEXUS-এর পর্যালোচনা R1, Mailchimp/HubSpot-এর নিয়ম): `{গ্রাহকের নাম|গ্রাহক}` — তথ্য না থাকলে "গ্রাহক" বসে।
+     * ⓘ বিকল্প ছাড়া ঘরের তথ্য না থাকলে (বা ফাঁকা হলে) ঘরের নামটাই থাকে — পর্দায় চোখে পড়ে, আর পাঠানো আটকায় ([[missing]])।
+     */
     public function fill(string $text, array $values, bool $html = true): string
     {
+        $values = array_filter($values, fn ($v) => trim((string) $v) !== '');
         $safe = $html ? array_map(fn ($v) => e((string) $v), $values) : $values;
 
+        $text = (string) preg_replace_callback('/\{([^{}|\n]{1,60})\|([^{}\n]{0,60})\}/u', function ($m) use ($safe) {
+            return $safe['{'.$m[1].'}'] ?? $m[2];
+        }, $text);
+
         return strtr($text, $safe);
+    }
+
+    /**
+     * ⛔ যে ঘর ভরেনি — পাঠানোর আগে এগুলো থাকলে মেইল যায় না (গ্রাহক "প্রিয় {গ্রাহকের নাম}" পান না)।
+     * ⓘ জানা ঘরগুলোই ধরা হয় — লেখায় সাধারণ { } (যেমন কোড) আটকায় না।
+     *
+     * @return list<string>
+     */
+    public static function missing(string ...$texts): array
+    {
+        $all = implode("\n", $texts);
+        $known = array_map(fn ($f) => preg_quote(trim($f, '{}'), '/'), self::FIELDS);
+        preg_match_all('/\{(?:'.implode('|', $known).')(?:\|[^{}\n]{0,60})?\}/u', $all, $m);
+
+        return array_values(array_unique($m[0]));
     }
 
     public static function money(string|int $v): string
