@@ -217,7 +217,7 @@ class TenancyService
     /**
      * ⭐ মাসের ভাড়া দাবি — চালু প্রতিটা চুক্তি, যার মেয়াদে মাসটা পড়ে আর যার মাসটা এখনো বসেনি।
      *
-     * @return array{charged: int, held: int}
+     * @return array{charged: int, held: int, failed: list<string>}
      */
     public function charge(Carbon $month): array
     {

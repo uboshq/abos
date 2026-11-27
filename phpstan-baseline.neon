@@ -61,24 +61,6 @@ parameters:
 			path: app/Core/Dashboard/ActivityRegistry.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$approver_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Core/Engines/Approval/ApprovalEngine.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$approver_type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Core/Engines/Approval/ApprovalEngine.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$level\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Core/Engines/Approval/ApprovalEngine.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>steps" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -253,12 +235,6 @@ parameters:
 			path: app/Core/Services/CustomFieldService.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$key\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Core/Services/CustomFieldService.php
-
-		-
 			message: '#^Property App\\Core\\Services\\CustomFieldService\:\:\$drill is never read, only written\.$#'
 			identifier: property.onlyWritten
 			count: 1
@@ -267,12 +243,6 @@ parameters:
 		-
 			message: '#^Static call to instance method stdClass\:\:drillSourceType\(\)\.$#'
 			identifier: method.staticCall
-			count: 1
-			path: app/Core/Services/CustomFieldService.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between \(int\|string\) and null will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Core/Services/CustomFieldService.php
 
@@ -397,28 +367,10 @@ parameters:
 			path: app/Http/Middleware/RefuseSwitchedOffScreens.php
 
 		-
-			message: '#^Method App\\Models\\Company\:\:currentFinancialYear\(\) should return App\\Models\\FinancialYear\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Models/Company.php
-
-		-
-			message: '#^Method App\\Models\\Company\:\:defaultBranch\(\) should return App\\Models\\Branch\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Models/Company.php
-
-		-
 			message: '#^Call to function is_string\(\) with \*NEVER\* will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 1
 			path: app/Models/CustomField.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Models/ExportLog.php
 
 		-
 			message: '#^Call to function is_scalar\(\) with non\-empty\-string will always evaluate to true\.$#'
@@ -445,22 +397,10 @@ parameters:
 			path: app/Models/ExportLog.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Models/LoginAttempt.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>name" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Models/LoginAttempt.php
-
-		-
-			message: '#^Method App\\Models\\LookSkin\:\:live\(\) should return App\\Models\\LookSkinVersion\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Models/LookSkin.php
 
 		-
 			message: '#^Offset ''dark'' on array\{\}\|string on left side of \?\? does not exist\.$#'
@@ -471,12 +411,6 @@ parameters:
 		-
 			message: '#^Offset ''light'' on array\{\}\|string on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Models/LookSkin.php
-
-		-
-			message: '#^Property App\\Models\\LookSkin\:\:\$liveVersion \(App\\Models\\LookSkinVersion\|null\) does not accept Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: assign.propertyType
 			count: 1
 			path: app/Models/LookSkin.php
 
@@ -505,12 +439,6 @@ parameters:
 			path: app/Models/User.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 3
-			path: app/Modules/Accounts/Dashboard/AccountsActivity.php
-
-		-
 			message: '#^Parameter \$when of class App\\Core\\Dashboard\\Happening constructor expects Illuminate\\Support\\Carbon, Carbon\\Carbon\|null given\.$#'
 			identifier: argument.type
 			count: 3
@@ -527,60 +455,6 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Modules/Accounts/Http/Controllers/CashTillController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$holder_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Http/Controllers/MoneyCustodyController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Http/Controllers/MoneyCustodyController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Accounts/Http/Controllers/MoneyTransferPrintController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Accounts/Http/Controllers/MoneyTransferPrintController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 3
-			path: app/Modules/Accounts/Http/Controllers/MoneyTransferPrintController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Http/Controllers/VoucherPrintController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Accounts/Http/Controllers/VoucherPrintController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{account\: string, narration\: string, debit\: string, credit\: string\}, Closure\(App\\Modules\\Accounts\\Models\\VoucherLine\)\: array\{account\: string, narration\: string, debit\: string, credit\: string\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Accounts/Http/Controllers/VoucherPrintController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:reduce\(\) expects callable\(numeric\-string, Illuminate\\Database\\Eloquent\\Model, int\)\: numeric\-string, Closure\(string, App\\Modules\\Accounts\\Models\\VoucherLine\)\: numeric\-string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Modules/Accounts/Http/Controllers/VoucherPrintController.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>code" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -601,40 +475,16 @@ parameters:
 			path: app/Modules/Accounts/Models/Account.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:gather\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Accounts/Models/Account.php
-
-		-
 			message: '#^Method App\\Modules\\Accounts\\Models\\Account\:\:gather\(\) should return Illuminate\\Database\\Eloquent\\Collection\<int, App\\Modules\\Accounts\\Models\\Account\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, \$this\(App\\Modules\\Accounts\\Models\\Account\)\>\.$#'
 			identifier: return.type
 			count: 1
 			path: app/Modules/Accounts/Models/Account.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:reduce\(\) expects callable\(numeric\-string, Illuminate\\Database\\Eloquent\\Model, int\)\: numeric\-string, Closure\(string, App\\Modules\\Accounts\\Models\\Account\)\: numeric\-string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Accounts/Models/Account.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:balanceOn\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Accounts/Models/CashTill.php
-
-		-
 			message: '#^Unsafe usage of new static\(\)\.$#'
 			identifier: new.static
 			count: 1
 			path: app/Modules/Accounts/Models/CostCenter.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Models/DepreciationEntry.php
 
 		-
 			message: '#^Cannot call method format\(\) on string\.$#'
@@ -661,18 +511,6 @@ parameters:
 			path: app/Modules/Accounts/Models/Loan.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$document_no\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Models/LoanInstalment.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$lender\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Models/LoanInstalment.php
-
-		-
 			message: '#^Cannot call method isBefore\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -685,46 +523,16 @@ parameters:
 			path: app/Modules/Accounts/Models/LoanInstalment.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$account_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Models/MoneyTransfer.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\:\:pending\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Accounts/Models/MoneyTransfer.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Accounts/Models/MoneyTransfer.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$credit\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Models/Voucher.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$debit\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Models/Voucher.php
-
-		-
 			message: '#^Method App\\Modules\\Accounts\\Reports\\CoreReports\:\:accountName\(\) should return Illuminate\\Database\\Query\\Expression but returns Illuminate\\Contracts\\Database\\Query\\Expression\.$#'
 			identifier: return.type
 			count: 1
 			path: app/Modules/Accounts/Reports/CoreReports.php
-
-		-
-			message: '#^Parameter \#1 \$account of method App\\Modules\\Accounts\\Services\\AccountService\:\:cascadeType\(\) expects App\\Modules\\Accounts\\Models\\Account, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Accounts/Services/AccountService.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$amount\.$#'
@@ -751,34 +559,10 @@ parameters:
 			path: app/Modules/Accounts/Services/BankReconciliationService.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$account_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Services/CashCountService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Accounts/Services/CashCountService.php
-
-		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
 			path: app/Modules/Accounts/Services/CashCountService.php
-
-		-
-			message: '#^Parameter \#1 \$account of method App\\Modules\\Accounts\\Services\\AccountService\:\:deactivate\(\) expects App\\Modules\\Accounts\\Models\\Account, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Accounts/Services/CashTillService.php
-
-		-
-			message: '#^Parameter \#1 \$account of method App\\Modules\\Accounts\\Services\\AccountService\:\:update\(\) expects App\\Modules\\Accounts\\Models\\Account, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Accounts/Services/CashTillService.php
 
 		-
 			message: '#^Cannot call method copy\(\) on string\.$#'
@@ -791,42 +575,6 @@ parameters:
 			identifier: method.nonObject
 			count: 3
 			path: app/Modules/Accounts/Services/LoanService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$account_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Services/MoneyTransferService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$account\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Accounts/Services/VoucherService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Accounts/Services/VoucherService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Accounts/Services/VoucherService.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: \(Illuminate\\Database\\Eloquent\\Model\|null\), Closure\(App\\Modules\\Accounts\\Models\\VoucherLine\)\: \(Illuminate\\Database\\Eloquent\\Model\|null\) given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Accounts/Services/VoucherService.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{account_id\: int\<0, max\>, debit\: float, credit\: float, party_type\: string\|null, party_id\: int\<0, max\>\|null, cost_center_id\: int\<0, max\>\|null, narration\: string\|null, source_line_id\: int\}, Closure\(App\\Modules\\Accounts\\Models\\VoucherLine\)\: array\{account_id\: int\<0, max\>, debit\: float, credit\: float, party_type\: string\|null, party_id\: int\<0, max\>\|null, cost_center_id\: int\<0, max\>\|null, narration\: string\|null, source_line_id\: int\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Accounts/Services/VoucherService.php
 
 		-
 			message: '#^Cannot call method diffInDays\(\) on string\.$#'
@@ -883,38 +631,8 @@ parameters:
 			path: app/Modules/Customer/Imports/CustomerImporter.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$level\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Customer/Models/Customer.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:ancestors\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Customer/Models/Customer.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Customer/Models/Customer.php
-
-		-
 			message: '#^Method App\\Modules\\Customer\\Models\\Customer\:\:activeConduct\(\) should return Illuminate\\Support\\Collection\<int, array\{label\: string, severity\: string, recorded_at\: Illuminate\\Support\\Carbon\|null\}\> but returns Illuminate\\Support\\Collection\<int, array\{label\: string, severity\: string, recorded_at\: string\}\>\.$#'
 			identifier: return.type
-			count: 1
-			path: app/Modules/Customer/Models/Customer.php
-
-		-
-			message: '#^Method App\\Modules\\Customer\\Models\\Customer\:\:area\(\) should return App\\Modules\\MasterData\\Models\\Location\|null but returns Illuminate\\Database\\Eloquent\\Model\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Modules/Customer/Models/Customer.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{label\: string, severity\: string, recorded_at\: string\}, Closure\(App\\Modules\\Customer\\Models\\CustomerConduct\)\: array\{label\: string, severity\: string, recorded_at\: string\} given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Modules/Customer/Models/Customer.php
 
@@ -943,18 +661,6 @@ parameters:
 			path: app/Modules/Customer/Sync/CustomerSync.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isRevolving\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Finance/Models/Deposit.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isSettled\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Finance/Models/Deposit.php
-
-		-
 			message: '#^Cannot call method translatedFormat\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -971,18 +677,6 @@ parameters:
 			identifier: method.nonObject
 			count: 1
 			path: app/Modules/Finance/Services/CapitalService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$voucher\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Finance/Services/DepositService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:takesInstalments\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Finance/Services/DepositService.php
 
 		-
 			message: '#^Offset ''held_by'' on non\-empty\-array\<string, mixed\> on left side of \?\? always exists and is not nullable\.$#'
@@ -1087,12 +781,6 @@ parameters:
 			path: app/Modules/Hr/Services/PayrollService.php
 
 		-
-			message: '#^Method App\\Modules\\Hr\\Services\\PayrollService\:\:accountFor\(\) should return App\\Modules\\Accounts\\Models\\Account\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Modules/Hr/Services/PayrollService.php
-
-		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -1117,54 +805,6 @@ parameters:
 			path: app/Modules/Hr/Sync/AttendanceSync.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Inventory/Http/Controllers/StockController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Inventory/Http/Controllers/StockPlacementController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\),Illuminate\\Database\\Eloquent\\Collection\<int, App\\Modules\\Inventory\\Models\\StorageLocation\>\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Modules/Inventory/Http/Controllers/StockPlacementController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Modules\\Inventory\\Models\\StorageLocation\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Modules/Inventory/Http/Controllers/StockPlacementController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Inventory/Http/Controllers/StockPrintController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:packedQty\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Inventory/Http/Controllers/StockPrintController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:packedUnitName\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Inventory/Http/Controllers/StockPrintController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Modules/Inventory/Http/Controllers/StockPrintController.php
-
-		-
 			message: '#^Parameter \$lines of class App\\Core\\Engines\\Print\\PrintableDocument constructor expects list\<array\{name\: string, qty\: string, unit\: string, rate\: string, amount\: string\}\>, array\<int, array\{name\: string, qty\: string, unit\: mixed\}\> given\.$#'
 			identifier: argument.type
 			count: 1
@@ -1183,12 +823,6 @@ parameters:
 			path: app/Modules/Inventory/Http/Controllers/StorageLocationController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Inventory/Models/Batch.php
-
-		-
 			message: '#^Cannot call method format\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -1201,30 +835,6 @@ parameters:
 			path: app/Modules/Inventory/Models/Batch.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$difference\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Inventory/Models/StockCount.php
-
-		-
-			message: '#^Method App\\Modules\\Inventory\\Models\\StockCount\:\:variances\(\) should return Illuminate\\Support\\Collection\<int, App\\Modules\\Inventory\\Models\\StockCountLine\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Modules/Inventory/Models/StockCount.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:filter\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|null, Closure\(App\\Modules\\Inventory\\Models\\StockCountLine\)\: bool given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Models/StockCount.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Inventory/Models/StockTransfer.php
-
-		-
 			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockTransferLine\:\:\$entered_qty\.$#'
 			identifier: property.notFound
 			count: 4
@@ -1232,12 +842,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockTransferLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Inventory/Models/StockTransferLine.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Modules/Inventory/Models/StockTransferLine.php
@@ -1285,12 +889,6 @@ parameters:
 			path: app/Modules/Inventory/Services/GoodsWaitingToBePlaced.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:label\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Inventory/Services/IssuedLots.php
-
-		-
 			message: '#^Offset ''10'' on array\<string, string\> in isset\(\) does not exist\.$#'
 			identifier: isset.offset
 			count: 1
@@ -1325,60 +923,6 @@ parameters:
 			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Modules/Inventory/Services/ProductService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Inventory/Services/StockAdjustmentService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Modules/Inventory/Services/StockTransferService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Modules/Inventory/Services/StockTransferService.php
-
-		-
-			message: '#^Parameter \#2 \$warehouse of method App\\Modules\\Inventory\\Services\\StockTransferService\:\:assertEnoughAtSource\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/StockTransferService.php
-
-		-
-			message: '#^Parameter \$batch of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\Inventory\\Models\\Batch\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/StockTransferService.php
-
-		-
-			message: '#^Parameter \$warehouse of method App\\Modules\\Inventory\\Services\\StockService\:\:issue\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Inventory/Services/StockTransferService.php
-
-		-
-			message: '#^Parameter \$warehouse of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 3
-			path: app/Modules/Inventory/Services/StockTransferService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Inventory/Sync/ProductSync.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name_bn\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Inventory/Sync/ProductSync.php
 
 		-
 			message: '#^Method App\\Modules\\Inventory\\Sync\\ProductSync\:\:requiredPermission\(\) never returns null so it can be removed from the return type\.$#'
@@ -1537,12 +1081,6 @@ parameters:
 			path: app/Modules/MasterData/Models/EmploymentType.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:gather\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/MasterData/Models/Location.php
-
-		-
 			message: '#^Method App\\Modules\\MasterData\\Models\\Location\:\:gather\(\) should return Illuminate\\Database\\Eloquent\\Collection\<int, App\\Modules\\MasterData\\Models\\Location\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, \$this\(App\\Modules\\MasterData\\Models\\Location\)\>\.$#'
 			identifier: return.type
 			count: 1
@@ -1675,33 +1213,9 @@ parameters:
 			path: app/Modules/MasterData/Services/MasterListService.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$free_qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Http/Controllers/DirectPurchaseController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Http/Controllers/DirectPurchaseController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 6
-			path: app/Modules/Purchase/Http/Controllers/PurchasePrintController.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,object\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
-			path: app/Modules/Purchase/Http/Controllers/PurchasePrintController.php
-
-		-
-			message: '#^Parameter \#1 \$lines of method App\\Modules\\Purchase\\Http\\Controllers\\PurchasePrintController\:\:lines\(\) expects Illuminate\\Support\\Collection\<int, object\>, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\> given\.$#'
-			identifier: argument.type
-			count: 4
 			path: app/Modules/Purchase/Http/Controllers/PurchasePrintController.php
 
 		-
@@ -1723,34 +1237,10 @@ parameters:
 			path: app/Modules/Purchase/Models/Payment.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/Payment.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:posted\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Purchase/Models/PurchaseBill.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Purchase/Models/PurchaseBill.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseBill.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseBillGiftLine.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
@@ -1771,12 +1261,6 @@ parameters:
 			path: app/Modules/Purchase/Models/PurchaseBillLine.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseBillLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -1784,12 +1268,6 @@ parameters:
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseOrder.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Purchase/Models/PurchaseOrder.php
@@ -1807,12 +1285,6 @@ parameters:
 			path: app/Modules/Purchase/Models/PurchaseOrderLine.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseOrderLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -1820,12 +1292,6 @@ parameters:
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseReceipt.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Purchase/Models/PurchaseReceipt.php
@@ -1843,12 +1309,6 @@ parameters:
 			path: app/Modules/Purchase/Models/PurchaseReceiptLine.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseReceiptLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -1861,12 +1321,6 @@ parameters:
 			path: app/Modules/Purchase/Models/PurchaseReturn.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseReturn.php
-
-		-
 			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseReturnLine\:\:\$entered_qty\.$#'
 			identifier: property.notFound
 			count: 4
@@ -1874,12 +1328,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Purchase\\Models\\PurchaseReturnLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseReturnLine.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Modules/Purchase/Models/PurchaseReturnLine.php
@@ -1921,60 +1369,6 @@ parameters:
 			path: app/Modules/Purchase/Services/BringsInLots.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_inclusive\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/DirectPurchaseService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pricing_anchor\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/DirectPurchaseService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pricing_pct\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/DirectPurchaseService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/DirectPurchaseService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/DirectPurchaseService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$rate\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/DirectPurchaseService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$remarks\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/DirectPurchaseService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sales_price\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/DirectPurchaseService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/DirectPurchaseService.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>is_inclusive" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -1987,274 +1381,10 @@ parameters:
 			path: app/Modules/Purchase/Services/DirectPurchaseService.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$amount\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PaymentService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$bill\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PaymentService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_group\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PaymentService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$parent_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PaymentService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PaymentService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/PaymentService.php
-
-		-
-			message: '#^Method App\\Modules\\Purchase\\Services\\PaymentService\:\:resolveMoneyAccount\(\) should return App\\Modules\\Accounts\\Models\\Account but returns Illuminate\\Database\\Eloquent\\Model\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Modules/Purchase/Services/PaymentService.php
-
-		-
-			message: '#^Parameter \#1 \$cheque of method App\\Modules\\Accounts\\Services\\ChequeService\:\:cancel\(\) expects App\\Modules\\Accounts\\Models\\Cheque, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Purchase/Services/PaymentService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$amount\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$company_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$document_no\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pricing_anchor\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pricing_pct\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$receiptLine\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sales_price\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$supplier_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$tax\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:filter\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|null, Closure\(App\\Modules\\Purchase\\Models\\PurchaseBillLine\)\: bool given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Parameter \#1 \$line of method App\\Modules\\Purchase\\Services\\PurchaseBillService\:\:raiseSalePriceIfTheRateOutranIt\(\) expects App\\Modules\\Purchase\\Models\\PurchaseBillLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Parameter \#2 \$line of method App\\Modules\\Purchase\\Services\\PurchaseBillService\:\:bringInFree\(\) expects App\\Modules\\Purchase\\Models\\PurchaseBillLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Parameter \#5 \$standard of method App\\Modules\\Purchase\\Services\\PurchaseBillService\:\:lineFigures\(\) expects App\\Modules\\MasterData\\Models\\Tax\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Parameter \$product of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\Inventory\\Models\\Product, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseBillService.php
-
-		-
-			message: '#^Parameter \#5 \$standard of method App\\Modules\\Purchase\\Services\\PurchaseOrderService\:\:lineFigures\(\) expects App\\Modules\\MasterData\\Models\\Tax\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseOrderService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$free_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: app/Modules/Purchase/Services/PurchaseReceiptService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pricing_anchor\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseReceiptService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pricing_pct\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseReceiptService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 6
-			path: app/Modules/Purchase/Services/PurchaseReceiptService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$rate\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseReceiptService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$received_qty\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Modules/Purchase/Services/PurchaseReceiptService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sales_price\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseReceiptService.php
-
-		-
-			message: '#^Parameter \$warehouse of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 4
-			path: app/Modules/Purchase/Services/PurchaseReceiptService.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>supplier_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Purchase/Services/PurchaseReceiptService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$billLine\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseReturnService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseReturnService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Modules/Purchase/Services/PurchaseReturnService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Modules/Purchase/Services/PurchaseReturnService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:posted\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseReturnService.php
-
-		-
-			message: '#^Parameter \#1 \$line of method App\\Modules\\Purchase\\Services\\PurchaseReturnService\:\:assertWithinBilled\(\) expects App\\Modules\\Purchase\\Models\\PurchaseReturnLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseReturnService.php
-
-		-
-			message: '#^Parameter \#2 \$warehouse of method App\\Modules\\Purchase\\Services\\PurchaseReturnService\:\:assertEnoughInStock\(\) expects App\\Modules\\Inventory\\Models\\Warehouse\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseReturnService.php
-
-		-
-			message: '#^Parameter \$reason of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\MasterData\\Models\\ReasonCode\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Purchase/Services/PurchaseReturnService.php
-
-		-
-			message: '#^Parameter \$warehouse of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Modules/Purchase/Services/PurchaseReturnService.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>document_no" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -2267,36 +1397,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Purchase/Services/PurchaseReturnService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Restaurant/Http/Controllers/KitchenBoardController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Modules\\Restaurant\\Models\\KitchenTicket\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Modules/Restaurant/Http/Controllers/KitchenBoardController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Restaurant/Listeners/SendTheOrderToTheKitchen.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Restaurant/Listeners/SendTheOrderToTheKitchen.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Modules/Restaurant/Listeners/SendTheOrderToTheKitchen.php
 
 		-
 			message: '#^Cannot call method diffInMinutes\(\) on string\.$#'
@@ -2317,12 +1417,6 @@ parameters:
 			path: app/Modules/Sales/Dashboard/SalesActivity.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:currentFinancialYear\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Dashboard/SalesWidgets.php
-
-		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
@@ -2333,24 +1427,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Sales/Events/InvoiceConfirmed.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_inclusive\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/DirectSaleController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$rate\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/DirectSaleController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Sales/Http/Controllers/DirectSaleController.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>is_inclusive" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -2365,58 +1441,10 @@ parameters:
 			path: app/Modules/Sales/Http/Controllers/DirectSaleController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/LotTraceController.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$running_balance\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Modules/Sales/Http/Controllers/PortalController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$discount\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product_id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$rate\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 3
-			path: app/Modules/Sales/Http/Controllers/PosController.php
 
 		-
 			message: '#^Cannot call method diffForHumans\(\) on string\.$#'
@@ -2431,26 +1459,8 @@ parameters:
 			path: app/Modules/Sales/Http/Controllers/PosController.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Modules\\Inventory\\Models\\Product\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 2
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Modules\\Sales\\Models\\SalesInvoice\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/PosController.php
-
-		-
-			message: '#^Parameter \#1 \$line of method App\\Modules\\Sales\\Services\\PosService\:\:alreadyReturned\(\) expects App\\Modules\\Sales\\Models\\SalesInvoiceLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Modules/Sales/Http/Controllers/PosController.php
 
@@ -2461,27 +1471,9 @@ parameters:
 			path: app/Modules/Sales/Http/Controllers/PosController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$amount\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/SalesPrintController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$challanLine\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/SalesPrintController.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 8
-			path: app/Modules/Sales/Http/Controllers/SalesPrintController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:pendingQty\(\)\.$#'
-			identifier: method.notFound
-			count: 2
 			path: app/Modules/Sales/Http/Controllers/SalesPrintController.php
 
 		-
@@ -2503,28 +1495,10 @@ parameters:
 			path: app/Modules/Sales/Http/Controllers/SchemeController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:currentFinancialYear\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Metrics/SalesMetrics.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Sales/Models/Collection.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/Collection.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/CommissionClaim.php
 
 		-
 			message: '#^Strict comparison using \=\=\= between float and null will always evaluate to false\.$#'
@@ -2534,12 +1508,6 @@ parameters:
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/DeliveryChallan.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Sales/Models/DeliveryChallan.php
@@ -2563,12 +1531,6 @@ parameters:
 			path: app/Modules/Sales/Models/DeliveryChallanGiftLine.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/DeliveryChallanGiftLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -2587,31 +1549,13 @@ parameters:
 			path: app/Modules/Sales/Models/DeliveryChallanLine.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/DeliveryChallanLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Sales/Models/DeliveryChallanLine.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:posted\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Modules/Sales/Models/SalesInvoice.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesInvoice.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Sales/Models/SalesInvoice.php
@@ -2629,12 +1573,6 @@ parameters:
 			path: app/Modules/Sales/Models/SalesInvoiceLine.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesInvoiceLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -2642,12 +1580,6 @@ parameters:
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesOrder.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Sales/Models/SalesOrder.php
@@ -2665,12 +1597,6 @@ parameters:
 			path: app/Modules/Sales/Models/SalesOrderLine.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesOrderLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -2683,12 +1609,6 @@ parameters:
 			path: app/Modules/Sales/Models/SalesReturn.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesReturn.php
-
-		-
 			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesReturnLine\:\:\$entered_qty\.$#'
 			identifier: property.notFound
 			count: 4
@@ -2696,12 +1616,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Sales\\Models\\SalesReturnLine\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesReturnLine.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$unit\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Modules/Sales/Models/SalesReturnLine.php
@@ -2729,12 +1643,6 @@ parameters:
 			identifier: notIdentical.alwaysTrue
 			count: 3
 			path: app/Modules/Sales/Models/Scheme.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$registration_no\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Models/Shipment.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>registration_no" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -2767,102 +1675,6 @@ parameters:
 			path: app/Modules/Sales/Services/BatchTrace.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$amount\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/CollectionService.php
-
-		-
-			message: '#^Method App\\Modules\\Sales\\Services\\CollectionService\:\:defaultCashAccount\(\) should return App\\Modules\\Accounts\\Models\\Account\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Modules/Sales/Services/CollectionService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$earner_role\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/CommissionEngine.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/CommissionEngine.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:covers\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Services/CommissionEngine.php
-
-		-
-			message: '#^Method App\\Modules\\Sales\\Services\\CommissionEngine\:\:linesOf\(\) should return Illuminate\\Support\\Collection\<int, App\\Modules\\Sales\\Models\\SalesInvoiceLine\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\.$#'
-			identifier: return.type
-			count: 3
-			path: app/Modules/Sales/Services/CommissionEngine.php
-
-		-
-			message: '#^Method App\\Modules\\Sales\\Services\\CommissionEngine\:\:rulesFor\(\) should return list\<App\\Modules\\Sales\\Models\\CommissionRule\> but returns list\<Illuminate\\Database\\Eloquent\\Model\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Modules/Sales/Services/CommissionEngine.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$delivered_qty\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$document_no\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$orderLine\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
-			message: '#^Parameter \#1 \$batch of method App\\Modules\\Inventory\\Services\\PrintedPriceCeiling\:\:assertWithin\(\) expects App\\Modules\\Inventory\\Models\\Batch, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
-			message: '#^Parameter \#1 \$line of method App\\Modules\\Sales\\Services\\DeliveryChallanService\:\:assertWithinPrintedPrice\(\) expects App\\Modules\\Sales\\Models\\DeliveryChallanLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
-			message: '#^Parameter \$warehouse of method App\\Modules\\Inventory\\Services\\StockService\:\:issue\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
-			message: '#^Parameter \$warehouse of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
 			message: '#^Strict comparison using \=\=\= between numeric\-string&uppercase\-string and '''' will always evaluate to false\.$#'
 			identifier: identical.alwaysFalse
 			count: 1
@@ -2873,90 +1685,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Sales/Services/DeliveryChallanService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$delivered_qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$free_qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$rate\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$remarks\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Modules/Sales/Services/DirectSaleService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/ParkedStockReservation.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/ParkedStockReservation.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:posted\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Services/PosService.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>account_id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -2971,172 +1699,10 @@ parameters:
 			path: app/Modules/Sales/Services/PosService.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$challanLine\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Services/SalesInvoiceService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$company_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/SalesInvoiceService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$customer_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/SalesInvoiceService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$document_no\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Services/SalesInvoiceService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 8
-			path: app/Modules/Sales/Services/SalesInvoiceService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 8
-			path: app/Modules/Sales/Services/SalesInvoiceService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/SalesInvoiceService.php
-
-		-
-			message: '#^Parameter \#2 \$line of method App\\Modules\\Sales\\Services\\SalesInvoiceService\:\:cookedCost\(\) expects App\\Modules\\Sales\\Models\\SalesInvoiceLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/SalesInvoiceService.php
-
-		-
-			message: '#^Parameter \#2 \$warehouse of method App\\Modules\\Sales\\Services\\SalesInvoiceService\:\:assertEnoughToSell\(\) expects App\\Modules\\Inventory\\Models\\Warehouse\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/SalesInvoiceService.php
-
-		-
-			message: '#^Parameter \#5 \$standard of method App\\Modules\\Sales\\Services\\SalesInvoiceService\:\:lineFigures\(\) expects App\\Modules\\MasterData\\Models\\Tax\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/SalesInvoiceService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$ordered_qty\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Services/SalesOrderService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Modules/Sales/Services/SalesOrderService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:pendingQty\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Services/SalesOrderService.php
-
-		-
-			message: '#^Parameter \#2 \$warehouse of method App\\Modules\\Sales\\Services\\SalesOrderService\:\:assertEnoughToSell\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/SalesOrderService.php
-
-		-
-			message: '#^Parameter \#5 \$standard of method App\\Modules\\Sales\\Services\\SalesOrderService\:\:lineFigures\(\) expects App\\Modules\\MasterData\\Models\\Tax\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/SalesOrderService.php
-
-		-
-			message: '#^Parameter \$warehouse of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Modules/Sales/Services/SalesOrderService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/SalesReturnService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Modules/Sales/Services/SalesReturnService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 6
-			path: app/Modules/Sales/Services/SalesReturnService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$to_hold\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Services/SalesReturnService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:posted\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Services/SalesReturnService.php
-
-		-
-			message: '#^Parameter \#1 \$line of method App\\Modules\\Sales\\Services\\SalesReturnService\:\:assertWithinSold\(\) expects App\\Modules\\Sales\\Models\\SalesReturnLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/SalesReturnService.php
-
-		-
-			message: '#^Parameter \$reason of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\MasterData\\Models\\ReasonCode\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/SalesReturnService.php
-
-		-
-			message: '#^Parameter \$warehouse of method App\\Modules\\Inventory\\Services\\StockService\:\:move\(\) expects App\\Modules\\Inventory\\Models\\Warehouse, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Modules/Sales/Services/SalesReturnService.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>document_no" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Sales/Services/SalesReturnService.php
-
-		-
-			message: '#^Parameter \#1 \$key of method Illuminate\\Support\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:every\(\) expects \(callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: bool\)\|Illuminate\\Database\\Eloquent\\Model\|string, Closure\(App\\Modules\\Sales\\Models\\CommissionRule\)\: bool given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/SchemeService.php
-
-		-
-			message: '#^Parameter \#1 \$scheme of method App\\Modules\\Sales\\Services\\SchemeService\:\:assertEditable\(\) expects App\\Modules\\Sales\\Models\\Scheme, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Modules/Sales/Services/SchemeService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$account_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/ShiftService.php
 
 		-
 			message: '#^Method App\\Modules\\Sales\\Services\\ShiftService\:\:figures\(\) should return array\{opening\: string, cash_in\: string, cash_out\: string, expected\: string, counted\: string\|null, difference\: string\|null, bills\: int, from\: Illuminate\\Support\\Carbon, \.\.\.\} but returns array\{opening\: numeric\-string, cash_in\: numeric\-string, cash_out\: numeric\-string, expected\: numeric\-string, counted\: numeric\-string\|null, difference\: numeric\-string\|null, bills\: int\<0, max\>, from\: string, \.\.\.\}\.$#'
@@ -3145,46 +1711,10 @@ parameters:
 			path: app/Modules/Sales/Services/ShiftService.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$document_no\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Services/ShipmentService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Services/ShipmentService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Sales/Services/ShipmentService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Support\\HigherOrderCollectionProxy\<string, Illuminate\\Database\\Eloquent\\Model, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\>\:\:isSettled\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Services/ShipmentService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Support\\HigherOrderCollectionProxy\<string, Illuminate\\Database\\Eloquent\\Model, Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\>\:\:needsGoodsBack\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Services/ShipmentService.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>document_no" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Sales/Services/ShipmentService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$public_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Sync/CollectionSync.php
 
 		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
@@ -3215,12 +1745,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Sales/Sync/CollectionSync.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$public_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Sales/Sync/SalesOrderSync.php
 
 		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
@@ -3269,12 +1793,6 @@ parameters:
 			identifier: notIdentical.alwaysTrue
 			count: 1
 			path: app/Modules/Supplier/Imports/SupplierImporter.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:dueDateFrom\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Supplier/Models/Supplier.php
 
 		-
 			message: '#^Method App\\Modules\\Supplier\\Reports\\PartyReports\:\:supplierName\(\) should return Illuminate\\Database\\Query\\Expression but returns Illuminate\\Contracts\\Database\\Query\\Expression\.$#'
@@ -3439,12 +1957,6 @@ parameters:
 			path: tests/Feature/Core/ImportTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model&object\{pivot\: Illuminate\\Database\\Eloquent\\Relations\\Pivot\}\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Core/NoCodeFieldIsEverLeftForTheUserToInventTest.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
 			identifier: property.notFound
 			count: 17
@@ -3463,30 +1975,6 @@ parameters:
 			path: tests/Feature/Core/OurOwnMigrationBrokeTheSealTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Core/PhaseOneExitTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Core/ReportEngineTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Core/TheBooksCouldBeEditedAndNobodyWouldKnowTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Core/TheSameDocumentPostedTwiceTest.php
-
-		-
 			message: '#^Property Tests\\Feature\\Core\\ThirtyOneCustomersWereAlreadyThereTest\:\:\$user is never read, only written\.$#'
 			identifier: property.onlyWritten
 			count: 1
@@ -3497,12 +1985,6 @@ parameters:
 			identifier: isset.offset
 			count: 1
 			path: tests/Feature/Design/WhatWeSayAboutACustomerStaysOnOurSideTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model&object\{pivot\: Illuminate\\Database\\Eloquent\\Relations\\Pivot\}\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/ABackupOnOneDiskIsNotABackupTest.php
 
 		-
 			message: '#^Offset ''secret'' does not exist on string\.$#'
@@ -3541,46 +2023,10 @@ parameters:
 			path: tests/Feature/Modules/APriceCutIsADiscountNobodyWroteDownTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/AProfitAndLossThatNeverSaidProfitTest.php
-
-		-
 			message: '#^Method Tests\\Feature\\Modules\\AProfitAndLossThatNeverSaidProfitTest\:\:summary\(\) never returns null so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1
 			path: tests/Feature/Modules/AProfitAndLossThatNeverSaidProfitTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/ARecipeScreenOpensTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$outcome\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/AVanGoesOutAndMustComeBackTest.php
-
-		-
-			message: '#^Parameter \#1 \$line of method App\\Modules\\Sales\\Services\\ShipmentService\:\:settle\(\) expects App\\Modules\\Sales\\Models\\ShipmentLine, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Feature/Modules/AVanGoesOutAndMustComeBackTest.php
-
-		-
-			message: '#^Parameter \#1 \$line of method App\\Modules\\Sales\\Services\\ShipmentService\:\:settle\(\) expects App\\Modules\\Sales\\Models\\ShipmentLine, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 2
-			path: tests/Feature/Modules/AVanGoesOutAndMustComeBackTest.php
-
-		-
-			message: '#^Method Tests\\Feature\\Modules\\Accounts\\ANestedAccountHidesItsMoneyTest\:\:cash\(\) should return App\\Modules\\Accounts\\Models\\Account but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: tests/Feature/Modules/Accounts/ANestedAccountHidesItsMoneyTest.php
 
 		-
 			message: '#^Offset ''module'' on array\{type\: string, default\: mixed, module\: string, group\: string, label\: string, holds\: string\|null, \.\.\.\} on left side of \?\? always exists and is not nullable\.$#'
@@ -3589,76 +2035,10 @@ parameters:
 			path: tests/Feature/Modules/AccountsShellTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/BatchOnPaperTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$batch_no\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/BatchOnSaleTest.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>batch_no" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: tests/Feature/Modules/BatchOnSaleTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$document_no\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/CashCountTest.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isPosted\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Modules/CashCountTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/CashTillTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_active\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/CashTillTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_group\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/CashTillTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name_bn\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/CashTillTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name_en\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/CashTillTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$parent_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/CashTillTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/ChartOfAccountsTest.php
 
 		-
 			message: '#^Offset ''groups'' on array\{code\: string, label\: string, icon\: string, section\: string, order\: int, under\: string\|null, codes\: list\<string\>, groups\: array\<string, list\<array\{label\: string, route\: string, url\: string\|null, active\: bool\}\>\>\} on left side of \?\? always exists and is not nullable\.$#'
@@ -3673,12 +2053,6 @@ parameters:
 			path: tests/Feature/Modules/ControlPanelTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$document_no\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/CostLayerTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNotNull\(\) with string will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 1
@@ -3691,32 +2065,8 @@ parameters:
 			path: tests/Feature/Modules/CustomerTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$against_product_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/DirectSaleTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$delivery_challan_line_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/DirectSaleTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/DirectSaleTest.php
-
-		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
 			identifier: method.nonObject
-			count: 1
-			path: tests/Feature/Modules/DirectSaleTest.php
-
-		-
-			message: '#^Method Tests\\Feature\\Modules\\DirectSaleTest\:\:cashTillAccount\(\) should return App\\Modules\\Accounts\\Models\\Account but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
 			count: 1
 			path: tests/Feature/Modules/DirectSaleTest.php
 
@@ -3725,12 +2075,6 @@ parameters:
 			identifier: foreach.nonIterable
 			count: 1
 			path: tests/Feature/Modules/Finance/EveryFinanceScreenIsOnTheMapTest.php
-
-		-
-			message: '#^Property Tests\\Feature\\Modules\\Finance\\OneWholeMonthOfARealBusinessTest\:\:\$till \(App\\Modules\\Accounts\\Models\\Account\) does not accept Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: tests/Feature/Modules/Finance/OneWholeMonthOfARealBusinessTest.php
 
 		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
@@ -3743,12 +2087,6 @@ parameters:
 			identifier: method.unused
 			count: 1
 			path: tests/Feature/Modules/FreeGoodsTest.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Modules/HowManyPlatesCanWeStillSellTest.php
 
 		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
@@ -3769,100 +2107,10 @@ parameters:
 			path: tests/Feature/Modules/Inventory/ANoticeThatRanAllDayAndNobodyReadItTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/Inventory/AProductWithAFaceNobodyElseCanSeeTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNotNull\(\) with int will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 2
 			path: tests/Feature/Modules/Inventory/ProductDuplicateTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$book_qty\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/Inventory/StockCountTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$difference\.$#'
-			identifier: property.notFound
-			count: 3
-			path: tests/Feature/Modules/Inventory/StockCountTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$product_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/Inventory/StockCountTest.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isSurplus\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Modules/Inventory/StockCountTest.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:varianceValue\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Modules/Inventory/StockCountTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$due_date\.$#'
-			identifier: property.notFound
-			count: 3
-			path: tests/Feature/Modules/LoanTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/LoanTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$interest\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/LoanTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$principal\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/LoanTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/LoanTest.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:isPaid\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Modules/LoanTest.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:total\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: tests/Feature/Modules/LoanTest.php
-
-		-
-			message: '#^Parameter \#1 \$instalment of method App\\Modules\\Accounts\\Services\\LoanService\:\:payInstalment\(\) expects App\\Modules\\Accounts\\Models\\LoanInstalment, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: tests/Feature/Modules/LoanTest.php
-
-		-
-			message: '#^Parameter \#1 \$instalment of method App\\Modules\\Accounts\\Services\\LoanService\:\:payInstalment\(\) expects App\\Modules\\Accounts\\Models\\LoanInstalment, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 4
-			path: tests/Feature/Modules/LoanTest.php
 
 		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
@@ -3907,12 +2155,6 @@ parameters:
 			path: tests/Feature/Modules/MoneyAtTheCounterTest.php
 
 		-
-			message: '#^Method Tests\\Feature\\Modules\\MoneyAtTheCounterTest\:\:cashAccount\(\) should return App\\Modules\\Accounts\\Models\\Account but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: tests/Feature/Modules/MoneyAtTheCounterTest.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
 			identifier: property.notFound
 			count: 1
@@ -3920,18 +2162,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/MoneyLentOnAWordIsNotALoanTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$money_account_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/MoneyLentOnAWordIsNotALoanTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$voucher_id\.$#'
 			identifier: property.notFound
 			count: 1
 			path: tests/Feature/Modules/MoneyLentOnAWordIsNotALoanTest.php
@@ -3956,12 +2186,6 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/MoneyPutAwayIsNotMoneyLentTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$voucher_id\.$#'
 			identifier: property.notFound
 			count: 1
 			path: tests/Feature/Modules/MoneyPutAwayIsNotMoneyLentTest.php
@@ -3991,136 +2215,16 @@ parameters:
 			path: tests/Feature/Modules/OpeningStockScreenTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 3
-			path: tests/Feature/Modules/PackEntryScreenTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 3
-			path: tests/Feature/Modules/PackEntryScreenTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$rate\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/PackEntryScreenTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$amount\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/PackedDocumentTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$entered_qty\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/PackedDocumentTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$entered_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/PackedDocumentTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$ordered_qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/PackedDocumentTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 3
-			path: tests/Feature/Modules/PackedDocumentTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$rate\.$#'
-			identifier: property.notFound
-			count: 3
-			path: tests/Feature/Modules/PackedDocumentTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sales_price\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/PackedDocumentTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/PosParkedBillTest.php
-
-		-
-			message: '#^Method Tests\\Feature\\Modules\\PosTest\:\:cashTillAccount\(\) should return App\\Modules\\Accounts\\Models\\Account but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: tests/Feature/Modules/PosTest.php
-
-		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
 			path: tests/Feature/Modules/PrintedPriceOnSaleTest.php
 
 		-
-			message: '#^Method Tests\\Feature\\Modules\\PurchasePaymentTest\:\:cashTillAccount\(\) should return App\\Modules\\Accounts\\Models\\Account but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: tests/Feature/Modules/PurchasePaymentTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 7
-			path: tests/Feature/Modules/PurchaseReturnTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$rate\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/PurchaseReturnTest.php
-
-		-
 			message: '#^Method Tests\\Feature\\Modules\\PurchaseReturnTest\:\:availableQty\(\) is unused\.$#'
 			identifier: method.unused
 			count: 1
 			path: tests/Feature/Modules/PurchaseReturnTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 6
-			path: tests/Feature/Modules/PurchaseTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$purchase_order_line_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/PurchaseTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$received_qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/PurchaseTest.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:pendingQty\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Modules/PurchaseTest.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:receivedQty\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: tests/Feature/Modules/PurchaseTest.php
 
 		-
 			message: '#^Cannot access property \$value on string\.$#'
@@ -4133,36 +2237,6 @@ parameters:
 			identifier: return.type
 			count: 1
 			path: tests/Feature/Modules/Sales/TheLorryFareNeverReachedTheBooksTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 7
-			path: tests/Feature/Modules/SalesReturnTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$rate\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/SalesReturnTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/SalesTest.php
-
-		-
-			message: '#^Method Tests\\Feature\\Modules\\SalesTest\:\:cashTillAccount\(\) should return App\\Modules\\Accounts\\Models\\Account but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: tests/Feature/Modules/SalesTest.php
-
-		-
-			message: '#^Method Tests\\Feature\\Modules\\SixtyCartonsTodayAndFortyNextWeekTest\:\:orderLine\(\) should return App\\Modules\\Purchase\\Models\\PurchaseOrderLine but returns Illuminate\\Database\\Eloquent\\Model\.$#'
-			identifier: return.type
-			count: 1
-			path: tests/Feature/Modules/SixtyCartonsTodayAndFortyNextWeekTest.php
 
 		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNotNull\(\) with App\\Modules\\Supplier\\Models\\Supplier will always evaluate to true\.$#'
@@ -4183,22 +2257,10 @@ parameters:
 			path: tests/Feature/Modules/TheBooksCheckThemselvesTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$amount\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/TheCustomerCouldNeverSeeHisOwnLedgerTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertNotNull\(\) with int will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 1
 			path: tests/Feature/Modules/TheCustomerCouldNeverSeeHisOwnLedgerTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/TheFdBehindTheLoanTest.php
 
 		-
 			message: '#^Cannot access property \$month on string\.$#'
@@ -4219,58 +2281,10 @@ parameters:
 			path: tests/Feature/Modules/TheFreeCartonCameBackAsTwelvePiecesTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$free_qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/TheFreeCartonCameBackAsTwelvePiecesTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$free_unit_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/TheFreeCartonCameBackAsTwelvePiecesTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/TheFreeCartonCameBackAsTwelvePiecesTest.php
-
-		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 6
 			path: tests/Feature/Modules/TheFreeCartonCameBackAsTwelvePiecesTest.php
-
-		-
-			message: '#^Method Tests\\Feature\\Modules\\TheFreeCartonCameBackAsTwelvePiecesTest\:\:buy\(\) should return App\\Modules\\Purchase\\Models\\PurchaseBillLine but returns Illuminate\\Database\\Eloquent\\Model\.$#'
-			identifier: return.type
-			count: 1
-			path: tests/Feature/Modules/TheFreeCartonCameBackAsTwelvePiecesTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/TheOrderWasForAHundredAndTheBillCameForOneTenTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$qty\.$#'
-			identifier: property.notFound
-			count: 3
-			path: tests/Feature/Modules/TheOrderWasForAHundredAndTheBillCameForOneTenTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$delivered_qty\.$#'
-			identifier: property.notFound
-			count: 4
-			path: tests/Feature/Modules/TheOrderWasForAHundredAndTheVanTookOneTenTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: tests/Feature/Modules/TheOrderWasForAHundredAndTheVanTookOneTenTest.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
@@ -4289,30 +2303,6 @@ parameters:
 			identifier: method.alreadyNarrowedType
 			count: 1
 			path: tests/Feature/Modules/ThePayableHeadSplitsWithoutLosingATakaTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$batch_no\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/ThePharmacyCouldNotBuyASingleStripTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$expiry_date\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/ThePharmacyCouldNotBuyASingleStripTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$mrp\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/ThePharmacyCouldNotBuyASingleStripTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$sales_price\.$#'
-			identifier: property.notFound
-			count: 4
-			path: tests/Feature/Modules/TheRateOutranThePriceAndNobodyToldTheCounterTest.php
 
 		-
 			message: '#^Property Tests\\Feature\\Modules\\TheSameSlipWentInTwiceAndTheMoneyDoubledTest\:\:\$supplier is never read, only written\.$#'
@@ -4345,34 +2335,16 @@ parameters:
 			path: tests/Feature/Modules/TwoThousandInBkashAndTheRestInCashTest.php
 
 		-
-			message: '#^Method Tests\\Feature\\Modules\\TwoThousandInBkashAndTheRestInCashTest\:\:tillAccount\(\) should return App\\Modules\\Accounts\\Models\\Account but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
-			identifier: return.type
-			count: 1
-			path: tests/Feature/Modules/TwoThousandInBkashAndTheRestInCashTest.php
-
-		-
 			message: '#^Call to method PHPUnit\\Framework\\Assert\:\:assertTrue\(\) with true will always evaluate to true\.$#'
 			identifier: method.alreadyNarrowedType
 			count: 1
 			path: tests/Feature/Modules/VoucherTest.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/WhatTheCompanyOwesMeAndIOweThemTest.php
-
-		-
 			message: '#^Cannot call method toDateString\(\) on string\.$#'
 			identifier: method.nonObject
 			count: 1
 			path: tests/Feature/Modules/WhatTheMonthWasSupposedToBeTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: tests/Feature/Modules/WhichRouteIsWorthRunningTest.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$c\.$#'
@@ -4384,12 +2356,6 @@ parameters:
 			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$d\.$#'
 			identifier: property.notFound
 			count: 1
-			path: tests/Feature/Modules/YearEndTest.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
 			path: tests/Feature/Modules/YearEndTest.php
 
 		-

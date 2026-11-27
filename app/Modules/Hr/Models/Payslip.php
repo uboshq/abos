@@ -33,7 +33,7 @@ class Payslip extends Model
     protected $table = 'hr_payslips';
 
     /** ⭐ আটকে থাকা স্লিপের বকেয়া কোন ব্যাংক ফাইলে গেল — একবারই ([[HeldWagePayment]]; fe, ২১ অক্টোবর ২০২৬) *
-     * @return HasOne<HeldWagePayment, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne<HeldWagePayment, $this>
      */
     public function heldPayment(): \Illuminate\Database\Eloquent\Relations\HasOne
     {

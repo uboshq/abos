@@ -347,7 +347,7 @@ final class CustomerDashboard implements ProvidesDashboard
      * ⓘ দুই দণ্ড একই মাপের (মানুষ): দ্বিতীয়টা প্রথমটার ভেতরের ভাগ, তাই ফাঁকটা বলে কতজন যোগ হয়েই বন্ধ হলেন।
      * ⓘ নতুন ড্যাশবোর্ডের অংশ — বাকিগুলোর সাথে একসাথে চালু হবে (config abos.dashboards_v2)।
      *
-     * @return list<Series>
+     * @return list<\App\Core\Engines\Dashboard\Series>
      */
     private static function growth(): array
     {

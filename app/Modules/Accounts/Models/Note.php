@@ -172,7 +172,7 @@ class Note extends Model implements Drillable
     }
 
     /** ⭐ নোটের সারি — পণ্য / সেবা / খাত (নকশা v5); পুরনো নোটে সারি নেই, একটাই অঙ্ক *
-     * @return HasMany<NoteLine, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<NoteLine, $this>
      */
     public function lines(): \Illuminate\Database\Eloquent\Relations\HasMany
     {

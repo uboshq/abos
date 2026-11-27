@@ -80,7 +80,7 @@ class DepositKind extends Model
      * প্রশ্নটা একটাই: ⚠️ এটা কি ব্যবহার হয়ে গেছে? ⛔ ব্যবহৃত ধরন মোছা
      * যায় না — পুরনো কাগজ অনাথ হত — কেবল নিষ্ক্রিয় করা যায়।
      *
-     * @return HasMany<Deposit, $this>
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<Deposit, $this>
      */
     public function deposits(): \Illuminate\Database\Eloquent\Relations\HasMany
     {

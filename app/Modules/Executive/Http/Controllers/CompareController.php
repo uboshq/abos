@@ -59,6 +59,9 @@ final class CompareController extends Controller implements HasMiddleware
         // ⓘ জের-এর সংখ্যার ধারা হয় না (খোপে খোপে "আজ" একই) — তখন বিক্রি
         $figure = Figures::definition($figure)['period'] ? $figure : Figures::SALES;
         $from = Carbon::today()->subDays(self::REACH[$grain] - 1)->toDateString();
+        // ⓘ গত বছরের একই খোপ — নাম ধরে দুই তারিখ, ছড়ানো (`...`) নয়: ফাঁকা এলে ছড়ানো ডাক চারটা যুক্তি নিয়ে ভেঙে পড়ত (PHPStan, ২৮ নভেম্বর ২০২৬)
+        $lastYear = Trend::previous(ReportEngine::COMPARE_LAST_YEAR, $from, Carbon::today()->toDateString())
+            ?? ['from' => Carbon::parse($from)->subYear()->toDateString(), 'to' => Carbon::today()->subYear()->toDateString()];
 
         return view('executive::compare', [
             'menu' => $this->menu->forUser($user),
@@ -67,8 +70,7 @@ final class CompareController extends Controller implements HasMiddleware
             'figure' => $figure,
             'trend' => $this->comparison->trend($user, $result['rows'], $figure, $grain, $from, Carbon::today()->toDateString()),
             // ⓘ পাশে গত বছরের একই খোপ — একই নিয়মে ([[Trend::previous()]]), যাতে মৌসুম বাদে বোঝা যায়
-            'lastYear' => $this->comparison->trend($user, $result['rows'], $figure, $grain,
-                ...array_values(Trend::previous(ReportEngine::COMPARE_LAST_YEAR, $from, Carbon::today()->toDateString()) ?? [])),
+            'lastYear' => $this->comparison->trend($user, $result['rows'], $figure, $grain, $lastYear['from'], $lastYear['to']),
         ]);
     }
 }
