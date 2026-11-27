@@ -174,7 +174,7 @@
     {{-- ⛔ `hasErrors` কেবল এই ফর্মের নিজের ফেরত (সাথে পাঠানো সারি, `old('lines')`) — অন্য পাতার ভুল এখানে ফিরলে (যেমন ছাপার
          দরজা) পাঠানো, হয়তো পাকা, কার্টটা আবার পর্দায় বসত (মালিক, ৫ অক্টোবর ২০২৬: "কনফার্মের পরে লিস্ট খালি")।
          `@pageshow.window` — পাঠানো পাতা ব্রাউজারের স্মৃতি থেকে ফিরলে কার্ট মুছে নতুন করে খোলে ([[direct-sale.js]] `onPageShow`)। --}}
-    <form method="POST" action="{{ route('sales.direct.store') }}" data-confirm-overview="{{ route('sales.direct.overview') }}" @if ($abosLook) data-abos-counter @endif
+    <form method="POST" action="{{ route('sales.direct.store') }}" data-confirm-overview="{{ route('sales.direct.overview') }}" @if ($abosLook) data-abos-counter data-final-confirm @endif
           x-data="directSale({
               catalogue: @js($products),
               margin: @js($margin),
@@ -225,6 +225,7 @@
                   'lastRateNone' => __('sales::field.last_rate_none'),
                   'lotsShort' => __('sales::field.lots_short'),
                   'cardNothing' => __('sales::field.card_nothing'),
+                  'itemsWord' => __('sales::field.items'),
                   'confirm' => [
                       'ready' => __('sales::message.confirm_ready'),
                       'viewOnly' => __('sales::message.confirm_view_only'),
@@ -898,6 +899,10 @@
             @endunless
             @include('sales::direct.partials.totals')
         </div>
+        {{-- ✓ শেষবার পাকা করা আর খসড়ার পপআপ (মালিক, ২৮ নভেম্বর ২০২৬) — কেবল ABOS-এর রূপে --}}
+        @if ($abosLook)
+            @include('sales::direct.partials.final-confirm')
+        @endif
 
     </form>
     @if ($abosLook)</div>{{-- ds-page --}}@endif

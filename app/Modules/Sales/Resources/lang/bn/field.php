@@ -506,4 +506,9 @@ return [
     'v2_bill_discount' => 'বিলের ছাড়',
     'free_unit_v2' => 'ফ্রি-র একক',
     'unit_rate' => 'একক দর',
+    'final_confirm_title' => 'বিলটা পাকা করবেন?',
+    'final_draft_title' => 'খসড়া হিসেবে রাখবেন?',
+    'sale_no' => 'বিক্রি নম্বর',
+    'total_so_far' => 'এখন পর্যন্ত মোট',
+    'buyer_word' => 'ক্রেতা',
 ];

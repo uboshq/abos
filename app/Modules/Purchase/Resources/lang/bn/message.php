@@ -205,4 +205,6 @@ return [
     'ready_need_supplier' => 'সরবরাহকারী বাছা হয়নি',
     'ready_need_lines' => 'কার্টে কোনো পণ্য নেই',
     'ready_need_carrier' => 'ভাড়া আছে, কিন্তু কে আনল বলা নেই (পরিবহন)',
+    'final_confirm_question' => 'পাকা হলে আর বদলানো যাবে না — নিশ্চিত?',
+    'final_draft_question' => 'খসড়া পরে "পেন্ডিং" থেকে খুলে শেষ করা যাবে। রাখবেন?',
 ];

@@ -625,6 +625,27 @@ export default function directSale({
             return '';
         },
 
+        /* ✓ শেষবার পাকা করার পপআপ (মালিক, ২৮ নভেম্বর; [[final-confirm.js]]) — CSP Alpine-এ একটা করে getter */
+        get finalTotalText() {
+            return '৳' + this.money(this.netPayable);
+        },
+
+        get finalPaidText() {
+            return '৳' + this.money(Number(this.deposit) || 0);
+        },
+
+        get finalDueText() {
+            return '৳' + this.money(this.invoiceDue);
+        },
+
+        get finalItemsText() {
+            return this.lines.length + ' ' + String(texts.itemsWord ?? '');
+        },
+
+        get finalPoint() {
+            return String((this.customer && this.customer.point) || '');
+        },
+
         /* 🚚 খরচের টাইলের ছোট লেখা (v2) */
         get transportTileSub() {
             return this.vehicleText || String(texts.cardNothing ?? '');

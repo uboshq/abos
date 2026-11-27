@@ -367,4 +367,9 @@ return [
     'unloading_tile' => 'Unloading · labour',
     'transport_tile' => 'Transport fare',
     'transport_none' => 'none yet',
+    'final_draft_title' => 'Keep it as a draft?',
+    'sale_no' => 'Sale no.',
+    'total_so_far' => 'Total so far',
+    'items_word' => 'Items',
+    'final_confirm_title' => 'Take the goods and make the bill final?',
 ];

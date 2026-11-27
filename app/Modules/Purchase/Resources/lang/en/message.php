@@ -192,4 +192,6 @@ return [
     'ready_need_supplier' => 'No supplier chosen',
     'ready_need_lines' => 'The cart is empty',
     'ready_need_carrier' => 'There is a fare but no carrier (transport)',
+    'final_confirm_question' => 'Once final it cannot be changed — sure?',
+    'final_draft_question' => 'The draft can be opened from "Pending" and finished later. Keep it?',
 ];

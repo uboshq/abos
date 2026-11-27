@@ -92,4 +92,7 @@ return [
     'delete_line_again' => 'আবার চাপুন — মুছবে',
     'cancel_esc' => 'বাতিল · Esc',
     'edit_line_title' => 'লাইন বদলান',
+    'go_back' => 'ফিরে যান',
+    'yes_confirm' => 'হ্যাঁ, পাকা করুন',
+    'yes_draft' => 'হ্যাঁ, খসড়া রাখুন',
 ];

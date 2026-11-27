@@ -16,6 +16,8 @@
  * ⛔ পপ-আপ কেবল দেখায়। আসল পাহারা (সীমা, সই, লট, দর) সার্ভারে নিশ্চিতের সময় — JS বন্ধ থাকলেও নিয়ম ভাঙে না।
  * ⓘ CSP-Alpine নয় — সাধারণ শ্রোতা, তাই ব্লেডের কোনো অ্যাট্রিবিউটে যুক্তি লিখতে হয় না।
  */
+import { askFinal } from './final-confirm.js'
+
 export function guardConfirmOverview (root = document, fetcher = (...args) => fetch(...args)) {
     root.addEventListener('submit', async (event) => {
         const form = event.target
@@ -107,12 +109,22 @@ export function guardConfirmOverview (root = document, fetcher = (...args) => fe
                 draft.value = wantsDraft ? '1' : '0'
             }
 
-            form.dataset.overviewSeen = '1'
-            if (typeof form.requestSubmit === 'function') {
-                form.requestSubmit(trigger)
-            } else {
-                form.submit()
+            const submitNow = () => {
+                form.dataset.overviewSeen = '1'
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit(trigger)
+                } else {
+                    form.submit()
+                }
             }
+
+            // ⭐ কাউন্টারে (ABOS-এর রূপে) সারাংশের পরে আরেকবার — "বিলটা পাকা করবেন?" (মালিক, ২৮ নভেম্বর ২০২৬; [[final-confirm.js]])
+            if (!wantsDraft && form.hasAttribute('data-final-confirm')) {
+                askFinal(form, 'confirm', submitNow)
+                return
+            }
+
+            submitNow()
         }
     }, true)
 }

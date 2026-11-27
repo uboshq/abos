@@ -1076,6 +1076,19 @@ export default function directPurchase({
             return String(texts.landedNote ?? '').replace(':price', this.money(this.netPayable));
         },
 
+        // ✓ শেষবার পাকা করার পপআপ (মালিক, ২৮ নভেম্বর; [[final-confirm.js]])
+        get finalTotalText() {
+            return '৳' + this.money(this.netPayable);
+        },
+
+        get finalPaidText() {
+            return '৳' + this.money(this.paidTotal);
+        },
+
+        get finalDueText() {
+            return '৳' + this.money(this.invoiceDue > 0 ? this.invoiceDue : 0);
+        },
+
         // ✓/⚠ "মাল বুঝে নিন"-এর উপরের লাইন
         get readyProblem() {
             if (! this.supplierId) return String(texts.ready?.needSupplier ?? '');

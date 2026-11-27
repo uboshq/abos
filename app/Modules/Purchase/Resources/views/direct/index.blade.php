@@ -24,7 +24,7 @@
             \App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)),
             \App\Core\Support\Ui::FOLD_MENU_LOOKS, true);
     @endphp
-    <form method="POST" action="{{ route('purchase.direct.store') }}" data-confirm-overview="{{ route('purchase.direct.overview') }}" @if ($abosLook) data-abos-purchase @keydown.window.f2.prevent="depositOpen = ! depositOpen" @keydown.window.f4.prevent="openUnloading()" @keydown.window.f7.prevent="transportOpen = ! transportOpen" @endif
+    <form method="POST" action="{{ route('purchase.direct.store') }}" data-confirm-overview="{{ route('purchase.direct.overview') }}" @if ($abosLook) data-abos-purchase data-final-confirm @keydown.window.f2.prevent="depositOpen = ! depositOpen" @keydown.window.f4.prevent="openUnloading()" @keydown.window.f7.prevent="transportOpen = ! transportOpen" @endif
           x-data="directPurchase({
               catalogue: @js($products),
               vatEnabled: {{ $show['vat'] ? 'true' : 'false' }},
@@ -645,6 +645,10 @@
              গায়ে লেগে একটা মোটা রেখা হয়ে যেত, আর কার্ড দুইটা আলাদা
              বোঝা যেত না। --}}
         @include('purchase::direct.partials.totals')
+        {{-- ✓ শেষবার পাকা করার পপআপ (মালিক, ২৮ নভেম্বর ২০২৬) — কেবল ABOS-এর রূপে --}}
+        @if ($abosLook)
+            @include('purchase::direct.partials.final-confirm')
+        @endif
 
         {{-- ══ আনলোডিং বিল — পপআপ, পর্দার ঠিক মাঝে ═══════════════════════
              মালিক, ২৬ নভেম্বর ২০২৬ (নমুনা v9 "ঠিক আছে"): "পপ আপটা স্ক্রিনের মাঝামাঝিতে আসবে, এটার কাজটা কমপ্লিট করে অন্য কাজে

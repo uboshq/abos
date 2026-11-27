@@ -324,4 +324,6 @@ return [
     'confirm_need_lines' => 'The cart is empty',
     'confirm_need_fare' => 'The fare amount is still blank (F4)',
     'confirm_credit_over' => 'Credit limit exceeded by :amount — confirming will be stopped; take money or reduce goods',
+    'final_confirm_question' => 'Once final it cannot be changed — sure?',
+    'final_draft_question' => 'The draft can be opened from "Pending" and finished later. Keep it?',
 ];

@@ -14,7 +14,7 @@
     "name": "preload-helper"
   },
   "resources/css/app.css": {
-    "file": "assets/app-D3txmecw.css",
+    "file": "assets/app-BlynxDPL.css",
     "name": "app",
     "names": [
       "app.css"
@@ -23,7 +23,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-CIL_4uqi.js",
+    "file": "assets/app-2FPE2zO9.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,

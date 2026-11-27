@@ -218,3 +218,43 @@ form[data-abos-counter] .ds-out > [data-sign='due'] { background: linear-gradien
 form[data-abos-counter] .ds-side .ds-tot-abos button[data-overview-trigger][data-opens-print] { background: linear-gradient(135deg, #047857, #10b981) !important; }
 form[data-abos-counter] .ds-cbar-t > i { background: linear-gradient(90deg, #22c55e, #f59e0b) !important; }
 form[data-abos-counter] .ds-tot-card { outline-color: #7cd3dc; }
+
+/* ════ ✓ শেষবার পাকা করা / খসড়ার পপআপ — মালিকের নমুনা (২৮ নভেম্বর ২০২৬) হুবহু; বিক্রয় আর ক্রয় দুইয়েরই ════ */
+dialog.fc-dialog { position: fixed; inset: 0; margin: auto; height: fit-content; width: min(520px, 92vw); max-height: none; padding: 0; border: 0; border-radius: 18px; overflow: hidden; background: #fff; color: #0f172a;
+    box-shadow: 0 24px 70px rgb(0 0 0 / .35); font-size: 15px; line-height: 1.5; }
+dialog.fc-dialog::backdrop { background: rgb(15 23 42 / .5); }
+.fc-head { color: #fff; padding: 14px 20px; font-size: 18px; font-weight: 700; }
+.fc-head.fc-ok { background: linear-gradient(135deg, #047857, #10b981); }
+.fc-head.fc-draft { background: linear-gradient(135deg, #334155, #64748b); }
+.fc-body { padding: 16px 20px; display: grid; gap: 10px; }
+.fc-who { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; color: #64748b; }
+.fc-no { text-align: end; white-space: nowrap; }
+.fc-no b { display: block; color: #0f172a; font-size: 15.5px; }
+.fc-cust { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+.fc-cust b { font-size: 21px; font-weight: 800; color: #0f172a; line-height: 1.25; }
+/* পয়েন্ট — কড়া নীল গোল কিনারা, ভিতরে হালকা নীল, বড় মোটা লেখা, সামনে আঁকা পিন (মালিক, ২৮ নভেম্বর) */
+.fc-pt { display: inline-flex; align-items: center; gap: 6px; font-size: 16.5px; font-weight: 800; color: #0b2a66; background: #dbeafe;
+    border: 2.5px solid #1d4ed8; border-radius: 999px; padding: 3px 14px 3px 9px; }
+.fc-pt svg { color: #1d4ed8; flex: none; }
+.fc-big { border-radius: 14px; padding: 14px 16px; text-align: center; }
+.fc-big.fc-ok { background: linear-gradient(135deg, #ecfdf5, #d1fae5); border: 2px solid #10b981; }
+.fc-big.fc-draft { background: #f1f5f9; border: 2px solid #94a3b8; }
+.fc-big small { display: block; font-size: 13px; color: #64748b; font-weight: 600; }
+.fc-big b { display: block; font-size: 48px; font-weight: 900; line-height: 1.1; color: #065f46; letter-spacing: .5px; }
+.fc-big.fc-draft b { color: #0f172a; }
+.fc-rows { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 14px; }
+.fc-rows > span:nth-child(even) { text-align: end; font-weight: 700; }
+.fc-due { color: #b91c1c; }
+.fc-q { margin: 0; font-size: 16px; font-weight: 700; text-align: center; }
+.fc-foot { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; padding: 0 20px 18px; }
+.fc-foot button { font: inherit; font-weight: 700; border-radius: 12px; padding: 12px 10px; border: 0; cursor: pointer; font-size: 16px; }
+.fc-foot button:focus-visible { outline: 3px solid #1d4ed8; outline-offset: 2px; }
+.fc-back { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1 !important; }
+.fc-yes { background: linear-gradient(135deg, #047857, #10b981); color: #fff; text-shadow: 0 1px 1px rgb(0 0 0 / .15); }
+.fc-yes:disabled { opacity: .6; cursor: wait; }
+.fc-yes-draft { background: linear-gradient(135deg, #334155, #64748b); }
+.fc-foot kbd { font: inherit; font-size: 12px; opacity: .85; margin-inline-start: 6px; }
+/* পয়েন্ট — ক্রেতার টাইলেও একই নীল গোল ঘর (মালিক, ২৮ নভেম্বর: পপআপের মতো, যাতে কোন জায়গার ক্রেতা এক নজরে চোখে পড়ে) */
+form[data-abos-counter] .ds-party [data-customer-details] span[data-point-chip] { background: #dbeafe !important; border: 2.5px solid #1d4ed8 !important;
+    color: #0b2a66 !important; font-size: 15px !important; font-weight: 800 !important; padding: 1px 12px !important; border-radius: 999px; }
+form[data-abos-counter] .ds-party [data-customer-details] span[data-point-chip] * { color: #0b2a66 !important; }

@@ -353,4 +353,9 @@ return [
     'unloading_tile' => 'আনলোডিং · হাম্মালি',
     'transport_tile' => 'পরিবহন ভাড়া',
     'transport_none' => 'এখনো নেই',
+    'final_draft_title' => 'খসড়া হিসেবে রাখবেন?',
+    'sale_no' => 'বিক্রি নম্বর',
+    'total_so_far' => 'এখন পর্যন্ত মোট',
+    'items_word' => 'পণ্য',
+    'final_confirm_title' => 'মাল বুঝে নিয়ে বিল পাকা করবেন?',
 ];
