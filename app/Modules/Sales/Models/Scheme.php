@@ -128,8 +128,10 @@ class Scheme extends Model
      * হয়, আর সব স্কিম টেনে এনে কোডে ছাঁকলে বছরের পুরনো স্কিমগুলোও
      * প্রতিবার মেমরিতে উঠত।
      */
-    public function scopeLiveOn(Builder $query, Carbon|string $date): Builder
+    public function scopeLiveOn(Builder $query, \Carbon\CarbonInterface|string $date): Builder
     {
+        $date = is_string($date) ? $date : \App\Core\Support\Dates::of($date);
+
         $on = $date instanceof Carbon ? $date->toDateString() : $date;
 
         return $query->where('status', self::ACTIVE)

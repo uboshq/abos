@@ -708,7 +708,7 @@ final class ChequeService
     /**
      * @param  list<array<string, mixed>>  $lines
      */
-    private function post(Cheque $cheque, string $sourceType, Carbon|string $date, array $lines): void
+    private function post(Cheque $cheque, string $sourceType, \Carbon\CarbonInterface|string $date, array $lines): void
     {
         $this->posting->post(
             sourceType: $sourceType,

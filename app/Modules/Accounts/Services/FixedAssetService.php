@@ -525,7 +525,7 @@ final class FixedAssetService
      * শুরু, তার আগের কোনো দিনে দাখিলা বসানোর মানে হয় না। ⭐ আসল
      * কেনার তারিখ হারায় না — সেটা `acquired_on` ঘরেই থাকে।
      */
-    private function postableDate(Carbon $date): string
+    private function postableDate(\Carbon\CarbonInterface $date): string
     {
         $year = FinancialYear::query()->where('is_current', true)->first();
 

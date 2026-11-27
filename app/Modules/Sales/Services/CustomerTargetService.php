@@ -227,8 +227,11 @@ final class CustomerTargetService
     }
 
     /** আজ থেকে শেষ তারিখ পর্যন্ত ব্যাংক খোলার দিন — রবি থেকে বৃহস্পতি। */
-    public function bankDays(Carbon $from, Carbon $to): int
+    public function bankDays(\Carbon\CarbonInterface $from, \Carbon\CarbonInterface $to): int
     {
+        $from = \App\Core\Support\Dates::of($from);
+        $to = \App\Core\Support\Dates::of($to);
+
         $days = 0;
 
         for ($d = $from->copy()->startOfDay(); $d->lte($to); $d->addDay()) {

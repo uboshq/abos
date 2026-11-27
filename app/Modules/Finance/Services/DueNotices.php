@@ -478,7 +478,7 @@ final class DueNotices
     }
 
     /** পেরিয়ে গেলে ঋণাত্মক — বার্তাটাই ঠিক করে কোন কথাটা লেখা হবে */
-    private function daysLeft(?Carbon $date): int
+    private function daysLeft(?\Carbon\CarbonInterface $date): int
     {
         return $date === null ? 0 : (int) now()->startOfDay()->diffInDays($date->copy()->startOfDay(), false);
     }

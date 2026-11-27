@@ -50,9 +50,11 @@ final class LoanSchedule
         string $principal,
         string $annualRate,
         int $months,
-        Carbon|string $firstDueOn,
+        \Carbon\CarbonInterface|string $firstDueOn,
         string $method = self::REDUCING,
     ): array {
+        $firstDueOn = is_string($firstDueOn) ? $firstDueOn : \App\Core\Support\Dates::of($firstDueOn);
+
         if ($months < 1) {
             throw new RuntimeException('A loan needs at least one instalment.');
         }

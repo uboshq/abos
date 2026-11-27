@@ -545,8 +545,10 @@ final class OpeningStockService
      * মজুদের সময় পেরিয়ে গেছে। ভুল হলে সমন্বয়ের পর্দা আছে — সেটা কারণ
      * চায়, চিহ্ন রাখে, আর FIFO-কেও সঠিক ক্রমে জানায়।
      */
-    public function stillOpen(Product $product, Warehouse $warehouse, Carbon|string|null $date = null): bool
+    public function stillOpen(Product $product, Warehouse $warehouse, \Carbon\CarbonInterface|string|null $date = null): bool
     {
+        $date = \App\Core\Support\Dates::sameKind($date);
+
         $moves = StockMovement::query()->withoutGlobalScopes(StockService::VIEW_WALLS)
             ->where('product_id', $product->id)
             ->where('warehouse_id', $warehouse->id)
@@ -657,8 +659,10 @@ final class OpeningStockService
         string $unitCost,
         ?Batch $batch = null,
         bool $topUp = false,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
     ): void {
+        $date = \App\Core\Support\Dates::sameKind($date);
+
         /*
          * ⛔ লট ধরা পণ্যে লট ছাড়া শুরুর মজুদ নয়।
          *

@@ -138,7 +138,7 @@ final class OpeningBalanceService
         int $sourceId,
         string $documentNo,
         string $amount,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
 
         /*
          * ⭐ কোন শাখার খাতায় — গুদামের শাখা, লেখকের নয় (Inventory অডিট ম১১, ৫ অক্টোবর ২০২৬)। ⛔ আগে দাখিলা বসত লেখকের
@@ -146,6 +146,8 @@ final class OpeningBalanceService
          */
         ?int $branchId = null,
     ): array {
+        $date = \App\Core\Support\Dates::sameKind($date);
+
         if (bccomp($amount, '0', 4) <= 0) {
             return [];
         }
@@ -181,9 +183,11 @@ final class OpeningBalanceService
         int $sourceId,
         string $documentNo,
         string $amount,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?int $branchId = null,
     ): array {
+        $date = \App\Core\Support\Dates::sameKind($date);
+
         if (bccomp($amount, '0', 4) <= 0) {
             return [];
         }
@@ -511,8 +515,10 @@ final class OpeningBalanceService
         ));
     }
 
-    private function dateFor(Carbon|string|null $date): Carbon
+    private function dateFor(\Carbon\CarbonInterface|string|null $date): Carbon
     {
+        $date = \App\Core\Support\Dates::sameKind($date);
+
         $year = FinancialYear::query()->where('is_current', true)->first();
 
         if ($year === null) {

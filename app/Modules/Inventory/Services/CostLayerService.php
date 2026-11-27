@@ -837,8 +837,10 @@ final class CostLayerService
      *
      * @return array{shelf_qty: string, shelf_diff: string, sold_qty: string, sold_diff: string}
      */
-    public function revalue(string $sourceType, int $sourceId, int $productId, string $newUnitCost, Carbon|string $date): array
+    public function revalue(string $sourceType, int $sourceId, int $productId, string $newUnitCost, \Carbon\CarbonInterface|string $date): array
     {
+        $date = is_string($date) ? $date : \App\Core\Support\Dates::of($date);
+
         return DB::transaction(function () use ($sourceType, $sourceId, $productId, $newUnitCost, $date) {
             $out = ['shelf_qty' => '0', 'shelf_diff' => '0', 'sold_qty' => '0', 'sold_diff' => '0'];
 

@@ -135,8 +135,10 @@ final class LoanService
     /**
      * @return LoanMovement তোলার সারি — সইয়ের ছক থামালে `awaiting`, নইলে খাতায় বসা
      */
-    public function drawDown(Loan $loan, string $amount, int $intoAccountId, Carbon|string|null $date = null): LoanMovement
+    public function drawDown(Loan $loan, string $amount, int $intoAccountId, \Carbon\CarbonInterface|string|null $date = null): LoanMovement
     {
+        $date = \App\Core\Support\Dates::sameKind($date);
+
         if (bccomp($amount, '0', 4) <= 0) {
             throw ValidationException::withMessages([
                 'amount' => __('accounts::validation.loan_amount_positive'),

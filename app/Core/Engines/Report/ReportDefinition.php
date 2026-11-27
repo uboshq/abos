@@ -146,7 +146,11 @@ final class ReportDefinition
          * কল-সাইট (`ReportController`) দুইটাই একটা দেয়। কোড ঠিক ছিল, ঘোষণা
          * ভুল — আর ঘোষণাটাই পরের জন পড়ত।
          *
-         * @var null|Closure(array<string, string>): array{label: string, value: string, good: bool}
+         * ⓘ পরে নগদ প্রবাহ (IAS 7) দ্বিতীয় আর্গুমেন্ট নিল — ছাঁকনিগুলো, শুরু-শেষের নগদ মাপতে — আর ফলে `lines`
+         * (মিলনের সারি) দেয়; ReportController, FinancialStatements, FinanceBoard ছাঁকনি পাঠায় ও `lines` পড়ে।
+         * ঘোষণা আবার পিছিয়ে ছিল (PHPStan, ২৮ নভেম্বর ২০২৬: "Offset 'lines' does not exist"), তাই মেলানো হলো।
+         *
+         * @var null|Closure(array<string, string>, array<string, mixed>=): array{label: string, value: string, good: bool, lines?: list<array<string, mixed>>}
          */
         public readonly ?Closure $summary = null,
 

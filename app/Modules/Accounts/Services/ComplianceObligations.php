@@ -47,8 +47,10 @@ final class ComplianceObligations
         string $kind,
         string $subject,
         string $amount,
-        Carbon|string $arisedOn,
+        \Carbon\CarbonInterface|string $arisedOn,
     ): ?ComplianceObligation {
+        $arisedOn = is_string($arisedOn) ? $arisedOn : \App\Core\Support\Dates::of($arisedOn);
+
         $amount = Money::round($amount, 2);
 
         if (bccomp($amount, '0', 2) <= 0) {

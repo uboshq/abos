@@ -203,6 +203,8 @@ final class AssetEventService
                 AssetEvent::REPAIR => $this->repairLines($asset, $locked, $funding === null ? null : (array) $funding),
                 AssetEvent::REVALUATION => $this->revaluationLines($asset, $locked),
                 AssetEvent::IMPAIRMENT => $this->impairmentLines($asset, $locked),
+                // ⓘ ধরন চারটাই (ফর্ম তা-ই নেয়); অচেনা ধরন এলে খাতায় কিছু না চেপে নাম ধরে থামে, UnhandledMatchError-এ নয়
+                default => throw new \LogicException("Asset event {$locked->id} has an unknown kind '{$locked->kind}'; nothing was posted."),
             };
 
             if ($lines !== []) {

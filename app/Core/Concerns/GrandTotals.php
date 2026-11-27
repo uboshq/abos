@@ -6,6 +6,7 @@ namespace App\Core\Concerns;
 
 use Illuminate\Contracts\Database\Query\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -32,6 +33,12 @@ trait GrandTotals
 
         $inner = clone $query;
         $inner = $inner instanceof EloquentBuilder ? $inner->toBase() : $inner;
+
+        // ⓘ নিচের limit/offset/reorder() আর fromSub() কেবল কোয়েরি-বিল্ডারের — চুক্তির (interface) নয়; অন্য কিছু এলে
+        // এখানেই নাম ধরে থামে, ভেতরে "undefined property"-তে নয় (PHPStan argument.type, ৪০টা তালিকায় একই সারি)।
+        if (! $inner instanceof QueryBuilder) {
+            throw new \InvalidArgumentException('grandTotals() needs a query builder, got '.get_debug_type($inner));
+        }
 
         // ⚠️ সীমা থাকলে (টপ/বটম ১০) ক্রমই ঠিক করে কোন সারি — তখন ক্রম রাখতে হয়, নইলে অন্য দশটার যোগ
         if ($inner->limit === null && $inner->offset === null) {

@@ -158,13 +158,15 @@ final class StockAdjustmentService
         Warehouse $warehouse,
         string $difference,
         ReasonCode $reason,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?string $narration = null,
         ?string $unitCost = null,
         ?Batch $batch = null,
         // ⭐ কাগজের নম্বর — চলাচল আর খাতার সারি থেকে গণনায় ফেরা যায় (মজুদ ছ২; [[ACountsMovementsCarryItsNumberTest]])
         ?string $documentNo = null,
     ): ?StockMovement {
+        $date = \App\Core\Support\Dates::sameKind($date);
+
         // মিলে গেলে কোনো সারি নয় — শূন্য সারি খতিয়ানে শুধু ভিড় বাড়ায়
         if (bccomp($difference, '0', 4) === 0) {
             return null;
@@ -343,12 +345,14 @@ final class StockAdjustmentService
         Warehouse $warehouse,
         string $difference,
         ReasonCode $reason,
-        Carbon|string|null $date = null,
+        \Carbon\CarbonInterface|string|null $date = null,
         ?string $narration = null,
         ?Batch $batch = null,
         // ⭐ কাগজের নম্বর — চলাচল আর খাতার সারি থেকে গণনায় ফেরা যায় (মজুদ ছ২; [[ACountsMovementsCarryItsNumberTest]])
         ?string $documentNo = null,
     ): ?StockMovement {
+        $date = \App\Core\Support\Dates::sameKind($date);
+
         if (bccomp($difference, '0', 4) === 0) {
             return null;
         }

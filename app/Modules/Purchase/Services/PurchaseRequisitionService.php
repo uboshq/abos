@@ -411,8 +411,10 @@ final class PurchaseRequisitionService
      * This paper is left out: counting it here would count its own figure
      * twice and the limit would bite at half the budget.
      */
-    private function committedIn(int $costCentreId, Carbon $on): string
+    private function committedIn(int $costCentreId, \Carbon\CarbonInterface $on): string
     {
+        $on = \App\Core\Support\Dates::of($on);
+
         return PurchaseRequisition::query()
             ->where('cost_center_id', $costCentreId)
             ->whereYear('trx_date', (int) $on->format('Y'))
