@@ -25,6 +25,7 @@ use App\Modules\Mail\Services\MailServer;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -74,6 +75,8 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
 
     public function test_a_send_is_logged_audited_and_carries_the_signature_and_template(): void
     {
+        // ⓘ লোগোর পথ লেখা, ফাইল নেই — ডেমোর অবস্থা; Mac-এর tree-তে আগের run ফাইলটা রেখে গিয়েছিল (mailh, ২৭ নভেম্বর)
+        Storage::fake('public');
         $box = $this->box($this->clerk, MailAccount::OWN, 'clerk@adi.test');
         $this->as($this->clerk);
         $this->get('/mail')->assertOk();
