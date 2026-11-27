@@ -317,4 +317,5 @@ return [
     'total_leaves_out_quotation' => 'Total leaves out rejected, cancelled and superseded',
     'total_leaves_out_delivery_order' => 'Total leaves out rejected and cancelled',
     'total_leaves_out_order' => 'Total leaves out rejected and cancelled',
+    'edit_line_hint' => 'Change it and press "Update" — the entry fields above stay empty',
 ];

@@ -336,4 +336,5 @@ return [
     'total_leaves_out_quotation' => 'মোটে ফেরত, বাতিল আর পুরনো সংস্করণ বাদ',
     'total_leaves_out_delivery_order' => 'মোটে ফেরত আর বাতিল বাদ',
     'total_leaves_out_order' => 'মোটে ফেরত আর বাতিল বাদ',
+    'edit_line_hint' => 'বদলে "হালনাগাদ করুন" চাপুন — উপরের এন্ট্রির ঘর ফাঁকাই থাকবে',
 ];

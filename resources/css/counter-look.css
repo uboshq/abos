@@ -166,6 +166,24 @@
         border-radius: 6px; background: #f3fbfc; color: #0b6c7a; font-size: .8rem; font-weight: 600; }
     form[data-abos-counter] .ds-pswap:hover { background: #e6f8fb; }
     form[data-abos-counter] .ds-pswap:focus-visible { outline: 2px solid #0b6c7a; outline-offset: 2px; }
+    /* ✎ লাইন বদলানোর পপআপ — নমুনার রঙিন মাথা আর নিচের তিন বোতাম, ABOS-এর টিলে (v2 A4) */
+    form[data-abos-counter] .ds-pophead { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+        margin: -16px -18px 12px; padding: 12px 18px; border-radius: 16px 16px 0 0; color: #fff;
+        background: linear-gradient(135deg, #0b3b5c, #0b6c7a); }
+    form[data-abos-counter] .ds-pophead h2 { font-size: 1rem; font-weight: 700; }
+    form[data-abos-counter] .ds-pophead p { font-size: .75rem; opacity: .9; }
+    form[data-abos-counter] .ds-pophead button { min-width: 2.25rem; min-height: 2.25rem; border-radius: 8px; font-size: 1.4rem; line-height: 1; }
+    form[data-abos-counter] .ds-pophead button:hover { background: rgb(255 255 255 / .15); }
+    form[data-abos-counter] .entry-as-popup [data-cart-button] { display: none !important; }
+    form[data-abos-counter] .ds-popfoot { display: flex; align-items: center; gap: .5rem; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--color-border); }
+    form[data-abos-counter] .ds-popfoot button { display: inline-flex; align-items: center; gap: .35rem; min-height: 2.5rem; padding: 0 1rem;
+        border-radius: 10px; font-size: .875rem; font-weight: 600; }
+    form[data-abos-counter] .ds-popfoot button:focus-visible { outline: 2px solid #0b6c7a; outline-offset: 2px; }
+    form[data-abos-counter] .ds-popdel { margin-inline-end: auto; color: #b91c1c; background: #fee2e2; }
+    form[data-abos-counter] .ds-popdel.is-armed { color: #fff; background: #b91c1c; }
+    form[data-abos-counter] .ds-popcancel { color: #334155; background: #f1f5f9; }
+    form[data-abos-counter] .ds-popsave { color: #fff; background: #0b6c7a; }
+    form[data-abos-counter] .ds-popsave kbd { font: inherit; font-size: .75rem; opacity: .85; }
     form[data-abos-counter] .ds-row2-empty :is(.ds-rcpt, .ds-qtywrap, [data-stock-box]) { display: none !important; }
     form[data-abos-counter] .ds-pick-hint { display: none !important; }
     /* পণ্যের সারি আর তার উপরের মজুদের বাক্স — একই কলাম, সোজাসুজি (মালিক: "অ্যাভেলেবেল … পরিমাণ আর এককের ঘর পর্যন্ত") */

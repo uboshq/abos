@@ -174,6 +174,8 @@ export default function directSale({
 
         /* ⭐ কার্টের যে সারিটা উপরে খোলা — `null` মানে নতুন সারি; নইলে সারির `key` ([[editLine()]]) */
         editingKey: null,
+        deleteArmed: false,
+        deleteArmTimer: null,
         picked: null,
         showCosting: false,
         /*
@@ -2184,6 +2186,7 @@ export default function directSale({
 
         clearEntry() {
             this.editingKey = null;
+            this.deleteArmed = false;
             this.picked = null;
             this.entry = { qty: '', freeQty: '', rate: '', discountInput: '', unitId: '', gifts: [], batchId: '' };
             this.giftDraft = null;
@@ -3520,9 +3523,36 @@ export default function directSale({
                 this.pickerOpen = false;
                 this.listShown = false;
                 this.customerPickerOpen = false;
+            } else if (this.editingKey !== null) {
+                // ✎ মাঝের পপআপ — Esc মানে বাতিল, সারি যেমন ছিল তেমন থাকে
+                this.clearEntry();
             } else {
                 this.helping = false;
             }
+        },
+
+        /** ✎ পপআপের মাথা: কার্টের কত নম্বর সারি */
+        get editingLineNo() {
+            const at = this.editingKey === null ? -1 : this.lines.findIndex(l => l.key === this.editingKey);
+            return at < 0 ? '' : String(at + 1);
+        },
+
+        /**
+         * 🗑 দুই চাপে মোছা — প্রথম চাপে বোতাম লাল হয়ে "আবার চাপুন", ৩ সেকেন্ডে না চাপলে ফিরে যায়।
+         * ⓘ ভুল আঙুলে একটা পুরো সারি না যায়; প্রশ্নের পপআপের চেয়ে দ্রুত।
+         */
+        deleteEditingLine() {
+            const at = this.editingKey === null ? -1 : this.lines.findIndex(l => l.key === this.editingKey);
+            if (at < 0) return;
+            if (! this.deleteArmed) {
+                this.deleteArmed = true;
+                clearTimeout(this.deleteArmTimer);
+                this.deleteArmTimer = setTimeout(() => { this.deleteArmed = false; }, 3000);
+                return;
+            }
+            clearTimeout(this.deleteArmTimer);
+            this.deleteArmed = false;
+            this.dropLine(at);
         },
 
         /** F6 — হিসাবের খাত থেকে পণ্য বাছার বোতাম */

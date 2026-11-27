@@ -105,4 +105,8 @@ return [
     'pause_draft' => 'Deactivate',
     'resume_draft' => 'Activate',
     'delete_draft' => 'Delete',
+    'delete_line' => 'Delete line',
+    'delete_line_again' => 'Tap again to delete',
+    'cancel_esc' => 'Cancel · Esc',
+    'edit_line_title' => 'Edit line',
 ];

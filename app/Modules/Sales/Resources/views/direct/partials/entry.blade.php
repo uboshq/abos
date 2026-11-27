@@ -5,10 +5,13 @@
                 @endif
                 <section data-boxed class="min-w-0" @if (($abosLook ?? false)) :class="editingKey !== null ? 'entry-as-popup' : ''" @endif>
                     @if (($abosLook ?? false))
-                        <div x-show="editingKey !== null" x-cloak class="mb-3 flex items-center justify-between border-b border-(--color-border) pb-2">
-                            <h2 class="text-base font-semibold">{{ __('purchase::action.edit_line') }}</h2>
-                            <button type="button" @click="clearEntry()" aria-label="{{ __('purchase::action.close_panel') }}"
-                                    class="rounded-(--radius-field) px-2 text-xl leading-none text-(--color-ink-muted) hover:bg-(--color-surface-hover)">&times;</button>
+                        {{-- ✎ নমুনার মাথা: রঙিন পটি, "লাইন বদলান · ক্রম N", নিচে ছোট নির্দেশ (v2 A4) --}}
+                        <div x-show="editingKey !== null" x-cloak class="ds-pophead" data-edit-head>
+                            <div>
+                                <h2>✎ {{ __('sales::action.edit_line_title') }} · {{ __('sales::field.line_no') }} <span class="num" x-text="editingLineNo"></span></h2>
+                                <p>{{ __('sales::message.edit_line_hint') }}</p>
+                            </div>
+                            <button type="button" @click="clearEntry()" aria-label="{{ __('purchase::action.close_panel') }}">&times;</button>
                         </div>
                     @endif
 
@@ -807,4 +810,17 @@
                         @endif
 
                     </div>
+
+                    {{-- ✎ পপআপের নিচের সারি — নমুনার মতো: মুছুন (বাঁয়ে, দুই চাপে) · বাতিল · হালনাগাদ (v2 A4, কেবল ABOS-এর রূপে) --}}
+                    @if (($abosLook ?? false))
+                        <div x-show="editingKey !== null && ! viewOnly" x-cloak class="ds-popfoot" data-edit-foot>
+                            <button type="button" @click="deleteEditingLine()" class="ds-popdel" :class="deleteArmed ? 'is-armed' : ''" data-edit-delete>
+                                <x-ui.licon name="trash-2" :size="16" />
+                                <span x-show="! deleteArmed">{{ __('sales::action.delete_line') }}</span>
+                                <span x-show="deleteArmed" x-cloak>{{ __('sales::action.delete_line_again') }}</span>
+                            </button>
+                            <button type="button" @click="clearEntry()" class="ds-popcancel">{{ __('sales::action.cancel_esc') }}</button>
+                            <button type="button" @click="addToCart()" class="ds-popsave" data-edit-save>{{ __('sales::action.update_line') }} <kbd>⏎</kbd></button>
+                        </div>
+                    @endif
                 </section>
