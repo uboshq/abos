@@ -242,7 +242,8 @@ class FixedAsset extends Model implements Drillable
     /** ⓘ ক্ষয় শুরুর দিন — ব্যবহার শুরু লেখা থাকলে সেটা, নইলে কেনার দিন (IAS 16.55) */
     public function depreciatesFrom(): Carbon
     {
-        return ($this->put_in_use_on ?? $this->acquired_on)->copy()->startOfDay();
+        // ⓘ cast-এর তারিখ এক ধরনে ([[Dates::of()]]) — হিসাব একই
+        return \App\Core\Support\Dates::of(($this->put_in_use_on ?? $this->acquired_on)->copy()->startOfDay());
     }
 
     public function statusLabel(): string

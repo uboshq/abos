@@ -379,7 +379,8 @@ final class FinanceApiController extends Controller implements HasMiddleware
     {
         $last = $c->ends_on?->copy();
 
-        return $c->closed_on !== null && ($last === null || $c->closed_on->lt($last)) ? $c->closed_on->copy() : $last;
+        // ⓘ cast-এর তারিখ এক ধরনে ([[Dates::carbon()]]) — হিসাব একই
+        return \App\Core\Support\Dates::carbon($c->closed_on !== null && ($last === null || $c->closed_on->lt($last)) ? $c->closed_on->copy() : $last);
     }
 
     /**

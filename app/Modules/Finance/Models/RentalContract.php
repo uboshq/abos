@@ -166,7 +166,8 @@ class RentalContract extends Model implements Drillable
             $next->addYearNoOverflow();
         }
 
-        return $next->gt($this->ends_on) ? null : $next;
+        // ⓘ cast-এর তারিখ এক ধরনে ([[Dates::of()]]) — হিসাব একই
+        return $next->gt($this->ends_on) ? null : \App\Core\Support\Dates::of($next);
     }
 
     /**

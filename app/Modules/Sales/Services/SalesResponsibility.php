@@ -126,7 +126,9 @@ final class SalesResponsibility
     /**
      * সেটিংয়ের বাছাই — এই কোম্পানির চালু ব্যবহারকারী ([[OwnerCapital::choices()]]-এর একই আকার)।
      *
-     * @return array<string, string>
+     * ⓘ চাবি ব্যবহারকারীর id — PHP সংখ্যার মতো লেখা চাবি ('0' সহ) নিজেই int বানায়, তাই ঘোষণা int|string
+     *
+     * @return array<int|string, string>
      */
     public static function choices(): array
     {

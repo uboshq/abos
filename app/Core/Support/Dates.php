@@ -28,6 +28,12 @@ final class Dates
         };
     }
 
+    /** ⓘ null-হীন তারিখ (মডেলের cast থেকে) → Illuminate\Support\Carbon; একই শ্রেণি হলে সেই বস্তুটাই, কপি নয় */
+    public static function of(CarbonInterface $date): Carbon
+    {
+        return $date instanceof Carbon ? $date : Carbon::instance($date);
+    }
+
     /**
      * ⓘ কেবল অন্য ধরনের Carbon বদলায়; লেখা তারিখ আর null যেমন ছিল তেমনই — যে দরজা লেখা তারিখ ভিতরে নিজেই পড়ে,
      *   তার আচরণ এক অক্ষরও বদলায় না।

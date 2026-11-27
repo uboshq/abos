@@ -154,7 +154,7 @@ class Tenancy extends Model implements Drillable
             $left = bcsub($left, (string) $charge->amount, 4);
 
             if (bccomp($left, '0', 4) < 0) {
-                return $charge->for_month->copy();
+                return \App\Core\Support\Dates::of($charge->for_month->copy()); // ⓘ cast-এর তারিখ এক ধরনে — হিসাব একই
             }
         }
 
