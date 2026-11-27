@@ -37,6 +37,12 @@ final class MailDefaults
         ['may_day', 'মে দিবস', 'মহান মে দিবস', 'শ্রমজীবী মানুষের প্রতি শ্রদ্ধা', '1 মে', ['#8a0e12', '#c40d16', '#ffffff'], '✊', true, '05-01'],
     ];
 
+    /**
+     * ⛔ শোকের দিন — কেবল অমর একুশে (NEXUS-এর পর্যালোচনা R3, ২৭ নভেম্বর)। এদিনে লেখা সংযত, "শুভ" নয়, অফার নয়।
+     * ⓘ বাকি `quiet` দিন (স্বাধীনতা, বিজয়, মে দিবস) = অফার নয়, কিন্তু গর্বের শুভেচ্ছা।
+     */
+    public const MOURNING = ['ekushe'];
+
     /** [category, key, name, colour, subject, body, button, attach_paper] */
     public const TEMPLATES = [
         ['collect', 'due_reminder', 'বকেয়ার বিনীত স্মরণ', '#1a3fd0', 'আপনার হিসাবে বাকি {বাকি টাকা}',
@@ -59,6 +65,28 @@ final class MailDefaults
             "প্রিয় সহকর্মী,\n…\nধন্যবাদ,\n{আমার নাম}", null, false],
         ['offer', 'festival_offer', 'উৎসবের অফার', '#00ab3f', 'উৎসবের বিশেষ অফার',
             "প্রিয় {গ্রাহকের নাম},\nউৎসব উপলক্ষে বিশেষ ছাড় — আপনার জন্য বাড়তি {উপহার পয়েন্ট} পয়েন্ট।", 'অফার দেখুন', false],
+        // ⭐ ERP-র শুরুর সেটের বাকি ১০টা (NEXUS-এর পর্যালোচনা R5, ২৭ নভেম্বর; D365, Odoo, Zoho Books-এর মতো)।
+        //   ⓘ যে ঘরের তথ্য না-ও থাকতে পারে, তাতে বিকল্প লেখা (`{ঘর|বিকল্প}`) — নইলে পাঠানো আটকায়, গ্রাহক ফাঁকা ঘর পান না
+        ['sales', 'quotation', 'দরপত্র (কোটেশন)', '#1a3fd0', 'দরপত্র — {কোম্পানি}',
+            "প্রিয় {গ্রাহকের নাম|গ্রাহক},\nআপনার চাওয়া পণ্যের দরপত্র সংযুক্ত। দাম 7 দিন পর্যন্ত বহাল থাকবে।\nঅর্ডার দিতে এই মেইলের উত্তর দিলেই হবে।", null, true],
+        ['sales', 'order_confirm', 'অর্ডার নিশ্চিত', '#00ab3f', 'আপনার অর্ডার নিশ্চিত হয়েছে',
+            "প্রিয় {গ্রাহকের নাম|গ্রাহক},\nআপনার অর্ডার পেয়েছি, নিশ্চিত করা হলো। মাল রওনা হলে জানাব।\nধন্যবাদ।", null, true],
+        ['collect', 'due_soon', 'বকেয়ার আগাম স্মরণ', '#0b7a70', 'শীঘ্রই পরিশোধের তারিখ',
+            "প্রিয় {গ্রাহকের নাম|গ্রাহক},\nকয়েক দিনের মধ্যে আপনার বিলের পরিশোধের তারিখ। এখন হিসাবে বাকি {বাকি টাকা}।\nআগেই জমা দিলে আমাদের দুজনেরই সুবিধা।", 'খতিয়ান দেখুন', false],
+        ['delivery', 'delivered', 'মাল পৌঁছেছে', '#0b7a70', 'আপনার মাল পৌঁছেছে',
+            "প্রিয় {গ্রাহকের নাম|গ্রাহক},\nআপনার মাল পৌঁছে দেওয়া হয়েছে; চালান সংযুক্ত। কোনো ঘাটতি থাকলে 2 দিনের মধ্যে জানাবেন।", null, true],
+        ['sales', 'return_credit', 'ফেরত নেওয়া হয়েছে (ক্রেডিট নোট)', '#6a3fd0', 'ফেরতের ক্রেডিট নোট',
+            "প্রিয় {গ্রাহকের নাম|গ্রাহক},\nআপনার ফেরত দেওয়া মাল বুঝে নিয়েছি; ক্রেডিট নোট সংযুক্ত। এখন হিসাবে বাকি {বাকি টাকা}।", null, true],
+        ['sales', 'welcome', 'নতুন গ্রাহককে স্বাগতম', '#1a3fd0', '{কোম্পানি}-এ স্বাগতম',
+            "প্রিয় {গ্রাহকের নাম|গ্রাহক},\nআমাদের সাথে যুক্ত হওয়ার জন্য ধন্যবাদ। অর্ডার, বিল বা হিসাব নিয়ে যেকোনো প্রশ্নে এই মেইলের উত্তর দিন।\n{আমার নাম}", null, false],
+        ['purchase', 'remittance', 'সরবরাহকারীকে টাকা পাঠানো', '#00ab3f', 'টাকা পাঠানো হয়েছে — {কোম্পানি}',
+            "প্রিয় {সরবরাহকারী|সরবরাহকারী},\nআপনার হিসাবে {টাকা|টাকা} পাঠানো হয়েছে; বিবরণ সংযুক্ত। মিলিয়ে জানালে কৃতজ্ঞ থাকব।", null, true],
+        ['purchase', 'rfq', 'দর চাওয়া (RFQ)', '#0b7a70', 'দর পাঠানোর অনুরোধ — {কোম্পানি}',
+            "প্রিয় {সরবরাহকারী|সরবরাহকারী},\nসংযুক্ত তালিকার পণ্যের দর, মাল পৌঁছানোর সময় আর পরিশোধের শর্ত জানালে খুশি হব।\nধন্যবাদ,\n{আমার নাম}", null, true],
+        ['hr', 'payslip', 'বেতনের স্লিপ', '#6a3fd0', 'আপনার বেতনের স্লিপ',
+            "প্রিয় সহকর্মী,\nএই মাসের বেতনের স্লিপ সংযুক্ত। কোনো প্রশ্ন থাকলে HR-কে জানাবেন।\n{আমার নাম}", null, true],
+        ['hr', 'leave_reply', 'ছুটির উত্তর', '#6a3fd0', 'আপনার ছুটির আবেদন',
+            "প্রিয় সহকর্মী,\nআপনার ছুটির আবেদনের সিদ্ধান্ত: …\nধন্যবাদ,\n{আমার নাম}", null, false],
         ['reply', 'reply_thanks', 'ধন্যবাদ, পেয়েছি', null, '', 'ধন্যবাদ, পেয়েছি।', null, false],
         ['reply', 'reply_friday', 'শুক্রবারের মধ্যে পাঠাচ্ছি', null, '', 'শুক্রবারের মধ্যে পাঠিয়ে দিচ্ছি।', null, false],
         ['reply', 'reply_checking', 'হিসাব মিলিয়ে জানাচ্ছি', null, '', 'হিসাবটা মিলিয়ে দেখে জানাচ্ছি।', null, false],
@@ -81,23 +109,31 @@ final class MailDefaults
                 }
             }
 
-            if (! MailTemplate::query()->whereNull('user_id')->exists()) {
-                foreach (self::TEMPLATES as [$category, $key, $name, $colour, $subject, $body, $button, $attach]) {
-                    MailTemplate::query()->create([
-                        'category' => $category, 'key' => $key, 'name' => $name, 'colour' => $colour, 'subject' => $subject,
-                        'body' => $body, 'button' => $button, 'attach_paper' => $attach,
-                        'format' => $category === 'reply' ? 'plain' : 'designed', 'locale' => 'bn',
-                        'auto' => in_array($key, ['due_reminder'], true) ? ['on' => false, 'rule' => 'due_30', 'day' => 'mon', 'at' => '10:00'] : null,
-                    ]);
+            $first = ! MailTemplate::query()->whereNull('user_id')->exists();
+            // ⓘ নতুন যোগ হওয়া কাজের টেমপ্লেট আগের কোম্পানিতেও বসে — নাম (key) না থাকলে; কোম্পানির বদলানো বা লুকানোটা যেমন আছে থাকে
+            $have = $first ? [] : MailTemplate::query()->whereNull('user_id')->pluck('key')->all();
+
+            foreach (self::TEMPLATES as [$category, $key, $name, $colour, $subject, $body, $button, $attach]) {
+                if (in_array($key, $have, true)) {
+                    continue;
                 }
 
+                MailTemplate::query()->create([
+                    'category' => $category, 'key' => $key, 'name' => $name, 'colour' => $colour, 'subject' => $subject,
+                    'body' => $body, 'button' => $button, 'attach_paper' => $attach,
+                    'format' => $category === 'reply' ? 'plain' : 'designed', 'locale' => 'bn',
+                    'auto' => in_array($key, ['due_reminder'], true) ? ['on' => false, 'rule' => 'due_30', 'day' => 'mon', 'at' => '10:00'] : null,
+                ]);
+            }
+
+            if ($first) {
                 foreach (MailFestival::query()->get() as $f) {
                     MailTemplate::query()->create([
                         'category' => 'festival', 'key' => 'fest_'.$f->key, 'name' => $f->name, 'colour' => $f->colours[1] ?? null,
                         'subject' => $f->greeting, 'format' => 'designed', 'locale' => 'bn',
-                        'body' => $f->quiet
+                        'body' => in_array($f->key, self::MOURNING, true)
                             ? "প্রিয় {গ্রাহকের নাম},\nএই দিনে আমরা গভীর শ্রদ্ধায় স্মরণ করি।"
-                            : "প্রিয় {গ্রাহকের নাম},\n".$f->line.'।',
+                            : "প্রিয় {গ্রাহকের নাম},\n".$f->greeting.' — '.$f->line.'।',
                         'auto' => ['on' => false, 'rule' => 'festival', 'at' => '09:00'],
                     ]);
                 }

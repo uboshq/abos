@@ -67,3 +67,12 @@ Route::middleware(['auth'])->prefix('mail')->group(function () {
     Route::post('/{account}/link', [MailController::class, 'link'])->whereUuid('account')->name('link');
     Route::post('/{account}/send', [MailController::class, 'send'])->whereUuid('account')->name('send');
 });
+
+/*
+ * ⭐ অফারের মেইল বন্ধ — লগইন ছাড়া, কারণ খোলেন গ্রাহক (NEXUS-এর পর্যালোচনা R2; RFC 8058)। ⛔ চাবি = সই করা লিংক (`signed`);
+ *   এই পথে ঠিকানা বন্ধ করা ছাড়া আর কিছু নেই। ⓘ POST-এ CSRF নেই — মেইল প্রোগ্রামের "Unsubscribe" বোতাম কুকি ছাড়াই ডাকে।
+ */
+Route::match(['GET', 'POST'], '/mail/stop', \App\Modules\Mail\Http\Controllers\MailUnsubscribeController::class)
+    ->middleware(['signed', 'throttle:30,1,mail-unsubscribe'])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class])
+    ->name('unsubscribe');

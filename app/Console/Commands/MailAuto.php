@@ -38,9 +38,10 @@ final class MailAuto extends Command
     public function handle(MailServer $server, MailTemplates $templates, MailFields $fields, MailSends $sends, SettingsService $settings): int
     {
         $sent = 0;
+        $skipped = [];
 
         foreach (Company::query()->where('is_active', true)->pluck('id') as $companyId) {
-            CompanyContext::forCompany((int) $companyId, function () use (&$sent, $server, $templates, $fields, $sends, $settings, $companyId) {
+            CompanyContext::forCompany((int) $companyId, function () use (&$sent, &$skipped, $server, $templates, $fields, $sends, $settings, $companyId) {
                 $from = (string) $settings->get('mail.auto_from', '');
                 $box = $from !== '' ? MailAccount::query()->where('public_id', $from)->first() : null;
 
@@ -62,11 +63,40 @@ final class MailAuto extends Command
                             continue;
                         }
 
+                        // ⛔ অফারের মেইল বন্ধ রাখা ঠিকানায় অফার/উৎসবের মেইল নয় (NEXUS-এর পর্যালোচনা R2; RFC 8058)
+                        $marketing = \App\Modules\Mail\Services\MailOptOuts::isMarketing($t);
+                        $optOuts = app(\App\Modules\Mail\Services\MailOptOuts::class);
+
+                        if ($marketing && $optOuts->stopped((string) $c->email)) {
+                            continue;
+                        }
+
                         $mail = $templates->render($t, $fields->forCustomer($c) + $fields->values(new \App\Models\User(['name' => $company]), null), $company);
+                        $headers = [];
+
+                        if ($marketing) {
+                            $link = $optOuts->link((string) $c->email, (string) $t->key);
+                            $mail['html'] .= $optOuts->footer($link);
+                            $headers = $optOuts->headers($link);
+                        }
+
+                        // ⛔ ভরেনি এমন ঘর থাকলে এই গ্রাহককে যায় না — বাদ পড়ার কারণ খাতায় নয়, লগে (NEXUS-এর পর্যালোচনা R1)
+                        if (($gaps = MailFields::missing($mail['subject'], $mail['html'])) !== []) {
+                            $skipped[] = $c->id;
+                            $this->warn("skip customer {$c->id} ({$t->key}): ".implode(', ', $gaps));
+
+                            continue;
+                        }
+
+                        // ⓘ ধীরে ধীরে — মিনিটে 30টার বেশি নয় (NEXUS-এর পর্যালোচনা S1): মেইল সার্ভার একসাথে অনেক মেইলকে স্প্যাম ধরে।
+                        //   সময় কোম্পানির ঘড়িতে (config app.timezone = Asia/Dhaka)।
+                        if ($sent > 0) {
+                            \Illuminate\Support\Sleep::for(2)->seconds();
+                        }
 
                         try {
                             $id = $server->send($box, ['to' => [(string) $c->email], 'subject' => $mail['subject'] ?: $t->name,
-                                'html' => MailController::safe($mail['html'], true), 'fromName' => $box->sender_name ?: $company]);
+                                'html' => MailController::safe($mail['html'], true), 'fromName' => $box->sender_name ?: $company, 'headers' => $headers]);
                             $sends->record($box, null, ['to' => [mb_strtolower((string) $c->email)], 'subject' => $mail['subject'] ?: $t->name,
                                 'messageId' => $id, 'template_id' => $t->id, 'auto' => true]);
                             $templates->used($t);
@@ -79,7 +109,7 @@ final class MailAuto extends Command
             });
         }
 
-        $this->info("sent {$sent}");
+        $this->info("sent {$sent}, skipped ".count($skipped).' (fields not filled)');
 
         return self::SUCCESS;
     }

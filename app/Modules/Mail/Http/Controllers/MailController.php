@@ -276,8 +276,31 @@ final class MailController extends Controller implements HasMiddleware
             'send_at' => 'nullable|date|after:+4 minutes|before:+90 days',
         ]);
 
+        // ⛔ ভরেনি এমন ঘর নিয়ে মেইল যায় না — গ্রাহক "প্রিয় {গ্রাহকের নাম}" পান না (NEXUS-এর পর্যালোচনা R1, ২৭ নভেম্বর)
+        if (($gaps = MailFields::missing($data['subject'], $data['html'])) !== []) {
+            return response()->json(['message' => __('mail::message.fields_missing', ['fields' => implode(', ', $gaps)]), 'missing' => $gaps], 422);
+        }
+
         $user = $request->user();
         $mail = array_intersect_key($data, array_flip(['to', 'cc', 'bcc', 'subject', 'html', 'inReplyTo', 'signature', 'template', 'papers']));
+
+        // ⛔ অফারের মেইল বন্ধ রাখা ঠিকানা বাদ (NEXUS-এর পর্যালোচনা R2; RFC 8058) — সবাই বন্ধ রাখলে মেইলই যায় না
+        $skipped = 0;
+        $tpl = ! empty($data['template']) ? MailTemplate::query()->where('public_id', $data['template'])->first() : null;
+
+        if (\App\Modules\Mail\Services\MailOptOuts::isMarketing($tpl)) {
+            $optOuts = app(\App\Modules\Mail\Services\MailOptOuts::class);
+
+            foreach (['to', 'cc', 'bcc'] as $k) {
+                $before = count($mail[$k] ?? []);
+                $mail[$k] = array_values(array_filter($mail[$k] ?? [], fn ($e) => ! $optOuts->stopped((string) $e)));
+                $skipped += $before - count($mail[$k]);
+            }
+
+            if ($mail['to'] === []) {
+                return response()->json(['message' => __('mail::field.unsubscribe.all_stopped')], 422);
+            }
+        }
 
         if (! empty($data['send_at'])) {
             if ($request->file('files', []) !== []) {
@@ -303,7 +326,8 @@ final class MailController extends Controller implements HasMiddleware
             return response()->json(['message' => __('mail::message.send_failed', ['why' => mb_substr($e->getMessage(), 0, 160)])], 422);
         }
 
-        return response()->json(['ok' => true, 'messageId' => $id, 'message' => __('mail::message.sent')]);
+        return response()->json(['ok' => true, 'messageId' => $id, 'message' => __('mail::message.sent')
+            .($skipped > 0 ? ' '.__('mail::field.unsubscribe.skipped', ['n' => $skipped]) : '')]);
     }
 
     /** ⭐ "⋯ আরও → আসল রূপ" — হেডার আর লেখা যেমন এসেছে, কেবল পড়ার জন্য (text/plain) */

@@ -20,6 +20,7 @@ use App\Modules\Mail\Models\MailTemplate;
 use App\Modules\Mail\Services\FakeMailHost;
 use App\Modules\Mail\Services\FakeMailServer;
 use App\Modules\Mail\Services\MailAddresses;
+use App\Modules\Mail\Services\MailFields;
 use App\Modules\Mail\Services\MailHost;
 use App\Modules\Mail\Services\MailServer;
 use Database\Seeders\DemoSeeder;
@@ -88,6 +89,61 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->assertNotNull((new \App\Modules\Mail\Services\MailSignatures)->logoBytes(), '⛔ ছোট লোগোও সইয়ে বসছে না।');
     }
 
+    public function test_an_unfilled_field_never_reaches_the_customer_and_a_fallback_fills_it(): void
+    {
+        // ⛔ NEXUS-এর পর্যালোচনা R1 (২৭ নভেম্বর): "প্রিয় {গ্রাহকের নাম}" গ্রাহকের কাছে যায় না
+        $box = $this->box($this->clerk, MailAccount::OWN, 'clerk@adi.test');
+        $this->as($this->clerk);
+
+        $this->postJson("/mail/{$box->public_id}/send", ['to' => ['karim@example.com'], 'subject' => 'বাকি {বাকি টাকা}',
+            'html' => '<p>প্রিয় {গ্রাহকের নাম}</p>', 'signature' => 'none'])
+            ->assertStatus(422)->assertJsonPath('missing', ['{বাকি টাকা}', '{গ্রাহকের নাম}']);
+        $this->assertCount(0, $this->fake->sent, '⛔ ভরেনি এমন ঘর নিয়ে মেইল চলে গেছে।');
+        $this->assertSame(0, MailSend::query()->count());
+
+        $fields = app(MailFields::class);
+        $this->assertSame('প্রিয় গ্রাহক', $fields->fill('প্রিয় {গ্রাহকের নাম|গ্রাহক}', []), '⛔ বিকল্প লেখা বসেনি।');
+        $this->assertSame('প্রিয় করিম', $fields->fill('প্রিয় {গ্রাহকের নাম|গ্রাহক}', ['{গ্রাহকের নাম}' => 'করিম']));
+        // ⓘ ফাঁকা মান = তথ্য নেই — ঘরটা থাকে, পাঠানো আটকায়
+        $this->assertSame(['{বাকি টাকা}'], MailFields::missing($fields->fill('{বাকি টাকা}', ['{বাকি টাকা}' => ''])));
+        // ⓘ লেখার সাধারণ বন্ধনী আটকায় না
+        $this->assertSame([], MailFields::missing('{x} {অজানা}'));
+    }
+
+    public function test_a_moon_festival_without_a_date_asks_the_admin_once_a_month(): void
+    {
+        // ⭐ NEXUS-এর পর্যালোচনা S2: ঈদের তারিখ না বসালে কিছুই যায় না — প্রশাসকের কাছে কাজ, মাসে একবার
+        $this->as($this->owner);
+        $this->get('/mail')->assertOk();
+        MailFestival::query()->where('key', 'eid_ul_fitr')->update(['on_date' => null]);
+        MailFestival::query()->where('key', 'christmas')->update(['on_date' => null]);
+        // ⓘ ক্রনে কেউ ঢুকে থাকে না — ঢোকা থাকলে নিজের কাজের খবর নিজেকে যায় না ([[NotificationService::send]] evenToSelf)
+        $this->app['auth']->forgetGuards();
+        CompanyContext::clear();
+
+        $this->artisan('abos:mail-daily')->assertSuccessful();
+        $this->artisan('abos:mail-daily')->assertSuccessful();
+
+        $asked = \App\Models\Notification::query()->withoutGlobalScopes()->where('type', 'mail.festival_date')->where('user_id', $this->owner->id)->get();
+        $this->assertTrue($asked->contains(fn ($n) => str_contains((string) $n->title, 'ঈদুল ফিতর')), '⛔ ঈদের তারিখ চাওয়া হয়নি।');
+        $this->assertFalse($asked->contains(fn ($n) => str_contains((string) $n->title, 'বড়দিন')), '⛔ নির্দিষ্ট তারিখের উৎসবেও তারিখ চাওয়া হলো।');
+        $this->assertSame(1, $asked->filter(fn ($n) => str_contains((string) $n->title, 'ঈদুল ফিতর'))->count(), '⛔ একই মাসে দুবার চাওয়া হলো।');
+        $this->assertSame(0, \App\Models\Notification::query()->withoutGlobalScopes()->where('type', 'mail.festival_date')->where('user_id', $this->clerk->id)->count(), '⛔ চাবি ছাড়া কর্মীকেও চাওয়া হলো।');
+    }
+
+    public function test_white_text_on_a_template_colour_always_meets_contrast(): void
+    {
+        // ⛔ NEXUS-এর পর্যালোচনা S4: সবুজ #00ab3f-এ সাদা লেখা 2.9:1 — WCAG AA 4.5:1 চাই
+        foreach (['#00ab3f', '#f5121d', '#f8cb46', '#0b7a70', '#1a3fd0', '#ffffff'] as $hex) {
+            $out = \App\Modules\Mail\Services\MailTemplates::underWhiteText($hex);
+            $rgb = array_map('hexdec', str_split(ltrim($out, '#'), 2));
+            $this->assertGreaterThanOrEqual(4.5, \App\Modules\Mail\Services\MailTemplates::contrastWithWhite($rgb), "⛔ {$hex} → {$out}: সাদা লেখা পড়া যায় না।");
+        }
+
+        // ⓘ যে রং আগেই পড়া যায়, সেটা বদলায় না — কোম্পানির রং যেমন তেমন
+        $this->assertSame('#1a3fd0', \App\Modules\Mail\Services\MailTemplates::underWhiteText('#1a3fd0'));
+    }
+
     public function test_a_send_is_logged_audited_and_carries_the_signature_and_template(): void
     {
         // ⓘ লোগোর পথ লেখা, ফাইল নেই — ডেমোর অবস্থা; Mac-এর tree-তে আগের run ফাইলটা রেখে গিয়েছিল (mailh, ২৭ নভেম্বর)
@@ -128,7 +184,22 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
 
         $this->assertSame(19, MailFestival::query()->count());
         $this->assertTrue(MailFestival::query()->where('key', 'victory')->value('quiet'), '⛔ বিজয় দিবস শ্রদ্ধার দিন — অফার নয়।');
-        $this->assertGreaterThanOrEqual(13 + 19, MailTemplate::query()->count());
+        $this->assertGreaterThanOrEqual(23 + 19, MailTemplate::query()->count());
+        // ⭐ ERP-র শুরুর সেটের বাকি ১০টা (NEXUS-এর পর্যালোচনা R5) — আর আগের কোম্পানিতেও বসে
+        foreach (['quotation', 'order_confirm', 'due_soon', 'delivered', 'return_credit', 'welcome', 'remittance', 'rfq', 'payslip', 'leave_reply'] as $key) {
+            $this->assertTrue(MailTemplate::query()->whereNull('user_id')->where('key', $key)->exists(), "⛔ টেমপ্লেট {$key} বসেনি।");
+        }
+        CompanyContext::forCompany($this->co->id, function () {
+            MailTemplate::query()->whereNull('user_id')->where('key', 'rfq')->delete();
+            app(\App\Modules\Mail\Services\MailDefaults::class)->ensure();
+        });
+        $this->assertSame(1, MailTemplate::query()->whereNull('user_id')->where('key', 'rfq')->count(), '⛔ আগের কোম্পানিতে নতুন টেমপ্লেট বসেনি, বা দুবার বসেছে।');
+        $this->assertSame(19, MailTemplate::query()->whereNull('user_id')->where('category', 'festival')->count(), '⛔ উৎসবের টেমপ্লেট দুবার বসেছে।');
+        // ⛔ শোকের দিন কেবল একুশে; বিজয় দিবস গর্বের শুভেচ্ছা — অফার ছাড়া (NEXUS-এর পর্যালোচনা R3)
+        $this->assertStringContainsString('শ্রদ্ধায়', (string) MailTemplate::query()->where('key', 'fest_ekushe')->value('body'));
+        $victory = (string) MailTemplate::query()->where('key', 'fest_victory')->value('body');
+        $this->assertStringNotContainsString('শ্রদ্ধায় স্মরণ', $victory, '⛔ বিজয় দিবসের শুভেচ্ছা শোকের সুরে।');
+        $this->assertStringContainsString('বিজয়', $victory);
 
         $j = $this->getJson('/mail/compose?to=karim@example.com')->assertOk()->json();
         $due = collect($j['templates'])->firstWhere('name', 'বকেয়ার বিনীত স্মরণ');
@@ -274,6 +345,50 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->assertCount(1, $mine, '⛔ একই গ্রাহক একদিনে দুবার পেল, নয়তো পায়নি।');
         $this->assertStringContainsString('বিজয়', $mine[0]['html']);
         $this->assertTrue(MailSend::query()->where('auto', true)->where('template_id', $tpl->id)->exists());
+    }
+
+    public function test_offer_mail_carries_one_click_unsubscribe_and_a_stopped_address_gets_no_more(): void
+    {
+        // ⭐ NEXUS-এর পর্যালোচনা R2 (Gmail/Yahoo ২০২৪, RFC 8058)
+        Customer::query()->update(['email' => null]);
+        $customer = Customer::query()->firstOrFail();
+        $customer->forceFill(['email' => 'karim@example.com', 'is_active' => true])->save();
+        $box = $this->box(null, MailAccount::SHARED, 'info@adi.test');
+        $this->as($this->clerk);
+        $this->get('/mail')->assertOk();
+
+        CompanyContext::forCompany($this->co->id, function () use ($box) {
+            app(SettingsService::class)->set('mail.auto_from', $box->public_id);
+            MailFestival::query()->where('key', 'victory')->update(['on_date' => now()->toDateString()]);
+        });
+        MailTemplate::query()->where('key', 'fest_victory')->firstOrFail()->forceFill(['auto' => ['on' => true, 'rule' => 'festival', 'at' => '09:00']])->save();
+        $this->travelTo(now()->setTime(9, 5));
+        $this->artisan('abos:mail-auto')->assertSuccessful();
+
+        $mail = collect($this->fake->sent)->firstWhere('to', ['karim@example.com']);
+        $this->assertNotNull($mail, '⛔ উৎসবের মেইল যায়নি।');
+        $this->assertSame('List-Unsubscribe=One-Click', $mail['headers']['List-Unsubscribe-Post'] ?? null, '⛔ এক চাপে বন্ধের header নেই।');
+        $this->assertMatchesRegularExpression('#^<https?://[^>]+/mail/stop\?[^>]*signature=[^>]+>$#', (string) ($mail['headers']['List-Unsubscribe'] ?? ''));
+        $this->assertStringContainsString('/mail/stop?', $mail['html'], '⛔ মেইলের নিচে বন্ধের লিংক নেই।');
+        $link = html_entity_decode(trim((string) $mail['headers']['List-Unsubscribe'], '<>'));
+
+        // ⓘ খুললে বন্ধ হয় না — কেবল বোতাম; ⛔ সই ছাড়া লিংক চলে না
+        $this->app['auth']->forgetGuards();
+        $this->get($link)->assertOk()->assertSee(__('mail::field.unsubscribe.button'));
+        $this->assertSame(0, \App\Modules\Mail\Models\MailOptOut::query()->withoutGlobalScopes()->count());
+        $this->post(preg_replace('/signature=[0-9a-f]+/', 'signature=bad', $link), ['List-Unsubscribe' => 'One-Click'])->assertForbidden();
+
+        // ⭐ মেইল প্রোগ্রামের এক চাপ — কুকি ছাড়া POST
+        $this->post($link, ['List-Unsubscribe' => 'One-Click'])->assertOk();
+        $this->assertTrue(\App\Modules\Mail\Models\MailOptOut::query()->withoutGlobalScopes()->where('company_id', $this->co->id)->where('email', 'karim@example.com')->exists());
+
+        // ⛔ পরের উৎসবে আর যায় না; ⓘ লেনদেনের মেইল (বকেয়ার স্মরণ) এই নিয়মের বাইরে
+        $this->fake->sent = [];
+        CompanyContext::forCompany($this->co->id, fn () => MailFestival::query()->where('key', 'christmas')->update(['on_date' => now()->toDateString()]));
+        MailTemplate::query()->where('key', 'fest_christmas')->firstOrFail()->forceFill(['auto' => ['on' => true, 'rule' => 'festival', 'at' => '09:00']])->save();
+        $this->artisan('abos:mail-auto')->assertSuccessful();
+        $this->assertNull(collect($this->fake->sent)->firstWhere('to', ['karim@example.com']), '⛔ বন্ধ করা ঠিকানায় আবার অফারের মেইল।');
+        $this->assertFalse(\App\Modules\Mail\Services\MailOptOuts::isMarketing(MailTemplate::query()->where('key', 'due_reminder')->first()));
     }
 
     public function test_every_mail_page_opens(): void

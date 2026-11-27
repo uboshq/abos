@@ -29,7 +29,8 @@ final class EveryDoorIntoAnotherCompanyAsksTheKeyThereTest extends TestCase
      * @var array<string, string|null>
      */
     private const DOORS = [
-        'app/Modules/Mail/Services/MailAddresses.php' => 'tidy(): দিনের কাজ (abos:mail-daily) — প্রতিটা ঠিকানার নিজের কোম্পানিতে ঢুকে বলা দিনে আবার চালু বা 30 দিন পরে মোছা; কোনো মানুষের দরজা নয়, ঠিকানার নিজের সারি',
+        'app/Modules/Mail/Services/MailOptOuts.php' => 'stop(): গ্রাহকের "অফারের মেইল বন্ধ" (RFC 8058) — মানুষ নেই, লগইন নেই; সই করা লিংকের কোম্পানিতে ঢুকে কেবল ঐ ঠিকানাটা অফারের তালিকা থেকে বাদ দেয়, কিছু পড়ে না, কিছু ফেরায় না',
+        'app/Modules/Mail/Services/MailAddresses.php' =>'tidy(): দিনের কাজ (abos:mail-daily) — প্রতিটা ঠিকানার নিজের কোম্পানিতে ঢুকে বলা দিনে আবার চালু বা 30 দিন পরে মোছা; কোনো মানুষের দরজা নয়, ঠিকানার নিজের সারি',
         // ⭐ অফিসের SMS ফোন (মালিকের "ঠিক আছে", নমুনা U1X687u5MkwVfEL7ci7MGv) — মানুষ নেই, ফোনের নিজের গোপন চাবি (smsgw_, sha256-এ রাখা)
         'app/Core/Services/SmsOutboxService.php' => 'অফিসের SMS ফোন — মানুষ নেই, কেবল ফোনের নিজের কোম্পানিতে ঢোকে (চাবি sha256-এ মিলিয়ে পাওয়া ফোনের company_id); '
             .'নেয় কেবল সেই ফোনের বার্তা, জানায় কেবল নিজের নেওয়া সারির ফল (AnSmsHadNoWayOutOfTheOfficeTest)',
