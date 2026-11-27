@@ -38,6 +38,13 @@ return [
     'search_folder' => 'Search this folder',
     'refresh' => 'Refresh',
     'all_inbox' => 'All inboxes together',
+    'loading' => 'Fetching mail…',
+    'retry' => 'Try again',
+    'undo' => 'Undo',
+    'undo_archived' => 'Mail archived',
+    'undo_deleted' => 'Mail deleted',
+    'undo_archived_n' => ':count mails archived',
+    'undo_deleted_n' => ':count mails deleted',
     'keys_title' => 'Keyboard shortcuts',
     'keys' => [
         'c' => 'New mail', '/' => 'Search', 'r' => 'Reply', 'a' => 'Reply all', 'f' => 'Forward',

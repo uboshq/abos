@@ -165,11 +165,19 @@ if (root) {
         return parts.filter(Boolean).join(' ')
     }
 
-    async function loadList () {
+    // ⭐ লোড হওয়ার সময় ছায়া-সারি (যৌথ PLAN.md §3.4, Gmail-এর মতো); নিজে থেকে নতুন মেইল আনার সময় (quiet) তালিকা যেমন ছিল থাকে — লাফায় না
+    async function loadList (quiet) {
         const rows = $('[data-rows]')
+        if (quiet === true && state.picked.size) return
         state.picked.clear()
         syncBulk()
-        rows.innerHTML = '<p class="mx-empty">…</p>'
+        if (quiet !== true) {
+            rows.setAttribute('aria-busy', 'true')
+            rows.innerHTML = Array.from({ length: 8 }, (_, i) => '<div aria-hidden="true" style="display:flex;gap:12px;align-items:center;padding:12px 14px;border-bottom:1px solid #eef1f6">'
+                + '<i style="width:28px;height:28px;border-radius:50%;background:#e9edf4"></i><i style="flex:0 0 ' + (90 + (i * 37) % 70) + 'px;height:10px;border-radius:5px;background:#e9edf4"></i>'
+                + '<i style="flex:1;height:10px;border-radius:5px;background:#f1f4f9"></i><i style="width:40px;height:10px;border-radius:5px;background:#e9edf4"></i></div>').join('')
+                + '<span class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">' + esc(W.loading || '') + '</span>'
+        }
 
         try {
             if (state.view.acc === 'all') {
@@ -184,10 +192,17 @@ if (root) {
                 state.total = j.total || 0
             }
         } catch (e) {
-            rows.innerHTML = '<p class="mx-err">' + esc(e.message) + '</p>'
+            rows.removeAttribute('aria-busy')
+            if (quiet === true) return
+            // ⓘ সমস্যা হলে কারণ আর "আবার চেষ্টা করুন"
+            rows.innerHTML = '<div class="mx-err" role="alert" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' + esc(e.message)
+                + '<button type="button" class="mx-btn" data-retry-list style="min-height:32px">' + esc(W.retry || '') + '</button></div>'
+            const again = rows.querySelector('[data-retry-list]')
+            if (again) again.addEventListener('click', () => loadList())
             return
         }
 
+        rows.removeAttribute('aria-busy')
         renderRows()
         loadParties()
     }
@@ -284,21 +299,39 @@ if (root) {
         // ⓘ অ্যাকাউন্ট ধরে ভাগ — "সব ইনবক্স" থেকে বাছলে প্রতিটা মেইলবক্সে আলাদা ডাক
         const byAcc = {}
         keys.forEach(k => { const i = k.lastIndexOf(':'); const a = k.slice(0, i); (byAcc[a] = byAcc[a] || []).push(Number(k.slice(i + 1))) })
-        const errors = []
+        const jobs = Object.entries(byAcc).map(([a, uids]) => ({
+            a, uids,
+            folder: (state.rows.find(m => m.acc === a) || {}).folder || state.view.path,
+            subjects: uids.map(u => (state.rows.find(m => m.acc === a && m.uid === u) || {}).subject || ''),
+        }))
 
-        for (const [a, uids] of Object.entries(byAcc)) {
-            const folder = (state.rows.find(m => m.acc === a) || {}).folder || state.view.path
-            const subjects = uids.map(u => (state.rows.find(m => m.acc === a && m.uid === u) || {}).subject || '')
-            try {
-                const j = await post(url('bulk', a), { folder, uids, do: what, to, subjects })
-                if (j.missing) errors.push(M.no_archive)
-            } catch (e) { errors.push(e.message) }
+        const send = async () => {
+            const errors = []
+            for (const j of jobs) {
+                try {
+                    const r = await post(url('bulk', j.a), { folder: j.folder, uids: j.uids, do: what, to, subjects: j.subjects })
+                    if (r.missing) errors.push(M.no_archive)
+                } catch (e) { errors.push(e.message) }
+            }
+            if (errors.length) toast(errors[0], true)
+            await refreshCounts()
+            loadList()
         }
 
-        if (errors.length) toast(errors[0], true)
         if (['archive', 'delete', 'move'].includes(what) && state.open && keys.includes(state.openAcc + ':' + state.open.uid)) closeReader()
-        await refreshCounts()
-        loadList()
+
+        // ⭐ আর্কাইভ আর মোছা — "ফিরিয়ে আনুন" পট্টিসহ ([[withUndo]])
+        if (what === 'archive' || what === 'delete') {
+            const kept = state.rows.slice()
+            state.rows = state.rows.filter(m => ! keys.includes(m.acc + ':' + m.uid))
+            state.picked.clear()
+            renderRows()
+            syncBulk()
+            withUndo(tr(what === 'delete' ? (W.undo_deleted_n || '') : (W.undo_archived_n || ''), { count: keys.length }), send, () => { state.rows = kept; renderRows() })
+            return
+        }
+
+        await send()
     }
 
     async function refreshCounts () {
@@ -436,14 +469,44 @@ if (root) {
 
     async function moveOpen (to, action) {
         const m = state.open
+        const acc = state.openAcc
         if (! m || ! to) return
-        try {
-            await post(url('move', state.openAcc), { folder: m.folder, uid: m.uid, to, subject: m.subject, action })
-            closeReader()
-            await refreshCounts()
-            loadList()
-        } catch (e) { toast(e.message, true) }
+        const kept = state.rows.slice()
+        state.rows = state.rows.filter(r => ! (r.acc === acc && r.uid === m.uid))
+        closeReader()
+        renderRows()
+        withUndo(action === 'mail_deleted' ? (W.undo_deleted || '') : (W.undo_archived || ''), async () => {
+            try {
+                await post(url('move', acc), { folder: m.folder, uid: m.uid, to, subject: m.subject, action })
+                await refreshCounts()
+                loadList()
+            } catch (e) { toast(e.message, true); state.rows = kept; renderRows() }
+        }, () => { state.rows = kept; renderRows() })
     }
+
+    /**
+     * ⭐ "ফিরিয়ে আনুন" পট্টি — আর্কাইভ বা মোছার পরে (যৌথ PLAN.md §3.3, Gmail-এর মতো): মেইল সাথে সাথে তালিকা থেকে সরে,
+     *   কিন্তু সার্ভারে যায় 6 সেকেন্ড পরে; তার মধ্যে "ফিরিয়ে আনুন" চাপলে কিছুই হয় না। ⓘ পাতা বন্ধ হলে বাকি কাজ তখনই যায়।
+     */
+    const pending = []
+    function withUndo (text, run, undo) {
+        const job = { done: false, run: () => { if (job.done) return; job.done = true; bar.remove(); run() } }
+        const bar = document.createElement('div')
+        bar.setAttribute('role', 'status')
+        bar.style.cssText = 'position:fixed;left:24px;bottom:24px;z-index:85;display:flex;gap:16px;align-items:center;padding:10px 12px 10px 16px;border-radius:10px;background:#1f2937;color:#fff;font-weight:600;box-shadow:0 8px 24px rgb(0 0 0 / .25)'
+        bar.innerHTML = '<span>' + esc(text) + '</span><button type="button" style="min-height:32px;padding:0 12px;border-radius:8px;background:transparent;color:#93c5fd;font-weight:700;border:1px solid #93c5fd">' + esc(W.undo || '') + '</button>'
+        bar.querySelector('button').addEventListener('click', () => {
+            if (job.done) return
+            job.done = true
+            clearTimeout(job.timer)
+            bar.remove()
+            undo()
+        })
+        root.appendChild(bar)
+        job.timer = setTimeout(job.run, 6000)
+        pending.push(job)
+    }
+    window.addEventListener('pagehide', () => { pending.forEach(j => j.run()) })
     const roleFolder = (a, role) => ((Array.isArray(state.folders[a]) ? state.folders[a] : []).find(f => f.role === role) || {}).path
 
     // ── নতুন মেইল / উত্তর ────────────────────────────────────────────
@@ -882,7 +945,7 @@ if (root) {
 
     loadAccounts()
     // ⓘ নতুন মেইল — প্রতি 1 মিনিটে, আর ট্যাবে ফিরলেই সাথে সাথে (পাতা লুকানো বা কিছু বাছা থাকলে নয়); সংখ্যা ব্রাউজারের ট্যাবেও
-    const fresh = () => { if (! document.hidden && state.view.acc && ! state.picked.size) { refreshCounts(); if (! state.open) loadList() } }
+    const fresh = () => { if (! document.hidden && state.view.acc && ! state.picked.size && ! pending.some(j => ! j.done)) { refreshCounts(); if (! state.open) loadList(true) } }
     setInterval(fresh, 60000)
     document.addEventListener('visibilitychange', () => { if (! document.hidden) fresh() })
 
