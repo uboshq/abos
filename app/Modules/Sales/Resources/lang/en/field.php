@@ -410,6 +410,8 @@ return [
     'invoice_total' => 'INV Total',
     'sub_total_no_vat' => 'Sub Total (without VAT)',
     'amount_or_pct' => 'amount or %',
+    'discount_reason' => 'Discount reason',
+    'discount_reason_hint' => 'e.g. old customer, bulk order — printed on the bill',
     'to_pay_on_this' => 'To pay on this challan',
     'received_deposit' => 'Received Deposit',
     'what_party_owes' => 'What this party owes',

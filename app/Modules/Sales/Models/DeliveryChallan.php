@@ -59,7 +59,7 @@ class DeliveryChallan extends Model implements \App\Core\Contracts\ExplainsItsCo
         'company_id', 'branch_id', 'financial_year_id', 'document_no', 'sale_no',
         'customer_id', 'warehouse_id', 'sales_order_id', 'trx_date',
         'vehicle_id', 'vehicle_no', 'driver_name', 'driver_phone', 'do_no', 'total',
-        'discount_amount', 'expense_amount', 'rounding_amount',
+        'discount_amount', 'discount_reason', 'expense_amount', 'rounding_amount',
         'deposit_amount', 'credit_period_days', 'payment_term',
 
         /* ছয়টা বোতামের ঘর — সরাসরি বিক্রয়ের পর্দা, ২৯ আগস্ট ২০২৬ */

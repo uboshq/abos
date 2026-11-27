@@ -98,12 +98,28 @@
 
                         {{-- হিসাব হওয়া টাকাটা — "৬%" লিখে কত হলো তা না
                              দেখালে শতাংশ দেওয়াটা অন্ধ বাজি হয়ে যেত --}}
+                        {{-- ⭐ ছাড়ের কারণ (📝) — নতুন কাউন্টারের নমুনা, মালিকের অনুমোদন ২৭–২৮ নভেম্বর ২০২৬; কাগজে ছাপা, অডিটে --}}
+                        <button type="button" @click="toggleReason" data-discount-reason-toggle
+                                :aria-expanded="reasonOpen ? 'true' : 'false'" aria-controls="discount-reason"
+                                aria-label="{{ __('sales::field.discount_reason') }}" title="{{ __('sales::field.discount_reason') }}"
+                                class="grid size-7 shrink-0 place-items-center rounded-(--radius-field) border border-(--color-border)
+                                       bg-(--color-surface-app) hover:bg-(--color-surface-hover)">
+                            <x-ui.licon name="file-text" :size="15" />
+                        </button>
+
                         <span class="num ms-auto w-16 text-end"
                               x-text="discountValue > 0 ? '৳' + money(discountValue) : '—'"></span>
                     </span>
 
                     <input type="hidden" name="discount_amount" :value="discountValue">
                 </x-sales::panel-row>
+
+                <div id="discount-reason" x-show="reasonOpen" x-cloak class="px-3 pb-2" data-discount-reason>
+                    <label for="discount-reason-text" class="mb-1 block text-2xs text-(--color-ink-muted)">{{ __('sales::field.discount_reason') }}</label>
+                    <textarea id="discount-reason-text" name="discount_reason" x-model="discountReason" maxlength="300" rows="2"
+                              placeholder="{{ __('sales::field.discount_reason_hint') }}"
+                              class="w-full rounded-(--radius-field) border border-(--color-border) bg-(--color-surface-app) px-2 py-1 text-sm"></textarea>
+                </div>
 
                 {{-- ⭐ হাতের ছাড়ের সীমা — কোম্পানির সেটিং থাকলে চোখের সামনে (৫ অক্টোবর ২০২৬; সার্ভার নিজে আটকায়, [[DiscountCap]]) --}}
                 @if (($discountCapHint = app(\App\Modules\Sales\Services\DiscountCap::class)->hint()) !== null)

@@ -369,6 +369,8 @@ return [
     'invoice_total' => 'বিলের মোট',
     'sub_total_no_vat' => 'মোট (ভ্যাট ছাড়া)',
     'amount_or_pct' => 'টাকা বা %',
+    'discount_reason' => 'ছাড়ের কারণ',
+    'discount_reason_hint' => 'যেমন: পুরনো ক্রেতা, একসাথে বেশি মাল — বিলে ছাপা হবে',
     'to_pay_on_this' => 'এই চালানে দিতে হবে',
     'received_deposit' => 'জমা নেওয়া হলো',
     'what_party_owes' => 'এই পক্ষের কত বাকি',

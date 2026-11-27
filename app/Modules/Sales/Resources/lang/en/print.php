@@ -8,6 +8,7 @@ return [
     'paid' => 'Paid',
     'invoice_due' => 'Due on this bill',
     'bill_discount' => 'Bill discount',
+    'discount_reason' => 'Discount reason',
     'previous_due' => 'Previous due',
     'previous_advance' => 'Previous advance',
     'outstanding' => 'Total outstanding',

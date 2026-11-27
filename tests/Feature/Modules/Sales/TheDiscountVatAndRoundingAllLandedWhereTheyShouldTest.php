@@ -204,6 +204,37 @@ final class TheDiscountVatAndRoundingAllLandedWhereTheyShouldTest extends TestCa
         ]);
     }
 
+    /**
+     * ⭐ বিলের ছাড়ের কারণ — নতুন কাউন্টার (মালিকের অনুমোদিত নমুনা, ২৭–২৮ নভেম্বর ২০২৬): চালান আর বিলে জমা, কাগজে ছাড়ের নিচে ছাপা;
+     *   ছাড় না থাকলে কারণ জমা হয় না; ৩০০ অক্ষরের বেশি ফিরিয়ে দেয়।
+     */
+    public function test_a_bill_discount_keeps_its_reason_on_the_challan_the_bill_and_the_paper(): void
+    {
+        $plain = $this->product('DVR-WHY', '150', null, '20', '100');
+
+        $this->sell([$this->line($plain, '8', '150')], [], ['discount_amount' => '50', 'discount_reason' => '  পুরনো ক্রেতা, একসাথে আট কার্টন  '])
+            ->assertSessionHasNoErrors();
+        $invoice = $this->lastInvoice();
+        $this->assertSame('পুরনো ক্রেতা, একসাথে আট কার্টন', $invoice->discount_reason, '⛔ বিলে ছাড়ের কারণ জমা হয়নি।');
+        $this->assertSame('পুরনো ক্রেতা, একসাথে আট কার্টন', \App\Modules\Sales\Models\DeliveryChallan::query()->latest('id')->value('discount_reason'), '⛔ চালানে ছাড়ের কারণ জমা হয়নি।');
+        $this->assertPrinted($invoice, 'a4', [
+            'core.print.subtotal' => '1,200.00',
+            'sales::print.bill_discount' => '50.00',
+            'sales::print.discount_reason' => 'পুরনো ক্রেতা, একসাথে আট কার্টন',
+            'core.print.total' => '1,150.00',
+            'sales::print.invoice_due' => '1,150.00',
+            'sales::print.outstanding' => '1,150.00',
+        ]);
+
+        // ⓘ ছাড় নেই → কারণও নেই
+        $this->sell([$this->line($plain, '2', '150')], [], ['discount_amount' => '0', 'discount_reason' => 'কোনো কারণ'])->assertSessionHasNoErrors();
+        $this->assertNull($this->lastInvoice()->discount_reason, '⛔ ছাড় ছাড়াই কারণ জমা হলো।');
+
+        // ⛔ ৩০০ অক্ষরের বেশি নয়
+        $this->sell([$this->line($plain, '1', '150')], [], ['discount_amount' => '10', 'discount_reason' => str_repeat('ক', 301)])
+            ->assertSessionHasErrors('discount_reason');
+    }
+
     // ══ গ · সারির ছাড় + বিলের ছাড় + ভ্যাট (দামের বাইরে) ══════════════════
 
     /**

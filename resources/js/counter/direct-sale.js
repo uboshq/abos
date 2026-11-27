@@ -255,6 +255,9 @@ export default function directSale({
         creditTerm: paymentTermDefault,
         dueOn: '',
         discountInput: '',
+        // ⭐ বিলের ছাড়ের কারণ — 📝 চাপলে খোলে, কাগজে ছাপা হয় (নতুন কাউন্টার, ২৮ নভেম্বর ২০২৬)
+        discountReason: '',
+        reasonOpen: false,
 
         // পুরো কাগজের ভ্যাট-বদল — খালি মানে পণ্য অনুযায়ী
         vatMode: '',
@@ -461,6 +464,7 @@ export default function directSale({
                 dueOn: this.dueOn,
                 lines: this.lines,
                 discountInput: this.discountInput,
+                discountReason: this.discountReason,
                 vatMode: this.vatMode,
                 vatRate: this.vatRate,
                 expenseInput: this.expenseInput,
@@ -687,6 +691,8 @@ export default function directSale({
                 this.dueOn = d.dueOn ?? '';
                 this.lines = d.lines ?? [];
                 this.discountInput = d.discountInput ?? '';
+                this.discountReason = d.discountReason ?? '';
+                this.reasonOpen = this.discountReason !== '';
                 this.vatMode = d.vatMode ?? '';
                 this.vatRate = d.vatRate ?? '';
                 this.expenseInput = d.expenseInput ?? d.expenseAmount ?? '';
@@ -2141,9 +2147,16 @@ export default function directSale({
             this.showCosting = false;
         },
 
+        // ⭐ ছাড়ের কারণের ঘর খোলা/বন্ধ (📝) — CSP Alpine-এ এক কাজ এক পদ্ধতিতে
+        toggleReason() {
+            this.reasonOpen = ! this.reasonOpen;
+        },
+
         clearAll() {
             this.lines = [];
             this.discountInput = '';
+            this.discountReason = '';
+            this.reasonOpen = false;
             this.expenseInput = '';
             this.roundingInput = '';
             this.deposits = [];
@@ -3328,6 +3341,8 @@ export default function directSale({
             this.lines = [];
             this.deposits = [];
             this.discountInput = '';
+            this.discountReason = '';
+            this.reasonOpen = false;
             this.expenseInput = '';
             this.roundingInput = '';
             this.customerId = '';

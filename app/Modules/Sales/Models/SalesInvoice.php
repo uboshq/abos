@@ -92,6 +92,8 @@ class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \A
          * ⓘ কাউন্টারের "ছাড়" ঘর; মোট থেকে বাদ যায় ([[SalesInvoiceService::replaceLines()]])।
          */
         'bill_discount',
+        // ⭐ বিলের ছাড়ের কারণ — কাগজে ছাপা, অডিটে (নতুন কাউন্টার, ২৮ নভেম্বর ২০২৬)
+        'discount_reason',
         'status', 'narration', 'created_by',
         'cancelled_by', 'cancelled_at', 'cancel_reason',
 
