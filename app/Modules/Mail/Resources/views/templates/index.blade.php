@@ -22,7 +22,7 @@
 
     <div class="mailx mx-page" data-mail-tpl>
         <div class="mx-head">
-            <h1>📄 {{ $T('title') }}</h1><span class="sp"></span>
+            <h1 data-page-title>📄 {{ $T('title') }}</h1><span class="sp"></span>
             <a class="mx-btn" href="{{ route('mail.index', ['counter' => 1]) }}" target="abos-mail">✉️ {{ __('mail::field.title') }} ↗</a>
         </div>
         @if (session('mail_flash'))<div class="mx-ok">{{ session('mail_flash') }}</div>@endif
