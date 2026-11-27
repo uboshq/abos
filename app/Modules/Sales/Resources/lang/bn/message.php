@@ -343,6 +343,6 @@ return [
     'confirm_need_lines' => 'কার্টে কোনো পণ্য নেই',
     'confirm_need_fare' => 'গাড়িভাড়ার অঙ্ক লেখা বাকি (F4)',
     'confirm_credit_over' => 'বাকির সীমা :amount পার — নিশ্চিত করলে আটকাবে; টাকা নিন বা মাল কমান',
-    'final_confirm_question' => 'পাকা হলে আর বদলানো যাবে না — নিশ্চিত?',
+    'final_confirm_question' => 'পোস্ট হলে আর বদলানো যাবে না — নিশ্চিত?',
     'final_draft_question' => 'খসড়া পরে "পেন্ডিং" থেকে খুলে শেষ করা যাবে। রাখবেন?',
 ];

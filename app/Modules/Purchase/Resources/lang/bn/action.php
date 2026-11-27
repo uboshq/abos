@@ -85,7 +85,7 @@ return [
     'new_contract' => 'নতুন চুক্তি',
     'activate_contract' => 'চালু করুন',
     'go_back' => 'ফিরে যান',
-    'yes_confirm' => 'হ্যাঁ, পাকা করুন',
+    'yes_confirm' => 'হ্যাঁ, পোস্ট করুন',
     'yes_draft' => 'হ্যাঁ, খসড়া রাখুন',
     'yes_take_goods' => 'হ্যাঁ, মাল বুঝে নিলাম',
 ];

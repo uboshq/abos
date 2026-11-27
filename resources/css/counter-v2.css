@@ -258,3 +258,6 @@ dialog.fc-dialog::backdrop { background: rgb(15 23 42 / .5); }
 form[data-abos-counter] .ds-party [data-customer-details] span[data-point-chip] { background: #dbeafe !important; border: 2.5px solid #1d4ed8 !important;
     color: #0b2a66 !important; font-size: 15px !important; font-weight: 800 !important; padding: 1px 12px !important; border-radius: 999px; }
 form[data-abos-counter] .ds-party [data-customer-details] span[data-point-chip] * { color: #0b2a66 !important; }
+/* ক্রয়মূল্যের বোতাম — "বদলান"-এর পাশে, একই গড়ন, সোনালি লেখা (ক্রয়মূল্য গোপন তথ্য, তাই আলাদা রঙে) */
+form[data-abos-counter] .ds-pswap.ds-pcost { color: #b45309; background: #fffbeb; }
+form[data-abos-counter] .ds-pswap.ds-pcost:hover { background: #fef3c7; }

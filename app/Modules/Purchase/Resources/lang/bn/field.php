@@ -357,5 +357,5 @@ return [
     'sale_no' => 'বিক্রি নম্বর',
     'total_so_far' => 'এখন পর্যন্ত মোট',
     'items_word' => 'পণ্য',
-    'final_confirm_title' => 'মাল বুঝে নিয়ে বিল পাকা করবেন?',
+    'final_confirm_title' => 'মাল বুঝে নিয়ে বিল পোস্ট করবেন?',
 ];

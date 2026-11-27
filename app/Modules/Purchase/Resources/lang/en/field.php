@@ -371,5 +371,5 @@ return [
     'sale_no' => 'Sale no.',
     'total_so_far' => 'Total so far',
     'items_word' => 'Items',
-    'final_confirm_title' => 'Take the goods and make the bill final?',
+    'final_confirm_title' => 'Take the goods and post the bill?',
 ];

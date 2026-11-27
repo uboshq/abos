@@ -170,3 +170,7 @@ form[data-abos-purchase] .pur-tot-foot > div:first-child > button:nth-child(3) {
 form[data-abos-purchase] .pur-tot-foot > div:first-child > button:nth-child(4) { background: linear-gradient(135deg, #b91c1c, #ef4444) !important; }
 form[data-abos-purchase] [data-total-owed][data-sign='due'] { background: linear-gradient(90deg, #b91c1c, #ef4444) !important; }
 form[data-abos-purchase] .pur-tot-foot button[data-overview-trigger] { background: linear-gradient(135deg, #047857, #10b981) !important; }
+/* সরবরাহকারীর টাইলের নিচের সারি — ফোন আর আগের বকেয়া (নমুনা) */
+form[data-abos-purchase] [data-supplier-credit] .pv2-sphone { white-space: nowrap; }
+form[data-abos-purchase] [data-supplier-credit] .pv2-sprev { white-space: nowrap; }
+form[data-abos-purchase] [data-supplier-credit] .pv2-sprev b { font-weight: 700; }
