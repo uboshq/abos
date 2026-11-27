@@ -6,6 +6,13 @@
 - The full bar on more pages: notices, notice kinds and templates, scheduled reports, custom fields, looks, payment schedule, all deposits, paper history, exchange rates — search, filter and sort in one row.
 - Direct sale: the cost-price door is guarded more strictly; the counter colours follow the theme rules.
 - Approval board: the "changed" warning uses a drawn icon.
+- New module "Mail" — office mail inside ABOS in one tab of its own (menu, profile menu "My mail", or the envelope on the bar with the unread count); a second click goes to the same tab. Mail stays on the mail server; ABOS stores none of it.
+- Inbox: all inboxes together, starred, look later, spam; filters; act on many at once; customer dues in the list; the customer card on the right (due, limit, still allowed, open bills, "Take money"); small tabs when several mails are open; Undo after delete or archive; the unread count in the browser tab; keyboard shortcuts (c, /, r, e, j/k, ? for the list).
+- New mail: templates filled with the customer's real data (a mail with an unfilled field does not go — a fallback can be written), signature, attach bills/challans/receipts/ledgers from ABOS — the paper's page then says "mailed"; send later, drafts.
+- Signatures: 20 designs, festival greetings; templates: 23 by work and 19 for festivals and days — 21 February in mourning, Victory and Independence Day proud; the admin is reminded to set moon-dated festival dates.
+- Offer mail carries one-click unsubscribe (Gmail/Yahoo rules); bills and receipts still go.
+- Personal Gmail/Hotmail by approval with a reason and a period; own-domain addresses created, paused, deleted (kept 30 days); every sent mail and every change is logged.
+- Menu: the merged modules' menus follow the international order — lists first, actions next, reports last.
 
 ## 1.3.29 — 26-11-2026
 
