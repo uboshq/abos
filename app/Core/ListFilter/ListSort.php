@@ -23,7 +23,7 @@ final class ListSort
     /**
      * বাছা চাবি — অজানা বা ফাঁকা হলে প্রথমটা।
      *
-     * @param  array<string, array{0: string, 1: string}|list<array{0: string, 1: string}>>  $map
+     * @param  array<string, array{0: string|\Illuminate\Contracts\Database\Query\Expression, 1: string}|list<array{0: string|\Illuminate\Contracts\Database\Query\Expression, 1: string}>>  $map
      */
     public static function chosen(mixed $key, array $map): string
     {
@@ -38,7 +38,7 @@ final class ListSort
      * @template T of BuilderContract
      *
      * @param  T  $query
-     * @param  array<string, array{0: string, 1: string}|list<array{0: string, 1: string}>>  $map
+     * @param  array<string, array{0: string|\Illuminate\Contracts\Database\Query\Expression, 1: string}|list<array{0: string|\Illuminate\Contracts\Database\Query\Expression, 1: string}>>  $map
      * @return T
      */
     public static function apply(BuilderContract $query, mixed $sort, array $map, string $idColumn = 'id'): BuilderContract
