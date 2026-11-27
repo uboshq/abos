@@ -77,7 +77,8 @@ final class ThePapersLinesHaveRoomAndTheirTotalTest extends TestCase
         $this->assertGreaterThan($sheetAt, $journeyAt, '⛔ যাত্রাপথ এখনো কাগজের আগে, নিজের সরু কলামে।');
 
         // ⓘ টেবিল সরার ঘরে, আর মোটের সারিতে দুই দিকের অঙ্কই
-        $this->assertMatchesRegularExpression('/min-w-0 overflow-x-auto( mt-\d)?"/', $html, '⛔ কাগজের টেবিল সরার ঘরে নেই — চওড়া হলে কেটে যায়।');
+        // ⓘ ঘরের পাশে ফাঁকের শ্রেণি (mt-3 / mt-1) থাকতে পারে — দাবি শুধু সরার ঘরটুকু (Mac run rlc of 22580bdfe)
+        $this->assertMatchesRegularExpression('/class="min-w-0 overflow-x-auto(?: [^"]*)?"/', $html, '⛔ কাগজের টেবিল সরার ঘরে নেই — চওড়া হলে কেটে যায়।');
         $foot = substr($html, (int) strpos($html, '<tfoot', $sheetAt));
         $foot = substr($foot, 0, (int) strpos($foot, '</tfoot>'));
         $this->assertNotSame('', $foot, '⛔ কাগজের টেবিলে মোটের সারিই নেই।');
