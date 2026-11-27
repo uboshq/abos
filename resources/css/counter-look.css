@@ -179,6 +179,7 @@
     form[data-abos-counter] .ds-sb-amber { --sb-bg: #fef3c7; --sb-ink: #b45309; }
     form[data-abos-counter] .ds-sb-red { --sb-bg: #fee2e2; --sb-ink: #b91c1c; }
     form[data-abos-counter] .ds-sb-violet { --sb-bg: #ede9fe; --sb-ink: #6d28d9; }
+    form[data-abos-counter] .ds-sb-orange { --sb-bg: #ffedd5; --sb-ink: #c2410c; }
     /* পরিমাণ আর একক বড়; মাথার লেখায় রং — পরিমাণ নীল, ফ্রি সবুজ, মোট কমলা, দাম বেগুনি */
     form[data-abos-counter] .ds-qtyrow > :nth-child(-n+2) :is(input, select) { height: 2.6rem; font-size: 1.05rem; font-weight: 700; border: 2px solid #1d4ed8; }
     form[data-abos-counter] .ds-qtyrow > :nth-child(-n+2) > span:first-child { color: #1d4ed8; }

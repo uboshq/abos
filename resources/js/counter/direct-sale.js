@@ -80,6 +80,7 @@ export default function directSale({
     pendingDrafts, resume, pendingUrl, transferModes, approvalNotice,
     margin = { costs: {}, floor: 0, words: {} },
     pricesUrl = '',
+    lastRatesUrl = '',
 }) {
     /*
      * ⓘ লটের তালিকা — পণ্যের আইডি ধরে, মেয়াদের ক্রমে সাজানো।
@@ -258,6 +259,8 @@ export default function directSale({
         // ⭐ বিলের ছাড়ের কারণ — 📝 চাপলে খোলে, কাগজে ছাপা হয় (নতুন কাউন্টার, ২৮ নভেম্বর ২০২৬)
         discountReason: '',
         reasonOpen: false,
+        // ⭐ এই ক্রেতার শেষ দর — পণ্য ধরে ([[loadLastRates]])
+        lastRates: {},
 
         // পুরো কাগজের ভ্যাট-বদল — খালি মানে পণ্য অনুযায়ী
         vatMode: '',
@@ -1352,6 +1355,7 @@ export default function directSale({
 
             /* ⭐ গ্রাহকের দর তালিকা — তালিকা আর কার্টের আপনা-আপনি দর এই গ্রাহকের দরে (দর তালিকা, ৫ অক্টোবর ২০২৬; [[customer-prices.js]]) */
             this.repriceFor(this.customerId);
+            this.loadLastRates(this.customerId);
 
             /*
              * ক্রেতার নিজের মেয়াদ থাকলে সেটাই বসে।
@@ -1413,6 +1417,46 @@ export default function directSale({
             if (! prices || String(this.customerId) !== String(customerId)) return;
 
             applyPrices(this.catalogue, this.lines, this.entry, this.picked, prices);
+        },
+
+        /**
+         * ⭐ এই ক্রেতার শেষ দর — নীল বাক্স (নতুন কাউন্টার, ২৮ নভেম্বর ২০২৬; [[LastSaleRates]])। ⓘ ক্রেতা বদলালে পুরনো উত্তর ফেলা হয়;
+         *   ⛔ না এলে বাক্সে "—", কাজ থামে না।
+         */
+        async loadLastRates(customerId) {
+            this.lastRates = {};
+            if (! lastRatesUrl || ! customerId) return;
+
+            try {
+                const r = await fetch(lastRatesUrl + '?customer_id=' + encodeURIComponent(customerId), { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                const j = r.ok ? await r.json() : null;
+                if (j && String(this.customerId) === String(customerId)) this.lastRates = j.rates || {};
+            } catch (e) { this.lastRates = {}; }
+        },
+
+        get pickedLastRate() {
+            return (this.picked && this.lastRates[String(this.picked.id)]) || null;
+        },
+
+        // ⓘ তথ্যের বাক্সের লেখা — CSP Alpine-এ লম্বা expression নয়, getter
+        get lastRateText() {
+            const r = this.pickedLastRate;
+            return r ? '৳' + this.money(r.rate) : '—';
+        },
+
+        get lastRateTitle() {
+            const r = this.pickedLastRate;
+            return r ? String(texts.lastRateFull ?? '') + ' — ' + r.invoiceNo + ' · ' + r.onDate : String(texts.lastRateNone ?? '');
+        },
+
+        get lotBoxText() {
+            if (this.chosenLot) return String(this.chosenLot.no ?? '');
+            return this.entryLots.length ? this.entryLots.length + ' ' + String(texts.lotsShort ?? '') : '—';
+        },
+
+        get lotExpiryText() {
+            const e = this.chosenLot && this.chosenLot.expiry;
+            return e ? String(e).split('-').reverse().join('/') : '—';
         },
 
         /** খোলা খসড়াটা এই পর্দাতেই খোলা — সম্পাদনা করে পাকা করার জন্য। */
