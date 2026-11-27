@@ -1033,7 +1033,7 @@ export default function directSale({
             try {
                 const answer = await fetch(base.replace(/\/0$/, '/' + encodeURIComponent(this.picked.id)), { headers: { Accept: 'application/json' } });
                 const d = answer.ok ? await answer.json() : null;
-                const w = texts.cost ?? {};
+                const w = texts.costWords ?? {};
                 const unit = d && d.unit ? ' / ' + d.unit : '';
                 const tk = v => '৳' + this.money(Number(v || 0));
 
