@@ -28,6 +28,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * নিশ্চিত হলে মালটা অর্ডারে ধরা পড়ে (Reserved): তাকেই থাকে, শুধু আর বেচা
  * যায় না। না ধরলে একই শেষ কার্টনটা দুইজনকে বেচা হত, আর ভুলটা ধরা পড়ত মাল
  * দিতে গিয়ে — ক্রেতার সামনে।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property int|null $channel_id
  */
 class SalesOrder extends Model implements \App\Modules\Sales\Contracts\CounterSaleSource, Drillable
 {

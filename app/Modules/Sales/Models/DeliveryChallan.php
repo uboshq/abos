@@ -34,6 +34,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * খতিয়ানে কিছু বসে না। মাল বেরোনো মানে বিক্রি নয় — ফেরত আসতে পারে, আর
  * দাম এখনো ঠিক হয়নি। আয় বসে বিলের দিনে।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $sale_no
+ * @property int|null $channel_id
  */
 class DeliveryChallan extends Model implements \App\Core\Contracts\ExplainsItsCostVoucher, Drillable, ShowsItselfForSigning
 {

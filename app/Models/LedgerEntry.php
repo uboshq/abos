@@ -21,6 +21,28 @@ use Illuminate\Database\Eloquent\Model;
  * গেলে কেউ একদিন শুধু ডেবিট বসিয়ে ক্রেডিট ভুলে যাবে, আর ট্রায়াল ব্যালেন্স
  * মেলাতে কয়েক দিন যাবে। সব লেখা PostingEngine-এর ভেতর দিয়ে, যেখানে
  * ডেবিট-ক্রেডিটের সমতা যাচাই হয়।
+ *
+ * ⓘ যোগফলের নাম — খাতার কোয়েরিগুলো `selectRaw('SUM(debit) as d, …')`-এ এই নামে মোট তোলে; কলাম নয়, কেবল সেই কোয়েরিতে থাকে।
+ *    ডাটাবেস থেকে আসে সংখ্যা-লেখা বা null, তাই ধরন `mixed` — পড়ার জায়গায় `(string)`/bcmath (PHPStan, ২৮ নভেম্বর ২০২৬)।
+ * @property-read mixed $d
+ * @property-read mixed $c
+ * @property-read mixed $dr
+ * @property-read mixed $cr
+ * @property-read mixed $net
+ * @property-read mixed $net_balance
+ * @property-read mixed $running_balance
+ * @property-read mixed $signed
+ * @property-read mixed $spent
+ * @property-read mixed $opening
+ * @property-read mixed $charged
+ * @property-read mixed $paid
+ * @property-read mixed $gap
+ * @property-read mixed $v
+ * @property-read mixed $n
+ * @property-read mixed $documents
+ * @property-read mixed $line_count
+ * @property-read mixed $last_at
+ * @property-read mixed $code
  */
 class LedgerEntry extends Model
 {

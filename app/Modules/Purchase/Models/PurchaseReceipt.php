@@ -30,6 +30,16 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * দায়টা এখনো সরবরাহকারীর নামে নয়, ২১৬০ "প্রাপ্ত মাল, বিল আসেনি"-তে বসে।
  * বিল এলে সেখান থেকে সরে সরবরাহকারীর নামে যায়। কারণটা ধ্রুবকের মন্তব্যে।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $unload_mode
+ * @property string $unload_amount
+ * @property string|null $unload_rate
+ * @property string $unload_cartons
+ * @property int|null $unload_account_id
+ * @property int|null $unload_contractor_id
+ * @property int|null $unload_payer_id
+ * @property string|null $unload_reason
  */
 class PurchaseReceipt extends Model implements Drillable
 {

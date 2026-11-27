@@ -154,9 +154,17 @@ class HandLoanAccount extends Model implements Drillable
         return 'hand_loan';
     }
 
+    /**
+     * ধারের হিসাবের চেনা নম্বর — যাঁর ধার, সেই মানুষের কোড ([[Person]]); পুরনো, মানুষ-ছাড়া হিসাবে কেবল সারির নম্বর।
+     *
+     * ⛔ আগে `$this->document_no` পড়া হত — এই টেবিলে ঐ কলামই নেই, Eloquent নিঃশব্দে null দিত, তাই খতিয়ান আর কাগজের
+     *    তালিকায় সবসময় কেবল একটা খালি সংখ্যা ("হাতধার — 12") দেখাত (PHPStan, ২৮ নভেম্বর ২০২৬)।
+     */
     public function drillDocumentNo(): string
     {
-        return $this->document_no ?? (string) $this->id;
+        $code = $this->person_id === null ? null : $this->person?->code;
+
+        return filled($code) ? (string) $code : (string) $this->id;
     }
 
     public function drillLabel(): string

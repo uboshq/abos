@@ -32,6 +32,11 @@ use Illuminate\Support\Facades\DB;
  * এখানেই আয় ও প্রাপ্য খাতায় বসে, আর একই সাথে বিক্রীত পণ্যের ব্যয়ও —
  * নাহলে লাভ-ক্ষতির হিসাবে আয় থাকত কিন্তু তার পেছনের খরচ থাকত না, আর
  * মুনাফা বাস্তবের চেয়ে বেশি দেখাত।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $sale_no
+ * @property int|null $channel_id
+ * @property int|null $sales_person_id
  */
 class SalesInvoice extends Model implements Drillable, ShowsItselfForSigning, \App\Core\Contracts\SettlementTerms, \App\Core\Contracts\NoteTarget, \App\Core\Contracts\NoteTargetLines, \App\Core\Contracts\ReturnsGoodsForNotes
 {

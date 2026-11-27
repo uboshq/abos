@@ -32,6 +32,16 @@ use Illuminate\Support\Facades\DB;
  * বিলটা দায়টা সরবরাহকারীর নামে বসায়, আর ঠিক সেই কারণে সরবরাহকারীর প্রদেয়
  * নিজে থেকেই মেলে: প্রদেয়ের সংখ্যাটা কোথাও জমা থাকে না, খতিয়ান থেকে গোনা
  * হয়। জমা রাখলে বিল বাতিল হলে দুই জায়গায় বদলাতে হত, আর একটা বাদ পড়ত।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $unload_mode
+ * @property string $unload_amount
+ * @property string|null $unload_rate
+ * @property string $unload_cartons
+ * @property int|null $unload_account_id
+ * @property int|null $unload_contractor_id
+ * @property int|null $unload_payer_id
+ * @property string|null $unload_reason
  */
 class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Core\Contracts\ShowsItselfForSigning, \App\Core\Contracts\NoteTarget, \App\Core\Contracts\NoteTargetLines, \App\Core\Contracts\ReturnsGoodsForNotes, \App\Core\Contracts\RevaluesStockForNotes
 {
@@ -237,7 +247,7 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
      * মালিকের কথা: *"goods e item zodi ekhane besi hoy tahole vaj kora
      * thbe"* — অর্থাৎ ঘরটা ছোট থাকবে, কিন্তু চাইলে পুরোটা দেখা যাবে।
      *
-     * ⛔ নামটা কীভাবে বের হয় (`display_name`, নাহলে `name_bn`, নাহলে
+     * ⛔ নামটা কীভাবে বের হয় ([[Product::name()]], নাহলে
      * `—`) সেই নিয়মটা দুই জায়গায় লিখলে একদিন দুইটা আলাদা হয়ে যেত:
      * ভাঁজ করা অবস্থায় এক নাম, খোলা অবস্থায় আরেক। ⓘ তাই নিয়মটা
      * এখানেই একবার, আর [[getGoodsSummaryAttribute]] এটাকেই কেটে নেয়।
@@ -271,7 +281,9 @@ class PurchaseBill extends Model implements Drillable, SettlementTerms, \App\Cor
     public function getGoodsNamesAttribute(): array
     {
         return $this->lines
-            ->map(fn ($l) => $l->product?->display_name ?? $l->product?->name_bn ?? '—')
+            // ⛔ আগে `display_name ?? name_bn` — পণ্যে `display_name` কলামই নেই, তাই কেবল ইংরেজি নামের পণ্যে "—" দেখাত;
+            //    এখন পণ্যের নিজের নিয়ম ([[Product::name()]]: বাংলা থাকলে বাংলা, নাহলে ইংরেজি) — PHPStan, ২৮ নভেম্বর ২০২৬
+            ->map(fn ($l) => $l->product?->name() ?: '—')
             ->filter()
             ->values()
             ->all();

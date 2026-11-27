@@ -15,6 +15,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * চালানের একটা লাইন — এক পণ্য, যত এসেছে।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $unload_rate
+ * @property string $unload_cartons
+ * @property string $unload_cost
+ * @property string|null $batch_no
+ * @property \Illuminate\Support\Carbon|null $expiry_date
+ * @property string|null $mrp
+ * @property string|null $entered_qty
+ * @property int|null $entered_unit_id
  */
 class PurchaseReceiptLine extends Model
 {

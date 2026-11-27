@@ -22,6 +22,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * ঠিক ওই জোড়াটাই লাগে: "কত ডিটারজেন্টের বিপরীতে কত বালতি"।
  *
  * পরিমাণটা ফ্রি ভাণ্ডার থেকে কাটে, বিক্রির মজুদ থেকে নয়।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $entered_qty
+ * @property int|null $entered_unit_id
  */
 class DeliveryChallanGiftLine extends Model
 {

@@ -18,6 +18,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * ⓘ জন্ম রওনার মুহূর্তে, নিজে ([[GatePassService::issueFor()]]); তারপর কেবল দেখা আর ছাপা।
  * ⛔ বদলানো যায় না — কেবল বাতিল, কারণসহ, আর বাতিলটাও নিরীক্ষায় ([[IsAudited]])।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $sale_no
  */
 class GatePass extends Model
 {

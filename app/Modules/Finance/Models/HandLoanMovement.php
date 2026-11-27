@@ -176,7 +176,8 @@ class HandLoanMovement extends Model implements Drillable, SettledByAVoucher, \A
 
     public function drillDocumentNo(): string
     {
-        return $this->account?->document_no ?? (string) $this->id;
+        // ⓘ ধারের হিসাবের নিজের নম্বর ([[HandLoanAccount::drillDocumentNo()]]) — আগে `document_no` পড়া হত, যে কলাম নেই (PHPStan, ২৮ নভেম্বর ২০২৬)
+        return $this->account?->drillDocumentNo() ?? (string) $this->id;
     }
 
     public function drillLabel(): string

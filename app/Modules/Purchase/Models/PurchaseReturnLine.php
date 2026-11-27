@@ -12,7 +12,12 @@ use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** ক্রয় ফেরতের একটা লাইন। */
+/** ক্রয় ফেরতের একটা লাইন।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $entered_qty
+ * @property int|null $entered_unit_id
+ */
 class PurchaseReturnLine extends Model
 {
     use BelongsToCompany;

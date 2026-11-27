@@ -27,6 +27,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * বিলটা বাতিল করা আর ফেরত নেওয়া এক নয়: বাতিল মানে বিক্রিটাই হয়নি,
  * ফেরত মানে হয়েছিল আর তার একটা অংশ ফিরে এসেছে। খাতায় দুইটা আলাদা
  * ঘটনা, আর ইতিহাসেও আলাদা থাকা উচিত।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $sale_no
+ * @property int|null $channel_id
+ * @property int|null $sales_person_id
  */
 class SalesReturn extends Model implements Drillable
 {

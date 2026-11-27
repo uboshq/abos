@@ -16,6 +16,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * দর নেই, ইচ্ছাকৃতভাবে: গুদাম বদলালে মালের মূল্য বদলায় না, আর এখানে
  * একটা দর বসালে কেউ ভাবত সেটা দিয়ে কিছু একটা হিসাব হচ্ছে।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $entered_qty
+ * @property int|null $entered_unit_id
  */
 class StockTransferLine extends Model
 {

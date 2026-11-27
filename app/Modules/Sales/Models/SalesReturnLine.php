@@ -14,7 +14,12 @@ use App\Modules\MasterData\Models\ReasonCode;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** ফেরতের একটা লাইন — কোন পণ্য, কতটা, আর সেটা আবার বিক্রি করা যাবে কি না। */
+/** ফেরতের একটা লাইন — কোন পণ্য, কতটা, আর সেটা আবার বিক্রি করা যাবে কি না।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $entered_qty
+ * @property int|null $entered_unit_id
+ */
 class SalesReturnLine extends Model
 {
     use BelongsToCompany;

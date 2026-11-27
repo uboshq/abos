@@ -27,6 +27,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * টাকাটা কোথায় ঢুকল তা বলতেই হবে (account_id): কারও টিলে, নাকি ব্যাংকে।
  * না বললে "আজ কার হাতে কত আছে" প্রশ্নের উত্তর থাকত না, অথচ দিনশেষে ওই
  * প্রশ্নটাই সবচেয়ে বেশি করা হয়।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম (২০২৭_০৩_০৫ the_money_form_asked…) — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property \Illuminate\Support\Carbon|null $value_date
+ * @property int|null $transfer_mode_id
+ * @property string|null $deposit_slip_no
+ * @property string|null $from_bank
  */
 class Collection extends Model implements Drillable
 {

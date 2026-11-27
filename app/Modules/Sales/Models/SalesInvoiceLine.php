@@ -12,7 +12,14 @@ use App\Modules\Inventory\Models\Product;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** বিলের একটা লাইন। */
+/** বিলের একটা লাইন।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $entered_qty
+ * @property int|null $entered_unit_id
+ * @property string|null $tax_variance
+ * @property string|null $price_variance
+ */
 class SalesInvoiceLine extends Model
 {
     use BelongsToCompanyThroughParent;

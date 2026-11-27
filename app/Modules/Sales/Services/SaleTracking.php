@@ -383,7 +383,9 @@ final class SaleTracking
      */
     public function timeline(DeliveryChallan $challan): array
     {
-        $miles = collect($this->milestones($challan, $challan->salesOrder, $this->passOf($challan)))->keyBy('key');
+        // ⓘ সাত ধাপের কোনোটা আদেশের ঘটনা দেখায় না (TIMELINE-এ 'order_created' নেই), তাই আদেশ লাগে না — স্পষ্ট null।
+        // ⛔ আগে `$challan->salesOrder` পড়া হত — চালানে ঐ নামের সম্পর্কই নেই (নাম `order`), Eloquent নিঃশব্দে null দিত (PHPStan, ২৮ নভেম্বর ২০২৬)
+        $miles = collect($this->milestones($challan, null, $this->passOf($challan)))->keyBy('key');
         $t = $challan->transportFacts();
         $driver = trim(implode(' · ', array_filter([$t['driver_name'] ?? null, $t['driver_phone'] ?? null])));
         $arrival = $this->stageEvents($challan)

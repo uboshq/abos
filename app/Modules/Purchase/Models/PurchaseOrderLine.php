@@ -23,6 +23,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * company_id নেই — বাবার আছে। সন্তান-টেবিলে আলাদা করে রাখলে দুইটা একদিন
  * আলাদা হয়ে যেতে পারত।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $entered_qty
+ * @property int|null $entered_unit_id
+ * @property string|null $tax_variance
  */
 class PurchaseOrderLine extends Model
 {

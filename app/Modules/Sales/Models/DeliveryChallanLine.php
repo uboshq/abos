@@ -14,7 +14,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/** চালানের একটা লাইন — এক পণ্য, যত গেল। */
+/** চালানের একটা লাইন — এক পণ্য, যত গেল।
+ *
+ * ⓘ লুপে যোগ হওয়া কলাম — larastan মাইগ্রেশনের foreach পড়তে পারে না (PHPStan, ২৮ নভেম্বর ২০২৬)
+ * @property string|null $entered_qty
+ * @property int|null $entered_unit_id
+ */
 class DeliveryChallanLine extends Model
 {
     use BelongsToCompanyThroughParent;

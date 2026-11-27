@@ -348,12 +348,13 @@ final class PurchaseReceiptService
              * ⓘ লাইনে নীতি না থাকলে পণ্যের পুরনো নীতি **ছোঁয়া হয় না** —
              * `null` লিখে দিলে আগের সিদ্ধান্তটা মুছে যেত, অথচ এই কাগজটা
              * কোনো নতুন সিদ্ধান্ত জানায়নি।
+             *
+             * ⛔ গ্রহণের (receipt) লাইনে নীতির ঘরই নেই — `pricing_anchor`/`pricing_pct` কেবল বিলের লাইনে
+             *    ([[PurchaseBillLine]], মাইগ্রেশন ২০২৬_১১_০৬ the_paper_recorded_the_price…), আর গ্রহণের ফর্মও নীতি চায় না।
+             *    তাই এখানে আগে যে `$line->pricing_anchor` পড়া হত তা সবসময় null — নীতি বসে কেবল বিল থেকে
+             *    ([[PurchaseBillService]])। গ্রহণ কেবল দামটা বসায়, পণ্যের নীতি অক্ষত রাখে (PHPStan, ২৮ নভেম্বর ২০২৬)।
              */
-            $policy = filled($line->pricing_anchor)
-                ? ['pricing_anchor' => $line->pricing_anchor, 'pricing_pct' => $line->pricing_pct]
-                : [];
-
-            $line->product->update(['sale_price' => $line->sales_price] + $policy);
+            $line->product->update(['sale_price' => $line->sales_price]);
         }
     }
 
