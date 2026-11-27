@@ -608,6 +608,27 @@ export default function directSale({
             return list.length > 0 && ! list.some(d => String(d.id) === this.resumeId);
         },
 
+        /*
+         * ✓/⚠ "নিশ্চিত করুন"-এর ঠিক উপরের লাইন (v2 A5–A6, নমুনার .ok)।
+         * ⓘ canConfirm-এর প্রতিটা শর্তের নিজের কথা — বোতাম ধূসর থাকলে কেন, সেটা চোখের সামনে।
+         * ⚠️ সীমা পার বোতাম আটকায় না (সার্ভার আটকায়, CreditExposure) — তাই শেষ সারিতে কেবল সতর্কতা।
+         */
+        get confirmProblem() {
+            if (this.viewOnly) return String(texts.confirm?.viewOnly ?? '');
+            if (this.customerId === '') return String(texts.confirm?.needCustomer ?? '');
+            if (this.lines.length === 0) return String(texts.confirm?.needLines ?? '');
+            if (this.customerHasOpenDraft) return this.openDraftText;
+            if (this.fareMissing) return String(texts.confirm?.needFare ?? '');
+            if (this.hasCreditLimit && this.termUsesCredit && this.creditOver > 0) {
+                return String(texts.confirm?.creditOver ?? '').replace(':amount', '৳' + this.money(this.creditOver));
+            }
+            return '';
+        },
+
+        get confirmLine() {
+            return this.confirmProblem || String(texts.confirm?.ready ?? '');
+        },
+
         get openDraftText() {
             if (! this.customerHasOpenDraft) return '';
 

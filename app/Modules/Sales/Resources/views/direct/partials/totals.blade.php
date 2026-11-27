@@ -631,6 +631,7 @@
                     @if ($show['deposit'])
                     <button type="button" @click="openPanel('deposit')" class="ds-b8 ds-b8-success" data-counter-button="deposit"
                             :class="panel === 'deposit' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="banknote" :size="18" />@endif
                         <span>{{ __('sales::field.btn_money') }}</span>
                         <small>F2</small>
                     </button>
@@ -638,18 +639,21 @@
                     @if ($show['transport'])
                     <button type="button" @click="openPanel('transport')" class="ds-b8 ds-b8-pending" data-counter-button="transport"
                             :class="panel === 'transport' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="truck" :size="18" />@endif
                         <span>{{ __('sales::field.btn_transport') }}</span>
                         <small>F4</small>
                     </button>
                     @endif
                     <button type="button" @click="openPanel('delivery')" class="ds-b8 ds-b8-inventory" data-counter-button="delivery"
                             :class="panel === 'delivery' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="package" :size="18" />@endif
                         <span>{{ __('sales::field.btn_delivery') }}</span>
                         <small><span x-text="'F7 · ' + deliveryModeLabel"></span></small>
                     </button>
                     @unless (($abosLook ?? false))
                     <button type="button" @click="openPanel('return')" class="ds-b8 ds-b8-draft" data-counter-button="return"
                             :class="panel === 'return' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="undo-2" :size="18" />@endif
                         <span>{{ __('sales::field.btn_return') }}</span>
                         <small>F9</small>
                     </button>
@@ -658,32 +662,38 @@
                     {{-- সারি ২ — "খসড়া রাখুন" ফর্মের নিজের submit (নাম আর মান কেবল চাপলে যায় — নিচের ব্যাখ্যা দেখুন) --}}
                     <button type="submit" name="save_as_draft" value="1" class="ds-b8 ds-b8-grey bg-(--color-border-strong)" data-counter-button="save_draft"
                             :disabled="! canConfirm">
+                        @if (($abosLook ?? false))<x-ui.licon name="archive" :size="18" />@endif
                         <span>{{ __('sales::action.save_draft') }}</span>
                     </button>
                     @if (($abosLook ?? false))
                     <button type="button" @click="openPanel('note')" class="ds-b8 ds-b8-info" data-counter-button="note"
                             :class="panel === 'note' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="file-text" :size="18" />@endif
                         <span>{{ __('sales::field.note') }}</span>
                         <small x-show="noteText !== ''" x-cloak>✓</small>
                     </button>
                     <button type="button" @click="openPanel('return')" class="ds-b8 ds-b8-draft" data-counter-button="return"
                             :class="panel === 'return' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="undo-2" :size="18" />@endif
                         <span>{{ __('sales::field.btn_return') }}</span>
                         <small>F9</small>
                     </button>
                     @endif
                     <button type="button" @click="openPanel('drafts')" class="ds-b8 ds-b8-neutral" data-counter-button="drafts"
                             :class="panel === 'drafts' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="folder-open" :size="18" />@endif
                         <span>{{ __('sales::field.btn_drafts') }}</span>
                         <small>F6</small>
                     </button>
                     <button type="button" @click="openPanel('reprint')" class="ds-b8 ds-b8-neutral" data-counter-button="reprint"
                             :class="panel === 'reprint' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="printer" :size="18" />@endif
                         <span>{{ __('sales::field.btn_reprint') }}</span>
                         <small>F8</small>
                     </button>
                     <button type="button" @click="openPanel('cancel')" class="ds-b8 ds-b8-danger" data-counter-button="cancel"
                             :class="panel === 'cancel' ? 'is-on' : ''">
+                        @if (($abosLook ?? false))<x-ui.licon name="circle-x" :size="18" />@endif
                         <span>{{ __('sales::field.btn_cancel') }}</span>
                         <small>Ctrl+X</small>
                     </button>
@@ -743,6 +753,14 @@
                 {{-- ⛔ "মাল কীভাবে যাবে" এখানে নেই — মালিক, ৩ অক্টোবর ২০২৬: *"ekhane thakbena kotobar bolechi"*। পরিবহন
                      ডেলিভারি প্রসেসিংয়ে, নয়তো চালান বা বিল ছাপার আগে পপআপে ([[RequireTransportBeforePrint]])। --}}
                 {{-- ⭐ সারি ৩ — "নিশ্চিত করুন" একা, পুরো প্রস্থে (মালিক, ৪ অক্টোবর ২০২৬)। "খসড়া রাখুন" উপরে, সারি ২-এ। --}}
+                {{-- ✓/⚠ নমুনার .ok লাইন — বোতাম ধূসর কেন, বা সব ঠিক (v2 A6, কেবল ABOS-এর রূপে) --}}
+                @if (($abosLook ?? false))
+                    <p class="ds-okline" :class="confirmProblem ? 'is-bad' : ''" role="status" aria-live="polite" data-confirm-line>
+                        <span x-show="! confirmProblem"><x-ui.licon name="circle-check-big" :size="15" /></span>
+                        <span x-show="confirmProblem" x-cloak><x-ui.licon name="triangle-alert" :size="15" /></span>
+                        <span x-text="confirmLine"></span>
+                    </p>
+                @endif
                 <div class="mt-2 grid grid-cols-1 gap-2">
                     {{-- ⭐ `data-opens-print` — চাপার মুহূর্তে ছাপার ট্যাব খোলে, কাউন্টার এখানেই থাকে (মালিক, ২৩ নভেম্বর ২০২৬; [[print-tab.js]]) --}}
                     <x-ui.button type="submit" tone="primary" class="py-2" x-ref="confirm" data-overview-trigger data-opens-print

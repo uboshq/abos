@@ -309,6 +309,27 @@
     /* ⓘ পুরো বাক্স এক পর্দায়, স্ক্রল ছাড়া (মালিক, ২৬ নভেম্বর ২০২৬) — বোতামগুলো একটু চাপা */
     form[data-abos-counter] .ds-tot-abos .ds-b8 { min-height: 1.9rem; padding-block: .1rem; }
     form[data-abos-counter] .ds-tot-abos [data-counter-buttons] { gap: .25rem; }
+    /* 🎨 ৯ বোতাম — আঁকা চিহ্ন + অর্থের রঙের ঢাল, সাদা লেখা (v2 A6)। ⓘ নমুনার হালকা প্রান্ত (#f59e0b ইত্যাদি) সাদা লেখায় ৩:১-এর নিচে
+       নামত, তাই দুই প্রান্তই গাঢ় — সাদার সাথে ≥ ৪.৫:১ (WCAG AA)। */
+    form[data-abos-counter] .ds-tot-abos .ds-b8 { flex-direction: row; flex-wrap: wrap; column-gap: .3rem; row-gap: 0; color: #fff;
+        background: linear-gradient(135deg, var(--b8-a), var(--b8-b)); --b8-ink: var(--b8-a); }
+    form[data-abos-counter] .ds-tot-abos .ds-b8 > small { flex-basis: 100%; text-align: center; margin-top: 0; }
+    form[data-abos-counter] .ds-tot-abos .ds-b8 svg { flex: none; }
+    form[data-abos-counter] .ds-tot-abos .ds-b8:disabled { opacity: .55; cursor: not-allowed; }
+    form[data-abos-counter] .ds-tot-abos .ds-b8.is-on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--b8-a); }
+    form[data-abos-counter] [data-counter-button='deposit'] { --b8-a: #065f46; --b8-b: #047857; }
+    form[data-abos-counter] [data-counter-button='transport'] { --b8-a: #92400e; --b8-b: #b45309; }
+    form[data-abos-counter] [data-counter-button='delivery'] { --b8-a: #155e75; --b8-b: #0e7490; }
+    form[data-abos-counter] [data-counter-button='save_draft'] { --b8-a: #334155; --b8-b: #475569; }
+    form[data-abos-counter] [data-counter-button='note'] { --b8-a: #1e40af; --b8-b: #1d4ed8; }
+    form[data-abos-counter] [data-counter-button='return'] { --b8-a: #5b21b6; --b8-b: #6d28d9; }
+    form[data-abos-counter] [data-counter-button='drafts'] { --b8-a: #374151; --b8-b: #4b5563; }
+    form[data-abos-counter] [data-counter-button='reprint'] { --b8-a: #115e59; --b8-b: #0f766e; }
+    form[data-abos-counter] [data-counter-button='cancel'] { --b8-a: #991b1b; --b8-b: #b91c1c; }
+    /* ✓/⚠ নিশ্চিত করার আগের লাইন — সবুজ "ঠিক আছে", লাল "কী বাকি" */
+    form[data-abos-counter] .ds-okline { display: flex; align-items: center; gap: .35rem; margin-top: .4rem; padding: .3rem .6rem; border-radius: 8px;
+        font-size: .75rem; font-weight: 600; color: #047857; background: #ecfdf5; }
+    form[data-abos-counter] .ds-okline.is-bad { color: #b91c1c; background: #fef2f2; }
     /* ⓘ কাউন্টার মোডে নিচে স্ট্যাটাস বার নেই — বাক্স আর তালিকা পর্দার নিচ পর্যন্ত */
     @media (min-width: 1280px) {
         body:has([data-counter-strip]) form[data-abos-counter] .ds-side { max-height: calc(100dvh - 6.3rem); }
