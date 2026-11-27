@@ -77,8 +77,30 @@ export function nameThisTab (win = window) {
     }
 }
 
+export const SIGN_OUT_KEY = 'abos-signed-out'
+
+/**
+ * ⭐ একটা ট্যাব থেকে বের হলে সব ট্যাব থেকে (যৌথ PLAN.md §3.8) — বের হওয়ার ফর্ম জমা পড়লে খবরটা রাখা হয়;
+ *   অন্য ট্যাব (মেইল বা মূল) সেটা শুনে ঢোকার পাতায় যায়। ⓘ সার্ভারের সেশন এমনিতেই এক; এটা পর্দাটাও মিলিয়ে দেয়।
+ */
+export function installSignOutSync (doc = document, win = window) {
+    doc.addEventListener('submit', (event) => {
+        const form = event.target
+        if (form && form.matches && form.matches('form[action$="/logout"]')) {
+            try { win.localStorage.setItem(SIGN_OUT_KEY, String(Date.now())) } catch (e) { /* ⓘ জমা রাখা বন্ধ থাকলে কেবল এই ট্যাব */ }
+        }
+    })
+
+    win.addEventListener('storage', (event) => {
+        if (event.key !== SIGN_OUT_KEY || ! event.newValue) return
+        if (/^\/(login|logout)\b/.test(win.location.pathname)) return
+        win.location.assign('/login')
+    })
+}
+
 export function installCounterMode (doc = document, win = window) {
     nameThisTab(win)
+    installSignOutSync(doc, win)
 
     doc.addEventListener('click', (event) => {
         const link = event.target?.closest?.('a[href]')

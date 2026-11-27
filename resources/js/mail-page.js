@@ -16,6 +16,7 @@ if (root) {
     const CSRF = root.dataset.csrf || ''
     const ZERO = '00000000-0000-0000-0000-000000000000'
     const PER = 50
+    const BASE_TITLE = document.title.replace(/^\(\d+\)\s*/, '')
     const $ = (s, el = root) => el.querySelector(s)
     const $$ = (s, el = root) => Array.from(el.querySelectorAll(s))
     const state = {
@@ -101,6 +102,8 @@ if (root) {
         if (office.length) html += '<div class="mx-sect">' + esc(W.my_mail) + '</div>' + office.map(box).join('')
         if (personal.length) html += '<div class="mx-sect">' + esc(W.personal) + '</div>' + personal.map(box).join('')
         $('[data-accounts]').innerHTML = html
+        // ⭐ ব্রাউজারের ট্যাবেও না-পড়া সংখ্যা — "(3) মেইল — ABOS" (যৌথ PLAN.md §3.1, Gmail-এর মতো)
+        document.title = (total ? '(' + total + ') ' : '') + BASE_TITLE
     }
 
     function renderRequests () {
@@ -820,13 +823,68 @@ if (root) {
     })
 
     document.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Escape') { $('[data-compose]').hidden = true; $('[data-connect]').hidden = true; closeMenu() }
+        if (ev.key === 'Escape') { $('[data-compose]').hidden = true; $('[data-connect]').hidden = true; closeMenu(); closeKeys() }
         if (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey) && ! $('[data-compose]').hidden && $('[data-compose]').contains(document.activeElement)) $('[data-compose]').requestSubmit()
+        shortcut(ev)
     })
 
+    // ⭐ কিবোর্ডের সহজ চাপ — Gmail-এর মতো (যৌথ PLAN.md §3.2)। ⛔ লেখার ঘরে, Ctrl/Alt/⌘ চেপে, বা নতুন মেইল খোলা থাকলে চলে না।
+    function shortcut (ev) {
+        if (ev.ctrlKey || ev.altKey || ev.metaKey || ev.defaultPrevented) return
+        const t = ev.target
+        if (t && (t.isContentEditable || (t.matches && t.matches('input, textarea, select, [contenteditable]')))) return
+        if (! $('[data-compose]').hidden) return
+        const press = (act) => { const b = $('[data-act="' + act + '"]'); if (b && ! b.disabled) { ev.preventDefault(); b.click() } }
+        const step = (by) => {
+            const rows = visibleRows()
+            if (! rows.length) return
+            const at = state.open ? rows.findIndex(m => m.acc === state.openAcc && m.uid === state.open.uid) : -1
+            const next = rows[Math.min(rows.length - 1, Math.max(0, at + by))]
+            if (next) { ev.preventDefault(); openMail(next.acc + ':' + next.uid, false) }
+        }
+
+        switch (ev.key) {
+            case 'c': press('compose'); break
+            case '/': { const q = $('[data-q]'); if (q) { ev.preventDefault(); q.focus(); q.select() } break }
+            case 'r': if (state.open) press('reply'); break
+            case 'a': if (state.open) press('reply-all'); break
+            case 'f': if (state.open) press('forward'); break
+            case 'e': if (state.open) press('archive'); break
+            case '#': if (state.open) press('delete'); break
+            case 'j': step(1); break
+            case 'k': step(-1); break
+            case 'u': if (state.open) { ev.preventDefault(); closeReader() } break
+            case '?': ev.preventDefault(); showKeys(); break
+        }
+    }
+
+    function showKeys () {
+        if (closeKeys()) return
+        const box = document.createElement('div')
+        box.dataset.keysHelp = '1'
+        box.setAttribute('role', 'dialog')
+        box.setAttribute('aria-modal', 'true')
+        box.setAttribute('aria-label', W.keys_title || '')
+        box.style.cssText = 'position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgb(15 23 42 / .35)'
+        box.innerHTML = '<div style="background:#fff;border-radius:14px;padding:18px 22px;min-width:300px;box-shadow:0 18px 48px rgb(0 0 0 / .25)">'
+            + '<b style="display:block;font-size:15px;margin-bottom:10px">' + esc(W.keys_title || '') + '</b>'
+            + Object.entries(W.keys || {}).map(([k, v]) => '<div style="display:flex;gap:14px;align-items:center;padding:3px 0"><kbd style="min-width:34px;text-align:center;padding:2px 8px;border:1px solid #cfd6e4;border-bottom-width:2px;border-radius:6px;font:600 13px ui-monospace,monospace">' + esc(k) + '</kbd><span>' + esc(v) + '</span></div>').join('')
+            + '</div>'
+        box.addEventListener('click', (e) => { if (e.target === box) closeKeys() })
+        root.appendChild(box)
+    }
+
+    function closeKeys () {
+        const old = root.querySelector('[data-keys-help]')
+        if (old) { old.remove(); return true }
+        return false
+    }
+
     loadAccounts()
-    // ⓘ নতুন মেইল — প্রতি 2 মিনিটে, পাতা লুকানো বা কিছু বাছা থাকলে নয়
-    setInterval(() => { if (! document.hidden && state.view.acc && ! state.picked.size) { refreshCounts(); if (! state.open) loadList() } }, 120000)
+    // ⓘ নতুন মেইল — প্রতি 1 মিনিটে, আর ট্যাবে ফিরলেই সাথে সাথে (পাতা লুকানো বা কিছু বাছা থাকলে নয়); সংখ্যা ব্রাউজারের ট্যাবেও
+    const fresh = () => { if (! document.hidden && state.view.acc && ! state.picked.size) { refreshCounts(); if (! state.open) loadList() } }
+    setInterval(fresh, 60000)
+    document.addEventListener('visibilitychange', () => { if (! document.hidden) fresh() })
 
     async function sendLater (which) {
         const form = $('[data-compose]')

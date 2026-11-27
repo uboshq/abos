@@ -38,6 +38,11 @@ return [
     'search_folder' => 'Search this folder',
     'refresh' => 'Refresh',
     'all_inbox' => 'All inboxes together',
+    'keys_title' => 'Keyboard shortcuts',
+    'keys' => [
+        'c' => 'New mail', '/' => 'Search', 'r' => 'Reply', 'a' => 'Reply all', 'f' => 'Forward',
+        'e' => 'Archive', '#' => 'Delete', 'j' => 'Next mail', 'k' => 'Previous mail', 'u' => 'Back to the list', '?' => 'This list', 'Esc' => 'Close',
+    ],
     'all_inbox_sub' => ':count accounts',
     'my_mail' => 'Office mail',
     'team_boxes' => 'Team mailboxes',

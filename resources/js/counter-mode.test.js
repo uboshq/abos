@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAIL_WINDOW, MAIN_WINDOW, isMailUrl, nameThisTab, openMail } from './counter-mode.js'
+import { MAIL_WINDOW, MAIN_WINDOW, SIGN_OUT_KEY, installSignOutSync, isMailUrl, nameThisTab, openMail } from './counter-mode.js'
 
 // ⭐ মেইল একটাই নিজের ট্যাবে (মালিক, ২৭ নভেম্বর ২০২৬; ABOS ও NEXUS-এর যৌথ PLAN.md §1)
 const O = 'https://demo.adi.com.bd'
@@ -78,5 +78,35 @@ describe('mail opens in its own tab', () => {
         const left = fakeWin(O + '/dashboard', MAIL_WINDOW)
         nameThisTab(left)
         expect(left.name).toBe(MAIN_WINDOW)
+    })
+})
+
+describe('signing out in one tab signs out the others', () => {
+    function bus () {
+        const on = {}
+        return { on, addEventListener (type, fn) { (on[type] = on[type] || []).push(fn) }, fire (type, ev) { (on[type] || []).forEach(fn => fn(ev)) } }
+    }
+
+    it('the sign-out form leaves a note, and another tab goes to the sign-in page', () => {
+        const store = {}
+        const doc = bus()
+        const win = Object.assign(bus(), { location: { pathname: '/mail', assign (u) { win.went = u } }, localStorage: { setItem (k, v) { store[k] = v } } })
+        installSignOutSync(doc, win)
+
+        doc.fire('submit', { target: { matches: (s) => s === 'form[action$="/logout"]' } })
+        expect(store[SIGN_OUT_KEY]).toBeTruthy()
+
+        win.fire('storage', { key: SIGN_OUT_KEY, newValue: store[SIGN_OUT_KEY] })
+        expect(win.went).toBe('/login')
+    })
+
+    it('other notes, and the sign-in page itself, do nothing', () => {
+        const doc = bus()
+        const win = Object.assign(bus(), { location: { pathname: '/login', assign (u) { win.went = u } }, localStorage: { setItem () {} } })
+        installSignOutSync(doc, win)
+
+        win.fire('storage', { key: 'something-else', newValue: '1' })
+        win.fire('storage', { key: SIGN_OUT_KEY, newValue: '1' })
+        expect(win.went).toBeUndefined()
     })
 })
