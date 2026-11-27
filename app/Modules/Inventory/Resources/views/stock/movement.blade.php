@@ -59,7 +59,7 @@
     <x-slot:title>{{ __('inventory::analysis.title') }}</x-slot:title>
 
     <div class="py-6">
-        <h1 class="text-xl font-bold text-(--color-ink)">{{ __('inventory::analysis.title') }}</h1>
+        <h1 data-page-title class="text-xl font-bold text-(--color-ink)">{{ __('inventory::analysis.title') }}</h1>
         <div class="mt-2 print-hide"><x-ui.print-view-button /></div>
 
         {{-- জানালা: ৭ / ৩০ / ৯০ দিন --}}

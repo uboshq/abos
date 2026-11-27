@@ -122,7 +122,7 @@
             @endif
 
             <div class="min-w-0 flex-1">
-                <h1 class="truncate text-2xl font-semibold text-(--color-ink)">{{ $employee->name() }}</h1>
+                <h1 data-page-title class="truncate text-2xl font-semibold text-(--color-ink)">{{ $employee->name() }}</h1>
                 <p class="text-sm text-(--color-ink-body)">
                     {{ collect([$employee->code, $title, $employee->department?->name(), $employee->branch?->name()])->filter()->implode(' · ') }}
                 </p>

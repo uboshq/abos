@@ -7,7 +7,7 @@
 
     <div class="space-y-4" data-party-message="{{ $message->id }}">
         <div class="flex items-center justify-between gap-2">
-            <h1 class="text-lg font-semibold">{{ __('notification::party_log.message_title') }}</h1>
+            <h1 data-page-title class="text-lg font-semibold">{{ __('notification::party_log.message_title') }}</h1>
             <a href="{{ route('notification.party_messages.index') }}" class="text-sm text-(--color-brand-500) hover:underline">{{ __('notification::party_log.back') }}</a>
         </div>
 

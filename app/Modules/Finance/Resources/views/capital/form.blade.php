@@ -41,7 +41,7 @@
              ⚠️ `x-ui.page-header` ব্যবহার করা হয়নি, কারণ ওটা নাম আর
              ব্যাখ্যা দুই লাইনে বসায়; নমুনায় সব এক লাইনে। --}}
         <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 class="text-lg font-semibold">{{ __('finance::field.capital_book_name') }}</h1>
+            <h1 data-page-title class="text-lg font-semibold">{{ __('finance::field.capital_book_name') }}</h1>
 
             <span class="text-sm text-(--color-ink-muted)">
                 {{ __('finance::field.capital_book_tag') }}

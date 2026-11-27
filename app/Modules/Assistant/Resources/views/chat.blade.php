@@ -41,7 +41,7 @@
 
         {{-- ── title row: Copilot + নতুন কথা + ইতিহাস, one row, no description line ── --}}
         <div class="cpp-head">
-            <h1>
+            <h1 data-page-title>
                 @if ($aiMark)
                     <x-ui.ai-mark :size="30" x-bind:data-ai-busy="busy" />
                 @else

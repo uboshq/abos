@@ -66,7 +66,7 @@
         <header class="mb-4 flex flex-wrap items-end justify-between gap-4">
             <div class="min-w-0">
                 <div class="flex items-center gap-3">
-                    <h1 class="text-2xl font-semibold">{{ __('money.screen.title_pay') }}</h1>
+                    <h1 data-page-title class="text-2xl font-semibold">{{ __('money.screen.title_pay') }}</h1>
                     <x-ui.paper-state state="draft" />
                 </div>
                 <p data-pay-meta class="mt-1 text-xs text-(--color-ink-muted)">
