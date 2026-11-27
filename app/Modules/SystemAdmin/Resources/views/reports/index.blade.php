@@ -23,11 +23,7 @@
         ['key' => 'status', 'label' => __('system_admin::schedule.status_col'), 'render' => fn ($s) => new \Illuminate\Support\HtmlString(
             '<span class="rounded-(--radius-badge) px-2 py-0.5 text-2xs '.($s->is_active ? 'bg-(--color-badge-success-bg) text-(--color-badge-success-ink)' : 'bg-(--color-badge-draft-bg) text-(--color-badge-draft-ink)').'">'
             .e(__($s->is_active ? 'system_admin::schedule.active' : 'system_admin::schedule.inactive')).'</span>')],
-        ['key' => 'act', 'label' => '', 'render' => fn ($s) => new \Illuminate\Support\HtmlString(
-            '<a href="'.e(route('system_admin.reports.schedule.edit', $s)).'" class="text-(--color-brand-600) hover:underline">'.e(__('core.action.edit')).'</a>'
-            .'<form method="POST" action="'.e(route('system_admin.reports.schedule.toggle', $s)).'" class="inline">'.csrf_field()
-            .'<button type="submit" class="ms-3 text-2xs text-(--color-ink-muted) underline hover:text-(--color-ink)">'
-            .e(__($s->is_active ? 'system_admin::schedule.deactivate' : 'system_admin::schedule.activate')).'</button></form>')],
+        ['key' => 'act', 'label' => '', 'render' => fn ($s) => new \Illuminate\Support\HtmlString(view('system_admin::reports.partials.row-actions', ['s' => $s])->render())],
     ];
 @endphp
 <x-layouts.app :menu="$menu">
@@ -110,16 +106,7 @@
                                 </x-ui.badge>
                             </td>
                             <td class="text-end">
-                                <a href="{{ route('system_admin.reports.schedule.edit', $s) }}"
-                                   class="text-(--color-brand-600) hover:underline">{{ __('core.action.edit') }}</a>
-                                <form method="POST" action="{{ route('system_admin.reports.schedule.toggle', $s) }}"
-                                      class="inline">
-                                    @csrf
-                                    <button type="submit"
-                                            class="ms-3 text-2xs text-(--color-ink-muted) underline hover:text-(--color-ink)">
-                                        {{ __($s->is_active ? 'system_admin::schedule.deactivate' : 'system_admin::schedule.activate') }}
-                                    </button>
-                                </form>
+                                @include('system_admin::reports.partials.row-actions')
                             </td>
                         </tr>
                     @endforeach
