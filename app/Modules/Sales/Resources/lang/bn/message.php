@@ -336,4 +336,11 @@ return [
     'total_leaves_out_quotation' => 'মোটে ফেরত, বাতিল আর পুরনো সংস্করণ বাদ',
     'total_leaves_out_delivery_order' => 'মোটে ফেরত আর বাতিল বাদ',
     'total_leaves_out_order' => 'মোটে ফেরত আর বাতিল বাদ',
+    'edit_line_hint' => 'বদলে "হালনাগাদ করুন" চাপুন — উপরের এন্ট্রির ঘর ফাঁকাই থাকবে',
+    'confirm_ready' => 'নিশ্চিত করার মতো — সব ঘর ঠিক আছে',
+    'confirm_view_only' => 'সইয়ের অপেক্ষায় — কেবল দেখা যাবে; বদলাতে আগে খসড়ায় ফেরান',
+    'confirm_need_customer' => 'ক্রেতা বাছা হয়নি',
+    'confirm_need_lines' => 'কার্টে কোনো পণ্য নেই',
+    'confirm_need_fare' => 'গাড়িভাড়ার অঙ্ক লেখা বাকি (F4)',
+    'confirm_credit_over' => 'বাকির সীমা :amount পার — নিশ্চিত করলে আটকাবে; টাকা নিন বা মাল কমান',
 ];

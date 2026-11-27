@@ -461,6 +461,8 @@ final class SalesInvoiceService
                  */
                 'rounding_amount' => $data['rounding_amount'] ?? '0',
                 'bill_discount' => $data['bill_discount'] ?? '0',
+                // ⭐ বিলের ছাড়ের কারণ (নতুন কাউন্টার, ২৮ নভেম্বর ২০২৬)
+                'discount_reason' => $data['discount_reason'] ?? null,
                 // ⭐ বিলে যোগ করা গাড়িভাড়া ("Prepaid & Add", ৪ অক্টোবর ২০২৬) — মোটের ভিতরে ([[replaceLines()]])
                 'freight_charge' => $data['freight_charge'] ?? '0',
                 'status' => DocumentStatus::DRAFT,
@@ -586,6 +588,7 @@ final class SalesInvoiceService
 
                 // ⓘ রাউন্ডিংয়ের একই কারণে: চাবি না এলে আগেরটাই থাকে
                 'bill_discount' => $data['bill_discount'] ?? $invoice->bill_discount,
+                'discount_reason' => array_key_exists('discount_reason', $data) ? $data['discount_reason'] : $invoice->discount_reason,
                 'freight_charge' => $data['freight_charge'] ?? $invoice->freight_charge,
             ]);
 

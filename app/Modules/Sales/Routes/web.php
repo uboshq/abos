@@ -191,6 +191,8 @@ Route::middleware('auth')->prefix('sales')->group(function () {
          * বলে। দেয়ালটা [[DirectSaleService]]-এই থাকে।
          */
         Route::get('/free-allowed', [DirectSaleController::class, 'freeAllowed'])->name('free_allowed');
+        // ⭐ এই ক্রেতার শেষ দর — নতুন কাউন্টারের নীল বাক্স ([[LastSaleRates]]; ২৮ নভেম্বর ২০২৬)। চাবি কন্ট্রোলারের (sales.challan.create)
+        Route::get('/last-rates', [DirectSaleController::class, 'lastRates'])->name('last_rates');
 
         /*
          * ⭐ ডিপোর যাচাই — হিসাবে অনুমোদিত DO, "যাচাই করে বিক্রয়ে খুলুন" (বিক্রয়ের কাজের ধারা, ২ অক্টোবর ২০২৬, ধাপ ঙ)।

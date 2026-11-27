@@ -158,8 +158,32 @@
     form[data-abos-counter] section:has(.ds-qtyrow.ds-nofree) .ds-lot { flex-basis: calc((100cqw - 2.25rem) * 2.7 / 8.45 + .375rem); }
     form[data-abos-counter] .ds-qtyrow > :is(.ds-gift-btn, button[data-cart-button]) { min-width: 0; overflow: hidden; }
     /* ⭐ বাছা পণ্যের নাম — হালকা টিল ঘরে, বাঁয়ে গাঢ় টিল দাগ; মোটের বাক্সের রঙের সাথে মেলে (মালিক, ২৬ নভেম্বর ২০২৬) */
-    form[data-abos-counter] .ds-picked-pill { flex: 0 1 auto !important; max-width: 100%; background: #e6f8fb; border: 1px solid #9fdde6 !important;
-        border-left: 5px solid #0b8a9a !important; border-radius: 10px; color: #0b3b5c !important; font-weight: 800; padding-inline: .9rem; }
+    form[data-abos-counter] .ds-picked-pill { flex: 0 1 auto !important; max-width: 100%; background: linear-gradient(90deg, #e6f8fb, #f3fbfc 70%, transparent);
+        border: 1px solid transparent !important; border-left: 6px solid #0b8a9a !important; border-radius: 8px; color: #0b3b5c !important;
+        font-size: 1.5rem; font-weight: 800; padding-inline: 1rem; }
+    /* 🔍 বদলান — নমুনার .pswap, টিল লেখা, হালকা ঘর (v2 A3) */
+    form[data-abos-counter] .ds-pswap { display: inline-flex; align-items: center; gap: .3rem; flex: none; min-height: 2rem; padding: 0 .6rem;
+        border-radius: 6px; background: #f3fbfc; color: #0b6c7a; font-size: .8rem; font-weight: 600; }
+    form[data-abos-counter] .ds-pswap:hover { background: #e6f8fb; }
+    form[data-abos-counter] .ds-pswap:focus-visible { outline: 2px solid #0b6c7a; outline-offset: 2px; }
+    /* ✎ লাইন বদলানোর পপআপ — নমুনার রঙিন মাথা আর নিচের তিন বোতাম, ABOS-এর টিলে (v2 A4) */
+    form[data-abos-counter] .ds-pophead { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+        margin: -16px -18px 12px; padding: 12px 18px; border-radius: 16px 16px 0 0; color: #fff;
+        background: linear-gradient(135deg, #0b3b5c, #0b6c7a); }
+    form[data-abos-counter] .ds-pophead h2 { font-size: 1rem; font-weight: 700; }
+    form[data-abos-counter] .ds-pophead p { font-size: .75rem; opacity: .9; }
+    form[data-abos-counter] .ds-pophead button { min-width: 2.25rem; min-height: 2.25rem; border-radius: 8px; font-size: 1.4rem; line-height: 1; }
+    form[data-abos-counter] .ds-pophead button:hover { background: rgb(255 255 255 / .15); }
+    form[data-abos-counter] .entry-as-popup [data-cart-button] { display: none !important; }
+    form[data-abos-counter] .ds-popfoot { display: flex; align-items: center; gap: .5rem; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--color-border); }
+    form[data-abos-counter] .ds-popfoot button { display: inline-flex; align-items: center; gap: .35rem; min-height: 2.5rem; padding: 0 1rem;
+        border-radius: 10px; font-size: .875rem; font-weight: 600; }
+    form[data-abos-counter] .ds-popfoot button:focus-visible { outline: 2px solid #0b6c7a; outline-offset: 2px; }
+    form[data-abos-counter] .ds-popdel { margin-inline-end: auto; color: #b91c1c; background: #fee2e2; }
+    form[data-abos-counter] .ds-popdel.is-armed { color: #fff; background: #b91c1c; }
+    form[data-abos-counter] .ds-popcancel { color: #334155; background: #f1f5f9; }
+    form[data-abos-counter] .ds-popsave { color: #fff; background: #0b6c7a; }
+    form[data-abos-counter] .ds-popsave kbd { font: inherit; font-size: .75rem; opacity: .85; }
     form[data-abos-counter] .ds-row2-empty :is(.ds-rcpt, .ds-qtywrap, [data-stock-box]) { display: none !important; }
     form[data-abos-counter] .ds-pick-hint { display: none !important; }
     /* পণ্যের সারি আর তার উপরের মজুদের বাক্স — একই কলাম, সোজাসুজি (মালিক: "অ্যাভেলেবেল … পরিমাণ আর এককের ঘর পর্যন্ত") */
@@ -179,6 +203,7 @@
     form[data-abos-counter] .ds-sb-amber { --sb-bg: #fef3c7; --sb-ink: #b45309; }
     form[data-abos-counter] .ds-sb-red { --sb-bg: #fee2e2; --sb-ink: #b91c1c; }
     form[data-abos-counter] .ds-sb-violet { --sb-bg: #ede9fe; --sb-ink: #6d28d9; }
+    form[data-abos-counter] .ds-sb-orange { --sb-bg: #ffedd5; --sb-ink: #c2410c; }
     /* পরিমাণ আর একক বড়; মাথার লেখায় রং — পরিমাণ নীল, ফ্রি সবুজ, মোট কমলা, দাম বেগুনি */
     form[data-abos-counter] .ds-qtyrow > :nth-child(-n+2) :is(input, select) { height: 2.6rem; font-size: 1.05rem; font-weight: 700; border: 2px solid #1d4ed8; }
     form[data-abos-counter] .ds-qtyrow > :nth-child(-n+2) > span:first-child { color: #1d4ed8; }
@@ -229,6 +254,29 @@
     form[data-abos-counter] .ds-tot-card [data-tone='net'] { background: #e6f8fb; }
     form[data-abos-counter] .ds-tot-card [data-tone='net'], form[data-abos-counter] .ds-tot-card [data-tone='net'] * { color: #0b6c7a !important; font-weight: 800; }
     form[data-abos-counter] .ds-tot-card [data-tone='due'], form[data-abos-counter] .ds-tot-card [data-tone='due'] * { color: #b45309 !important; font-weight: 700; }
+    /* 🎨 মোটের সারি অর্থের রঙে — নমুনার মতো (v2 A5): ছাড় কমলা · কর/ভাড়া/রাউন্ডিং বেগুনি · জমা সবুজ · আগের বকেয়া ধূসর ·
+       মোট দেয় গাঢ় টিলের পটি · বিলের বাকি লাল। ⓘ অর্থ আগে, রং পরে: লেবেল বদলায় না, কেবল রং। */
+    form[data-abos-counter] .ds-tot-card [data-row] { border-radius: 8px; margin: 1px .5rem; padding: .12rem .5rem; border-top: 0 !important; }
+    form[data-abos-counter] .ds-tot-card [data-row='disc'] { background: #fff7ed; }
+    form[data-abos-counter] .ds-tot-card [data-row='disc'] > span:first-child, form[data-abos-counter] .ds-tot-card [data-row='disc'] .num { color: #c2410c !important; font-weight: 600; }
+    form[data-abos-counter] .ds-tot-card [data-row='tax'] { background: #faf5ff; }
+    form[data-abos-counter] .ds-tot-card [data-row='tax'] > span:first-child { color: #7e22ce !important; }
+    form[data-abos-counter] .ds-tot-card [data-row='paid'] { background: #ecfdf5; }
+    form[data-abos-counter] .ds-tot-card [data-row='paid'] > span:first-child, form[data-abos-counter] .ds-tot-card [data-row='paid'] .num { color: #047857 !important; font-weight: 600; }
+    form[data-abos-counter] .ds-tot-card [data-row='prev'] { background: #f1f5f9; }
+    form[data-abos-counter] .ds-tot-card [data-row='pay'] { background: linear-gradient(90deg, #0b3b5c, #0b6c7a); margin-block: 4px; padding-block: .3rem; }
+    form[data-abos-counter] .ds-tot-card [data-row='pay'], form[data-abos-counter] .ds-tot-card [data-row='pay'] * { color: #fff !important; }
+    form[data-abos-counter] .ds-tot-card [data-row='bal'] { background: #fee2e2; padding-block: .3rem; }
+    form[data-abos-counter] .ds-tot-card [data-row='bal'] > span:first-child { color: #991b1b !important; }
+    form[data-abos-counter] .ds-tot-card [data-row='bal'] .num { color: #b91c1c !important; }
+    /* 📊 বাকির সীমার দাগ — কতটা ব্যবহার হলো; ৭০%-এর নিচে সবুজ, ৯০% পর্যন্ত হলুদ, তার উপরে লাল */
+    form[data-abos-counter] .ds-cbar { margin-top: .3rem; padding: .3rem .6rem; border: 1px solid #e2e8f0; border-radius: 10px; font-size: .72rem; }
+    form[data-abos-counter] .ds-cbar-l { display: flex; justify-content: space-between; gap: .5rem; color: #475569; }
+    form[data-abos-counter] .ds-cbar-t { height: 6px; margin-top: .25rem; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    form[data-abos-counter] .ds-cbar-t > i { display: block; height: 100%; border-radius: inherit; background: #15803d; transition: width .2s ease-out; }
+    form[data-abos-counter] .ds-cbar-t > i.is-warn { background: #d97706; }
+    form[data-abos-counter] .ds-cbar-t > i.is-over { background: #b91c1c; }
+    @media (prefers-reduced-motion: reduce) { form[data-abos-counter] .ds-cbar-t > i { transition: none; } }
     form[data-abos-counter] .ds-dep-sub { background: #fff; padding: 0 1rem .3rem !important; margin-top: -.2rem !important; font-size: .68rem; color: #5b6b82; }
     form[data-abos-counter] .ds-out { background: #fff; padding: .2rem .75rem .3rem !important; }
     form[data-abos-counter] .ds-out > div { border-radius: 12px !important; padding: .22rem .9rem !important; border: 1px solid #e3e8f0; }
@@ -261,6 +309,27 @@
     /* ⓘ পুরো বাক্স এক পর্দায়, স্ক্রল ছাড়া (মালিক, ২৬ নভেম্বর ২০২৬) — বোতামগুলো একটু চাপা */
     form[data-abos-counter] .ds-tot-abos .ds-b8 { min-height: 1.9rem; padding-block: .1rem; }
     form[data-abos-counter] .ds-tot-abos [data-counter-buttons] { gap: .25rem; }
+    /* 🎨 ৯ বোতাম — আঁকা চিহ্ন + অর্থের রঙের ঢাল, সাদা লেখা (v2 A6)। ⓘ নমুনার হালকা প্রান্ত (#f59e0b ইত্যাদি) সাদা লেখায় ৩:১-এর নিচে
+       নামত, তাই দুই প্রান্তই গাঢ় — সাদার সাথে ≥ ৪.৫:১ (WCAG AA)। */
+    form[data-abos-counter] .ds-tot-abos .ds-b8 { flex-direction: row; flex-wrap: wrap; column-gap: .3rem; row-gap: 0; color: #fff;
+        background: linear-gradient(135deg, var(--b8-a), var(--b8-b)); --b8-ink: var(--b8-a); }
+    form[data-abos-counter] .ds-tot-abos .ds-b8 > small { flex-basis: 100%; text-align: center; margin-top: 0; }
+    form[data-abos-counter] .ds-tot-abos .ds-b8 svg { flex: none; }
+    form[data-abos-counter] .ds-tot-abos .ds-b8:disabled { opacity: .55; cursor: not-allowed; }
+    form[data-abos-counter] .ds-tot-abos .ds-b8.is-on { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--b8-a); }
+    form[data-abos-counter] [data-counter-button='deposit'] { --b8-a: #065f46; --b8-b: #047857; }
+    form[data-abos-counter] [data-counter-button='transport'] { --b8-a: #92400e; --b8-b: #b45309; }
+    form[data-abos-counter] [data-counter-button='delivery'] { --b8-a: #155e75; --b8-b: #0e7490; }
+    form[data-abos-counter] [data-counter-button='save_draft'] { --b8-a: #334155; --b8-b: #475569; }
+    form[data-abos-counter] [data-counter-button='note'] { --b8-a: #1e40af; --b8-b: #1d4ed8; }
+    form[data-abos-counter] [data-counter-button='return'] { --b8-a: #5b21b6; --b8-b: #6d28d9; }
+    form[data-abos-counter] [data-counter-button='drafts'] { --b8-a: #374151; --b8-b: #4b5563; }
+    form[data-abos-counter] [data-counter-button='reprint'] { --b8-a: #115e59; --b8-b: #0f766e; }
+    form[data-abos-counter] [data-counter-button='cancel'] { --b8-a: #991b1b; --b8-b: #b91c1c; }
+    /* ✓/⚠ নিশ্চিত করার আগের লাইন — সবুজ "ঠিক আছে", লাল "কী বাকি" */
+    form[data-abos-counter] .ds-okline { display: flex; align-items: center; gap: .35rem; margin-top: .4rem; padding: .3rem .6rem; border-radius: 8px;
+        font-size: .75rem; font-weight: 600; color: #047857; background: #ecfdf5; }
+    form[data-abos-counter] .ds-okline.is-bad { color: #b91c1c; background: #fef2f2; }
     /* ⓘ কাউন্টার মোডে নিচে স্ট্যাটাস বার নেই — বাক্স আর তালিকা পর্দার নিচ পর্যন্ত */
     @media (min-width: 1280px) {
         body:has([data-counter-strip]) form[data-abos-counter] .ds-side { max-height: calc(100dvh - 6.3rem); }

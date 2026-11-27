@@ -5,10 +5,13 @@
                 @endif
                 <section data-boxed class="min-w-0" @if (($abosLook ?? false)) :class="editingKey !== null ? 'entry-as-popup' : ''" @endif>
                     @if (($abosLook ?? false))
-                        <div x-show="editingKey !== null" x-cloak class="mb-3 flex items-center justify-between border-b border-(--color-border) pb-2">
-                            <h2 class="text-base font-semibold">{{ __('purchase::action.edit_line') }}</h2>
-                            <button type="button" @click="clearEntry()" aria-label="{{ __('purchase::action.close_panel') }}"
-                                    class="rounded-(--radius-field) px-2 text-xl leading-none text-(--color-ink-muted) hover:bg-(--color-surface-hover)">&times;</button>
+                        {{-- ✎ নমুনার মাথা: রঙিন পটি, "লাইন বদলান · ক্রম N", নিচে ছোট নির্দেশ (v2 A4) --}}
+                        <div x-show="editingKey !== null" x-cloak class="ds-pophead" data-edit-head>
+                            <div>
+                                <h2>✎ {{ __('sales::action.edit_line_title') }} · {{ __('sales::field.line_no') }} <span class="num" x-text="editingLineNo"></span></h2>
+                                <p>{{ __('sales::message.edit_line_hint') }}</p>
+                            </div>
+                            <button type="button" @click="clearEntry()" aria-label="{{ __('purchase::action.close_panel') }}">&times;</button>
                         </div>
                     @endif
 
@@ -161,6 +164,16 @@
                                                  px-2 py-0.5 text-2xs font-medium text-(--color-ink-muted)"
                                           x-text="(picked && picked.code)"></span>
 
+                                    {{-- 🔍 অন্য পণ্য — নমুনার "বদলান" (v2 A3)। ⚠️ নমুনায় F3, কিন্তু এই
+                                         পাতায় F3 আগে থেকেই "দাম দেখা" — কর্মীদের হাতে বসা চাবি তাই বদলানো হয়নি। --}}
+                                    @if (($abosLook ?? false))
+                                    <button type="button" x-show="picked && ! viewOnly" x-cloak @click="openPicker()"
+                                            class="ds-pswap" data-picked-swap>
+                                        <x-ui.licon name="search" :size="14" />
+                                        <span>{{ __('sales::field.swap_product') }}</span>
+                                    </button>
+                                    @endif
+
                                     {{-- ⭐ লট বাছাই — পণ্যের নামের পাশে, মালিকের
                                          নির্দেশ, ২৫ সেপ্টেম্বর ২০২৬।
 
@@ -270,29 +283,47 @@
                         @if (($abosLook ?? false))
                         {{-- ⭐ মজুদ — আলাদা রঙিন বাক্সে, নিচের ঘরের সোজাসুজি: "Available" পরিমাণ আর এককের উপরে, "Free" ফ্রি আর তার
                              এককের উপরে, বাকিগুলো পরে (মালিক, ২৬ নভেম্বর ২০২৬) --}}
+                        {{-- ⭐ নতুন কাউন্টার (মালিকের অনুমোদিত নমুনা, ২৭–২৮ নভেম্বর ২০২৬): তথ্যের বাক্স ঠিক যে ঘরের তথ্য দেয় তার উপরে, অর্থের রঙে —
+                             গুদাম/বিক্রয়যোগ্য → পরিমাণ+একক (সবুজ) · ফ্রি → ফ্রি+একক (কমলা) · লট → মোট পরিমাণ (সোনালি) ·
+                             এই ক্রেতার শেষ দর → একক দর (নীল) · আটকানো/রিজার্ভ/মেয়াদ → বাকি ঘর (বেগুনি) --}}
                         <div class="ds-stockrow {{ $show['free_qty'] ? '' : 'ds-nofree' }}" x-show="picked" x-cloak data-stock-box>
-                            @foreach (array_values(array_filter([
-                                ['available', 'sales::field.available_short', 'ds-sb-blue', 2],
-                                $show['free_qty'] ? ['free_available', 'sales::field.free_available', 'ds-sb-green', 2] : null,
-                                ['reserved', 'sales::field.reserved_short', 'ds-sb-amber', 1],
-                                ['hold', 'sales::field.hold_short', 'ds-sb-red', 1],
-                                ['main', 'sales::field.main_stock', 'ds-sb-violet', 3],
-                            ])) as [$key, $label, $tone, $span])
-                                <div class="ds-sb {{ $tone }}" style="grid-column: span {{ $span }}" data-stock="{{ $key }}">
-                                    <span class="ds-sb-l">{{ __($label) }}</span>
+                            <div class="ds-sb ds-sb-green" style="grid-column: span 2" data-stock="available">
+                                <span class="ds-sb-l">{{ __('sales::field.available_short') }}</span>
+                                <span class="ds-sb-v">
+                                    <b class="num" x-text="qty(picked && picked.available)"></b>
+                                    <small x-text="(picked && picked.unit) || ''"></small>
+                                    <small class="ds-sb-pack" data-stock="main">{{ __('sales::field.main_stock') }} <span class="num" x-text="qty(picked && picked.main)"></span></small>
+                                </span>
+                            </div>
+                            @if ($show['free_qty'])
+                                <div class="ds-sb ds-sb-orange" style="grid-column: span 2" data-stock="free_available">
+                                    <span class="ds-sb-l">{{ __('sales::field.free_available') }}</span>
                                     <span class="ds-sb-v">
-                                        <b class="num" x-text="qty(picked && picked.{{ $key }})"></b>
+                                        <b class="num" x-text="qty(picked && picked.free_available)"></b>
                                         <small x-text="(picked && picked.unit) || ''"></small>
-                                        @if ($span === 2)
-                                            <small class="ds-sb-pack" x-text="packText(picked && picked.{{ $key }})"></small>
-                                        @endif
-                                        @if ($key === 'main')
-                                            <small class="ds-sb-pack" x-show="freeRatio" x-cloak data-free-ratio
-                                                   x-text="@js(__('sales::field.free_ratio')) + ' ' + freeRatio"></small>
-                                        @endif
+                                        <small class="ds-sb-pack" x-show="freeRatio" x-cloak data-free-ratio
+                                               x-text="@js(__('sales::field.free_ratio')) + ' ' + freeRatio"></small>
                                     </span>
                                 </div>
-                            @endforeach
+                            @endif
+                            <div class="ds-sb ds-sb-amber" style="grid-column: span 1" data-stock="lot">
+                                <span class="ds-sb-l">{{ __('sales::field.lot') }}</span>
+                                <span class="ds-sb-v"><b class="num" x-text="lotBoxText"></b></span>
+                            </div>
+                            <div class="ds-sb ds-sb-blue" style="grid-column: span 1" data-stock="last_rate" :title="lastRateTitle">
+                                <span class="ds-sb-l">{{ __('sales::field.last_rate') }}</span>
+                                <span class="ds-sb-v"><b class="num" x-text="lastRateText"></b></span>
+                            </div>
+                            <div class="ds-sb ds-sb-violet" style="grid-column: span 3" data-stock="hold">
+                                <span class="ds-sb-l">{{ __('sales::field.hold_short') }} · {{ __('sales::field.reserved_short') }} · {{ __('sales::field.lot_expiry_short') }}</span>
+                                <span class="ds-sb-v">
+                                    <b class="num" x-text="qty(picked && picked.hold)"></b>
+                                    <small>·</small>
+                                    <b class="num" data-stock="reserved" x-text="qty(picked && picked.reserved)"></b>
+                                    <small>·</small>
+                                    <b class="num" x-text="lotExpiryText"></b>
+                                </span>
+                            </div>
                         </div>
                         @else
                         <div class="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 rounded-(--radius-field) border border-(--color-brand-400) bg-(--color-brand-50) px-3 py-2"
@@ -779,4 +810,17 @@
                         @endif
 
                     </div>
+
+                    {{-- ✎ পপআপের নিচের সারি — নমুনার মতো: মুছুন (বাঁয়ে, দুই চাপে) · বাতিল · হালনাগাদ (v2 A4, কেবল ABOS-এর রূপে) --}}
+                    @if (($abosLook ?? false))
+                        <div x-show="editingKey !== null && ! viewOnly" x-cloak class="ds-popfoot" data-edit-foot>
+                            <button type="button" @click="deleteEditingLine()" class="ds-popdel" :class="deleteArmed ? 'is-armed' : ''" data-edit-delete>
+                                <x-ui.licon name="trash-2" :size="16" />
+                                <span x-show="! deleteArmed">{{ __('sales::action.delete_line') }}</span>
+                                <span x-show="deleteArmed" x-cloak>{{ __('sales::action.delete_line_again') }}</span>
+                            </button>
+                            <button type="button" @click="clearEntry()" class="ds-popcancel">{{ __('sales::action.cancel_esc') }}</button>
+                            <button type="button" @click="addToCart()" class="ds-popsave" data-edit-save>{{ __('sales::action.update_line') }} <kbd>⏎</kbd></button>
+                        </div>
+                    @endif
                 </section>

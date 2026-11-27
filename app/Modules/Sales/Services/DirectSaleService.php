@@ -1997,6 +1997,7 @@ final class DirectSaleService
         $challan->update([
             'do_no' => $data['do_no'] ?? null,
             'discount_amount' => $this->money($data['discount_amount'] ?? '0'),
+            'discount_reason' => $this->discountReason($data),
             'expense_amount' => $this->money($data['expense_amount'] ?? '0'),
             /*
              * ⚠️ রাউন্ডিং `money()` দিয়ে নয় — ওটা ঋণাত্মক প্রত্যাখ্যান করে।
@@ -2584,17 +2585,34 @@ final class DirectSaleService
      * বিলে আলাদা লাইনে। ⓘ কেবল `fare_paid_by = us_add_to_bill` হলে; বাকি তিন রকমে বিলে ভাড়া নেই।
      *
      * @param  array<string, mixed>  $data
-     * @return array{bill_discount: string, rounding_amount: string, freight_charge: string}
+     * @return array{bill_discount: string, discount_reason: ?string, rounding_amount: string, freight_charge: string}
      */
     private function billFigures(array $data): array
     {
         return [
             'bill_discount' => $this->money($data['discount_amount'] ?? '0'),
+            'discount_reason' => $this->discountReason($data),
             'rounding_amount' => $this->signedMoney($data['rounding_amount'] ?? '0'),
             'freight_charge' => ($data['fare_paid_by'] ?? null) === 'us_add_to_bill'
                 ? $this->money($data['transport_cost'] ?? '0')
                 : '0',
         ];
+    }
+
+    /**
+     * ⭐ বিলের ছাড়ের কারণ (নতুন কাউন্টার, ২৮ নভেম্বর ২০২৬) — ছাড় থাকলে তবেই; ফাঁকা লেখা = নেই (null), ৩০০ অক্ষর পর্যন্ত।
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function discountReason(array $data): ?string
+    {
+        $reason = trim((string) ($data['discount_reason'] ?? ''));
+
+        if ($reason === '' || bccomp($this->money($data['discount_amount'] ?? '0'), '0', 4) <= 0) {
+            return null;
+        }
+
+        return mb_substr($reason, 0, 300);
     }
 
     /**
