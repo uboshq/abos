@@ -120,6 +120,7 @@
         'messaging' => '💬',
         /* ⭐ মেইল — খাম (আলাদা মডিউল, মালিক, ২৬ নভেম্বর ২০২৬) */
         'mail' => '✉️',
+        'sales_intel' => '📈',
         /* বাকি নিয়ন্ত্রণ — কার্ড: সীমা মানে বাকির একটা কার্ড, যার শেষ আছে (১১ অক্টোবর ২০২৬) */
         'credit_control' => '💳',
     ];
@@ -147,6 +148,7 @@
         'approval' => 'circle-check-big', 'governance' => 'scale', 'system_admin' => 'shield-check', 'backup' => 'database-backup',
         'documents' => 'folder-open', 'fixed_assets' => 'building-2', 'executive' => 'gauge', 'assistant' => 'brain',
         'notification' => 'bell', 'messaging' => 'messages-square', 'mail' => 'mail-open', 'credit_control' => 'credit-card',
+        'sales_intel' => 'chart-line',
     ];
     $tile = ! $aiMark && ! $drawn && isset($moduleTiles[$name]) && \App\Core\Support\AiMark::shows() ? $moduleTiles[$name] : null;
 @endphp
@@ -316,6 +318,7 @@
 
         // ⓘ মেইল মডিউল (২৬ নভেম্বর ২০২৬) — খাম
         'mail' => '<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/>',
+        'sales_intel' => '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m19 9-5 5-4-4-3 3"/>',
 
         'settings' => '<circle cx="12" cy="12" r="3"/>'
             .'<path d="M12 2.5v2.2M12 19.3v2.2M4.9 4.9l1.6 1.6M17.5 17.5l1.6 1.6'
