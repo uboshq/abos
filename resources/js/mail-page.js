@@ -392,7 +392,7 @@ if (root) {
             if (! p) { ctx.innerHTML = lock; return }
             const C = W.card
             const kv = (k, v, col) => v === null || v === undefined || v === '' ? '' : '<div class="mx-kv"><span>' + esc(k) + '</span><b class="num" style="color:' + col + '">' + v + '</b></div>'
-            const bills = (p.bills || []).map(b => '<a class="mx-bl"' + (b.url ? ' href="' + esc(b.url) + '" target="abos"' : '') + '><span class="num">' + esc(b.no) + ' · ' + esc(b.date || '') + '</span><b class="num" style="color:var(--mx-red)">' + money(b.due) + '</b></a>').join('')
+            const bills = (p.bills || []).map(b => '<a class="mx-bl"' + (b.url ? ' href="' + esc(b.url) + '" target="abos-main"' : '') + '><span class="num">' + esc(b.no) + ' · ' + esc(b.date || '') + '</span><b class="num" style="color:var(--mx-red)">' + money(b.due) + '</b></a>').join('')
             ctx.innerHTML = '<div class="mx-cc"><b style="font-size:15px;display:block">' + esc(p.name) + '</b><div class="muted" style="font-size:12px;margin:2px 0 8px">'
                 + esc([p.kind === 'supplier' ? C.supplier : W.tags.customer, p.point, p.phone].filter(Boolean).join(' · ')) + '</div>'
                 + (p.due !== null ? kv(C.due, money(p.due), 'var(--mx-red)') : '')
@@ -400,10 +400,10 @@ if (root) {
                 + (p.left !== null && p.left !== undefined ? kv(C.left, money(p.left), Number(p.left) >= 0 ? 'var(--mx-green-ink)' : 'var(--mx-red)') : '')
                 + (p.points ? kv(C.points, '⭐ ' + esc(p.points), 'var(--mx-amber)') : '')
                 + (p.last ? kv(C.last, esc(p.last), 'var(--mx-brand)') : '')
-                + (p.links.receipt ? '<a class="mx-btn g" style="width:100%;justify-content:center;margin-top:10px;height:36px" href="' + esc(p.links.receipt) + '" target="abos">💰 ' + esc(C.take_money) + '</a>' : '')
+                + (p.links.receipt ? '<a class="mx-btn g" style="width:100%;justify-content:center;margin-top:10px;height:36px" href="' + esc(p.links.receipt) + '" target="abos-main">💰 ' + esc(C.take_money) + '</a>' : '')
                 + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">'
-                + (p.links.page ? '<a class="mx-btn" style="justify-content:center" href="' + esc(p.links.page) + '" target="abos">' + esc(C.ledger) + '</a>' : '')
-                + (p.links.bill ? '<a class="mx-btn" style="justify-content:center" href="' + esc(p.links.bill) + '" target="abos">' + esc(C.new_bill) + '</a>' : '') + '</div></div>'
+                + (p.links.page ? '<a class="mx-btn" style="justify-content:center" href="' + esc(p.links.page) + '" target="abos-main">' + esc(C.ledger) + '</a>' : '')
+                + (p.links.bill ? '<a class="mx-btn" style="justify-content:center" href="' + esc(p.links.bill) + '" target="abos-main">' + esc(C.new_bill) + '</a>' : '') + '</div></div>'
                 + (bills ? '<div class="mx-cc"><b>' + esc(C.open_bills) + '</b>' + bills + '<div class="muted" style="font-size:11.5px;margin-top:6px">' + esc(C.bills_hint) + '</div></div>' : '') + lock
         } catch (e) { ctx.innerHTML = lock }
     }

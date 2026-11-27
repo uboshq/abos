@@ -23,7 +23,7 @@
     <div class="mailx mx-page" data-mail-tpl>
         <div class="mx-head">
             <h1>📄 {{ $T('title') }}</h1><span class="sp"></span>
-            <a class="mx-btn" href="{{ route('mail.index', ['counter' => 1]) }}" target="_blank" rel="noopener">✉️ {{ __('mail::field.title') }} ↗</a>
+            <a class="mx-btn" href="{{ route('mail.index', ['counter' => 1]) }}" target="abos-mail">✉️ {{ __('mail::field.title') }} ↗</a>
         </div>
         @if (session('mail_flash'))<div class="mx-ok">{{ session('mail_flash') }}</div>@endif
         <x-ui.errors />
@@ -109,7 +109,7 @@
                             <form method="POST" action="{{ route('mail.templates.destroy', $sel->public_id) }}">@csrf @method('DELETE')<button type="submit" class="mx-btn">🙈 {{ $T('hide') }}</button></form>
                         @endif
                         <form method="POST" action="{{ route('mail.templates.copy', $sel->public_id) }}">@csrf<button type="submit" class="mx-btn">⧉ {{ $T('copy') }}</button></form>
-                        <a class="mx-btn p" href="{{ route('mail.index', ['counter' => 1, 'compose' => 1, 'template' => $sel->public_id]) }}" target="_blank" rel="noopener">{{ $T('use') }} ➤</a>
+                        <a class="mx-btn p" href="{{ route('mail.index', ['counter' => 1, 'compose' => 1, 'template' => $sel->public_id]) }}" target="abos-mail">{{ $T('use') }} ➤</a>
                     </div>
                 @else
                     <p class="mx-empty">{{ __('mail::field.history.none') }}</p>
