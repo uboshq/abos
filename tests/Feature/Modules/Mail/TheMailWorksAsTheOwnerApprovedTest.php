@@ -73,6 +73,21 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->clerk = $this->person('Mail Clerk', ['mail.use', 'customer.view']);
     }
 
+    public function test_a_big_company_logo_stays_out_of_the_signature_and_a_small_one_goes_in(): void
+    {
+        // ⛔ Mac run maili (২৭ নভেম্বর): 7 MB-এর লোগোয় লেখার পাতা memory শেষ করে ভেঙেছিল
+        Storage::fake('public');
+        $this->co->forceFill(['logo_path' => 'logos/sig-test.png'])->save();
+        CompanyContext::set($this->co->id);
+        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+
+        Storage::disk('public')->put('logos/sig-test.png', $png.str_repeat("\0", \App\Modules\Mail\Services\MailSignatures::LOGO_MAX_BYTES));
+        $this->assertNull(app(\App\Modules\Mail\Services\MailSignatures::class)->logoBytes(), '⛔ বড় লোগো সইয়ে বসেছে — প্রতিটা মেইল ভারী, পর্দা ভাঙে।');
+
+        Storage::disk('public')->put('logos/sig-test.png', $png);
+        $this->assertNotNull((new \App\Modules\Mail\Services\MailSignatures)->logoBytes(), '⛔ ছোট লোগোও সইয়ে বসছে না।');
+    }
+
     public function test_a_send_is_logged_audited_and_carries_the_signature_and_template(): void
     {
         // ⓘ লোগোর পথ লেখা, ফাইল নেই — ডেমোর অবস্থা; Mac-এর tree-তে আগের run ফাইলটা রেখে গিয়েছিল (mailh, ২৭ নভেম্বর)

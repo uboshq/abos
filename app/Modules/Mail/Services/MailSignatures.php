@@ -31,6 +31,9 @@ final class MailSignatures
     /** ⓘ "নিজে বানান" — কর্মীর নিজের সই */
     public const OWN = 21;
 
+    /** ⓘ সইয়ে বসার মতো লোগোর সবচেয়ে বড় মাপ — এর বেশি হলে লোগো বাদ, কোম্পানির নাম লেখায় */
+    public const LOGO_MAX_BYTES = 512 * 1024;
+
     /** @return array{name: string, title: string, name_bn: string, title_bn: string, phone: string, email: string, web: string, company: string, address: string, links: array<string, string>, initials: string, c1: string, c2: string, c3: string} */
     public function facts(User $user, ?string $fromEmail = null): array
     {
@@ -196,6 +199,12 @@ final class MailSignatures
         $company = Company::query()->find(CompanyContext::id());
 
         if (! $company?->logo_path || ! Storage::disk('public')->exists($company->logo_path)) {
+            return null;
+        }
+
+        // ⛔ বড় লোগো সইয়ে নয় — প্রতিটা মেইলে বসে, পর্দায় base64-এ আরও বড়; Mac run maili-তে 7 MB-এর লোগোয় লেখার পাতা
+        //   memory শেষ করে ভেঙেছিল (২৭ নভেম্বর)। মেইলের সইয়ের লোগো ছোট রাখাই রীতি — বড় হলে লোগো বাদ, কোম্পানির নাম লেখায়
+        if (Storage::disk('public')->size($company->logo_path) > self::LOGO_MAX_BYTES) {
             return null;
         }
 
