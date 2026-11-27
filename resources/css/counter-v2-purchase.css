@@ -147,3 +147,26 @@ form[data-abos-purchase] table.ui-grid thead tr { background: linear-gradient(90
 /* স্তর — সরবরাহকারীর খোঁজার তালিকা নিচের পণ্যের কার্ডের উপরে খোলে (Mac-এর কপিতে ধরা: তালিকা কার্ডের নিচে চাপা পড়ত) */
 form[data-abos-purchase] [data-purchase-head] > div:first-of-type { z-index: 3; }
 form[data-abos-purchase] [data-purchase-head] > section[data-boxed] { z-index: 2; }
+/* টাইল আর ঘর এক কলামে (মালিক, ২৮ নভেম্বর) — বোতামের কলাম ৩১৮px-এ বাঁধা (ব্লেডে), তিন বোতাম সমান ভাগে তার ভেতরেই */
+form[data-abos-purchase] [data-entry-row] div[style*='grid-template-columns'] > :last-child { display: flex; gap: 6px; min-width: 0; }
+form[data-abos-purchase] [data-entry-row] div[style*='grid-template-columns'] > :last-child > button { flex: 1 1 0; min-width: 0; padding-inline: 6px !important;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+form[data-abos-purchase] .pv2-tiles > .pv2-t { min-width: 0; }
+form[data-abos-purchase] .pv2-col > span { white-space: nowrap; font-size: 11.5px; }
+form[data-abos-purchase] .pv2-chip { white-space: nowrap; font-size: 12px !important; padding: 0 6px; }
+
+/* ════ রং — নমুনার হুবহু, উজ্জ্বল (মালিক, ২৮ নভেম্বর: "উজ্জ্বল চকচক করবে") ════ */
+form[data-abos-purchase] .pv2-t, form[data-abos-purchase] .pv2-ct, form[data-abos-purchase] .pur-tot-foot > div:first-child > button { text-shadow: 0 1px 1px rgb(0 0 0 / .15); }
+form[data-abos-purchase] .pv2-green   { background: linear-gradient(135deg, #10b981, #047857); }
+form[data-abos-purchase] .pv2-orange  { background: linear-gradient(135deg, #fb923c, #c2410c); }
+form[data-abos-purchase] .pv2-amber   { background: linear-gradient(135deg, #fbbf24, #d97706); }
+form[data-abos-purchase] .pv2-blue    { background: linear-gradient(135deg, #5b8def, #2160d8); }
+form[data-abos-purchase] .pv2-magenta { background: linear-gradient(135deg, #e879f9, #a21caf); }
+form[data-abos-purchase] .pv2-ct-violet { background: linear-gradient(135deg, #6d28d9, #a78bfa); }
+form[data-abos-purchase] .pv2-ct-amber  { background: linear-gradient(135deg, #b45309, #f59e0b); }
+form[data-abos-purchase] .pur-tot-foot > div:first-child > button:nth-child(1) { background: linear-gradient(135deg, #047857, #10b981) !important; }
+form[data-abos-purchase] .pur-tot-foot > div:first-child > button:nth-child(2) { background: linear-gradient(135deg, #6d28d9, #a78bfa) !important; }
+form[data-abos-purchase] .pur-tot-foot > div:first-child > button:nth-child(3) { background: linear-gradient(135deg, #b45309, #f59e0b) !important; }
+form[data-abos-purchase] .pur-tot-foot > div:first-child > button:nth-child(4) { background: linear-gradient(135deg, #b91c1c, #ef4444) !important; }
+form[data-abos-purchase] [data-total-owed][data-sign='due'] { background: linear-gradient(90deg, #b91c1c, #ef4444) !important; }
+form[data-abos-purchase] .pur-tot-foot button[data-overview-trigger] { background: linear-gradient(135deg, #047857, #10b981) !important; }

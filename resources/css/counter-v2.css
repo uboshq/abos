@@ -57,8 +57,8 @@ form[data-abos-counter] .ds-sb-red    { --sb-a: #b91c1c; --sb-b: #dc2626; }
 
 /* ঘরের সারি: ৮টা ঘর + উপহার · কার্টে দিন · অনেক পণ্য; উপরের টাইল একই কলামে */
 form[data-abos-counter] .ds-qtyrow, form[data-abos-counter] .ds-stockrow {
-    grid-template-columns: repeat(8, minmax(0, 1fr)) auto auto auto !important; column-gap: 8px !important; }
-form[data-abos-counter] :is(.ds-qtyrow, .ds-stockrow).ds-nofree { grid-template-columns: repeat(6, minmax(0, 1fr)) auto auto auto !important; }
+    grid-template-columns: repeat(8, minmax(0, 1fr)) 104px 96px 116px !important; column-gap: 8px !important; }
+form[data-abos-counter] :is(.ds-qtyrow, .ds-stockrow).ds-nofree { grid-template-columns: repeat(6, minmax(0, 1fr)) 104px 96px 116px !important; }
 form[data-abos-counter] .ds-qtyrow label > span:first-child { font-size: 12px; font-weight: 600 !important; text-transform: none !important; letter-spacing: 0 !important; }
 form[data-abos-counter] .ds-qtyrow :is(input, select) { height: 36px !important; border-radius: 8px !important; font-size: 13.5px !important; border-width: 1.5px !important; }
 /* রং জোড়ায় জোড়ায় — টাইল যে রঙে, তার নিচের ঘরও সেই রঙে (হালকা) */
@@ -180,3 +180,41 @@ form[data-abos-counter] .ds-cart-scroll [data-edit-line] + button { display: non
 form[data-abos-counter] .ds-side .ds-tot-abos button[data-overview-trigger][data-opens-print] {
     border-radius: 12px !important; background: linear-gradient(135deg, #047857, #15803d) !important; color: #fff !important;
     font-size: 19px !important; font-weight: 700 !important; min-height: 52px; border: 0 !important; }
+
+/* ⛔ টাইল আর ঘর এক কলামে — মালিক, ২৮ নভেম্বর ২০২৬: "বিক্রয়যোগ্য … নিচের পরিমাণ আর কার্টনের দুইটা বক্সের সোজাসুজি; ফ্রি …
+   ফ্রি আর ফ্রি-র এককের বক্স পর্যন্ত; সীমার ভিতরেই"। বোতামের তিন কলাম দুই সারিতেই একই px-এ বাঁধা (উপরে), তাই ভগ্নাংশের
+   কলামগুলো দুই সারিতে হুবহু এক মাপ; টাইল নিজের কলামের বাইরে যায় না, লেখা বেশি হলে কাটে। */
+form[data-abos-counter] .ds-stockrow > .ds-sb { min-width: 0; overflow: hidden; }
+form[data-abos-counter] .ds-stockrow > .ds-sb .ds-sb-v, form[data-abos-counter] .ds-stockrow > .ds-sb .ds-sb-pairs { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+form[data-abos-counter] .ds-qtyrow > :is(.ds-gift-btn, button[data-cart-button]), form[data-abos-counter] .ds-qtyrow > [x-ref='chartEntry'] button { width: 100%; padding-inline: 6px !important; }
+form[data-abos-counter] .ds-qtyrow > [x-ref='chartEntry'] { width: 100%; }
+/* লাইনের ছাড় বন্ধ থাকলে একটা ঘর কম — টাইলের হিসাবও এক কম (বেগুনি টাইল তখন কেবল "টাকা"-র উপরে) */
+form[data-abos-counter] :is(.ds-qtyrow, .ds-stockrow).ds-nodisc { grid-template-columns: repeat(7, minmax(0, 1fr)) 104px 96px 116px !important; }
+form[data-abos-counter] :is(.ds-qtyrow, .ds-stockrow).ds-nofree.ds-nodisc { grid-template-columns: repeat(5, minmax(0, 1fr)) 104px 96px 116px !important; }
+
+/* ════ রং — নমুনার হুবহু (counter.css + abos-theme.css, ২৭ নভেম্বর), উজ্জ্বল ঢাল; মালিক, ২৮ নভেম্বর: "উজ্জ্বল চকচক করবে",
+   আগের গাঢ় করা রং ফ্যাকাশে দেখাচ্ছিল। ⓘ ঢাল নমুনার দিকেই: টাইল হালকা→গাঢ়, বোতাম গাঢ়→হালকা। ════ */
+form[data-abos-counter] .ds-sb-green  { --sb-a: #10b981; --sb-b: #047857; }
+form[data-abos-counter] .ds-sb-orange { --sb-a: #fb923c; --sb-b: #c2410c; }
+form[data-abos-counter] .ds-sb-amber  { --sb-a: #fbbf24; --sb-b: #d97706; }
+form[data-abos-counter] .ds-sb-blue   { --sb-a: #5b8def; --sb-b: #2160d8; }
+form[data-abos-counter] .ds-sb-violet { --sb-a: #e879f9; --sb-b: #a21caf; }
+form[data-abos-counter] .ds-sb { text-shadow: 0 1px 1px rgb(0 0 0 / .15); }
+form[data-abos-counter] [data-counter-button='deposit']    { --b8-a: #047857; --b8-b: #10b981; }
+form[data-abos-counter] [data-counter-button='transport']  { --b8-a: #b45309; --b8-b: #f59e0b; }
+form[data-abos-counter] [data-counter-button='delivery']   { --b8-a: #0e7490; --b8-b: #06b6d4; }
+form[data-abos-counter] [data-counter-button='save_draft'] { --b8-a: #334155; --b8-b: #64748b; }
+form[data-abos-counter] [data-counter-button='note']       { --b8-a: #1d4ed8; --b8-b: #60a5fa; }
+form[data-abos-counter] [data-counter-button='return']     { --b8-a: #6d28d9; --b8-b: #a78bfa; }
+form[data-abos-counter] [data-counter-button='drafts']     { --b8-a: #475569; --b8-b: #94a3b8; }
+form[data-abos-counter] [data-counter-button='reprint']    { --b8-a: #0f766e; --b8-b: #2dd4bf; }
+form[data-abos-counter] [data-counter-button='cancel']     { --b8-a: #b91c1c; --b8-b: #ef4444; }
+form[data-abos-counter] .ds-tot-abos .ds-b8 { text-shadow: 0 1px 1px rgb(0 0 0 / .15); }
+form[data-abos-counter] .ds-ct { text-shadow: 0 1px 1px rgb(0 0 0 / .15); }
+form[data-abos-counter] .ds-ct-cyan  { background: linear-gradient(135deg, #0e7490, #06b6d4); }
+form[data-abos-counter] .ds-ct-amber { background: linear-gradient(135deg, #b45309, #f59e0b); }
+form[data-abos-counter] .ds-ct-blue  { background: linear-gradient(135deg, #2160d8, #5b8def); }
+form[data-abos-counter] .ds-out > [data-sign='due'] { background: linear-gradient(90deg, #b91c1c, #ef4444) !important; }
+form[data-abos-counter] .ds-side .ds-tot-abos button[data-overview-trigger][data-opens-print] { background: linear-gradient(135deg, #047857, #10b981) !important; }
+form[data-abos-counter] .ds-cbar-t > i { background: linear-gradient(90deg, #22c55e, #f59e0b) !important; }
+form[data-abos-counter] .ds-tot-card { outline-color: #7cd3dc; }

@@ -205,8 +205,7 @@
                                     {{-- ⭐ লট-ধরা নয় এমন পণ্যেও ঘরটা থাকে, নিভে — মালিকের নির্দেশ, ২৮
                                          সেপ্টেম্বর ২০২৬: *"লট বাছার ঘর … eta ase ni laive nai"*। ⓘ ঘর না থাকলে
                                          মনে হত বানানোই হয়নি; নিভে থাকা ঘর বলে দেয় এই পণ্যে লট ধরা হয় না। --}}
-                                    {{-- ABOS-এর রূপে লট বাছাই সোনালি লটের টাইলের ভেতরে (নমুনা ২৭ নভেম্বর) — এখানে কেবল অন্য রূপে --}}
-                                    @unless (($abosLook ?? false))
+                                    {{-- ⭐ লট — পণ্যের নামের সারিতে একদম ডানে, আগের মতো (মালিক, ২৮ নভেম্বর ২০২৬: "লটের ঘরটা … পণ্যের সোজাসুজি উপরে ডান পাশে"); টাইলের সারিতে আর নেই --}}
                                     <template x-if="picked && ! needsLot">
                                         <span class="ds-lot" style="opacity: .6">
                                             <span class="ds-lot-face">
@@ -242,7 +241,6 @@
                                             </span>
                                         </label>
                                     </template>
-                                    @endunless
                                 </div>
 
                                 <label class="block" x-show="pickerOpen" x-cloak>
@@ -297,7 +295,7 @@
                         {{-- ⭐ নতুন কাউন্টার (মালিকের অনুমোদিত নমুনা, ২৭–২৮ নভেম্বর ২০২৬): তথ্যের বাক্স ঠিক যে ঘরের তথ্য দেয় তার উপরে, অর্থের রঙে —
                              গুদাম/বিক্রয়যোগ্য → পরিমাণ+একক (সবুজ) · ফ্রি → ফ্রি+একক (কমলা) · লট → মোট পরিমাণ (সোনালি) ·
                              এই ক্রেতার শেষ দর → একক দর (নীল) · আটকানো/রিজার্ভ/মেয়াদ → বাকি ঘর (বেগুনি) --}}
-                        <div class="ds-stockrow {{ $show['free_qty'] ? '' : 'ds-nofree' }}" x-show="picked" x-cloak data-stock-box>
+                        <div class="ds-stockrow {{ $show['free_qty'] ? '' : 'ds-nofree' }} {{ ($abosLook ?? false) && ! $show['line_discount'] ? 'ds-nodisc' : '' }}" x-show="picked" x-cloak data-stock-box>
                             <div class="ds-sb ds-sb-green" style="grid-column: span 2" data-stock="available">
                                 <span class="ds-sb-l">{{ __('sales::field.available_short') }}</span>
                                 <span class="ds-sb-v">
@@ -317,26 +315,11 @@
                                     </span>
                                 </div>
                             @endif
-                            <div class="ds-sb ds-sb-amber" style="grid-column: span 1" data-stock="lot">
-                                <span class="ds-sb-l">{{ __('sales::field.lot') }}</span>
-                                {{-- নমুনার `.lsel`: টাইলের ভেতরে সাদা ছোট বাছাই; মেয়াদের ক্রম, পুরনোটা উপরে (BatchAllocator-এর মতো) --}}
-                                <template x-if="needsLot">
-                                    <select x-model="entry.batchId" x-ref="lot" @change="lotChosen()" class="ds-lsel" aria-label="{{ __('sales::field.lot') }}" data-lot-select>
-                                        <option value="">{{ __('sales::field.lot_pick') }}</option>
-                                        <template x-for="lot in entryLots" :key="lot.id">
-                                            <option :value="lot.id" x-text="lotLabel(lot)"></option>
-                                        </template>
-                                    </select>
-                                </template>
-                                <template x-if="! needsLot">
-                                    <span class="ds-sb-v"><b class="num">{{ __('sales::field.no_lot') }}</b></span>
-                                </template>
-                            </div>
-                            <div class="ds-sb ds-sb-blue" style="grid-column: span 1" data-stock="last_rate" :title="lastRateTitle">
+                            <div class="ds-sb ds-sb-blue" style="grid-column: span 2" data-stock="last_rate" :title="lastRateTitle">
                                 <span class="ds-sb-l">{{ __('sales::field.last_rate') }}</span>
                                 <span class="ds-sb-v"><b class="num" x-text="lastRateText"></b></span>
                             </div>
-                            <div class="ds-sb ds-sb-violet" style="grid-column: span 2" data-stock="hold">
+                            <div class="ds-sb ds-sb-violet" style="grid-column: span {{ $show['line_discount'] ? 2 : 1 }}" data-stock="hold">
                                 {{-- নমুনার মতো: "আটকানো 8   রিজার্ভ 4   মেয়াদ 30/06/2027" — এক সারিতে তিন জোড়া --}}
                                 <span class="ds-sb-pairs">
                                     <span>{{ __('sales::field.hold_short') }} <b class="num" x-text="qty(picked && picked.hold)"></b></span>
@@ -542,7 +525,7 @@
                          যথেষ্ট — জায়গা থাকলে তারা বাড়ে, না থাকলে মোড়কটা
                          স্ক্রল করে। --}}
                     {{-- ⭐ এই সারির যেকোনো ঘরে Enter = "কার্টে দিন" (মালিক, ২৬ নভেম্বর ২০২৬: "এন্টার দিলে … অ্যাড টু কার্ট") --}}
-                    <div @keydown.enter="enterAdds($event)" class="ds-qtyrow {{ $show['free_qty'] ? '' : 'ds-nofree' }} grid items-end gap-2 grid-cols-2 sm:grid-cols-3
+                    <div @keydown.enter="enterAdds($event)" class="ds-qtyrow {{ $show['free_qty'] ? '' : 'ds-nofree' }} {{ ($abosLook ?? false) && ! $show['line_discount'] ? 'ds-nodisc' : '' }} grid items-end gap-2 grid-cols-2 sm:grid-cols-3
                                 lg:grid-cols-[3.5rem_4rem_3.5rem_4rem_minmax(4.5rem,1fr)_minmax(5.5rem,1fr)_auto]
                                 gap-x-1.5">
                             <x-sales::entry-field label="sales::field.qty" width="w-full">
