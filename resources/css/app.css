@@ -3203,3 +3203,20 @@ html:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .toolbar-view labe
 :root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) [data-modulebar-fold] {
     max-height: min(70dvh, 34rem);
 }
+
+/*
+ * ⭐ Navy — লেখা পড়ার মতো গাঢ় আর বোতাম অন্তত ২৮px (মালিক "ok", ২৮ নভেম্বর ২০২৬; নমুনা মালিকের-ফাইল/রং-ও-বোতামের-মাপ-নমুনা-২৮-নভেম্বর.html)।
+ * ⓘ axe (WCAG 2.2 AA): সাধারণ লেখা ৪.৫:১, বোতাম ২৪×২৪। রঙের পরিবার একই — কেবল শেড গাঢ়; অর্থের রং (টাকা সবুজ, বাকি লাল) যেমন ছিল।
+ * ⓘ ব্র্যান্ড-৫০০ কোম্পানির নিজের রং থেকেই আসে (৬০০ আর ৭০০-র মিশেল) — ABOS টিয়ায় প্রায় #0b7285 (৫.৫:১), অন্য কোম্পানির রঙেও একই গাঢ়তা।
+ */
+:root[data-ui='navy']:not([data-theme='dark']) {
+    --color-brand-500: color-mix(in srgb, rgb(var(--accent-600)) 55%, rgb(var(--accent-700)));
+}
+:root[data-ui='navy'] .tone-sky { --c: #0369a1; }
+:root[data-ui='navy'] .tone-amber { --c: #b45309; }
+:root[data-ui='navy'] .tone-green { --c: #047857; }
+:root[data-ui='navy'] .tone-teal { --c: #0f766e; }
+:root[data-ui='navy'] .list-filter-option.is-zero { opacity: 1; color: #5f6b7a; }
+:root[data-ui='navy'] .list-filter-tools button { display: inline-flex; align-items: center; min-height: 28px; }
+:root[data-ui='navy'] form[data-abos-counter] .ds-sec-h { color: #0b6c7a; }
+:root[data-ui='navy'] .ds-b8 small { opacity: 1; }
