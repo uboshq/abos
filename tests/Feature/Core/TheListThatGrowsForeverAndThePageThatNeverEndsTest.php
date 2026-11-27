@@ -64,6 +64,8 @@ final class TheListThatGrowsForeverAndThePageThatNeverEndsTest extends TestCase
         // ⓘ বিজ্ঞপ্তির মাধ্যম কোডে নিবন্ধিত — নতুন মাধ্যম কেবল কোড লিখে আসে (১২ অক্টোবর ২০২৬, বিজ্ঞপ্তি মডিউল)
         'App\Modules\Notification\Http\Controllers\NotificationChannelController' => 'কোডে নিবন্ধিত মাধ্যমগুলো (ইমেইল, এসএমএস, পুশ, অ্যাপ) — সারি নয়, তালিকা কোডের সাথে বাঁধা।',
         // ⓘ ২৩ নভেম্বর ২০২৬ (1.3.10) — বার্তার পাতা
+        // ⓘ ২৮ নভেম্বর ২০২৬ (মালিকের সিদ্ধান্ত ১-খ, ছাদ ৫৭২ → ৫৭৩ তাঁর ok-এ) — মেইল: ঠিকানা আর টেমপ্লেট আসলেই পাতা ভাগ করে; কেবল এটা ছাড়
+        'App\Modules\Mail\Http\Controllers\MailController' => 'পাতাটা নিজে কোনো তালিকা আনে না — কেবল মেনু আর দুইটা চাবি; চিঠি আসে messages() দরজা থেকে, সার্ভারেই পাতা ভাগ (ImapMailServer::list, page × per)।',
         'App\Modules\Messaging\Http\Controllers\MessengerPageController' => 'পাতাটা নিজে কোনো তালিকা আনে না — কথোপকথন আসে বার্তার দরজা থেকে, একবারে ৫০টা (MessengerService::LIST_PAGE), বার্তা ১০০/২০০-তে বাঁধা; unread() কেবল একটা বাজতে থাকা কল (first())।',
 
         // ── প্রতিষ্ঠানের নিজের সাজানো, আর সাজানো জিনিস গোনা যায় ────────
