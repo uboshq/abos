@@ -52,6 +52,8 @@ final class BalanceSheetService
      *   equity: list<array<string, mixed>>,
      *   totals: array{assets: string, liabilities: string, equity: string, funding: string},
      *   profit: string,
+     *   profit_this_year: string,
+     *   profit_earlier: string,
      *   agrees: bool,
      *   difference: string,
      *   as_of: string,
