@@ -143,6 +143,9 @@ return [
         // ⓘ বার্তা ও কল (মালিক "ok", ২১ নভেম্বর ২০২৬)
         'messaging' => 'বার্তা ও কল',
         'messaging.group' => 'বার্তার দল',
+        'mail' => 'পুরো মেইল মডিউল',
+        'mail.personal' => 'ব্যক্তিগত মেইলের অনুরোধ',
+        'mail.addresses' => 'মেইল ঠিকানা',
         'notification.templates' => 'বিজ্ঞপ্তির ছাঁচ',
         'notification.archive' => 'বিজ্ঞপ্তির আর্কাইভ',
         'notification.reports' => 'বিজ্ঞপ্তির রিপোর্ট',
