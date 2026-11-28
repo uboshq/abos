@@ -375,12 +375,6 @@ parameters:
 			path: app/Modules/Accounts/Http/Controllers/VoucherPrintController.php
 
 		-
-			message: '#^Strict comparison using \!\=\= between Illuminate\\Support\\Carbon\|null and false will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Modules/Accounts/Imports/OpeningBalanceImporter.php
-
-		-
 			message: '#^Method App\\Modules\\Accounts\\Models\\Account\:\:gather\(\) should return Illuminate\\Database\\Eloquent\\Collection\<int, App\\Modules\\Accounts\\Models\\Account\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, \$this\(App\\Modules\\Accounts\\Models\\Account\)\>\.$#'
 			identifier: return.type
 			count: 1
@@ -405,12 +399,6 @@ parameters:
 			path: app/Modules/Accounts/Models/MoneyTransfer.php
 
 		-
-			message: '#^Method App\\Modules\\Accounts\\Reports\\CoreReports\:\:accountName\(\) should return Illuminate\\Database\\Query\\Expression but returns Illuminate\\Contracts\\Database\\Query\\Expression\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Modules/Accounts/Reports/CoreReports.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\LedgerEntry\:\:\$amount\.$#'
 			identifier: property.notFound
 			count: 1
@@ -421,12 +409,6 @@ parameters:
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Modules/Backup/Services/BackupRunner.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between Illuminate\\Support\\Carbon\|null and false will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Modules/Customer/Imports/CustomerImporter.php
 
 		-
 			message: '#^Using nullsafe property access "\?\-\>id" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
@@ -543,12 +525,6 @@ parameters:
 			path: app/Modules/Inventory/Http/Controllers/StorageLocationController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Inventory/Models/StockTransferLine.php
-
-		-
 			message: '#^Unsafe usage of new static\(\)\.$#'
 			identifier: new.static
 			count: 1
@@ -627,39 +603,9 @@ parameters:
 			path: app/Modules/Inventory/Sync/ProductSync.php
 
 		-
-			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockMovement\:\:\$floor\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Inventory/Sync/StockOnHandSync.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockMovement\:\:\$free\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Inventory/Sync/StockOnHandSync.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockMovement\:\:\$free_reserved\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Inventory/Sync/StockOnHandSync.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockMovement\:\:\$hold\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Modules/Inventory/Sync/StockOnHandSync.php
-
-		-
 			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockMovement\:\:\$moved_at\.$#'
 			identifier: property.notFound
 			count: 1
-			path: app/Modules/Inventory/Sync/StockOnHandSync.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Inventory\\Models\\StockMovement\:\:\$reserved\.$#'
-			identifier: property.notFound
-			count: 2
 			path: app/Modules/Inventory/Sync/StockOnHandSync.php
 
 		-
@@ -933,28 +879,10 @@ parameters:
 			path: app/Modules/Purchase/Models/PurchaseBill.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseBillGiftLine.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseBillLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Purchase/Models/PurchaseOrder.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseOrderLine.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
@@ -963,22 +891,10 @@ parameters:
 			path: app/Modules/Purchase/Models/PurchaseReceipt.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseReceiptLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Purchase/Models/PurchaseReturn.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Purchase/Models/PurchaseReturnLine.php
 
 		-
 			message: '#^Method App\\Modules\\Purchase\\Reports\\PurchaseReports\:\:productName\(\) should return Illuminate\\Database\\Query\\Expression but returns Illuminate\\Contracts\\Database\\Query\\Expression\.$#'
@@ -1065,12 +981,6 @@ parameters:
 			path: app/Modules/Sales/Http/Controllers/DirectSaleController.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Http/Controllers/SalesPrintController.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>document_no" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
@@ -1107,28 +1017,10 @@ parameters:
 			path: app/Modules/Sales/Models/DeliveryChallan.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/DeliveryChallanGiftLine.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/DeliveryChallanLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Sales/Models/SalesInvoice.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesInvoiceLine.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
@@ -1137,22 +1029,10 @@ parameters:
 			path: app/Modules/Sales/Models/SalesOrder.php
 
 		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesOrderLine.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Builder\<Illuminate\\Database\\Eloquent\\Model\>\:\:search\(\)\.$#'
 			identifier: method.notFound
 			count: 1
 			path: app/Modules/Sales/Models/SalesReturn.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:name\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Modules/Sales/Models/SalesReturnLine.php
 
 		-
 			message: '#^Result of && is always true\.$#'
@@ -1261,12 +1141,6 @@ parameters:
 			identifier: arrayValues.list
 			count: 1
 			path: app/Modules/Supplier/Dashboard/SupplierWidgets.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between Illuminate\\Support\\Carbon\|null and false will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Modules/Supplier/Imports/SupplierImporter.php
 
 		-
 			message: '#^Method App\\Modules\\Supplier\\Reports\\PartyReports\:\:supplierName\(\) should return Illuminate\\Database\\Query\\Expression but returns Illuminate\\Contracts\\Database\\Query\\Expression\.$#'

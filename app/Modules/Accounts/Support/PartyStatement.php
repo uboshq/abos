@@ -153,7 +153,7 @@ final class PartyStatement
 
             $rows[] = [
                 'sl' => $i + 1,
-                'date' => (string) $entry->trx_date?->toDateString(),
+                'date' => $entry->trx_date->toDateString(), // ⓘ ledger_entries.trx_date NOT NULL
                 'no' => (string) $entry->document_no,
                 'kind' => $this->kind($sourceBase, $dr, $cr),
                 'particulars' => $this->particulars($sourceBase, $undone, $money[$key] ?? '',

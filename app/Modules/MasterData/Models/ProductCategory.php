@@ -23,6 +23,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * "বিস্কুট" ও "বিস্কিট" দুইটা আলাদা শ্রেণি হয়ে বসত। দুইটা একসাথে করা
  * ইচ্ছাকৃত — একই টেবিলে দুইবার মাইগ্রেশন চালানোর চেয়ে একবারই ভালো, আর
  * ভুলটাও হুবহু একই।
+ *
+ * ⓘ টেবিলটা মাইগ্রেশনে চলকের নামে তৈরি (`Schema::create($table, …)`, ব্র্যান্ডের সাথে এক লুপে) — Larastan তাই ঘরগুলো
+ *   দেখতে পায় না; এখানে লেখা (২৮ নভেম্বর ২০২৬)। ⓘ name_bn ২৩ সেপ্টেম্বরের মাইগ্রেশনের পর আবার NOT NULL।
+ *
+ * @property string $code
+ * @property string $name_en
+ * @property string $name_bn
  */
 class ProductCategory extends Model implements Drillable
 {
