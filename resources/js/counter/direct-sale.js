@@ -1551,6 +1551,24 @@ export default function directSale({
             return e ? String(e).split('-').reverse().join('/') : '—';
         },
 
+        /* ⭐ অবস্থান বাক্স — গুদাম বড় করে, নিচে জায়গা (Block ▸ Rack ▸ Shelf) আর আরও কয় জায়গায় (মালিক, ২৮ নভেম্বর ২০২৬) */
+        get whereGodown() {
+            const w = this.picked && this.picked.where;
+            return (w && w.godown) || '—';
+        },
+
+        get wherePlace() {
+            const w = this.picked && this.picked.where;
+            if (! w) return '';
+            const more = Number(w.more) > 0 ? String(texts.whereMore ?? '').replace(':n', String(w.more)) : '';
+
+            return [w.place, more].filter(Boolean).join(' · ');
+        },
+
+        get whereTitle() {
+            return [this.whereGodown, this.wherePlace].filter((s) => s && s !== '—').join(' — ');
+        },
+
         /** খোলা খসড়াটা এই পর্দাতেই খোলা — সম্পাদনা করে পাকা করার জন্য। */
         openTheOpenDraft() {
             const draft = this.pendingForCustomer[0];
