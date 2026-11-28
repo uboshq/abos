@@ -14,7 +14,7 @@
     লিখলে বাকি দুইটা নিজে বসে (resources/js/pricing.js), আর যে ঘরে
     কার্সর আছে সেটায় কখনো হাত পড়ে না।
 --}}
-<x-layouts.app :menu="$menu">
+<x-layouts.app :menu="$menu" :fit1920="true">
     <x-slot:title>{{ __('purchase::menu.direct') }}</x-slot:title>
 
     {{-- ⓘ `data-confirm-overview` — নিশ্চিতের আগে সারাংশের পপ-আপ ([[confirm-overview.js]], ৪ অক্টোবর ২০২৬) --}}

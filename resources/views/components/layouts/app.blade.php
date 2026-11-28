@@ -76,6 +76,9 @@
       {{-- ⭐ দুই-কলামের টাকার ফর্ম (`<x-layouts.app two-column-form>`) — ১৫৩৬-এর নিচে মেনু রেলে বা ভাসমান, যাতে নকশার
            দুই কলাম মালিকের ১৩৬৬-এর পর্দায় ধরে ([[sidebar-state.js]]; মালিক আর fe, ২৪ অক্টোবর ২০২৬) --}}
       @if ($twoColumnForm ?? false) data-two-column-form @endif
+      {{-- ⭐ ১৯২০-এর এক মাপ (মালিক, ২৮ নভেম্বর ২০২৬: "একটা মাপে রাখবা স্ক্রিনটা") — কেবল ABOS-এর তিন রূপে, যে পাতা চায় (`fit1920`);
+           নকল রূপ (SAP, Dynamic…) নিজেদের আসল আচরণে থাকে। নিচের <head>-এর স্ক্রিপ্ট আর [[vite.config.js]]-এর fitUnits দেখুন। --}}
+      @if (($fit1920 ?? false) && \App\Core\Support\Ui::foldsMenuGroups(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)))) data-fit-1920 @endif
       {{-- ⭐ ফ্রেমের রং (সাদা · Redwood · Navy; মালিক, ২৩ নভেম্বর ২০২৬) — [[Accent::frame()]], রং `--frame-*`-এ; কেবল Navy রূপ পড়ে ([[tokens.css]]) --}}
       @if (\App\Core\Support\Accent::frame(auth()->user()?->accent) !== null) data-accent-frame="{{ auth()->user()?->accent }}" @endif
       {{-- ⭐ রঙিন মডিউল বন্ধ — সব মডিউল ব্র্যান্ডের এক রঙে (`tokens.css`-এর `[data-modules='calm']`; কোম্পানির সুইচ
@@ -111,6 +114,12 @@
     {{-- এই লাইনটা ছাড়া মোবাইল ব্রাউজার ৯৮০px চওড়া একটা কাল্পনিক ডেস্কটপ
          ধরে নেয় আর কোনো media query কাজ করে না (সেকশন ২০.১)। --}}
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    {{-- ⭐ ১৯২০-এর এক মাপ: পাতা সবসময় ১৯২০ চওড়ায় সাজানো, জানালার মাপে পুরোটা একসাথে বড়-ছোট (zoom) — ব্রাউজারে জুম করলে
+         কিছু ভাঙে না, চাপে না, ফাঁকা হয় না। vh/vw এই মাপে আনতে --fit-vh/--fit-vw ([[vite.config.js]] fitUnits)।
+         ১২৮০-এর নিচে (ফোন, ট্যাবলেট, ১৫০%-এর বেশি জুম) আগের মতো ফোনের নকশা — সেখানে media query-গুলো আসল জানালা মাপে।
+         ⓘ ব্লক করা inline, যাতে প্রথম আঁকাতেই ঠিক মাপ — পরে বসালে পাতা একবার লাফাত। --}}
+    <script @nonce>(function () { var r = document.documentElement; if (! r.hasAttribute('data-fit-1920')) return; function fit() { var w = window.innerWidth; if (w < 1280) { r.style.zoom = ''; r.style.removeProperty('--fit-vh'); r.style.removeProperty('--fit-vw'); r.removeAttribute('data-fit-on'); return; } var z = w / 1920; r.style.zoom = String(z); r.style.setProperty('--fit-vh', (window.innerHeight / z / 100) + 'px'); r.style.setProperty('--fit-vw', '19.2px'); r.setAttribute('data-fit-on', ''); } fit(); window.addEventListener('resize', fit); })();</script>
 
     <title>{{ isset($title) ? $title . ' — ABOS' : 'ABOS' }}</title>
 

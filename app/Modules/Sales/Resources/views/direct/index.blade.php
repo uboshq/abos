@@ -32,7 +32,7 @@
     $vatEnabled = $show['vat'] ?? true;
 @endphp
 
-<x-layouts.app :menu="$menu">
+<x-layouts.app :menu="$menu" :fit1920="true">
     <x-slot:title>{{ __('sales::menu.direct') }}</x-slot:title>
 
     {{-- ⓘ সংরক্ষণ আর ত্রুটির বার্তা এখান থেকে সরে "খসড়া রাখুন / নিশ্চিত
