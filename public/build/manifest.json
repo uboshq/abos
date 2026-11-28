@@ -3,12 +3,12 @@
     "file": "assets/mail-iMZlZI9O.css",
     "src": "_mail-iMZlZI9O.css"
   },
-  "_preload-helper-B6JZccWF.js": {
-    "file": "assets/preload-helper-B6JZccWF.js",
+  "_preload-helper-BPf9s95w.js": {
+    "file": "assets/preload-helper-BPf9s95w.js",
     "name": "preload-helper"
   },
   "node_modules/livekit-client/dist/livekit-client.esm.mjs": {
-    "file": "assets/livekit-client.esm-BkrmzZ0_.js",
+    "file": "assets/livekit-client.esm-Cc589mEs.js",
     "name": "livekit-client.esm",
     "src": "node_modules/livekit-client/dist/livekit-client.esm.mjs",
     "isDynamicEntry": true
@@ -23,12 +23,12 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-B_dXjYQi.js",
+    "file": "assets/app-D5KfOj3a.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_preload-helper-B6JZccWF.js"
+      "_preload-helper-BPf9s95w.js"
     ],
     "dynamicImports": [
       "resources/js/messenger-call.js",
@@ -37,7 +37,7 @@
     ]
   },
   "resources/js/mail-admin.js": {
-    "file": "assets/mail-admin-SKAINSLC.js",
+    "file": "assets/mail-admin-BQ6eBIgs.js",
     "name": "mail-admin",
     "src": "resources/js/mail-admin.js",
     "isEntry": true,
@@ -52,7 +52,7 @@
     "isEntry": true
   },
   "resources/js/mail-page.js": {
-    "file": "assets/mail-page-D5ccmvZH.js",
+    "file": "assets/mail-page-CkEHxz96.js",
     "name": "mail-page",
     "src": "resources/js/mail-page.js",
     "isEntry": true,
@@ -61,31 +61,31 @@
     ]
   },
   "resources/js/meeting-page.js": {
-    "file": "assets/meeting-page-DWEW3nX2.js",
+    "file": "assets/meeting-page-e40uOhDU.js",
     "name": "meeting-page",
     "src": "resources/js/meeting-page.js",
     "isEntry": true,
     "imports": [
-      "_preload-helper-B6JZccWF.js"
+      "_preload-helper-BPf9s95w.js"
     ],
     "dynamicImports": [
       "node_modules/livekit-client/dist/livekit-client.esm.mjs"
     ]
   },
   "resources/js/messenger-call.js": {
-    "file": "assets/messenger-call-CdkPS2B0.js",
+    "file": "assets/messenger-call-CWbGx6Q_.js",
     "name": "messenger-call",
     "src": "resources/js/messenger-call.js",
     "isDynamicEntry": true,
     "imports": [
-      "_preload-helper-B6JZccWF.js"
+      "_preload-helper-BPf9s95w.js"
     ],
     "dynamicImports": [
       "node_modules/livekit-client/dist/livekit-client.esm.mjs"
     ]
   },
   "resources/js/messenger-meeting.js": {
-    "file": "assets/messenger-meeting-CexSWWaP.js",
+    "file": "assets/messenger-meeting-JJXwTFwq.js",
     "name": "messenger-meeting",
     "src": "resources/js/messenger-meeting.js",
     "isDynamicEntry": true,
@@ -94,7 +94,7 @@
     ]
   },
   "resources/js/messenger-page.js": {
-    "file": "assets/messenger-page-CX_gcrMN.js",
+    "file": "assets/messenger-page-CycF88Ix.js",
     "name": "messenger-page",
     "src": "resources/js/messenger-page.js",
     "isEntry": true,
@@ -103,7 +103,7 @@
     ]
   },
   "resources/js/messenger-share.js": {
-    "file": "assets/messenger-share-DXFrAxi7.js",
+    "file": "assets/messenger-share-DVMDH0_V.js",
     "name": "messenger-share",
     "src": "resources/js/messenger-share.js",
     "isDynamicEntry": true,
