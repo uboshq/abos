@@ -2,7 +2,7 @@
                  ⓘ এক সারি = এক লট; ছাপা বিলে একই পণ্য এক লাইনে মেলে। --}}
             <section data-boxed class="ds-gold overflow-hidden rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) shadow-sm">
-                <div class="table-responsive ds-cart-scroll">
+                <div class="table-responsive ds-cart-scroll" tabindex="0" role="region" aria-label="{{ __('sales::field.items') }}">
                     <table class="ui-lines table-cards w-full text-sm">
                         <thead>
                             <tr>

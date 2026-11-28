@@ -103,7 +103,7 @@
      `click.outside`-এ পৌঁছে সাথে সাথে বন্ধ করে দিত --}}
 <div x-data="createMenu" class="relative" data-shell-create @open-create-menu.window="openSoon()">
     <button type="button"
-            @click="open = ! open" @click.outside="open = false"
+            @click="open = ! open" @click.outside="open = false" aria-label="{{ __('core.action.create') }}"
             @keydown.escape.window="open = false"
             :aria-expanded="open.toString()"
             class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field)
