@@ -131,7 +131,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
         ]);
 
         $query = $this->visible($user)
-            ->when($data['type'] ?? null, fn (Builder $q, string $t) => $q->ofType($t))
+            ->when($data['type'] ?? null, /** @param Builder<Voucher> $q */ fn (Builder $q, string $t) => $q->ofType($t))
             ->when($data['money'] ?? null, fn (Builder $q, string $kind) => $this->paidInto($q, $kind))
             // ⓘ শাখা — মডেলের নিজের দেয়ালের ভিতরে; নাগালের বাইরের বা অচেনা শাখা চাইলে খালি তালিকা, অন্যের কাগজ নয়
             ->when($data['branch'] ?? null, fn (Builder $q, string $b) => $q->whereIn('branch_id',
@@ -350,6 +350,7 @@ final class VoucherApiController extends Controller implements HasMiddleware
     }
 
     /** রিপোর্টের চাবিতে সব (শাখার দেয়াল মডেলের নিজের); কেবল লেখার চাবিতে নিজের লেখা */
+    /** @return Builder<Voucher> */
     private function visible(User $user): Builder
     {
         return Voucher::query()->when(! $user->can('accounts.report'), fn (Builder $q) => $q->where('created_by', $user->id));

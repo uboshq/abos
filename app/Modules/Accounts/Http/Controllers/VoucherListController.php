@@ -231,6 +231,8 @@ class VoucherListController extends Controller implements HasMiddleware
      * ⓘ তাই অঙ্ক = আসল নামের ডেবিট − উল্টো নামের ডেবিট (উল্টোটায় ডেবিট-
      * ক্রেডিট অদলবদল, তাই ওর ডেবিট = আগের দাখিলার মোট)। ⚠️ বাতিল বিলে নিট
      * শূন্য, আর সেগুলো তালিকায় আসে না — খাতায় ওদের আর কোনো ভার নেই।
+     *
+     * @return Builder<LedgerEntry>
      */
     private function posted(string $source, Request $request): Builder
     {
@@ -283,6 +285,9 @@ class VoucherListController extends Controller implements HasMiddleware
      * ⚠️ তিনটা শাখা মিলে সব ভাউচার ঢাকে, আর কোনোটা দুইবার নয় — উপরের
      * মন্তব্য দেখুন। ⓘ বিক্রয় বিলের নামটা কেন এখানে হাতে লেখা, সেটা
      * [[SALES_INVOICE_SOURCE]]-এ।
+     *
+     * @param  Builder<Voucher>  $query
+     * @return Builder<Voucher>
      */
     private function scoped(Builder $query, string $tab): Builder
     {

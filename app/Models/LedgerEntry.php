@@ -30,7 +30,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property-read mixed $cr
  * @property-read mixed $net
  * @property-read mixed $net_balance
- * @property-read mixed $running_balance
+ * @property mixed $running_balance
  * @property-read mixed $signed
  * @property-read mixed $spent
  * @property-read mixed $opening

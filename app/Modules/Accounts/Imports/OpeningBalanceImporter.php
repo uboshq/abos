@@ -192,7 +192,7 @@ final class OpeningBalanceImporter implements \App\Core\Contracts\ImportNeedsKey
                 continue;
             }
 
-            if ($parsed !== false && $parsed->format($format) === $value) {
+            if ($parsed !== null && $parsed->format($format) === $value) {
                 return $parsed->startOfDay();
             }
         }

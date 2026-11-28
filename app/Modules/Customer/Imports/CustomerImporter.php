@@ -244,7 +244,7 @@ final class CustomerImporter implements Importer, ImportNeedsKeys
 
             // format() মিলিয়ে দেখা হয় কারণ Carbon "32/13/2026"-ও মেনে
             // নিয়ে পরের মাসে গড়িয়ে যায়, আর তখন ভুলটা নীরবে ঢুকত
-            if ($parsed !== false && $parsed->format($format) === $value) {
+            if ($parsed !== null && $parsed->format($format) === $value) {
                 return $parsed->startOfDay();
             }
         }

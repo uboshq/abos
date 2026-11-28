@@ -88,7 +88,7 @@ final class BankStatementService
              * গড়িয়ে নেয়। ⓘ তাই ফিরিয়ে লিখে মিলিয়ে দেখা হয়: একই ছকে
              * ছাপলে হুবহু একই লেখা না এলে তারিখটা আসলে বোঝা যায়নি।
              */
-            if ($date !== false && $date->format($format) === $value) {
+            if ($date !== null && $date->format($format) === $value) {
                 return $date->toDateString();
             }
         }

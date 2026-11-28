@@ -22,6 +22,11 @@ use Illuminate\Support\Carbon;
  *
  * সারি হিসেবে থাকায় ব্যাংক কোনো কিস্তি বদলালে (পুনঃতফসিল, আংশিক
  * পরিশোধ) সেই সারিটাই শোধরানো যায়।
+ *
+ * ⓘ নিচের ঘর দুটো টেবিলের নয় — FinancialStatements-এর যোগফলের প্রশ্নের নাম (`… as account_id`, `SUM(…) as due`)।
+ *
+ * @property-read mixed $account_id
+ * @property-read mixed $due
  */
 class LoanInstalment extends Model implements Drillable
 {

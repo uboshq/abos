@@ -33,6 +33,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * ধরনটা শুধু ঠিক করে কোন ফর্মে লেখা হবে ও কী ছাপা হবে। সংরক্ষণ ও
  * পোস্টিং সবার এক, কারণ সবগুলোই শেষমেশ ডেবিট-ক্রেডিটের কয়েকটা সারি।
+ *
+ * ⓘ `$v` টেবিলের নয় — হিসাবের বোর্ডের দিনভিত্তিক যোগফলের নাম (`SUM(…) as v`)।
+ *
+ * @property-read mixed $v
  */
 class Voucher extends Model implements Drillable, RepostsAfterRevision, ShowsItselfForSigning, \App\Core\Contracts\SummarisesItsList
 {

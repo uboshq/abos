@@ -140,7 +140,7 @@ final class FixedAssetOpeningImporter implements Importer, ImportNeedsKeys, Refu
                 continue;
             }
 
-            if ($parsed !== false && $parsed->format($format) === $value) {
+            if ($parsed !== null && $parsed->format($format) === $value) {
                 return $parsed->startOfDay();
             }
         }
