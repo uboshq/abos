@@ -62,7 +62,7 @@ final class TheCounterSaysWhichGodownTheGoodsAreInTest extends TestCase
     {
         $row = app(DirectSaleOptions::class)->catalogue($this->warehouse, 50, (int) $product->id)->first();
 
-        return $row?->where ?? null;
+        return $row === null ? null : $row->where;
     }
 
     private function aShelf(): StorageLocation

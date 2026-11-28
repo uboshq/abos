@@ -40,7 +40,8 @@
                         <td class="ch">
                             @if ($r->reason)<div>{{ $r->reason }}</div>@endif
                             @foreach ($r->changes as $c)
-                                <div><b>{{ $c->field }}</b>: {{ \Illuminate\Support\Str::limit((string) ($c->old_value ?? '—'), 60) }} → {{ \Illuminate\Support\Str::limit((string) ($c->new_value ?? '—'), 60) }}</div>
+                                {{-- ⛔ অডিটের মান ছাপা কেবল FieldSecurity দিয়ে — ঢাকা ঘর ঢাকাই থাকে (§৮ ⛔১; EveryAuditDoorHidesTheSalaryTest) --}}
+                                <div><b>{{ $c->field }}</b>: {{ \Illuminate\Support\Str::limit((string) \App\Core\Security\FieldSecurity::show($r->auditable_type, $c->field, $c->old_value ?? '—', $r->auditable_id), 60) }} → {{ \Illuminate\Support\Str::limit((string) \App\Core\Security\FieldSecurity::show($r->auditable_type, $c->field, $c->new_value ?? '—', $r->auditable_id), 60) }}</div>
                             @endforeach
                         </td>
                     </tr>

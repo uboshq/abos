@@ -67,6 +67,8 @@ final class EveryAuditDoorHidesTheSalaryTest extends TestCase
         'app/Core/Services/SignedSettings.php' => 'setting_changes (the waiting change of a setting), not the audit tables',
         'app/Modules/SystemAdmin/Resources/views/role/partials/history.blade.php' => 'masks through FieldSecurity::show(); rows of the role itself',
         'app/Modules/SystemAdmin/Support/ModuleBoard.php' => 'one named on/off field of a module or branch switch, shown as yes/no',
+        // ⓘ ২৮ নভেম্বর ২০২৬ — মেইলের বদলের খাতা (ঠিকানা, মেইলবক্স, টেমপ্লেট, উৎসবের সারি; বেতন নেই), তবু FieldSecurity দিয়ে ছাপে
+        'app/Modules/Mail/Resources/views/history/index.blade.php' => 'masks through FieldSecurity::show(); mail address/mailbox/template rows only',
     ];
 
     /** যে পাঠকরা নিজেরাই ছাপে — এদের ঢাকনা FieldSecurity দিয়েই হতে হবে */
@@ -75,6 +77,7 @@ final class EveryAuditDoorHidesTheSalaryTest extends TestCase
         'app/Modules/Governance/Resources/views/audit/partials/summary.blade.php',
         'app/Modules/Governance/Resources/views/audit/show.blade.php',
         'app/Modules/SystemAdmin/Resources/views/role/partials/history.blade.php',
+        'app/Modules/Mail/Resources/views/history/index.blade.php',
     ];
 
     private Company $company;
