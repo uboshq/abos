@@ -148,7 +148,6 @@ export function moneyMethod ({
     charge = '',
     chequeDate = '',
     amountField = 'amount',
-    chargeField = 'charge_amount',
     moneyField = '',
     direction = 'in',
     notes = {},

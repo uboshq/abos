@@ -202,7 +202,7 @@ export default function documentScan () {
                 this.status = data.wordDone
 
                 await this.suggestFields()
-            } catch (error) {
+            } catch {
                 this.failed = true
                 this.status = data.wordFailed
             } finally {

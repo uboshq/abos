@@ -298,7 +298,7 @@ export default function directPurchase({
                     driverName: this.driverName,
                     nextKey: this.nextKey,
                 }));
-            } catch (e) {
+            } catch {
                 /* ⚠️ চুপ করে থাকা ইচ্ছাকৃত — localStorage বন্ধ
                    থাকতে পারে (ব্যক্তিগত উইন্ডো, সাইট-ডেটা বন্ধ
                    করা ব্রাউজার), আর তখন লেখা ব্যতিক্রম ছোঁড়ে।
@@ -334,7 +334,7 @@ export default function directPurchase({
 
                 this.draftFound = true;
                 this.draftAt = d.at ? new Date(d.at).toLocaleString() : '';
-            } catch (e) {
+            } catch {
                 localStorage.removeItem(this.draftKey);
             }
         },
@@ -353,7 +353,7 @@ export default function directPurchase({
         discardDraft() {
             try {
                 localStorage.removeItem(this.draftKey);
-            } catch (e) {
+            } catch {
                 // মুছতে না পারলেও প্রস্তাবটা সরিয়ে দেওয়াই যথেষ্ট
             }
 
@@ -387,7 +387,7 @@ export default function directPurchase({
                    না — আর তখন কার্টে সারি আছে অথচ "গতবার কত"
                    কলামটা ফাঁকা থাকত, ঠিক দরাদরির মুহূর্তে। */
                 if (d.supplierId) this.supplierPicked(d.supplierId);
-            } catch (e) {
+            } catch {
                 // ভাঙা খসড়া — ফেরানোর চেয়ে বাদ দেওয়াই নিরাপদ
             }
         },
@@ -411,7 +411,7 @@ export default function directPurchase({
                     localStorage.setItem(this.draftKey + '.pending', raw);
                     localStorage.removeItem(this.draftKey);
                 }
-            } catch (e) {
+            } catch {
                 // সরাতে না পারলে খসড়াটা যেখানে আছে সেখানেই থাক
             }
         },
@@ -613,7 +613,7 @@ export default function directPurchase({
                 this.previousDue = Number(payload.due) || 0;
                 this.creditLimit = Number(payload.limit) || 0;
                 this.creditRoom = payload.room === null || payload.room === undefined ? null : (Number(payload.room) || 0);
-            } catch (e) {
+            } catch {
                 /* নীরবে ছেড়ে দেওয়া — সংখ্যাটা সুবিধার, বাধ্যতামূলক
                    নয়। ওটা না এলে ক্রয় থেমে যাওয়া অনেক বড় ক্ষতি। */
             }

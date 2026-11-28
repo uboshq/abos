@@ -830,7 +830,9 @@ describe('কার্টের সারিতে লেখার ঘর নে
         const { readFileSync } = await import('node:fs')
         const blade = readFileSync(new URL('../../../app/Modules/Purchase/Resources/views/direct/partials/cart.blade.php', import.meta.url), 'utf8')
         const start = blade.indexOf('x-for="(line, index) in lines"')
-        const end = blade.indexOf('x-for="line in lines"')
+        // ⓘ শেষ চিহ্ন — উপহারের সারি (পর্দা v9, ২৬ নভেম্বর: উপহার তার সারির নিচে); আগের দ্বিতীয় `x-for="line in lines"` লুপ আর নেই
+        //   (ESLint/vitest ঝাড়াই, ২৮ নভেম্বর ২০২৬ — main-এ লাল ছিল, দাবির শর্ত একই)
+        const end = blade.indexOf('x-for="(gift, gi) in line.gifts"')
         const row = blade.slice(start, end).replace(/\{\{--[\s\S]*?--\}\}/g, '')
 
         expect(start).toBeGreaterThan(0)

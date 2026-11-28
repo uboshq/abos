@@ -18,7 +18,7 @@ export const STORE_PREFIX = 'abos.menuFold.'
 function defaultStore () {
     try {
         return window.localStorage ?? null
-    } catch (e) {
+    } catch {
         return null
     }
 }
@@ -33,7 +33,7 @@ export function readSaved (store, module) {
         const said = raw ? JSON.parse(raw) : {}
 
         return said && typeof said === 'object' && ! Array.isArray(said) ? said : {}
-    } catch (e) {
+    } catch {
         return {}
     }
 }
@@ -45,7 +45,7 @@ function save (store, module, state) {
 
     try {
         store.setItem(STORE_PREFIX + module, JSON.stringify(state))
-    } catch (e) {
+    } catch {
         // ⓘ জায়গা নেই বা বন্ধ — মনে রাখা যায় না, ভাঁজ তবু চলে
     }
 }

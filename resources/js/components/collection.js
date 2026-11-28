@@ -138,7 +138,7 @@ export function collectionForm (config = {}) {
                 if (response.ok) {
                     this.load(await response.json())
                 }
-            } catch (e) {
+            } catch {
                 this.previewFailed = true
             }
         },
@@ -294,7 +294,7 @@ export function collectionForm (config = {}) {
                 // ⓘ সার্ভারের কথাই শেষ — একই নিয়ম, তবে পার্থক্যের ধরন সার্ভার ঠিক করে
                 this.ownerSigns = body.needs_signature === true
                 this.postsNow = !this.ownerSigns
-            } catch (e) {
+            } catch {
                 this.previewFailed = true
             }
         },

@@ -164,7 +164,7 @@ export function copilotQuick ({ url, feedbackUrl, csrf, locale, page, failed, no
                 this.endListening()
             }
             this.rec = rec
-            try { rec.start() } catch (_) { this.endListening() }
+            try { rec.start() } catch { this.endListening() }
         },
         endListening () {
             clearTimeout(this.listenTimer)
@@ -234,7 +234,7 @@ export function copilotQuick ({ url, feedbackUrl, csrf, locale, page, failed, no
                     voted: 0,
                     say: d.answer ? sayOf(d.answer) : String(d.message ?? ''),
                 }
-            } catch (e) {
+            } catch {
                 item = { id: `bot-${Date.now()}`, me: false, head: failed, pairs: [], source: '', answerId: null, voted: 0, say: failed }
             }
             this.thread.push(item)

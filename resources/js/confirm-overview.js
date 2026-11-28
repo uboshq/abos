@@ -71,7 +71,7 @@ export function guardConfirmOverview (root = document, fetcher = (...args) => fe
                 failed = true
                 body.textContent = dialog.dataset.refused ?? dialog.dataset.failed ?? ''
             }
-        } catch (e) {
+        } catch {
             failed = true
             body.textContent = dialog.dataset.failed ?? ''
         }

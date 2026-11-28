@@ -522,7 +522,7 @@ export default function partyVoucher({ partyType, partyId, dueUrl, texts, picked
                 this.partyBranch = String(data.party_branch ?? '');
                 this.tellDue();
                 this.adoptPicked();
-            } catch (e) {
+            } catch {
                 /*
                  * ⚠️ নেট গেলে পর্দাটা অচল হয় না — বকেয়া আর বিলের তালিকা
                  * সুবিধা, শর্ত নয়। ⓘ ব্যবহারকারী হাতে অঙ্ক লিখে রসিদটা

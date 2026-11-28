@@ -53,7 +53,7 @@ export function openMail (url, win = window) {
 
     try {
         here = w.location.href && w.location.href !== 'about:blank' ? new URL(w.location.href) : null
-    } catch (e) {
+    } catch {
         here = null
     }
 
@@ -87,7 +87,7 @@ export function installSignOutSync (doc = document, win = window) {
     doc.addEventListener('submit', (event) => {
         const form = event.target
         if (form && form.matches && form.matches('form[action$="/logout"]')) {
-            try { win.localStorage.setItem(SIGN_OUT_KEY, String(Date.now())) } catch (e) { /* ⓘ জমা রাখা বন্ধ থাকলে কেবল এই ট্যাব */ }
+            try { win.localStorage.setItem(SIGN_OUT_KEY, String(Date.now())) } catch { /* ⓘ জমা রাখা বন্ধ থাকলে কেবল এই ট্যাব */ }
         }
     })
 

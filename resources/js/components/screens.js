@@ -260,7 +260,7 @@ export function liveRefresh({ url = '', seconds = 30 } = {}) {
                 if (!response.ok) return
                 const fresh = new DOMParser().parseFromString(await response.text(), 'text/html').querySelector('[data-live]')
                 if (fresh) this.$el.innerHTML = fresh.innerHTML
-            } catch (e) {
+            } catch {
                 // সংযোগ নেই — পুরনোটা থাকুক, পরের বার আবার
             }
         },

@@ -22,7 +22,7 @@ function remember (win, held) {
         } else {
             win.sessionStorage.removeItem(PRINT_FLAG)
         }
-    } catch (e) {
+    } catch {
         // ব্যক্তিগত উইন্ডো — মনে রাখা না গেলেও ছাপা চলে; কেবল ফাঁকা ট্যাবটা নিজে বন্ধ হবে না
     }
 }
@@ -30,7 +30,7 @@ function remember (win, held) {
 function wasHeld (win) {
     try {
         return win.sessionStorage.getItem(PRINT_FLAG) === '1'
-    } catch (e) {
+    } catch {
         return false
     }
 }
@@ -41,7 +41,7 @@ export function holdPrintTab (win = window, text = '') {
 
     try {
         tab = win.open('', PRINT_TAB)
-    } catch (e) {
+    } catch {
         tab = null
     }
 
@@ -55,7 +55,7 @@ export function holdPrintTab (win = window, text = '') {
         doc.body.style.font = '16px system-ui, sans-serif'
         doc.body.style.padding = '32px'
         doc.body.textContent = text || '…'
-    } catch (e) {
+    } catch {
         // ট্যাবটা আগে থেকে অন্য ঠিকানায় (আগের ছাপা) — লেখা যায় না, তাতে ক্ষতি নেই
     }
 
@@ -74,7 +74,7 @@ export function dropPrintTab (win = window) {
 
     try {
         win.open('', PRINT_TAB)?.close()
-    } catch (e) {
+    } catch {
         // ব্যবহারকারী নিজেই বন্ধ করেছেন
     }
 }
@@ -85,7 +85,7 @@ export function sendToPrintTab (url, win = window) {
 
     try {
         return win.open(url, PRINT_TAB) ?? null
-    } catch (e) {
+    } catch {
         return null
     }
 }

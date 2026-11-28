@@ -549,7 +549,7 @@ export function tradeLines (config = {}) {
                 }
 
                 this.applyBill(body, keep === true)
-            } catch (e) {
+            } catch {
                 this.billError = text.billFailed ?? ''
             } finally {
                 this.billBusy = false
