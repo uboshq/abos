@@ -25,7 +25,7 @@
      তাই বন্ধ করলেও মান যায়; কেবল দেখা-না-দেখা বদলায়। বাইরে চাপলে বা Esc-এ বন্ধ। --}}
 <div x-show="panel" x-cloak @click.self="closePanel()" data-counter-popup
      class="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-<div class="ds-gold ds-dialog rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 shadow-lg">
+<div class="ds-gold ds-dialog rounded-(--radius-card) border border-(--color-border) bg-(--color-surface-card) p-4 shadow-lg" :data-panel="panel">
     <div class="mb-3 flex items-center justify-between gap-2">
         <h2 class="text-base font-bold">
             <span x-show="panel === 'deposit'" x-cloak>{{ __('sales::field.btn_money') }}</span>
