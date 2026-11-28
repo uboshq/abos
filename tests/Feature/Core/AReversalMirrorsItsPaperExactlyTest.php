@@ -93,7 +93,7 @@ final class AReversalMirrorsItsPaperExactlyTest extends TestCase
             $this->assertSame(__('core.posting.reversal_of', ['document' => 'INV-2026-0008']), $row->narration);
             $this->assertStringContainsString('INV-2026-0008', (string) $row->narration, '⛔ বিবরণে কোন কাগজ উল্টাল তা নেই');
             $this->assertSame($writer->id, (int) $row->created_by, '⛔ যিনি উল্টাতে বললেন তাঁর বদলে লগ-ইন করা মানুষ বসল');
-            $this->assertSame($today, $row->trx_date instanceof \DateTimeInterface ? $row->trx_date->format('Y-m-d') : (string) $row->trx_date);
+            $this->assertSame($today, $row->trx_date->format('Y-m-d'));
         }
 
         // ডেবিট-ক্রেডিট উল্টানো: খাত ১০-এ মূলটা ডেবিট ৭০০, উল্টোটা ক্রেডিট ৭০০

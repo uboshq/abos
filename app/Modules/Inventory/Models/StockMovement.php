@@ -28,6 +28,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * তিনটা কলাম কেন — module.php-র ব্যাখ্যা দেখুন। সংক্ষেপে: একটা সারি
  * প্রায়ই একসাথে দুইটা অবস্থা বদলায়, আর দুই সারিতে ভাগ করলে একটা বসে
  * অন্যটা না বসার সুযোগ তৈরি হয়।
+ *
+ * ⓘ নিচের ঘরগুলো টেবিলের নয় — যোগফলের প্রশ্নের নাম (`selectRaw('SUM(…) as floor')`), যা StockService আর বোর্ডগুলো পড়ে।
+ *   PHPStan-কে বলা, যাতে নাম ভুল লিখলে আলাদা চোখে পড়ে (২৮ নভেম্বর ২০২৬; [[LedgerEntry]]-এর একই ছক)।
+ *
+ * @property-read mixed $still
+ * @property-read mixed $floor
+ * @property-read mixed $reserved
+ * @property-read mixed $hold
+ * @property-read mixed $free
+ * @property-read mixed $free_reserved
+ * @property-read mixed $unplaced
+ * @property-read mixed $unplaced_free
+ * @property-read mixed $available
+ * @property-read mixed $qty
+ * @property-read mixed $qin
+ * @property-read mixed $qout
+ * @property-read mixed $came_in
+ * @property-read mixed $shelf
+ * @property-read mixed $waiting
  */
 class StockMovement extends Model
 {
