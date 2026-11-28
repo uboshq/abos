@@ -144,6 +144,9 @@ return [
 
     'available_short' => 'Available',
     'main_stock' => 'Main Stock',
+    // ⭐ location box (owner, 28 Nov 2026)
+    'where_short' => 'Location',
+    'where_more' => ':n more places',
     'hold_short' => 'Hold',
     'free_stock' => 'Free Stock',
     /* ⚠️ One word — the owner's instruction (3 Sep 2026): *"Free

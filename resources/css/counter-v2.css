@@ -172,7 +172,7 @@ form[data-abos-counter] .ds-sb .ds-lsel { height: 26px; width: 100%; margin-top:
 form[data-abos-counter] .ds-sb .ds-lsel option { color: #0f172a; }
 form[data-abos-counter] .ds-sb .ds-lsel:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
 /* আটকানো · রিজার্ভ · মেয়াদ — এক সারিতে তিন জোড়া */
-form[data-abos-counter] .ds-sb-pairs { display: flex; align-items: baseline; gap: 18px; font-size: 12.5px; font-weight: 600; white-space: nowrap; }
+form[data-abos-counter] .ds-sb-pairs { display: flex; align-items: baseline; gap: clamp(8px, 0.9vw, 18px); font-size: 12px; font-weight: 600; white-space: nowrap; }
 form[data-abos-counter] .ds-sb-pairs b { font-size: 17px; font-weight: 700; margin-inline-start: 3px; }
 /* কার্টে কেবল ✎ — মোছা পপআপের ভেতরে, দুই চাপে (নমুনা) */
 form[data-abos-counter] .ds-cart-scroll [data-edit-line] + button { display: none !important; }
@@ -300,3 +300,12 @@ form[data-abos-counter] [data-counter-popup] .ds-dialog[data-panel='price']     
     form[data-abos-counter] :is(.ds-qtyrow, .ds-stockrow) > * { grid-column: auto / span 1 !important; min-width: 0; }
     form[data-abos-counter] :is(.ds-qtyrow, .ds-stockrow) :is(input, select, button) { min-height: 36px; }
 }
+
+/* ── অবস্থান বাক্স (মালিক, ২৮ নভেম্বর ২০২৬): একদম ডানে, বোতামগুলোর উপরে — গুদামের নাম বড় করে, নিচে জায়গা ── */
+form[data-abos-counter] .ds-sb-teal { --sb-a: #14b8a6; --sb-b: #0f766e; }
+form[data-abos-counter] .ds-sb-where .ds-sb-v { display: flex; flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.15; }
+form[data-abos-counter] .ds-sb-where .ds-sb-v b { font-size: 20px; font-weight: 800; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+form[data-abos-counter] .ds-sb-where .ds-sb-v small { font-size: 11px; font-weight: 600; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ছোট লেখা কখনো দুই লাইনে ভাঙে না — টাইলের নাম, নিচের ছোট লেখা আর ডানের লেখা এক লাইনে, না ধরলে … (মালিক, ২৮ নভেম্বর: ডেমোতে ভাঙছিল) */
+form[data-abos-counter] .ds-ct .ds-cn, form[data-abos-counter] .ds-ct .ds-cn small, form[data-abos-counter] .ds-ct .ds-cv,
+form[data-abos-counter] .ds-ct .ds-cv small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }

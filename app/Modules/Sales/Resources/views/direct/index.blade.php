@@ -230,6 +230,7 @@
                   'lotsShort' => __('sales::field.lots_short'),
                   'cardNothing' => __('sales::field.card_nothing'),
                   'fareLoadingSplit' => __('sales::field.fare_loading_split'),
+                  'whereMore' => __('sales::field.where_more'),
                   'itemsWord' => __('sales::field.items'),
                   'confirm' => [
                       'ready' => __('sales::message.confirm_ready'),

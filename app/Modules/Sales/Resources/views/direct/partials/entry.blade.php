@@ -301,7 +301,6 @@
                                 <span class="ds-sb-v">
                                     <b class="num" x-text="qty(picked && picked.available)"></b>
                                     <small x-text="(picked && picked.unit) || ''"></small>
-                                    <small class="ds-sb-pack" data-stock="main">{{ __('sales::field.main_stock') }} <span class="num" x-text="qty(picked && picked.main)"></span></small>
                                 </span>
                             </div>
                             @if ($show['free_qty'])
@@ -326,6 +325,11 @@
                                     <span>{{ __('sales::field.reserved_short') }} <b class="num" data-stock="reserved" x-text="qty(picked && picked.reserved)"></b></span>
                                     <span>{{ __('sales::field.lot_expiry_short') }} <b class="num" x-text="lotExpiryText"></b></span>
                                 </span>
+                            </div>
+                            {{-- ⭐ অবস্থান — মাল কোন গুদামে, কোন জায়গায়; একদম ডানে, বোতামগুলোর উপরে, বড় করে (মালিক, ২৮ নভেম্বর ২০২৬) --}}
+                            <div class="ds-sb ds-sb-teal ds-sb-where" style="grid-column: span 3" data-stock="where" :title="whereTitle">
+                                <span class="ds-sb-l">{{ __('sales::field.where_short') }}</span>
+                                <span class="ds-sb-v"><b x-text="whereGodown"></b><small x-show="wherePlace" x-cloak x-text="wherePlace"></small></span>
                             </div>
                         </div>
                         @else

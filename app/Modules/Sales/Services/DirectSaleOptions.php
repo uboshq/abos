@@ -11,6 +11,7 @@ use App\Modules\Accounts\Models\CashTill;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Inventory\Models\Batch;
 use App\Modules\Inventory\Models\Product;
+use App\Modules\Inventory\Models\StorageLocation;
 use App\Modules\Inventory\Models\Warehouse;
 use App\Modules\Inventory\Services\FreeRatio;
 use App\Modules\Inventory\Services\StockService;
@@ -290,6 +291,55 @@ final class DirectSaleOptions
      * ⓘ [[DirectSaleController]] থেকে হুবহু তোলা (৪ অক্টোবর ২০২৬), তিনটা বদল নাম ধরে: সীমা ডাকনেওয়ালার, একটা পণ্যে
      * ছাঁকা যায় (ফোনের "দাম দেখুন" — [[DirectSaleApiController::price()]]), আর রেসিপির খাতা `app()` দিয়ে।
      */
+    /**
+     * ⭐ পণ্যটা কোন গুদামে, গুদামের কোন জায়গায় — কাউন্টারের "অবস্থান" বাক্স (মালিক, ২৮ নভেম্বর ২০২৬:
+     * "কোন গোডাউনে আছে এটা যাতে দেখায় … একদম বড় করে")।
+     *
+     * ⓘ তাকে থাকা মাল (`floor_change`-এর যোগ > ০) গুদাম আর জায়গা ধরে; সবচেয়ে বেশি যেখানে সেটা প্রথমে, বাকি জায়গা কয়টা।
+     * ⓘ জায়গা বসানো না থাকলে (`storage_location_id` ফাঁকা) কেবল গুদামের নাম। কাউন্টারের গুদাম জানা থাকলে কেবল সেটাতেই খোঁজা।
+     *
+     * @param  list<int>  $productIds
+     * @return array<int, array{godown: string, place: string, qty: string, more: int}>
+     */
+    private function stockPlaces(array $productIds, ?Warehouse $warehouse): array
+    {
+        if ($productIds === []) {
+            return [];
+        }
+
+        $rows = DB::table('inv_stock_movements')
+            ->select('product_id', 'warehouse_id', 'storage_location_id')
+            ->selectRaw('SUM(floor_change) as qty')
+            ->where('company_id', CompanyContext::id())
+            ->whereIn('product_id', $productIds)
+            ->when($warehouse, fn ($q) => $q->where('warehouse_id', $warehouse->id))
+            ->groupBy('product_id', 'warehouse_id', 'storage_location_id')
+            ->havingRaw('SUM(floor_change) > 0')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        $godowns = Warehouse::query()->withoutGlobalScopes()->whereIn('id', $rows->pluck('warehouse_id')->unique())->get()->keyBy('id');
+        $spots = StorageLocation::query()->withoutGlobalScopes()->with('parent.parent')
+            ->whereIn('id', $rows->pluck('storage_location_id')->filter()->unique())->get()->keyBy('id');
+
+        $out = [];
+
+        foreach ($rows->groupBy('product_id') as $productId => $list) {
+            $top = $list->sortByDesc(fn ($r) => (float) $r->qty)->first();
+            $out[(int) $productId] = [
+                'godown' => (string) ($godowns->get($top->warehouse_id)?->name() ?? ''),
+                'place' => $top->storage_location_id !== null ? (string) ($spots->get($top->storage_location_id)?->path() ?? '') : '',
+                'qty' => (string) $top->qty,
+                'more' => $list->count() - 1,
+            ];
+        }
+
+        return $out;
+    }
+
     public function catalogue(?Warehouse $warehouse, int $limit, ?int $productId = null, ?Customer $customer = null): Collection
     {
         $sum = fn (string $column) => DB::table('inv_stock_movements')
@@ -320,7 +370,11 @@ final class DirectSaleOptions
             ->tap(function (Collection $rows) use (&$prices, $customer) {
                 $prices = app(SalesPrice::class)->forMany($customer, $rows);
             })
-            ->map(function (Product $p) use ($warehouse, $seesCost, &$prices) {
+            // ⭐ মাল কোন গুদামে, কোন জায়গায় (মালিক, ২৮ নভেম্বর ২০২৬) — সব পণ্যের একটাই কোয়েরিতে
+            ->tap(function (Collection $rows) use (&$places, $warehouse) {
+                $places = $this->stockPlaces($rows->modelKeys(), $warehouse);
+            })
+            ->map(function (Product $p) use ($warehouse, $seesCost, &$prices, &$places) {
                 /*
                  * খাবারের উত্তরটা আলাদা — কারণটা
                  * [[RecipeService::sellableQty()]]-এ। POS-ও ঠিক এই
@@ -379,6 +433,8 @@ final class DirectSaleOptions
                     'hold' => (string) $p->hold_total,
                     'available' => $available,
                     'free' => (string) $p->free_total,
+                    // ⭐ কোন গুদামে আর কোন জায়গায় (Block ▸ Rack ▸ Shelf) — সবচেয়ে বেশি যেখানে; আরও জায়গা থাকলে কয়টা
+                    'where' => $places[(int) $p->id] ?? null,
 
                     /*
                      * ⭐ পুনঃক্রয়ের সীমা — খোঁজার তালিকায় "কম মজুদ" লাল
