@@ -547,4 +547,9 @@ return [
     'v2_bill_discount' => 'Bill discount',
     'free_unit_v2' => 'Free unit',
     'unit_rate' => 'Unit rate',
+    'final_confirm_title' => 'Make this bill final?',
+    'final_draft_title' => 'Keep it as a draft?',
+    'sale_no' => 'Sale no.',
+    'total_so_far' => 'Total so far',
+    'buyer_word' => 'Customer',
 ];

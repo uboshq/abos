@@ -188,4 +188,10 @@ return [
     'withheld_ait' => ':no — income tax withheld at source (AIT), owed to the Government',
     'withheld_vds' => ':no — VAT withheld at source (VDS), owed to the Government',
     'withholding_undone_on_bounce' => 'Cheque :cheque bounced — the tax/VAT withheld on :no is reversed too',
+    'ready_ok' => 'Ready — every field is in order',
+    'ready_need_supplier' => 'No supplier chosen',
+    'ready_need_lines' => 'The cart is empty',
+    'ready_need_carrier' => 'There is a fare but no carrier (transport)',
+    'final_confirm_question' => 'Once final it cannot be changed — sure?',
+    'final_draft_question' => 'The draft can be opened from "Pending" and finished later. Keep it?',
 ];

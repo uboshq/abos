@@ -90,6 +90,11 @@
                     <b class="num shrink-0 text-xs" :class="creditRoom === null ? '' : (creditRoom >= 0 ? 'text-(--color-success)' : 'text-(--color-danger)')"
                        x-text="creditRoom === null ? @js(__('purchase::field.no_limit')) : money(creditRoom)"></b>
                 </span>
+                {{-- v2 (মালিকের অনুমোদিত নমুনা ২৭ নভেম্বর, ২৬ নভেম্বরের "কেবল একটা"-র জায়গায়): ফোন আগে, আগের বকেয়া পরে — কেবল ABOS-এর রূপে --}}
+                @if (($abosLook ?? false))
+                    <span class="pv2-sphone num" x-show="supplier && supplier.phone" x-text="supplier && supplier.phone"></span>
+                    <span class="pv2-sprev">{{ __('purchase::field.previous_due') }} <b class="num" x-text="'৳' + money($abs(previousDue))"></b></span>
+                @endif
             </div>
 
             <input type="hidden" name="supplier_id" x-model="supplierId">

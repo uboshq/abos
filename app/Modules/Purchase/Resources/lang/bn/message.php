@@ -201,4 +201,10 @@ return [
     'withheld_ait' => ':no — উৎসে কর্তিত আয়কর (AIT), সরকারের পাওনা',
     'withheld_vds' => ':no — উৎসে কর্তিত মূসক (VDS), সরকারের পাওনা',
     'withholding_undone_on_bounce' => ':cheque নম্বর চেক ফেরত — :no-এর কাটা কর/ভ্যাটও উল্টো',
+    'ready_ok' => 'জমা দেওয়ার মতো — সব ঘর ঠিক আছে',
+    'ready_need_supplier' => 'সরবরাহকারী বাছা হয়নি',
+    'ready_need_lines' => 'কার্টে কোনো পণ্য নেই',
+    'ready_need_carrier' => 'ভাড়া আছে, কিন্তু কে আনল বলা নেই (পরিবহন)',
+    'final_confirm_question' => 'পোস্ট হলে আর বদলানো যাবে না — নিশ্চিত?',
+    'final_draft_question' => 'খসড়া পরে "পেন্ডিং" থেকে খুলে শেষ করা যাবে। রাখবেন?',
 ];

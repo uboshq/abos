@@ -174,7 +174,7 @@
     {{-- ⛔ `hasErrors` কেবল এই ফর্মের নিজের ফেরত (সাথে পাঠানো সারি, `old('lines')`) — অন্য পাতার ভুল এখানে ফিরলে (যেমন ছাপার
          দরজা) পাঠানো, হয়তো পাকা, কার্টটা আবার পর্দায় বসত (মালিক, ৫ অক্টোবর ২০২৬: "কনফার্মের পরে লিস্ট খালি")।
          `@pageshow.window` — পাঠানো পাতা ব্রাউজারের স্মৃতি থেকে ফিরলে কার্ট মুছে নতুন করে খোলে ([[direct-sale.js]] `onPageShow`)। --}}
-    <form method="POST" action="{{ route('sales.direct.store') }}" data-confirm-overview="{{ route('sales.direct.overview') }}" @if ($abosLook) data-abos-counter @endif
+    <form method="POST" action="{{ route('sales.direct.store') }}" data-confirm-overview="{{ route('sales.direct.overview') }}" @if ($abosLook) data-abos-counter data-final-confirm @endif
           x-data="directSale({
               catalogue: @js($products),
               margin: @js($margin),
@@ -213,8 +213,12 @@
                   'owners' => ['own' => __('sales::field.owner_own'), 'hired' => __('sales::field.owner_hired'), 'customer' => __('sales::field.owner_customer'), 'none' => __('sales::field.owner_none')],
                   'fares' => ['us' => __('sales::field.fare_us'), 'us_add_to_bill' => __('sales::field.fare_us_add_to_bill'), 'customer' => __('sales::field.fare_customer'), 'none' => __('sales::field.fare_none')],
                   'fareWhen' => ['now' => __('sales::field.fare_us_now'), 'later' => __('sales::field.fare_us_later')],
-                  'cost' => ['rate' => __('sales::field.cost_rate'), 'discount' => __('sales::field.cost_discount'), 'unload' => __('sales::field.cost_unload'),
-                      'total' => __('sales::field.cost_total'), 'withFree' => __('sales::field.cost_with_free'), 'book' => __('sales::field.cost_book'), 'from' => __('sales::field.cost_from')],
+                  {{-- ⛔ ক্রয়মূল্যের পপআপের শব্দ কেবল চাবিওয়ালার পাতায় (`sales.cost.view`), আর চাবির নাম `costWords` — "cost" নামের
+                       ঘর চাবি ছাড়া পাতার উৎসে কখনো নয় (TheCounterPageCarriedThePurchasePriceTest; main-এও লাল ছিল, ২৮ নভেম্বর ২০২৬) --}}
+                  'costWords' => auth()->user()?->can('sales.cost.view')
+                      ? ['rate' => __('sales::field.cost_rate'), 'discount' => __('sales::field.cost_discount'), 'unload' => __('sales::field.cost_unload'),
+                         'total' => __('sales::field.cost_total'), 'withFree' => __('sales::field.cost_with_free'), 'book' => __('sales::field.cost_book'), 'from' => __('sales::field.cost_from')]
+                      : [],
                   // ⭐ ভাড়ার ঘর না লাগলে এক লাইন (মালিক, ৭ নভেম্বর ২০২৬)
                   'noFare' => ['customer' => __('sales::fare.no_fare_customer_vehicle'), 'none' => __('sales::fare.no_fare_no_vehicle'),
                       'customerPays' => __('sales::fare.no_fare_customer_pays'), 'nothing' => __('sales::fare.no_fare_nothing')],
@@ -225,6 +229,7 @@
                   'lastRateNone' => __('sales::field.last_rate_none'),
                   'lotsShort' => __('sales::field.lots_short'),
                   'cardNothing' => __('sales::field.card_nothing'),
+                  'itemsWord' => __('sales::field.items'),
                   'confirm' => [
                       'ready' => __('sales::message.confirm_ready'),
                       'viewOnly' => __('sales::message.confirm_view_only'),
@@ -898,6 +903,10 @@
             @endunless
             @include('sales::direct.partials.totals')
         </div>
+        {{-- ✓ শেষবার পাকা করা আর খসড়ার পপআপ (মালিক, ২৮ নভেম্বর ২০২৬) — কেবল ABOS-এর রূপে --}}
+        @if ($abosLook)
+            @include('sales::direct.partials.final-confirm')
+        @endif
 
     </form>
     @if ($abosLook)</div>{{-- ds-page --}}@endif

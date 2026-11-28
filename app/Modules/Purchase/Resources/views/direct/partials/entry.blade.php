@@ -89,7 +89,7 @@
                              ⓘ আবার খুঁজতে বাঁয়ের চিহ্নটা (`browsing`) — সেটা
                              আগেও এভাবেই কাজ করত, কেবল ঘরটা লুকানো ছিল না বলে
                              কেউ চিহ্নটা ব্যবহার করত না। --}}
-                        <input type="text" x-model="term" x-ref="search"
+                        <input type="text" x-model="term" x-ref="search" aria-label="{{ __('purchase::field.search_item') }}"
                                x-show="! picked || browsing" x-cloak
                                :class="picked ? 'w-40 shrink-0' : 'min-w-0 flex-1'"
                                {{-- ⛔ ফোকাসে তালিকা নয় — মালিক, ৩ অক্টোবর ২০২৬: *"ekta product add er por ro add
@@ -173,6 +173,8 @@
                     </ul>
 
                 {{-- ⓘ পণ্যের খবর — নামের ঠিক নিচে, লটের বাক্সের বাঁয়ে (মালিক, ২৬ নভেম্বর ২০২৬): আলাদা সারি নয়, তাই নিচের ঘরগুলো উপরে ওঠে --}}
+                {{-- ABOS-এ এই খবর রঙিন টাইলে (নিচে) --}}
+                @unless (($abosLook ?? false))
                 <div x-show="picked" x-cloak class="mt-0.5 flex flex-wrap gap-x-4 ps-11 text-2xs text-(--color-ink-muted)">
                     <span>{{ __('purchase::message.on_hand') }}: <b class="num text-(--color-ink)" x-text="qty((picked && picked.on_hand))"></b></span>
                     <span x-show="(picked && picked.last_rate) > 0" x-cloak>{{ __('purchase::message.last_rate') }}:
@@ -180,11 +182,14 @@
                     <span x-show="entry.sales_price" x-cloak>{{ __('purchase::field.sales_rate') }}:
                         <b class="num text-(--color-ink)" x-text="money(entry.sales_price)"></b></span>
                 </div>
+                @endunless
                 </div>
 
                 {{-- ⭐ লট — পণ্যের ডানে, হলুদ বাক্সে (নমুনা v9); কেবল লট রাখা পণ্যে। লিখলে সেটাই, খালি রাখলে সংরক্ষণে কাগজের
                      তারিখে নিজে বসে (`261126/01-LOT`, [[PurchaseLots]]) — আগের মতোই (মালিক, ২৬ নভেম্বর ২০২৬)।
                      ⓘ `x-if` — প্রতিটা পণ্য বাছায় ঘরগুলো নতুন করে বসে, তাই তারিখের ঘর আগের পণ্যের মেয়াদ ধরে রাখে না। --}}
+                {{-- ABOS-এ লটের তিন ঘর সোনালি লটের টাইলের ভেতরে (নিচে) --}}
+                @unless (($abosLook ?? false))
                 <template x-if="picked && picked.track_batch">
                     <div data-lot-fields class="grid w-[42%] shrink-0 grid-cols-3 gap-2 rounded-(--radius-field)
                                 bg-(--color-badge-pending-bg) px-2 py-1.5">
@@ -207,6 +212,7 @@
                         </label>
                     </div>
                 </template>
+                @endunless
                 </div>
 
 
@@ -257,8 +263,58 @@
                             array_push($cols, $fr(0.9), $fr(1.2), $fr(0.9), $fr(0.9), $fr(1.2)); // মোট, ক্রয়দর, মার্কআপ, মার্জিন, বিক্রয়দর
                             if ($show['line_discount']) { $cols[] = $fr(1.2); }
                             if ($show['vat']) { $cols[] = $fr(1.5); }
-                            array_push($cols, $fr(1.3), 'auto');                                  // টাকা, বোতাম
+                            array_push($cols, $fr(1.3), ($abosLook ?? false) ? '318px' : 'auto'); // ⓘ ABOS-এ বোতামের কলাম বাঁধা px-এ, যাতে টাইলের সারি আর ঘরের সারি হুবহু এক কলামে (মালিক, ২৮ নভেম্বর ২০২৬)                                  // টাকা, বোতাম
                         @endphp
+                        {{-- 🎨 v2 (নমুনা ২৭ নভেম্বর): পণ্যের খবর রঙিন টাইলে, প্রতিটা নিচের ঘরের ঠিক উপরে — কেবল ABOS-এর রূপে --}}
+                        @if (($abosLook ?? false))
+                            @php $restSpan = 1 + ($show['line_discount'] ? 1 : 0) + ($show['vat'] ? 1 : 0); @endphp
+                            <div class="pv2-tiles" x-show="picked" x-cloak style="grid-template-columns: {{ implode(' ', $cols) }}" data-product-tiles>
+                                <div class="pv2-t pv2-green" style="grid-column: span 2" data-tile="stock">
+                                    <span>{{ __('purchase::message.on_hand') }} <b class="num" x-text="qty((picked && picked.on_hand))"></b></span>
+                                    <small x-text="(picked && picked.unit) || ''"></small>
+                                </div>
+                                @if ($show['free_qty'])
+                                    <div class="pv2-t pv2-orange" style="grid-column: span 2" data-tile="free">
+                                        <span>{{ __('purchase::field.free_this_line') }} <b class="num" x-text="tileFree"></b></span>
+                                    </div>
+                                @endif
+                                <div class="pv2-t pv2-amber pv2-col" data-tile="keeps-lot">
+                                    <span>{{ __('purchase::lot.keeps_lot') }}</span>
+                                    <b class="pv2-chip" x-text="tileKeepsLot"></b>
+                                </div>
+                                <div class="pv2-t pv2-blue pv2-col" data-tile="last-rate">
+                                    <span>{{ __('purchase::field.last_purchase_rate') }}</span>
+                                    <b class="num" x-text="tileLastRate"></b>
+                                </div>
+                                <div class="pv2-t pv2-amber pv2-lot" style="grid-column: span 3" data-tile="lot">
+                                    <template x-if="picked && picked.track_batch">
+                                        <div class="pv2-lotin" data-lot-fields>
+                                            <label>
+                                                <span>{{ __('inventory::field.batch_no') }}</span>
+                                                <input type="text" maxlength="60" autocomplete="off" data-lot-field x-model="entry.batch_no"
+                                                       :placeholder="lotHint" @keydown.enter.prevent="lotNext($event)">
+                                            </label>
+                                            <div>
+                                                <span>{{ __('inventory::field.expiry_date') }}</span>
+                                                <x-ui.date dense name="entry_expiry_date" bind-iso="entry.expiry_date" bind-model="entry.expiry_date"
+                                                           data-lot-field x-on:keydown.enter.prevent="lotNext($event)" class="text-sm" />
+                                            </div>
+                                            <label>
+                                                <span>{{ __('inventory::field.mrp') }}</span>
+                                                <input type="number" step="0.01" min="0" inputmode="decimal" data-lot-field x-model="entry.mrp"
+                                                       class="num" @keydown.enter.prevent="lotNext($event)">
+                                            </label>
+                                        </div>
+                                    </template>
+                                    <template x-if="picked && ! picked.track_batch">
+                                        <span>{{ __('purchase::field.no_lot_here') }}</span>
+                                    </template>
+                                </div>
+                                <div class="pv2-t pv2-magenta" style="grid-column: span {{ $restSpan }}" data-tile="sale-price">
+                                    <span>{{ __('purchase::field.current_sale_price') }} <b class="num" x-text="tileSalePrice"></b></span>
+                                </div>
+                            </div>
+                        @endif
                         {{-- ⭐ এই সারির যেকোনো ঘরে Enter = "কার্টে দিন" (মালিক, ২৬ নভেম্বর ২০২৬) --}}
                         <div @keydown.enter.prevent="addToCart()" class="grid items-end gap-1.5 [&>label]:min-w-0 [&>label>span]:truncate
                                     [&_input]:px-1.5 [&_select]:px-1"

@@ -109,4 +109,7 @@ return [
     'delete_line_again' => 'Tap again to delete',
     'cancel_esc' => 'Cancel · Esc',
     'edit_line_title' => 'Edit line',
+    'go_back' => 'Go back',
+    'yes_confirm' => 'Yes, make it final',
+    'yes_draft' => 'Yes, keep the draft',
 ];

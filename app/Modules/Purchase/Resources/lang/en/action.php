@@ -102,4 +102,8 @@ return [
     'add_quotation' => 'Record a quotation',
     'new_contract' => 'New contract',
     'activate_contract' => 'Make it live',
+    'go_back' => 'Go back',
+    'yes_confirm' => 'Yes, make it final',
+    'yes_draft' => 'Yes, keep the draft',
+    'yes_take_goods' => 'Yes, goods taken',
 ];

@@ -1,10 +1,4 @@
 {
-  "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs": {
-    "file": "assets/livekit-client.esm-BkrmzZ0_.js",
-    "name": "livekit-client.esm",
-    "src": "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs",
-    "isDynamicEntry": true
-  },
   "_mail-iMZlZI9O.css": {
     "file": "assets/mail-iMZlZI9O.css",
     "src": "_mail-iMZlZI9O.css"
@@ -13,8 +7,14 @@
     "file": "assets/preload-helper-B6JZccWF.js",
     "name": "preload-helper"
   },
+  "node_modules/livekit-client/dist/livekit-client.esm.mjs": {
+    "file": "assets/livekit-client.esm-BkrmzZ0_.js",
+    "name": "livekit-client.esm",
+    "src": "node_modules/livekit-client/dist/livekit-client.esm.mjs",
+    "isDynamicEntry": true
+  },
   "resources/css/app.css": {
-    "file": "assets/app-D4no8Z3y.css",
+    "file": "assets/app-RpiJ0M_z.css",
     "name": "app",
     "names": [
       "app.css"
@@ -23,7 +23,7 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-DZZ_Dhfy.js",
+    "file": "assets/app-DrUJe_v8.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -69,7 +69,7 @@
       "_preload-helper-B6JZccWF.js"
     ],
     "dynamicImports": [
-      "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs"
+      "node_modules/livekit-client/dist/livekit-client.esm.mjs"
     ]
   },
   "resources/js/messenger-call.js": {
@@ -81,7 +81,7 @@
       "_preload-helper-B6JZccWF.js"
     ],
     "dynamicImports": [
-      "../fe-msg/node_modules/livekit-client/dist/livekit-client.esm.mjs"
+      "node_modules/livekit-client/dist/livekit-client.esm.mjs"
     ]
   },
   "resources/js/messenger-meeting.js": {

@@ -15,6 +15,7 @@ import { guardOneSubmit } from './one-submit.js'
 import { watchMatchTotals } from './match-total.js'
 import { bootLiveLogos } from './live-logo.js'
 import { guardConfirmOverview } from './confirm-overview.js'
+import { guardFinalConfirm } from './final-confirm.js'
 import { stockPlacement } from './placement.js'
 import { scannerStore } from './scanner.js'
 import partyVoucher from './party-voucher.js'
@@ -203,6 +204,8 @@ guardAllBranchesView()
 installCounterMode()
 // ⭐ নিশ্চিতের আগে সারাংশের পপ-আপ — একবার-জমার পাহারার আগে (capture), মালিক ৪ অক্টোবর ২০২৬ ([[confirm-overview.js]])
 guardConfirmOverview()
+// ⭐ খসড়ার আগে "খসড়া হিসেবে রাখবেন?" — কেবল data-final-confirm ফর্মে (কাউন্টার, ABOS-এর রূপে; মালিক, ২৮ নভেম্বর ২০২৬)
+guardFinalConfirm()
 guardOneSubmit()
 // ⭐ এক ব্যাংক-সারি, কয়েকটা কাগজ — টিকের চলতি মোট (মালিক, ২১ নভেম্বর ২০২৬; [[match-total.js]])
 watchMatchTotals()

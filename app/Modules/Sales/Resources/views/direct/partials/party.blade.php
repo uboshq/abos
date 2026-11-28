@@ -386,7 +386,7 @@
                                      ফোনটাকে ঠেলে বের করে দিত। --}}
                                 <div x-show="customerId && (customer.location || customer.point || customer.phone)"
                                      x-cloak class="mt-1 flex flex-wrap items-center gap-1.5">
-                                    <span @if (($abosLook ?? false)) x-show="customer.point" @else x-show="customer.location" @endif
+                                    <span @if (($abosLook ?? false)) x-show="customer.point" data-point-chip @else x-show="customer.location" @endif
                                           class="inline-flex min-w-0 items-center truncate rounded-full
                                                  border border-(--color-brand-500) bg-(--color-surface-selected)
                                                  px-2.5 py-0.5 text-sm font-medium text-(--color-ink)"
@@ -726,7 +726,7 @@
                             @if ($show['do_no'])
                                 <label class="min-w-0 ds-f-ref">
                                     <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
-                                                 text-(--color-ink-muted)">{{ ($abosLook ?? false) ? __('sales::field.challan_do_no') : __('sales::field.do_no') }}</span>
+                                                 text-(--color-ink-muted)">{{ __('sales::field.do_no') }}</span>
                                     <input type="text" name="do_no" value="{{ old('do_no', $resume['fields']['do_no'] ?? '') }}"
                                            class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-sm">
