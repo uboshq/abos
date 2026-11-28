@@ -11,7 +11,7 @@ import { magics } from '../components/index.js'
  *   2. bill discount  = taka, or % of the subtotal; never below 0, never above the subtotal
  *   3. net payable    = subtotal − bill discount + cost + rounding (no VAT: distributor, owner 28 Nov)
  *   4. credit left    = limit − (previous due + held + (net payable − deposit))
- *   5. fare tile      = vehicle fare + loading (only when loading is cash or due)
+ *   5. cost card      = fare tile shows the fare alone; loading (only cash or due) takes the delivery tile's place
  */
 
 const CASES = 1000
@@ -112,11 +112,11 @@ describe('counter arithmetic holds for 1,000 random bills each', () => {
         }
     })
 
-    it('5. fare tile = vehicle fare + loading, loading only when cash or due', () => {
+    it('5. fare tile = fare alone; loading (cash or due only) swaps in for delivery', () => {
         const r = rng(5505)
         const modes = ['cash', 'due', '', 'none']
         for (let i = 0; i < CASES; i++) {
-            const c = counter({ fareLoadingSplit: ':fare+:loading', cardNothing: '-' })
+            const c = counter({ cardNothing: '-' })
             const fare = r() < 0.8 ? money(r, 0, 20_000) : 0
             const loading = money(r, 0, 5_000)
             const mode = modes[int(r, 0, 3)]
@@ -126,7 +126,9 @@ describe('counter arithmetic holds for 1,000 random bills each', () => {
             c.noteLoading()
             const counted = ['cash', 'due'].includes(mode) ? loading : 0
             near(c.loadingAmount, counted)
-            expect(c.fareTotalText).toBe(fare + counted > 0 ? '৳' + c.money(fare + counted) : '—')
+            expect(c.fareText).toBe(fare > 0 ? '৳' + c.money(fare) : '—')
+            expect(c.showLoadingTile).toBe(counted > 0)
+            expect(c.showDeliveryTile).toBe(counted <= 0)
         }
     })
 })
