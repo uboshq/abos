@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 trait HasEnteredPack
 {
+    /** @return BelongsTo<Unit, $this> */
     public function enteredUnit(): BelongsTo
     {
         return $this->belongsTo(Unit::class, 'entered_unit_id');
