@@ -445,6 +445,8 @@ class TenancyService
                 $this->partyLine($tenancy, $this->head(StandardChart::TENANT_DEPOSITS), $amount, '0'),
                 ['account_id' => $money->id, 'debit' => '0', 'credit' => $amount],
             ]],
+            // ⓘ চার ধরনই ডাকার দরজা থেকে আসে; অচেনা ধরন এলে ভাউচার বানানোর আগেই নাম ধরে থামে (PHPStan match.unhandled)
+            default => throw new \LogicException("Tenancy move kind '{$kind}' is not one of the four; no voucher was made."),
         };
 
         $voucher = $this->vouchers->create([
