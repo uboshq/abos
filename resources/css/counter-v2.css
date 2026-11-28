@@ -261,3 +261,27 @@ form[data-abos-counter] .ds-party [data-customer-details] span[data-point-chip] 
 /* ক্রয়মূল্যের বোতাম — "বদলান"-এর পাশে, একই গড়ন, সোনালি লেখা (ক্রয়মূল্য গোপন তথ্য, তাই আলাদা রঙে) */
 form[data-abos-counter] .ds-pswap.ds-pcost { color: #b45309; background: #fffbeb; }
 form[data-abos-counter] .ds-pswap.ds-pcost:hover { background: #fef3c7; }
+
+/* ════ কাজের পপআপ — নমুনার `.pop` (পর্দার মাঝে, বড়, রঙিন মাথা); মাথার রং ঐ পপআপের বোতামের রং (v2, কেবল ABOS-এর রূপে) ════ */
+form[data-abos-counter] [data-counter-popup] { background: rgb(15 23 42 / .5) !important; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog { width: min(760px, 94vw); max-height: 90vh; overflow: auto; padding: 0 !important; border: 0 !important;
+    border-radius: 18px !important; box-shadow: 0 24px 70px rgb(0 0 0 / .35) !important; border-left: 0 !important;
+    --pop-a: #0b3b5c; --pop-b: #0b6c7a; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog > :first-child { position: sticky; top: 0; z-index: 2; margin: 0 !important; padding: 13px 20px;
+    color: #fff; background: linear-gradient(135deg, var(--pop-a), var(--pop-b)); text-shadow: 0 1px 1px rgb(0 0 0 / .15); }
+form[data-abos-counter] [data-counter-popup] .ds-dialog > :first-child h2 { font-size: 18px; font-weight: 700; color: #fff; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog > :first-child .ds-kbd { background: rgb(255 255 255 / .2); color: #fff; border-color: transparent; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog > :first-child button { min-width: 32px; min-height: 32px; border-radius: 8px; color: #fff !important;
+    background: rgb(255 255 255 / .2); }
+form[data-abos-counter] [data-counter-popup] .ds-dialog > :not(:first-child) { padding-inline: 20px; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog > :nth-child(2) { padding-top: 16px; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog > :last-child { padding-bottom: 18px; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog[data-panel='deposit']   { --pop-a: #047857; --pop-b: #10b981; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog[data-panel='transport'] { --pop-a: #b45309; --pop-b: #f59e0b; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog[data-panel='delivery']  { --pop-a: #0e7490; --pop-b: #06b6d4; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog[data-panel='note']      { --pop-a: #1d4ed8; --pop-b: #60a5fa; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog[data-panel='return']    { --pop-a: #6d28d9; --pop-b: #a78bfa; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog[data-panel='drafts']    { --pop-a: #475569; --pop-b: #94a3b8; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog[data-panel='reprint']   { --pop-a: #0f766e; --pop-b: #2dd4bf; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog[data-panel='cancel']    { --pop-a: #b91c1c; --pop-b: #ef4444; }
+form[data-abos-counter] [data-counter-popup] .ds-dialog[data-panel='price']     { --pop-a: #2160d8; --pop-b: #5b8def; }

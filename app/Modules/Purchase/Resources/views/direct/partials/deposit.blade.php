@@ -1,6 +1,13 @@
-            <section data-boxed x-show="depositOpen" x-cloak
+            <section data-boxed x-show="depositOpen" x-cloak data-purchase-deposit @keydown.escape.window="depositOpen = false"
                      class="rounded-(--radius-card) border border-(--color-border)
                             bg-(--color-surface-card) p-3">
+                {{-- v2 (নমুনা): ABOS-এর রূপে এটা পর্দার মাঝের পপআপ — সবুজ মাথা, বন্ধের বোতাম, Esc --}}
+                @if (($abosLook ?? false))
+                    <div class="pv2-pophead pv2-pophead-green">
+                        <h2>{{ __('purchase::action.add_deposit_panel') }} <kbd>F2</kbd></h2>
+                        <button type="button" @click="depositOpen = false" aria-label="{{ __('purchase::action.close_panel') }}">&times;</button>
+                    </div>
+                @endif
 
                 {{-- যোগ হয়ে যাওয়া পরিশোধগুলো --}}
                 <template x-for="(row, i) in deposits" :key="i">

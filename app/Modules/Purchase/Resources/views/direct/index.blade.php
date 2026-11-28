@@ -476,8 +476,15 @@
                      বেশিরভাগ চালানে ভাড়া থাকেই না; সবসময় খোলা রাখলে পাঁচটা
                      খালি ঘর প্রতিদিন চোখে পড়ত, আর মানুষ ওগুলোকে "ঐচ্ছিক
                      আবর্জনা" পড়তে শিখত। --}}
-                <div x-show="transportOpen" x-cloak
+                <div x-show="transportOpen" x-cloak data-purchase-transport @keydown.escape.window="transportOpen = false"
                      class="mt-3 space-y-2 border-t border-(--color-border) pt-3">
+                    {{-- v2 (নমুনা): ABOS-এর রূপে পর্দার মাঝের পপআপ — সোনালি মাথা, বন্ধের বোতাম, Esc --}}
+                    @if ($abosLook)
+                        <div class="pv2-pophead pv2-pophead-amber">
+                            <h2>{{ __('purchase::action.transportation') }} <kbd>F7</kbd></h2>
+                            <button type="button" @click="transportOpen = false" aria-label="{{ __('purchase::action.close_panel') }}">&times;</button>
+                        </div>
+                    @endif
                     <div class="text-2xs font-medium text-(--color-ink-muted)">
                         {{ __('purchase::field.carrier') }}
                     </div>
@@ -665,7 +672,7 @@
             <section role="dialog" aria-modal="true" aria-labelledby="unloading-title"
                      class="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-(--radius-card)
                             bg-(--color-surface-card) text-(--color-ink) shadow-xl">
-                <header class="flex items-center justify-between gap-2 px-4 py-3 text-(--color-ink-inverse)"
+                <header class="flex items-center justify-between gap-2 px-4 py-3 text-(--color-ink-inverse)" data-unload-head
                         style="background: var(--color-info)">
                     <h2 id="unloading-title" class="text-base font-semibold">
                         {{ __('purchase::field.unloading_bill') }}<span x-show="unloadSplit === 'product'" x-cloak> — {{ __('supplier::labour.split_product') }}</span>
