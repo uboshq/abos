@@ -113,6 +113,7 @@ return [
         'customer.binding' => 'Customer bindings',
         'documents' => 'Whole documents module',
         'notification' => 'Whole notification module',
+        'sales_intel' => 'Whole sales intelligence module',
         // ⓘ messages and calls (owner "ok", 21 Nov 2026)
         'messaging' => 'Messages and calls',
         'messaging.group' => 'Message groups',

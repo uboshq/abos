@@ -1067,6 +1067,8 @@
     --color-module-messaging: #047857;    /* এমারেল্ড ৭০০ — ৫.৪৮ */
     /* ⭐ মেইল (২৬ নভেম্বর ২০২৬) — গাঢ় নীল খাম; কোনো মডিউলের রং নয় */
     --color-module-mail: #1e3a8a;         /* নীল ৯০০ — ১০.৩৬ */
+    /* ⭐ সেলস ইন্টেলিজেন্স (২৮ নভেম্বর ২০২৬) — গাঢ় আকাশি-নীল; কোনো মডিউলের রং নয় */
+    --color-module-sales_intel: #075985;  /* আকাশি ৮০০ — ৭.৫৭ */
 
     /*
      * ⭐ রঙিন ড্যাশবোর্ড — মালিকের নমুনা "সব মডিউলের রঙিন ড্যাশবোর্ড" (৩১ অক্টোবর ২০২৬: "desh board e multi color ba 10 12 ti color
@@ -1135,6 +1137,7 @@
     --color-module-assistant: var(--color-brand-700);
     --color-module-messaging: var(--color-brand-700);
     --color-module-mail: var(--color-brand-700);
+    --color-module-sales_intel: var(--color-brand-700);
     /* ⓘ সাজের বারো রং আর সঙ্গী রংও এক রঙে; মানের রং (`--color-card-*`) থাকে */
     --color-pal-blue: var(--color-brand-700);
     --color-pal-green: var(--color-brand-700);
@@ -1439,6 +1442,7 @@
     --color-launcher-restaurant: #dc2626;     /* লাল — ৪.৮৩ঃ১ */
     --color-launcher-messaging: #047857;      /* এমারেল্ড — বার্তা ও কল — ৫.৪৮ঃ১ */
     --color-launcher-mail: #1e3a8a;           /* গাঢ় নীল — মেইল — ১০.৩৬ঃ১ */
+    --color-launcher-sales_intel: #3730a3;    /* ইন্ডিগো ৮০০ — সেলস ইন্টেলিজেন্স — ১০.৩৬ঃ১ */
 }
 
 /* ─────────────────────────────────────────────────────────────────
