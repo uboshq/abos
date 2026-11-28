@@ -100,6 +100,12 @@ form[data-abos-counter] .ds-tot-abos > div:first-child { background: transparent
     padding: 3px 4px 8px; margin: -3px -4px 0; display: flex; flex-direction: column; gap: 10px; }
 /* ⓘ পরিমাণ/দর/ছাড়ের ঘরের ফোকাসের গোল দাগ কাটত — মোড়কের কিনারায় ০px জায়গা ছিল (মালিক, ২৮ নভেম্বর) */
 form[data-abos-counter] .ds-qtywrap { padding: 4px; margin-inline: -4px; margin-bottom: -4px; }
+/* ⓘ পর্দা নিচু হলে (১১০–১২৫% জুম, ছোট ল্যাপটপ) পাশের প্যানেল আর পর্দার উচ্চতায় বাঁধা নয় — পুরো পাতা স্বাভাবিক স্ক্রল করে,
+   কোনো ঘর ভিতরের স্ক্রলে লুকায় না (মালিক, ২৮ নভেম্বর: নোটের ঘর)। ১০৮০-এর পর্দায় ১০০%-এ সব আঁটে, সেখানে বদল নেই। */
+@media (min-width: 1280px) and (max-height: 899.98px) {
+    form[data-abos-counter] .ds-side { position: static !important; max-height: none !important; }
+    form[data-abos-counter] .ds-tot-abos > div:first-child { overflow: visible !important; }
+}
 form[data-abos-counter] .ds-tot-card { border-radius: 14px; overflow: hidden; outline: 2px solid #7cd3dc; box-shadow: 0 6px 18px rgb(11 59 92 / .16);
     background: linear-gradient(180deg, #e6f8fb, #f5fcfd 40%, #fff) !important; padding-bottom: 8px; }
 /* মোটের মাথা: গাঢ় নেভি, ৩০px সংখ্যা */
