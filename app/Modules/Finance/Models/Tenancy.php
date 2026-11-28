@@ -161,7 +161,7 @@ class Tenancy extends Model implements Drillable
         return null;
     }
 
-    /** @param  Builder<Model>  $rows */
+    /** @param  Builder<covariant Model>  $rows */
     private function postedSum(Builder $rows, string $table): string
     {
         return bcadd((string) $rows

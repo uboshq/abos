@@ -66,6 +66,10 @@ class ComplianceObligation extends Model
         return $query->whereNull($this->qualifyColumn('done_at'))->whereNull($this->qualifyColumn('cancelled_at'));
     }
 
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
     public function scopeOverdue(Builder $query): Builder
     {
         // ⛔ `due_on` সত্যিকারের `date` — সাধারণ where(), whereDate() নয় (সূচক থাকে; [[TheDateFilterHidTheIndexFromMysqlTest]])
