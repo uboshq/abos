@@ -423,8 +423,8 @@ return [
     // ⭐ the cost card — fare and loading on separate tiles (owner, 28 Nov 2026 evening)
     'tile_fare' => 'Vehicle fare',
     'tile_loading' => 'Loading cost',
-    'loading_by_cash' => 'Paid in cash',
-    'loading_by_due' => 'On credit, paid later',
+    'loading_by_cash' => 'in cash',
+    'loading_by_due' => 'on credit',
     'cost_card_sub' => 'how it reaches the customer, at whose cost',
     'note_prints' => 'printed on the bill',
     'credit_left_more' => 'left',

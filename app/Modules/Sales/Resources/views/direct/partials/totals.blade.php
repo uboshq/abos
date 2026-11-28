@@ -540,10 +540,10 @@
                         <span class="ds-cn">{{ __("sales::field.tile_fare") }}<small x-text="fareTileSub"></small></span>
                         <span class="ds-cv"><b class="num" x-text="fareText"></b><small class="ds-st" x-show="farePaidBy" x-text="farePayText"></small></span>
                     </button>
-                    <button type="button" @click="openPanel('transport')" class="ds-ct ds-ct-violet" data-tile="loading" x-show="showLoadingTile" x-cloak>
+                    {{-- ⓘ ছোট টাইলে টাকা নামের নিচে — পাশে বসালে নাম কেটে যেত (ডেমোতে দেখা, ২৮ নভেম্বর) --}}
+                    <button type="button" @click="openPanel('transport')" class="ds-ct ds-ct-violet ds-ct-stack" data-tile="loading" x-show="showLoadingTile" x-cloak>
                         <span class="ds-ci"><x-ui.licon name="package" :size="18" /></span>
-                        <span class="ds-cn">{{ __("sales::field.tile_loading") }}<small x-text="loadingTileSub"></small></span>
-                        <span class="ds-cv"><b class="num" x-text="loadingText"></b></span>
+                        <span class="ds-cn">{{ __("sales::field.tile_loading") }}<span class="ds-cl"><b class="num" x-text="loadingText"></b> <small x-text="loadingTileSub"></small></span></span>
                     </button>
                     @endif
                     <button type="button" @click="openPanel('delivery')" @class(['ds-ct ds-ct-cyan', 'ds-ct-wide' => ! $show['transport']]) data-tile="delivery" x-show="showDeliveryTile">
