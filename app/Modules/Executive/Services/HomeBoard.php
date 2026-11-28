@@ -70,6 +70,9 @@ final class HomeBoard implements HomeBoardContract
 
     private const TEAL = '#0891b2';
 
+    /** ⓘ হোমের "শীর্ষ গ্রাহক" কার্ডে কত সারি — ২৪px নামে ১০৮০-এ ধরে (মালিক, ২৮ নভেম্বর ২০২৬) */
+    public const TOP_SHOPS = 8;
+
     private const YELLOW = '#eab308';
 
     /** দোকান "সক্রিয়" — শেষ এত দিনে অন্তত একটা পাকা বিল */
@@ -302,7 +305,9 @@ final class HomeBoard implements HomeBoardContract
             return null;
         }
 
-        $rows = $this->sales->topCustomers($from, $to);
+        // ⭐ শীর্ষ ৮, ১০ নয় — নামের লিংক এখন ২৪px উঁচু (WCAG 2.2 AA 2.5.8), আর ১০ সারিতে কার্ড ৬২px লম্বা হয়ে ১০৮০-এর
+        //    দুই সারি চার্ট ভাঙত; মালিকের সিদ্ধান্ত, ২৮ নভেম্বর ২০২৬: "তোমার পরামর্শ মতেই" (বিকল্প গ)
+        $rows = array_slice($this->sales->topCustomers($from, $to), 0, self::TOP_SHOPS);
 
         return [
             'key' => 'top_shops',

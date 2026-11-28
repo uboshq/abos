@@ -51,13 +51,14 @@
 .hb-key { display: inline-flex; align-items: center; gap: 4px; }
 .hb-key i, .hb-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; flex: none; }
 .hb-chart > svg { width: 100%; height: 150px; display: block; }
+/* ⓘ অক্ষ ৯ → ১১px, মান ১০ → ১২px, নোট ১১ → ১২px — ১৯২০ পর্দায় দূর থেকে আর ল্যাপটপে জুম ছাড়া পড়া যায় (impeccable নিরীক্ষা ২৭ নভেম্বর ২০২৬, বিষয় ২; সমন্বয়কের "ok" ২৮ নভেম্বর; রং আর সাজানো একই) */
 .hb-grid { stroke: var(--color-border); }
-.hb-axis { font-size: 9px; fill: var(--color-ink-muted); }
-.hb-val { font-size: 10px; font-weight: 600; fill: var(--color-ink); }
+.hb-axis { font-size: 11px; fill: var(--color-ink-muted); }
+.hb-val { font-size: 12px; font-weight: 600; fill: var(--color-ink); }
 .hb-centre { font-size: 14px; font-weight: 700; fill: var(--color-ink); font-variant-numeric: tabular-nums; }
 .hb-ring { stroke: var(--color-border); }
 .hb-empty { display: grid; place-items: center; height: 140px; font-size: 13px; color: var(--color-ink-muted); }
-.hb-note { margin: 2px 0 0; font-size: 11px; color: var(--color-ink-muted); }
+.hb-note { margin: 2px 0 0; font-size: 12px; color: var(--color-ink-muted); }
 
 .hb-donut { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 10px; align-items: center; }
 .hb-donut svg { width: 140px; height: 140px; display: block; }
@@ -65,11 +66,14 @@
 .hb-legend div { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .hb-legend span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hb-legend b { margin-inline-start: auto; font-weight: 600; white-space: nowrap; }
-.hb-legend small { width: 38px; text-align: end; color: var(--color-ink-muted); flex: none; }
+.hb-legend small { width: 38px; text-align: end; color: var(--color-ink-muted); flex: none; font-size: 12px; }
 
 .hb-bars { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; font-size: 11.5px; }
 .hb-bars li { display: grid; grid-template-columns: minmax(0, 42%) minmax(0, 1fr) auto; align-items: center; gap: 6px; }
 .hb-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--color-ink); }
+/* ⓘ নামটা লিংক হলে (শীর্ষ গ্রাহক) অন্তত ২৪px উঁচু চাপার জায়গা — WCAG 2.2 AA 2.5.8; কেবল লিংকের নিজের উচ্চতা, সারির ফাঁক একই।
+   কার্ড ১০ নয় ৮ সারি ([[HomeBoard::TOP_SHOPS]]) যাতে ১০৮০-এ দুই সারি চার্ট ধরে — মালিকের সিদ্ধান্ত, ২৮ নভেম্বর ২০২৬ */
+a.hb-bar-name { display: block; min-height: 24px; line-height: 24px; }
 .hb-bar { display: block; height: 8px; border-radius: 4px; background: var(--color-surface-muted); overflow: hidden; }
 .hb-bar i { display: block; height: 100%; border-radius: 4px; }
 .hb-bars b { font-weight: 600; white-space: nowrap; }
@@ -132,7 +136,7 @@
 .hb-row[data-tint='ok'] { background: var(--color-status-ok-soft, var(--color-surface-muted)); }
 .hb-row > i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .hb-row > span { min-width: 0; }
-.hb-row small { display: block; color: var(--color-ink-muted); font-size: 11px; }
+.hb-row small { display: block; color: var(--color-ink-muted); font-size: 12px; }
 .hb-row > b { margin-inline-start: auto; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* ── সব প্রতিষ্ঠান ─────────────────────────────────────────────────── */
@@ -140,7 +144,7 @@
 .hb-companies h2 { margin: 0 0 2px; font-size: 16px; font-weight: 700; }
 .hb-companies table { min-width: 900px; }
 .hb-companies tr.hb-total td { font-weight: 700; }
-.hb-here { font-size: 11px; color: var(--color-link); margin-inline-start: 6px; }
+.hb-here { font-size: 12px; color: var(--color-link); margin-inline-start: 6px; }
 
 /* ── আজ যা করতে হবে ────────────────────────────────────────────────── */
 .hb-todo { padding: 14px 16px; display: grid; gap: 10px; }

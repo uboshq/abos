@@ -82,7 +82,7 @@ return [
         'chart_dues_ageing' => 'Dues ageing',
         'chart_stock_category' => 'Stock by category',
         'chart_top_products' => 'Top 10 products',
-        'chart_top_shops' => 'Top 10 customers',
+        'chart_top_shops' => 'Top 8 customers',
         'chart_channel' => 'Collection by channel',
         'chart_working_capital' => 'Working capital',
         'last_12_months' => 'Last 12 months · this month running',

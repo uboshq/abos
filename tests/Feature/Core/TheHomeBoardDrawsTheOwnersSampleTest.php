@@ -94,7 +94,9 @@ final class TheHomeBoardDrawsTheOwnersSampleTest extends TestCase
         // ⭐ মালিক, ১৯ নভেম্বর ২০২৬ রাত (লাইভের দাগানো ছবি): এক্সিকিউটিভ কমান্ড সেন্টারের লিংক মাথায় নয়; "শীর্ষ ১০ দোকান" নয়, "শীর্ষ ১০ গ্রাহক"
         $this->assertSame(0, $page->query('//*[@data-home-executive]')->length, '⛔ মাথায় আবার এক্সিকিউটিভ কমান্ড সেন্টারের লিংক।');
         $this->assertStringContainsString(e(__('home.board.chart_top_shops')), $html);
-        $this->assertSame('Top 10 customers', trans('home.board.chart_top_shops', [], 'en'));
+        $this->assertSame('Top 8 customers', trans('home.board.chart_top_shops', [], 'en'));
+        // ⓘ শীর্ষ ৮ — ২৪px নামে ১০৮০-এ দুই সারি চার্ট ধরে (মালিক, ২৮ নভেম্বর ২০২৬)
+        $this->assertSame(8, \App\Modules\Executive\Services\HomeBoard::TOP_SHOPS);
         // ⓘ আজ বিক্রি হয়েছে (sellToday) — তাই শীর্ষ গ্রাহক আজকের, বড় সময়ে যাওয়ার লেখা নেই
         $this->assertStringNotContainsString(e(__('home.board.note_widened', ['period' => __('core.dashboard.this_month')])), $html,
             '⛔ আজ বিক্রি থাকতেও শীর্ষ গ্রাহক এই মাসে চলে গেছে।');

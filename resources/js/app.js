@@ -28,6 +28,7 @@ import { installFieldNames } from './name-bare-fields.js'
 import { foldRowActs } from './fold-row-acts.js'
 import { installSelectSearch } from './select-search.js'
 import { cardsUnderHead, compactPageHead, foldPageNotes, mergeMoneyHead } from './abos-list-head.js'
+import { infoTap } from './info-tap.js'
 import { keepMenusOnScreen } from './keep-on-screen.js'
 import { foldMenuGroups } from './menu-fold.js'
 import { bulkBars, pickColumns } from './bulk-bar.js'
@@ -224,6 +225,8 @@ installFieldNames()
 // ⭐ ছাঁকনির বার স্থির, দুই পাশের পাতায় যার যার স্ক্রল ([[abos-bar-stays.js]]) — মাথা সাজানোর পরে, শেষ মাপে
 barStays()
 foldPageNotes()
+// ⭐ ⓘ ছুঁলে বা কীবোর্ডে খোলে — তিন ABOS রূপে (WCAG 2.1.1, 1.4.13; [[info-tap.js]]); ⓘ-গুলো তৈরি হওয়ার পরে
+infoTap()
 bulkBars()
 pickColumns()
 // ⭐ ড্যাশবোর্ডের প্রথম পর্দায় গ্রাফ, বাকি নিচে ([[board-arrange.js]])

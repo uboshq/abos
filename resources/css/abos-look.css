@@ -271,7 +271,7 @@
 :root[data-ui='rose'] .abos-modpick-btn small {
     display: block;
     font-weight: 500;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--abos-menu-group);
 }
 
@@ -519,7 +519,7 @@
     border-radius: 999px;
     background: var(--abos-brand);
     color: #ffffff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
 }
 
@@ -846,7 +846,7 @@
 
 :root[data-ui='rose'] [data-head-tabs] a .num {
     padding: 1px 6px;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.2;
 }
 
@@ -929,7 +929,7 @@
     padding: 1px 6px;
     background: #ffffff;
     color: var(--color-brand-700, #1d4ed8);
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.2;
 }
 
