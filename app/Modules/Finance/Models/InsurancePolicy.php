@@ -116,6 +116,9 @@ class InsurancePolicy extends Model
      * ⚠️ মেয়াদ-পেরোনোগুলো ইচ্ছাকৃতভাবে ভেতরে: ওগুলোই সবচেয়ে জরুরি, আর
      * "৩০ দিনের মধ্যে" বলে বাদ দিলে সতর্কবার্তা ঠিক তখনই চুপ করত যখন
      * দেরি হয়ে গেছে।
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
      */
     public function scopeDueForRenewal(Builder $query, ?CarbonInterface $today = null): Builder
     {

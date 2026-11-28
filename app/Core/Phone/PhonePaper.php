@@ -40,7 +40,7 @@ abstract class PhonePaper
      */
     abstract public function webRoute(): array;
 
-    /** @return Builder<Model> মডেলের নিজের কোয়েরি — দেয়াল তার গ্লোবাল স্কোপে */
+    /** @return Builder<covariant Model> মডেলের নিজের কোয়েরি — দেয়াল তার গ্লোবাল স্কোপে */
     abstract public function query(): Builder;
 
     /**
