@@ -213,7 +213,7 @@
                   'owners' => ['own' => __('sales::field.owner_own'), 'hired' => __('sales::field.owner_hired'), 'customer' => __('sales::field.owner_customer'), 'none' => __('sales::field.owner_none')],
                   'fares' => ['us' => __('sales::field.fare_us'), 'us_add_to_bill' => __('sales::field.fare_us_add_to_bill'), 'customer' => __('sales::field.fare_customer'), 'none' => __('sales::field.fare_none')],
                   'fareWhen' => ['now' => __('sales::field.fare_us_now'), 'later' => __('sales::field.fare_us_later')],
-                  {{-- ⛔ ক্রয়মূল্যের পপআপের শব্দ কেবল চাবিওয়ালার পাতায় (`sales.cost.view`), আর চাবির নাম `costWords` — "cost" নামের
+                  {{-- ⛔ ক্রয়মূল্যের পপআপের শব্দ কেবল চাবিওয়ালার পাতায় (`sales.cost.view`), আর চাবির নাম `costWords` — “cost” নামের
                        ঘর চাবি ছাড়া পাতার উৎসে কখনো নয় (TheCounterPageCarriedThePurchasePriceTest; main-এও লাল ছিল, ২৮ নভেম্বর ২০২৬) --}}
                   'costWords' => auth()->user()?->can('sales.cost.view')
                       ? ['rate' => __('sales::field.cost_rate'), 'discount' => __('sales::field.cost_discount'), 'unload' => __('sales::field.cost_unload'),

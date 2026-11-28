@@ -62,6 +62,7 @@
                     @endforelse
                 </div>
                 {{-- ⭐ ৫০টা করে পাতা (মালিক, ২৮ নভেম্বর ২০২৬, সিদ্ধান্ত ১-খ) --}}
+                <x-ui.list-totals :rows="$pages" />
                 <x-ui.pager :rows="$pages" />
 
                 @if ($category === 'festival' && $festivals->isNotEmpty())
