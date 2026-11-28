@@ -53,6 +53,8 @@ final class StockService
     /**
      * চলাচলের সারি — দেয়াল ছাড়া ([[VIEW_WALLS]])। ⓘ `$walled` কেবল "সব গুদাম" দেখানোর প্রশ্নে: গুদাম না বললে
      * মানুষ যা দেখতে পান তার যোগফল — নইলে এক গুদামের কেরানি পুরো কোম্পানির মজুদ দেখতেন।
+     *
+     * @return Builder<StockMovement> ⓘ ধরন বলা থাকলে PHPStan `forProduct()`/`inWarehouse()` স্কোপ চেনে (১৪টা method.notFound, ২৮ নভেম্বর ২০২৬)
      */
     private function movements(bool $walled = false): Builder
     {

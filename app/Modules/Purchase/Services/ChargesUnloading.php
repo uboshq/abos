@@ -47,7 +47,7 @@ trait ChargesUnloading
     /**
      * সংরক্ষণে — দরজা পাঠালে বাছাই বসানো, আর কার্টন, দর ও ভাগ নতুন করে।
      *
-     * @param  Collection<int, Model>  $lines  যে সারিগুলো মাল আনে (বিলে কেবল চালান-ছাড়া সারি)
+     * @param  Collection<int, covariant Model>  $lines  যে সারিগুলো মাল আনে (বিলে কেবল চালান-ছাড়া সারি)
      * @param  array<string, mixed>  $data
      */
     protected function stampUnloading(Model $paper, Collection $lines, string $qtyField, array $data): void
@@ -67,7 +67,7 @@ trait ChargesUnloading
     /**
      * ভাগ গোনা আর সারিতে লেখা — সারির id → ভাগ।
      *
-     * @param  Collection<int, Model>  $lines
+     * @param  Collection<int, covariant Model>  $lines  ⓘ covariant: বিলের বা চালানের সারির সংগ্রহও চলে (PHPStan argument.type ×৬)
      * @return array<int, string>
      */
     protected function spreadUnloading(Model $paper, Collection $lines, string $qtyField): array
