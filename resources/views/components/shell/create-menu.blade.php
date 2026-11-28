@@ -107,13 +107,13 @@
             @keydown.escape.window="open = false"
             :aria-expanded="open.toString()"
             class="flex min-h-(--spacing-touch) items-center gap-1.5 rounded-(--radius-field)
-                   bg-(--color-brand-500) px-3 text-sm font-medium text-white
+                   bg-(--color-brand-500) px-2 sm:px-3 text-sm font-medium text-white
                    transition-colors hover:brightness-110">
         <svg viewBox="0 0 24 24" aria-hidden="true" class="size-4 shrink-0 fill-current">
             <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z"/>
         </svg>
         <span class="topbar-label hidden sm:inline">{{ __('core.action.create') }}</span>
-        <svg viewBox="0 0 24 24" aria-hidden="true" class="size-3 shrink-0 fill-current opacity-70">
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="hidden size-3 shrink-0 fill-current opacity-70 sm:block">
             <path d="M7 10l5 5 5-5H7Z"/>
         </svg>
     </button>
