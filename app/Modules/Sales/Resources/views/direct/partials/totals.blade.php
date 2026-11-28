@@ -532,18 +532,19 @@
                 {{-- 🚚 v2 (নমুনা ২৭ নভেম্বর): "মাল পৌঁছানো ও খরচ" — রঙিন টাইল, প্রতিটা চাপলে নিজের পপআপ (আগের লাইনগুলোর বদলে) --}}
                 <div class="ds-cost" data-counter-details>
                     <div class="ds-ch">{{ __("sales::field.cost_card_title") }} <small>{{ __("sales::field.cost_card_sub") }}</small></div>
-                    <button type="button" @click="openPanel('delivery')" class="ds-ct ds-ct-cyan" data-tile="delivery">
-                        <span class="ds-ci"><x-ui.licon name="package" :size="18" /></span>
-                        <span class="ds-cn">{{ __("sales::field.btn_delivery") }}<small x-text="deliveryModeLabel"></small></span>
-                        <span class="ds-cv"><small class="ds-st">F7</small></span>
-                    </button>
+                    {{-- ⭐ মালিক, ২৮ নভেম্বর ২০২৬: প্রথমে গাড়ি ভাড়া (বড়) — ভাড়া আর লোডিং এক ঘরে যোগ হয়ে; ডানে ডেলিভারি (ছোট),
+                         এখন/পরে নেবেন লেখা থাকে, F7 কেবল নিচের বোতামে (টাইলে দুবার নয়) --}}
                     @if ($show['transport'])
                     <button type="button" @click="openPanel('transport')" class="ds-ct ds-ct-amber" data-tile="transport" data-transport-line>
                         <span class="ds-ci"><x-ui.licon name="truck" :size="18" /></span>
-                        <span class="ds-cn">{{ __("sales::field.btn_transport") }}<small x-text="transportTileSub"></small></span>
-                        <span class="ds-cv"><b class="num" x-text="fareText"></b><small class="ds-st" x-show="farePaidBy" x-text="farePayText"></small></span>
+                        <span class="ds-cn">{{ __("sales::field.tile_fare_loading") }}<small x-text="transportTileSub"></small></span>
+                        <span class="ds-cv"><b class="num" x-text="fareTotalText"></b><small class="ds-st" x-show="farePaidBy" x-text="farePayText"></small></span>
                     </button>
                     @endif
+                    <button type="button" @click="openPanel('delivery')" @class(['ds-ct ds-ct-cyan', 'ds-ct-wide' => ! $show['transport']]) data-tile="delivery">
+                        <span class="ds-ci"><x-ui.licon name="package" :size="18" /></span>
+                        <span class="ds-cn">{{ __("sales::field.btn_delivery") }}<small x-text="deliveryModeLabel"></small></span>
+                    </button>
                     <button type="button" @click="openPanel('note')" class="ds-ct ds-ct-blue ds-ct-wide" data-tile="note">
                         <span class="ds-ci"><x-ui.licon name="file-text" :size="18" /></span>
                         <span class="ds-cn">{{ __("sales::field.note") }}<small>{{ __("sales::field.note_prints") }}</small></span>
