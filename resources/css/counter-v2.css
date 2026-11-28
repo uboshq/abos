@@ -253,6 +253,11 @@ dialog.fc-dialog::backdrop { background: rgb(15 23 42 / .5); }
 .fc-yes { background: linear-gradient(135deg, #047857, #10b981); color: #fff; text-shadow: 0 1px 1px rgb(0 0 0 / .15); }
 .fc-yes:disabled { opacity: .6; cursor: wait; }
 .fc-yes-draft { background: linear-gradient(135deg, #334155, #64748b); }
+/* guidelines (২৮ নভেম্বর): চাপার আগে বোঝা যায় — হাত রাখলে একটু গাঢ়; অঙ্ক সমান চওড়া; পপআপের স্ক্রল পিছনে যায় না */
+.fc-foot button:hover:not(:disabled) { filter: brightness(.93); }
+.fc-big b, .fc-rows .num, .fc-no b { font-variant-numeric: tabular-nums; }
+dialog.fc-dialog { overscroll-behavior: contain; }
+.fc-foot button { touch-action: manipulation; }
 .fc-foot kbd { font: inherit; font-size: 12px; opacity: .85; margin-inline-start: 6px; }
 /* পয়েন্ট — ক্রেতার টাইলেও একই নীল গোল ঘর (মালিক, ২৮ নভেম্বর: পপআপের মতো, যাতে কোন জায়গার ক্রেতা এক নজরে চোখে পড়ে) */
 form[data-abos-counter] .ds-party [data-customer-details] span[data-point-chip] { background: #dbeafe !important; border: 2.5px solid #1d4ed8 !important;
