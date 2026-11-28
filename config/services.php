@@ -59,6 +59,8 @@ return [
         'verify' => (bool) env('CPANEL_VERIFY_TLS', false),
         // ⓘ একই হোস্টিংয়ে চললে সার্ভারের নিজের uapi — টোকেন লাগে না
         'uapi' => env('CPANEL_UAPI', '/usr/bin/uapi'),
+        // ⓘ মেইল ফোল্ডারের মূল (~/mail/<domain>/<user>-এর ~); ফাঁকা = যে ব্যবহারকারী চালাচ্ছে তার নিজের বাড়ির ফোল্ডার
+        'home' => env('CPANEL_HOME', ''),
     ],
 
     'slack' => [

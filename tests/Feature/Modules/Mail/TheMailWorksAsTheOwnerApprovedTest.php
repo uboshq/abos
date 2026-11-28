@@ -295,6 +295,43 @@ final class TheMailWorksAsTheOwnerApprovedTest extends TestCase
         $this->assertSame(1, $backups, '⛔ মোছার আগে ব্যাকআপ হয়নি।');
     }
 
+    public function test_the_daily_job_backs_up_the_mail_folder_from_the_configured_home_before_deleting(): void
+    {
+        // ⭐ ২৮ নভেম্বর: মেইল ফোল্ডারের মূল এখন কনফিগে (services.cpanel.home = CPANEL_HOME), env('HOME') আর পড়া হয় না
+        $home = storage_path('framework/testing/mail-home-'.uniqid());
+        @mkdir($home.'/mail/adi.test/najma/cur', 0750, true);
+        file_put_contents($home.'/mail/adi.test/najma/cur/1.eml', "Subject: hi\r\n\r\nbody");
+        config(['services.cpanel.home' => $home]);
+        $before = glob(storage_path('app/mail-backups/najma@adi.test-*.tar.gz')) ?: [];
+
+        $this->owner->forceFill(['password' => Hash::make('owner-pass-1')])->save();
+        $this->as($this->owner);
+        $this->post('/mail/addresses', ['kind' => 'person', 'user_id' => $this->clerk->id, 'local' => 'najma', 'domain' => 'adi.test',
+            'display_name' => 'Najma', 'quota_mb' => 5120, 'deliver' => 'screen'])->assertRedirect();
+        $address = MailAddress::query()->where('email', 'najma@adi.test')->firstOrFail();
+        $this->post("/mail/addresses/{$address->public_id}/pause", ['mode' => 'bounce', 'reason' => 'ছুটি'])->assertRedirect();
+        $this->post("/mail/addresses/{$address->public_id}/delete", ['typed' => 'najma@adi.test', 'password' => 'owner-pass-1'])->assertRedirect();
+
+        $this->travel(31)->days();
+        $this->app['auth']->forgetGuards();
+        CompanyContext::clear();
+        $this->artisan('abos:mail-daily')->assertSuccessful();
+
+        $made = array_values(array_diff(glob(storage_path('app/mail-backups/najma@adi.test-*.tar.gz')) ?: [], $before));
+        try {
+            $this->assertCount(1, $made, '⛔ কনফিগের ফোল্ডার থেকে মেইলের ব্যাকআপ হয়নি, অথচ ঠিকানা মোছা হলো।');
+            $this->assertGreaterThan(0, filesize($made[0]));
+            $this->assertSame(MailAddress::DELETED, $address->fresh()->status);
+            $this->assertSame(1, $this->host->count('delete'));
+        } finally {
+            array_map('unlink', $made);
+            @unlink($home.'/mail/adi.test/najma/cur/1.eml');
+            foreach (['/mail/adi.test/najma/cur', '/mail/adi.test/najma', '/mail/adi.test', '/mail', ''] as $d) {
+                @rmdir($home.$d);
+            }
+        }
+    }
+
     public function test_a_system_address_is_never_paused_or_deleted_and_only_the_owner_deletes(): void
     {
         $this->host->boxes['no-reply@adi.test'] = ['email' => 'no-reply@adi.test', 'used_mb' => 1.0, 'quota_mb' => 2048, 'login_off' => false, 'incoming_off' => false];

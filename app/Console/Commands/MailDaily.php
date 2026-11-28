@@ -98,7 +98,7 @@ final class MailDaily extends Command
      */
     private function backup(MailAddress $a): void
     {
-        $home = (string) (getenv('HOME') ?: (function_exists('posix_getpwuid') ? (posix_getpwuid(posix_geteuid())['dir'] ?? '') : ''));
+        $home = (string) (config('services.cpanel.home') ?: (function_exists('posix_getpwuid') ? (posix_getpwuid(posix_geteuid())['dir'] ?? '') : ''));
         $dir = $home.'/mail/'.$a->domain.'/'.$a->localPart();
         $target = storage_path('app/mail-backups');
 
