@@ -726,7 +726,7 @@
                             @if ($show['do_no'])
                                 <label class="min-w-0 ds-f-ref">
                                     <span class="mb-0.5 block text-2xs font-semibold uppercase tracking-wide
-                                                 text-(--color-ink-muted)">{{ ($abosLook ?? false) ? __('sales::field.challan_do_no') : __('sales::field.do_no') }}</span>
+                                                 text-(--color-ink-muted)">{{ __('sales::field.do_no') }}</span>
                                     <input type="text" name="do_no" value="{{ old('do_no', $resume['fields']['do_no'] ?? '') }}"
                                            class="h-(--spacing-field-dense) w-full rounded-(--radius-field) border border-(--color-border)
                                                   bg-(--color-surface-app) px-2 text-sm">
