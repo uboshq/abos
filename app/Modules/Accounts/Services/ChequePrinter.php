@@ -215,7 +215,7 @@ final class ChequePrinter
      * চেকের পাতার PDF — পাতা ঠিক চেকের মাপ। `$test` = সাধারণ কাগজে পরীক্ষার ছাপ: পাতার কিনারা আর ঘরের হালকা দাগ, যাতে চেকের ওপর
      * রেখে আলোয় মেলানো যায়।
      *
-     * @param  array{cheque_date: Carbon|string|null, payee: ?string, amount: string|null, crossed: bool}  $cheque
+     * @param  array{cheque_date: \Carbon\CarbonInterface|string|null, payee: ?string, amount: string|null, crossed: bool}  $cheque
      */
     public function pdf(ChequeLayout $layout, array $cheque, bool $test = false): string
     {

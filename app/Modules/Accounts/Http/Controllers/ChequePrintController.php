@@ -116,7 +116,7 @@ class ChequePrintController extends Controller implements HasMiddleware
         $book = ChequeBook::query()->with('layout')->findOrFail($data['book']);
 
         return $this->inline($this->printer->pdf($book->layout, [
-            'cheque_date' => $cheque->cheque_date, 'payee' => $data['payee'] ?? null,
+            'cheque_date' => $cheque->cheque_date, 'payee' => isset($data['payee']) ? (string) $data['payee'] : null,
             'amount' => bcadd((string) $cheque->amount, '0', 4), 'crossed' => $request->boolean('crossed'),
         ], true), 'test');
     }
@@ -164,7 +164,7 @@ class ChequePrintController extends Controller implements HasMiddleware
         $book = ChequeBook::query()->with('layout')->findOrFail($data['book']);
 
         return $this->inline($this->printer->pdf($book->layout, [
-            'cheque_date' => $voucher->instrument_date ?? $voucher->trx_date, 'payee' => $data['payee'] ?? null,
+            'cheque_date' => $voucher->instrument_date ?? $voucher->trx_date, 'payee' => isset($data['payee']) ? (string) $data['payee'] : null,
             'amount' => $this->printer->paidFromBank($voucher), 'crossed' => $request->boolean('crossed'),
         ], true), 'test');
     }

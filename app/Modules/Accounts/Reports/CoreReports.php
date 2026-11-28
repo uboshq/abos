@@ -11,8 +11,8 @@ use App\Models\FinancialYear;
 use App\Modules\Accounts\Models\Account;
 use App\Modules\Accounts\Services\StandardChart;
 use App\Modules\Accounts\Services\YearEndService;
+use Illuminate\Contracts\Database\Query\Expression;
 use Illuminate\Database\Query\Builder;
-use Illuminate\Database\Query\Expression;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -1516,7 +1516,7 @@ final class CoreReports
                 ->orderByRaw('SUM(ledger_entries.debit - ledger_entries.credit) DESC')
                 ->select([
                     'ledger_entries.account_id',
-                    DB::raw(self::accountName()),
+                    self::accountName(),
                     DB::raw('SUM(ledger_entries.debit - ledger_entries.credit) as spent'),
                 ]),
             columns: [
@@ -1568,7 +1568,7 @@ final class CoreReports
                 ->orderByRaw('SUM(ledger_entries.credit - ledger_entries.debit) DESC')
                 ->select([
                     'ledger_entries.account_id',
-                    DB::raw(self::accountName()),
+                    self::accountName(),
                     DB::raw('SUM(ledger_entries.credit - ledger_entries.debit) as earned'),
                 ]),
             columns: [

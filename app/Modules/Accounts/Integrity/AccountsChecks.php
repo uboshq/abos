@@ -377,7 +377,7 @@ final class AccountsChecks implements ChecksItsOwnBooks
      * ⛔ আগে একশোয় থেমে যেত আর কিছু বলত না — ৫,০০০ ভাঙা কাগজ আর ১০০টা একই রকম দেখাত, অথচ প্রথমটা একটা
      * মাইগ্রেশনের দুর্ঘটনা আর দ্বিতীয়টা কয়েকটা ভুল হাতের কাজ (abos-bb-র নিরীক্ষা, ২ অক্টোবর ২০২৬)।
      *
-     * @return array{0: Collection<int, object>, 1: list<IntegrityFinding>}
+     * @return array{0: Collection<int, covariant object>, 1: list<IntegrityFinding>}
      */
     private static function firstHundred(Builder $query): array
     {
