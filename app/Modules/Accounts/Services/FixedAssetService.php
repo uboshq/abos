@@ -442,7 +442,7 @@ final class FixedAssetService
      *
      * ⓘ সারিতে তালা দিয়ে, অপেক্ষায় থাকলেই — একই সই দুইবার ঘটনা পাঠালে দ্বিতীয়বার কিছু হয় না।
      *
-     * @param  array{funding?: array{account_id: int, party_type: ?string, party_id: ?int}, opening_depreciation?: string}  $signed
+     * @param  array{funding?: array{account_id: int, party_type: ?string, party_id: ?int}, opening_depreciation?: string, bill?: array<string, mixed>}  $signed  ⓘ bill: বিলের সারি থেকে সম্পদ (উপরে, `['bill' => $bill]`)
      */
     public function finishRegistered(FixedAsset $asset, array $signed): FixedAsset
     {
