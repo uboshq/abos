@@ -84,7 +84,7 @@ final class RentalDues
             }
 
             if (! in_array($month->toDateString(), $done, true)) {
-                $out[] = $month->copy();
+                $out[] = \App\Core\Support\Dates::of($month->copy());
             }
         }
 

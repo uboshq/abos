@@ -25,6 +25,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $mrp
  * @property string|null $entered_qty
  * @property int|null $entered_unit_id
+ *
+ * ⓘ টেবিলের নয় — PurchaseBillService-এর যোগফলের নাম (`SUM(received_qty) as qty`, `SUM(… * rate) as value`, `… as unload`)।
+ * @property-read mixed $qty
+ * @property-read mixed $value
+ * @property-read mixed $unload
  */
 class PurchaseReceiptLine extends Model
 {

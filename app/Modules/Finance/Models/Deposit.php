@@ -52,6 +52,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * জন্যই তিনি এটা চেয়েছেন।
  *
  * সারিটা থাকে দুই ক্ষেত্রেই; কেবল টাকার দাখিলাটা আলাদা।
+ *
+ * ⓘ টেবিলের নয় — InstitutionLinkProposer-এর দলবাঁধা প্রশ্নের নাম (`COUNT(*) as n`, `SUM(…) as total`)।
+ *
+ * @property-read mixed $n
+ * @property-read mixed $total
  */
 class Deposit extends Model implements Drillable
 {
