@@ -126,6 +126,8 @@
                 </tbody>
             </table>
         </div>
+        {{-- ⭐ ৫০টা করে পাতা (মালিক, ২৮ নভেম্বর ২০২৬, সিদ্ধান্ত ১-খ) --}}
+        <x-ui.pager :rows="$rows" />
 
         {{-- ⋯ মেনু (পর্দা ১০) --}}
         <div class="mx-menu" data-row-menu hidden>

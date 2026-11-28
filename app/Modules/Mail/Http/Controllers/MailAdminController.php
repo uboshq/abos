@@ -66,12 +66,22 @@ final class MailAdminController extends Controller implements HasMiddleware
 
         $chip = (string) $request->query('show', 'all');
         $q = mb_strtolower(trim((string) $request->query('q', '')));
-        $rows = $live
-            ->when($chip === 'active', fn ($c) => $c->where('status', MailAddress::ACTIVE))
-            ->when($chip === 'paused', fn ($c) => $c->whereIn('status', [MailAddress::PAUSED, MailAddress::DELETING]))
-            ->when($chip === 'shared', fn ($c) => $c->where('kind', MailAddress::SHARED))
-            ->when($q !== '', fn ($c) => $c->filter(fn (MailAddress $a) => str_contains(mb_strtolower($a->email.' '.$a->display_name.' '.$a->user?->name), $q)))
-            ->values();
+        /*
+         * ⭐ তালিকা ৫০টা করে পাতায় (মালিক, ২৮ নভেম্বর ২০২৬, সিদ্ধান্ত ১-খ: "আসলেই পাতা ভাগ")। ⓘ উপরের যোগফল আর ডোমেইনের
+         * স্বাস্থ্য গোটা কোম্পানির — তাই ওগুলো সব ঠিকানা থেকে (`$all`); কেবল চোখের তালিকাটা ভাগ হয়, একই ছাঁকনি সার্ভারে।
+         */
+        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $q).'%';
+        $rows = MailAddress::query()->with(['user:id,name,designation,two_factor_secret', 'account.members:id,name'])
+            ->where('status', '!=', MailAddress::DELETED)
+            ->when($chip === 'active', fn ($b) => $b->where('status', MailAddress::ACTIVE))
+            ->when($chip === 'paused', fn ($b) => $b->whereIn('status', [MailAddress::PAUSED, MailAddress::DELETING]))
+            ->when($chip === 'shared', fn ($b) => $b->where('kind', MailAddress::SHARED))
+            ->when($q !== '', fn ($b) => $b->where(fn ($w) => $w->whereRaw('LOWER(email) LIKE ?', [$like])
+                ->orWhereRaw('LOWER(COALESCE(display_name, \'\')) LIKE ?', [$like])
+                ->orWhereHas('user', fn ($u) => $u->whereRaw('LOWER(name) LIKE ?', [$like]))))
+            ->orderBy('email')
+            ->paginate(50)
+            ->withQueryString();
 
         return view('mail::admin.index', [
             // ⓘ রেল আর মডিউলের মেনু — না দিলে পাশের মেনু খালি থাকে (ডেমোতে ধরা, ২৭ নভেম্বর)

@@ -48,15 +48,21 @@ final class MailTemplateController extends Controller implements HasMiddleware
         $look = (string) $request->query('look', 'all');
 
         $all = MailTemplate::query()->seenBy($user)->orderBy('name')->get();
-        $list = $all
-            ->when($whose === 'company', fn ($c) => $c->whereNull('user_id'), fn ($c) => $whose === 'mine' ? $c->where('user_id', $user->id) : $c->where('category', $category))
-            ->when($look === 'designed', fn ($c) => $c->where('format', 'designed'))
-            ->when($look === 'plain', fn ($c) => $c->where('format', 'plain'))
-            ->when($look === 'bn', fn ($c) => $c->whereIn('locale', ['bn', 'both']))
-            ->when($look === 'en', fn ($c) => $c->whereIn('locale', ['en', 'both']))
-            ->values();
+        /*
+         * ⭐ তালিকা ৫০টা করে পাতায় (মালিক, ২৮ নভেম্বর ২০২৬, সিদ্ধান্ত ১-খ)। ⓘ ভাগের গোনা (`counts`) গোটা তালিকা থেকে (`$all`),
+         * চোখের তালিকা একই ছাঁকনিতে সার্ভারে ভাগ হয় — প্রতিটা ছাঁচ আঁকা (render) কেবল এই পাতার ৫০টার, সবগুলোর নয়।
+         */
+        $list = MailTemplate::query()->seenBy($user)
+            ->when($whose === 'company', fn ($b) => $b->whereNull('user_id'), fn ($b) => $whose === 'mine' ? $b->where('user_id', $user->id) : $b->where('category', $category))
+            ->when($look === 'designed', fn ($b) => $b->where('format', 'designed'))
+            ->when($look === 'plain', fn ($b) => $b->where('format', 'plain'))
+            ->when($look === 'bn', fn ($b) => $b->whereIn('locale', ['bn', 'both']))
+            ->when($look === 'en', fn ($b) => $b->whereIn('locale', ['en', 'both']))
+            ->orderBy('name')
+            ->paginate(50)
+            ->withQueryString();
 
-        $selected = $request->query('t') ? $all->firstWhere('public_id', (string) $request->query('t')) : $list->first();
+        $selected = $request->query('t') ? $all->firstWhere('public_id', (string) $request->query('t')) : $list->getCollection()->first();
         $customer = $request->query('customer') && $user->can('customer.view') ? Customer::query()->inViewedBranch()->find((int) $request->query('customer')) : null;
         $values = $this->fields->values($user, null) + ($customer ? $this->fields->forCustomer($customer) : []);
         $company = (string) (Company::query()->whereKey(CompanyContext::id())->value('name_en') ?? '');
@@ -70,7 +76,8 @@ final class MailTemplateController extends Controller implements HasMiddleware
             'category' => $whose !== '' ? '' : $category,
             'whose' => $whose,
             'look' => $look,
-            'list' => $list->map(fn (MailTemplate $t) => ['t' => $t] + $this->templates->render($t, $values, $company)),
+            'list' => $list->getCollection()->map(fn (MailTemplate $t) => ['t' => $t] + $this->templates->render($t, $values, $company)),
+            'pages' => $list,
             'selected' => $selected,
             'rendered' => $selected ? $this->templates->render($selected, $values, $company) : null,
             'customer' => $customer,

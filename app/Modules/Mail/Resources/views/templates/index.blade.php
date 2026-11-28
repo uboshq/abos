@@ -61,6 +61,8 @@
                         <p class="mx-empty">{{ __('mail::field.history.none') }}</p>
                     @endforelse
                 </div>
+                {{-- ⭐ ৫০টা করে পাতা (মালিক, ২৮ নভেম্বর ২০২৬, সিদ্ধান্ত ১-খ) --}}
+                <x-ui.pager :rows="$pages" />
 
                 @if ($category === 'festival' && $festivals->isNotEmpty())
                     <div class="mx-card" style="padding:12px 14px">
