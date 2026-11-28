@@ -1626,6 +1626,11 @@ input[type='number'] {
     opacity: 0.82;
 }
 
+/* ⓘ ABOS-এর ৩ রূপে নামের লেখা পুরো সাদা, হালকা কেবল আইকনের গোল — ০.৮২-এ লেখা নীলের উপর 4.01:1 ছিল, WCAG AA চায় 4.5
+   (axe, ফোনে ৩৭৫px, ২৮ নভেম্বর ২০২৬; মালিকের দেওয়া ok-এর ভারে সমন্বয়কের আন্তর্জাতিক মানের যাচাই) */
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .bottom-nav-item:not(.bottom-nav-item-on):not([data-bottom-create]) { opacity: 1; }
+:root:is([data-ui='rose'], [data-ui='navy'], [data-ui='blue']) .bottom-nav-item:not(.bottom-nav-item-on):not([data-bottom-create]) > .bottom-nav-pill { opacity: 0.82; }
+
 .bottom-nav-pill {
     display: grid;
     place-items: center;

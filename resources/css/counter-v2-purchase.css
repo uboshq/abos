@@ -25,7 +25,7 @@ form[data-abos-purchase] [data-supplier-credit] b { font-weight: 700; }
 /* কাগজের ঘর */
 form[data-abos-purchase] [data-purchase-head] > section[data-boxed] { border: 0 !important; background: transparent !important; box-shadow: none !important; }
 form[data-abos-purchase] [data-purchase-head] > section[data-boxed] > div:first-child:not(.px-3) { display: none; }
-form[data-abos-purchase] [data-purchase-head] > section[data-boxed] label > span:first-child { color: #64748b !important; font-size: 12px; font-weight: 500;
+form[data-abos-purchase] [data-purchase-head] > section[data-boxed] label > span:first-child { color: #475569 !important; font-size: 12px; font-weight: 500;
     text-transform: none !important; letter-spacing: 0 !important; }
 form[data-abos-purchase] [data-purchase-head] > section[data-boxed] :is(input, select) { height: 36px; border: 1px solid #cbd5e1 !important; border-radius: 8px;
     background: #fff !important; font-size: 13.5px; }
@@ -192,3 +192,16 @@ form[data-abos-purchase] .pv2-pophead-amber { background: linear-gradient(135deg
 form[data-abos-purchase] [data-direct-unloading] section[role='dialog'] { border-radius: 18px !important; box-shadow: 0 24px 70px rgb(0 0 0 / .35) !important; }
 form[data-abos-purchase] [data-unload-head] { background: linear-gradient(135deg, #6d28d9, #a78bfa) !important; padding: 13px 20px !important; }
 form[data-abos-purchase] [data-unload-head] h2 { font-size: 18px !important; font-weight: 700 !important; }
+
+/* ── ফোন (< 768px): ১৯২০-এর নকশা বদলায় না; মাথা এক কলামে, টাইল আর ঘর দুই কলামে, পাশে উপচায় না (Playwright 375, ২৮ নভেম্বর) ── */
+@media (max-width: 767.98px) {
+    form[data-abos-purchase] [data-purchase-head] { grid-template-columns: minmax(0, 1fr) !important; }
+    form[data-abos-purchase] [data-purchase-head]::before { display: none; }
+    form[data-abos-purchase] [data-purchase-head] > :is(div, section) { grid-row: auto !important; grid-column: 1 !important; }
+    form[data-abos-purchase] :is(.pv2-tiles, [data-entry-row] div[style*='grid-template-columns']) { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; row-gap: 8px; }
+    form[data-abos-purchase] :is(.pv2-tiles, [data-entry-row] div[style*='grid-template-columns']) > * { grid-column: auto / span 1 !important; min-width: 0; }
+    form[data-abos-purchase] [data-entry-row] :is(input, select, button) { min-height: 36px; }
+}
+
+/* ⓘ রঙিন ঘরের উপর ছোট ধূসর নাম (#64748b) হালকা নীলে 4.27:1 ছিল — একটু গাঢ় ধূসর (#475569, 7:1+); নকশা একই (axe, ২৮ নভেম্বর) */
+form[data-abos-purchase] .text-\(--color-ink-muted\) { color: #475569 !important; }
