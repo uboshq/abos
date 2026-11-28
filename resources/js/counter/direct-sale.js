@@ -313,6 +313,8 @@ export default function directSale({
          */
         drivers: drivers ?? [],
         transportCost: '',
+        /* ⭐ লোডিং খরচ — গাড়ি ভাড়ার টাইলে যোগ হয়ে দেখায় (মালিক, ২৮ নভেম্বর ২০২৬); ঘরটা পপআপের ভাঁজে, এখানে কেবল পড়া */
+        loadingAmount: 0,
 
         /* ⭐ নমুনা ৩-এর পপ-আপের মান (মালিক, ৪ অক্টোবর ২০২৬) — সার্ভারের নাম af-এর সাথে মেলানো */
         deliveryMode: '',
@@ -646,9 +648,32 @@ export default function directSale({
             return String((this.customer && this.customer.point) || '');
         },
 
-        /* 🚚 খরচের টাইলের ছোট লেখা (v2) */
+        /* 🚚 খরচের টাইলের ছোট লেখা (v2) — লোডিং থাকলে "ভাড়া ৳… + লোডিং ৳…" (মালিক, ২৮ নভেম্বর ২০২৬) */
         get transportTileSub() {
+            if (this.loadingAmount > 0) {
+                return String(texts.fareLoadingSplit ?? '')
+                    .replace(':fare', this.money(Number(this.transportCost) || 0))
+                    .replace(':loading', this.money(this.loadingAmount));
+            }
+
             return this.vehicleText || String(texts.cardNothing ?? '');
+        },
+
+        /** ⭐ টাইলের টাকা = গাড়ি ভাড়া + লোডিং, একটাই ঘরে (মালিক, ২৮ নভেম্বর ২০২৬); কোনোটাই না থাকলে — */
+        get fareTotalText() {
+            const total = (Number(this.transportCost) || 0) + this.loadingAmount;
+
+            return total > 0 ? '৳' + this.money(total) : '—';
+        },
+
+        /** ⓘ লোডিংয়ের ঘর অফিসের চালানের ভাগ করা অংশ (নিজের x-data) — বদলালে এখানে পড়ে নেওয়া; "বাছা নেই" হলে ০ */
+        noteLoading() {
+            this.$nextTick(() => {
+                const mode = this.$root.querySelector('input[name="loading_mode"]');
+                const amount = this.$root.querySelector('input[name="loading_amount"]');
+                const on = mode !== null && ['cash', 'due'].includes(String(mode.value));
+                this.loadingAmount = on && amount !== null ? Math.max(0, Number(amount.value) || 0) : 0;
+            });
         },
 
         get noteTileText() {

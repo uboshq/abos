@@ -267,7 +267,7 @@
         <details class="sm:col-span-3 rounded-(--radius-card) border border-(--color-border) p-3" data-counter-loading
                  @if ((string) old('loading_mode', $resume['fields']['loading_mode'] ?? '') !== '') open @endif>
             <summary class="cursor-pointer text-sm font-semibold text-(--color-brand-700)">{{ __('sales::field.loading_fold') }}</summary>
-            <div class="mt-2">
+            <div class="mt-2" x-init="noteLoading()" @input="noteLoading()" @click="noteLoading()">
             @include('sales::challan.partials.loading-fields', ['compact' => true, 'loadingValues' => [
                 'mode' => $resume['fields']['loading_mode'] ?? '',
                 'amount' => $resume['fields']['loading_amount'] ?? '',

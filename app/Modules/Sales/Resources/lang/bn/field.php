@@ -376,6 +376,9 @@ return [
     'credit_used' => 'ব্যবহৃত',
     'challan_do_no' => 'চালান / DO নম্বর',
     'cost_card_title' => 'মাল পৌঁছানো ও খরচ',
+    // ⭐ গাড়ি ভাড়ার টাইল — ভাড়া আর লোডিং এক ঘরে (মালিক, ২৮ নভেম্বর ২০২৬)
+    'tile_fare_loading' => 'গাড়ি ভাড়া ও লোডিং',
+    'fare_loading_split' => 'ভাড়া ৳:fare + লোডিং ৳:loading',
     'cost_card_sub' => 'ক্রেতার হাতে কীভাবে যাবে, কার খরচে',
     'note_prints' => 'বিলে ছাপা হবে',
     'credit_left_more' => 'আরো',

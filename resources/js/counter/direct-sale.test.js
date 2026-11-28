@@ -2659,3 +2659,36 @@ describe('Enter in a plain field never submits the counter form', () => {
         expect(press({ tagName: 'INPUT', type: 'checkbox' })).toBe(false)
     })
 })
+
+/* ⭐ মালিক, ২৮ নভেম্বর ২০২৬: গাড়ি ভাড়ার টাইলে ভাড়া আর লোডিং এক ঘরে — লোডিং "বাছা নেই" হলে গোনা হয় না */
+describe('the fare tile adds the loading cost', () => {
+    const withLoading = (mode, amount) => {
+        const c = counter({ texts: { fareLoadingSplit: 'ভাড়া ৳:fare + লোডিং ৳:loading', cardNothing: 'এখনো কিছু নেই' } })
+        const fields = { 'input[name="loading_mode"]': { value: mode }, 'input[name="loading_amount"]': { value: amount } }
+        c.$root = { querySelector: (s) => fields[s] ?? null }
+        return c
+    }
+
+    it('fare 500 + loading 200 (cash) shows ৳700.00 and the split', () => {
+        const c = withLoading('cash', '200')
+        c.transportCost = '500'
+        c.noteLoading()
+        expect(c.loadingAmount).toBe(200)
+        expect(c.fareTotalText).toBe('৳' + c.money(700))
+        expect(c.transportTileSub).toBe('ভাড়া ৳' + c.money(500) + ' + লোডিং ৳' + c.money(200))
+    })
+
+    it('loading not chosen counts nothing; no fare and no loading shows a dash', () => {
+        const c = withLoading('', '200')
+        c.noteLoading()
+        expect(c.loadingAmount).toBe(0)
+        expect(c.fareTotalText).toBe('—')
+        expect(c.transportTileSub).toBe('এখনো কিছু নেই')
+    })
+
+    it('a due loading with no fare still shows on the tile', () => {
+        const c = withLoading('due', '150')
+        c.noteLoading()
+        expect(c.fareTotalText).toBe('৳' + c.money(150))
+    })
+})
