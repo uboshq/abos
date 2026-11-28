@@ -229,7 +229,8 @@
                   'lastRateNone' => __('sales::field.last_rate_none'),
                   'lotsShort' => __('sales::field.lots_short'),
                   'cardNothing' => __('sales::field.card_nothing'),
-                  'fareLoadingSplit' => __('sales::field.fare_loading_split'),
+                  'loadingByCash' => __('sales::field.loading_by_cash'),
+                  'loadingByDue' => __('sales::field.loading_by_due'),
                   'whereMore' => __('sales::field.where_more'),
                   'itemsWord' => __('sales::field.items'),
                   'confirm' => [

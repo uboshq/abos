@@ -2661,34 +2661,40 @@ describe('Enter in a plain field never submits the counter form', () => {
 })
 
 /* ⭐ মালিক, ২৮ নভেম্বর ২০২৬: গাড়ি ভাড়ার টাইলে ভাড়া আর লোডিং এক ঘরে — লোডিং "বাছা নেই" হলে গোনা হয় না */
-describe('the fare tile adds the loading cost', () => {
+describe('the cost card: fare alone, loading on its own tile in place of delivery (owner, 28 Nov evening)', () => {
     const withLoading = (mode, amount) => {
-        const c = counter({ texts: { fareLoadingSplit: 'ভাড়া ৳:fare + লোডিং ৳:loading', cardNothing: 'এখনো কিছু নেই' } })
+        const c = counter({ texts: { cardNothing: 'এখনো কিছু নেই', loadingByCash: 'নগদে দেওয়া', loadingByDue: 'বাকিতে, পরে দেওয়া' } })
         const fields = { 'input[name="loading_mode"]': { value: mode }, 'input[name="loading_amount"]': { value: amount } }
         c.$root = { querySelector: (s) => fields[s] ?? null }
         return c
     }
 
-    it('fare 500 + loading 200 (cash) shows ৳700.00 and the split', () => {
+    it('fare 500 + loading 200 (cash): fare tile ৳500.00, loading tile ৳200.00 in cash, delivery tile steps aside', () => {
         const c = withLoading('cash', '200')
         c.transportCost = '500'
         c.noteLoading()
+        expect(c.fareText).toBe('৳' + c.money(500))
         expect(c.loadingAmount).toBe(200)
-        expect(c.fareTotalText).toBe('৳' + c.money(700))
-        expect(c.transportTileSub).toBe('ভাড়া ৳' + c.money(500) + ' + লোডিং ৳' + c.money(200))
+        expect(c.loadingText).toBe('৳' + c.money(200))
+        expect(c.loadingTileSub).toBe('নগদে দেওয়া')
+        expect(c.showLoadingTile).toBe(true)
+        expect(c.showDeliveryTile).toBe(false)
     })
 
-    it('loading not chosen counts nothing; no fare and no loading shows a dash', () => {
+    it('loading not chosen: no loading tile, the delivery tile shows; no fare shows a dash', () => {
         const c = withLoading('', '200')
         c.noteLoading()
         expect(c.loadingAmount).toBe(0)
-        expect(c.fareTotalText).toBe('—')
-        expect(c.transportTileSub).toBe('এখনো কিছু নেই')
+        expect(c.fareText).toBe('—')
+        expect(c.fareTileSub).toBe('এখনো কিছু নেই')
+        expect(c.showLoadingTile).toBe(false)
+        expect(c.showDeliveryTile).toBe(true)
     })
 
-    it('a due loading with no fare still shows on the tile', () => {
+    it('a due loading says it is paid later', () => {
         const c = withLoading('due', '150')
         c.noteLoading()
-        expect(c.fareTotalText).toBe('৳' + c.money(150))
+        expect(c.loadingText).toBe('৳' + c.money(150))
+        expect(c.loadingTileSub).toBe('বাকিতে, পরে দেওয়া')
     })
 })

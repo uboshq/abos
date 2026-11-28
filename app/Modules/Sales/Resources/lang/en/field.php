@@ -420,9 +420,11 @@ return [
     'credit_used' => 'used',
     'challan_do_no' => 'Challan / DO no.',
     'cost_card_title' => 'Delivery and costs',
-    // ⭐ the fare tile — fare and loading in one box (owner, 28 Nov 2026)
-    'tile_fare_loading' => 'Vehicle fare and loading',
-    'fare_loading_split' => 'fare ৳:fare + loading ৳:loading',
+    // ⭐ the cost card — fare and loading on separate tiles (owner, 28 Nov 2026 evening)
+    'tile_fare' => 'Vehicle fare',
+    'tile_loading' => 'Loading cost',
+    'loading_by_cash' => 'Paid in cash',
+    'loading_by_due' => 'On credit, paid later',
     'cost_card_sub' => 'how it reaches the customer, at whose cost',
     'note_prints' => 'printed on the bill',
     'credit_left_more' => 'left',

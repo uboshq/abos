@@ -313,8 +313,9 @@ export default function directSale({
          */
         drivers: drivers ?? [],
         transportCost: '',
-        /* ⭐ লোডিং খরচ — গাড়ি ভাড়ার টাইলে যোগ হয়ে দেখায় (মালিক, ২৮ নভেম্বর ২০২৬); ঘরটা পপআপের ভাঁজে, এখানে কেবল পড়া */
+        /* ⭐ লোডিং খরচ — নিজের টাইলে, ভাড়া থেকে আলাদা (মালিক, ২৮ নভেম্বর ২০২৬ সন্ধ্যা); ঘরটা পপআপের ভাঁজে, এখানে কেবল পড়া */
         loadingAmount: 0,
+        loadingMode: '',
 
         /* ⭐ নমুনা ৩-এর পপ-আপের মান (মালিক, ৪ অক্টোবর ২০২৬) — সার্ভারের নাম af-এর সাথে মেলানো */
         deliveryMode: '',
@@ -648,22 +649,35 @@ export default function directSale({
             return String((this.customer && this.customer.point) || '');
         },
 
-        /* 🚚 খরচের টাইলের ছোট লেখা (v2) — লোডিং থাকলে "ভাড়া ৳… + লোডিং ৳…" (মালিক, ২৮ নভেম্বর ২০২৬) */
-        get transportTileSub() {
-            if (this.loadingAmount > 0) {
-                return String(texts.fareLoadingSplit ?? '')
-                    .replace(':fare', this.money(Number(this.transportCost) || 0))
-                    .replace(':loading', this.money(this.loadingAmount));
-            }
-
+        /*
+         * ⭐ খরচের কার্ড (মালিক, ২৮ নভেম্বর ২০২৬ সন্ধ্যা): ভাড়া আর লোডিং আলাদা আলাদা — "কোনটার কস্টিং কত"।
+         *   বাঁয়ে বড় টাইল = শুধু গাড়ি ভাড়া। ডানের ছোট টাইল বদলায়: লোডিং খরচ বসলে "লোডিং খরচ ৳…",
+         *   না থাকলে "ডেলিভারি — এখনই/পরে নেবেন"; তখন ডেলিভারি কখন, সেটা নিচের ডেলিভারি (F7) বোতামে থাকে।
+         */
+        get fareTileSub() {
             return this.vehicleText || String(texts.cardNothing ?? '');
         },
 
-        /** ⭐ টাইলের টাকা = গাড়ি ভাড়া + লোডিং, একটাই ঘরে (মালিক, ২৮ নভেম্বর ২০২৬); কোনোটাই না থাকলে — */
-        get fareTotalText() {
-            const total = (Number(this.transportCost) || 0) + this.loadingAmount;
+        get fareText() {
+            const fare = Number(this.transportCost) || 0;
 
-            return total > 0 ? '৳' + this.money(total) : '—';
+            return fare > 0 ? '৳' + this.money(fare) : '—';
+        },
+
+        get showLoadingTile() {
+            return this.loadingAmount > 0;
+        },
+
+        get showDeliveryTile() {
+            return this.loadingAmount <= 0;
+        },
+
+        get loadingText() {
+            return '৳' + this.money(this.loadingAmount);
+        },
+
+        get loadingTileSub() {
+            return String((this.loadingMode === 'due' ? texts.loadingByDue : texts.loadingByCash) ?? '');
         },
 
         /** ⓘ লোডিংয়ের ঘর অফিসের চালানের ভাগ করা অংশ (নিজের x-data) — বদলালে এখানে পড়ে নেওয়া; "বাছা নেই" হলে ০ */
@@ -673,6 +687,7 @@ export default function directSale({
                 const amount = this.$root.querySelector('input[name="loading_amount"]');
                 const on = mode !== null && ['cash', 'due'].includes(String(mode.value));
                 this.loadingAmount = on && amount !== null ? Math.max(0, Number(amount.value) || 0) : 0;
+                this.loadingMode = on ? String(mode.value) : '';
             });
         },
 
