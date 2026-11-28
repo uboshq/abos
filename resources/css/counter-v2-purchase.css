@@ -174,3 +174,21 @@ form[data-abos-purchase] .pur-tot-foot button[data-overview-trigger] { backgroun
 form[data-abos-purchase] [data-supplier-credit] .pv2-sphone { white-space: nowrap; }
 form[data-abos-purchase] [data-supplier-credit] .pv2-sprev { white-space: nowrap; }
 form[data-abos-purchase] [data-supplier-credit] .pv2-sprev b { font-weight: 700; }
+
+/* ════ পরিশোধ আর পরিবহন — নমুনার মতো পর্দার মাঝের পপআপ (ABOS-এর রূপে); পেছনের ধূসর পট box-shadow-এ, তাই নতুন উপাদান লাগে না ════ */
+form[data-abos-purchase] :is([data-purchase-deposit], [data-purchase-transport]) { position: fixed; inset: 0; margin: auto !important; z-index: 60;
+    width: min(760px, 94vw); height: fit-content; max-height: 90vh; overflow: auto; background: #fff; border: 0 !important;
+    border-radius: 18px !important; padding: 0 20px 18px !important;
+    box-shadow: 0 0 0 100vmax rgb(15 23 42 / .5), 0 24px 70px rgb(0 0 0 / .35); }
+form[data-abos-purchase] .pv2-pophead { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin: 0 -20px 14px; padding: 13px 20px; color: #fff; text-shadow: 0 1px 1px rgb(0 0 0 / .15); }
+form[data-abos-purchase] .pv2-pophead h2 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+form[data-abos-purchase] .pv2-pophead kbd { font: inherit; font-size: 12px; background: rgb(255 255 255 / .2); border-radius: 6px; padding: 0 6px; }
+form[data-abos-purchase] .pv2-pophead button { min-width: 32px; min-height: 32px; border-radius: 8px; background: rgb(255 255 255 / .2); color: #fff; font-size: 18px; }
+form[data-abos-purchase] .pv2-pophead button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+form[data-abos-purchase] .pv2-pophead-green { background: linear-gradient(135deg, #047857, #10b981); }
+form[data-abos-purchase] .pv2-pophead-amber { background: linear-gradient(135deg, #b45309, #f59e0b); }
+/* আনলোডিংয়ের পপআপ — মাথা বেগুনি (নমুনার আনলোডিংয়ের রং), কোণ গোল */
+form[data-abos-purchase] [data-direct-unloading] section[role='dialog'] { border-radius: 18px !important; box-shadow: 0 24px 70px rgb(0 0 0 / .35) !important; }
+form[data-abos-purchase] [data-unload-head] { background: linear-gradient(135deg, #6d28d9, #a78bfa) !important; padding: 13px 20px !important; }
+form[data-abos-purchase] [data-unload-head] h2 { font-size: 18px !important; font-weight: 700 !important; }
