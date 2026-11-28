@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Route;
  */
 final class InventoryBoard
 {
-    /** @var Collection<int, Product>|null */
+    /** @var \Illuminate\Database\Eloquent\Collection<int, Product>|null */
     private ?Collection $snap = null;
 
     public function __construct(
@@ -50,7 +50,7 @@ final class InventoryBoard
         return ['warehouse' => $id('warehouse'), 'brand' => $id('brand'), 'category' => $id('category'), 'abc' => in_array($abc, ['A', 'B', 'C'], true) ? $abc : null];
     }
 
-    /** @return Collection<int, Product> */
+    /** @return \Illuminate\Database\Eloquent\Collection<int, Product> ⓘ StockFacts-এর `get()` থেকে; where/filter/values ধরন রাখে, তাই `loadMissing()` চলে */
     public function snapshot(): Collection
     {
         if ($this->snap !== null) {

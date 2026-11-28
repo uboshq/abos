@@ -176,7 +176,7 @@ final class StockFacts
      * ⓘ ঘর: available_qty (বিক্রিযোগ্য, [[StockService::availableSql()]]), on_hand_qty (তাকে + বসানো বাকি), last_out (শেষ বেরোনোর
      * দিন), out_30 (গত 30 দিনে বেরোনো পরিমাণ), avg_cost (চালু খরচ-স্তরের গড়; খরচ দেখার অনুমতি না থাকলে ঘরটাই নেই)।
      *
-     * @return Collection<int, Product>
+     * @return \Illuminate\Database\Eloquent\Collection<int, Product> ⓘ কোয়েরির `get()` — মডেলের সংগ্রহ, তাই `loadMissing()` চলে
      */
     public function snapshot(): Collection
     {
