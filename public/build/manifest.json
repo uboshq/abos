@@ -13,13 +13,85 @@
     "src": "node_modules/livekit-client/dist/livekit-client.esm.mjs",
     "isDynamicEntry": true
   },
+  "resources/css/abos-look.css": {
+    "file": "assets/abos-look-DRDm9OXw.css",
+    "name": "abos-look",
+    "names": [
+      "abos-look.css"
+    ],
+    "src": "resources/css/abos-look.css",
+    "isEntry": true
+  },
   "resources/css/app.css": {
-    "file": "assets/app-D1SyByHA.css",
+    "file": "assets/app-BXW_qHpD.css",
     "name": "app",
     "names": [
       "app.css"
     ],
     "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/css/base.css": {
+    "file": "assets/base-J3IoToO1.css",
+    "name": "base",
+    "names": [
+      "base.css"
+    ],
+    "src": "resources/css/base.css",
+    "isEntry": true
+  },
+  "resources/css/blue-look.css": {
+    "file": "assets/blue-look-BepgmBtq.css",
+    "name": "blue-look",
+    "names": [
+      "blue-look.css"
+    ],
+    "src": "resources/css/blue-look.css",
+    "isEntry": true
+  },
+  "resources/css/copilot-page.css": {
+    "file": "assets/copilot-page-10hz27uD.css",
+    "name": "copilot-page",
+    "names": [
+      "copilot-page.css"
+    ],
+    "src": "resources/css/copilot-page.css",
+    "isEntry": true
+  },
+  "resources/css/dynamic-look.css": {
+    "file": "assets/dynamic-look-DOuum-y_.css",
+    "name": "dynamic-look",
+    "names": [
+      "dynamic-look.css"
+    ],
+    "src": "resources/css/dynamic-look.css",
+    "isEntry": true
+  },
+  "resources/css/fiori-look.css": {
+    "file": "assets/fiori-look-BlPSGAdr.css",
+    "name": "fiori-look",
+    "names": [
+      "fiori-look.css"
+    ],
+    "src": "resources/css/fiori-look.css",
+    "isEntry": true
+  },
+  "resources/css/pages/counter.css": {
+    "file": "assets/counter-DWiXaY4S.css",
+    "name": "counter",
+    "names": [
+      "counter.css"
+    ],
+    "src": "resources/css/pages/counter.css",
+    "isEntry": true
+  },
+  "resources/css/trade-voucher.css": {
+    "file": "assets/trade-voucher-BXBtkchY.css",
+    "name": "trade-voucher",
+    "names": [
+      "trade-voucher.css"
+    ],
+    "src": "resources/css/trade-voucher.css",
     "isEntry": true
   },
   "resources/js/app.js": {

@@ -295,7 +295,9 @@ class TheOtherNineLooksWereNotTouchedTest extends TestCase
             (preg_match_all("/data-ui='([a-z]+)'/", (string) preg_replace('#/\*.*?\*/#s', '', $css), $m) ? $m[1] : []), ['rose']))),
             '⛔ abos-look.css অন্য রূপকে ছোঁয়।');
         $this->assertStringNotContainsString('--blue-', $css, '⛔ abos-look.css ABOS Blue-র ভেরিয়েবল পড়ে।');
-        $this->assertStringContainsString("@import './abos-look.css';", (string) file_get_contents(resource_path('css/app.css')));
+        // ⓘ CSS ভাগের পর (২৮ নভেম্বর ২০২৬) abos-look.css আর app.css-এ @import নয় — "ABOS" রূপের পাতায় নিজের ফাইল হয়ে আসে ([[PageCss]])
+        $this->assertSame(['resources/css/abos-look.css'], \App\Core\Support\PageCss::look('rose'), '⛔ "ABOS" রূপের পাতায় abos-look.css আসে না।');
+        $this->assertStringContainsString("'resources/css/abos-look.css'", (string) file_get_contents(base_path('vite.config.js')), '⛔ abos-look.css বিল্ড হয় না।');
         $chrome = (string) file_get_contents(resource_path('views/components/shell/chrome/rose.blade.php'));
         $this->assertStringNotContainsString('chrome.navy', $chrome);
         $this->assertStringNotContainsString('chrome.blue', $chrome);

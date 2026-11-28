@@ -13,7 +13,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title ?? __('sales::portal.title') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/base.css', 'resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-(--color-surface-app) text-(--color-ink)">
     <header class="border-b border-(--color-border) bg-(--color-surface-card)">

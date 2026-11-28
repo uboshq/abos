@@ -1,3 +1,4 @@
+<x-page-css name="counter" />{{-- এই পাতার নিজের CSS ([[PageCss]]) --}}
 {{--
     মাল গ্রহণ।
 

@@ -250,8 +250,9 @@ final class TheInboxFitsAPhoneTest extends TestCase
     private function builtCss(): string
     {
         $manifest = json_decode((string) file_get_contents(public_path('build/manifest.json')), true);
-        $file = $manifest['resources/css/app.css']['file'] ?? null;
-        $this->assertIsString($file, 'প্রস্তুতিটাই ভুল — বান্ডেলের তালিকায় app.css নেই।');
+        // ⓘ Tailwind-এর ক্লাস base.css-এর বান্ডেলে — CSS ভাগের পর ([[PageCss]], ২৮ নভেম্বর ২০২৬)
+        $file = $manifest['resources/css/base.css']['file'] ?? null;
+        $this->assertIsString($file, 'প্রস্তুতিটাই ভুল — বান্ডেলের তালিকায় base.css নেই।');
 
         return (string) file_get_contents(public_path('build/'.$file));
     }

@@ -36,7 +36,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ __('auth.sign_in') }} — ABOS</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/base.css', 'resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 {{--

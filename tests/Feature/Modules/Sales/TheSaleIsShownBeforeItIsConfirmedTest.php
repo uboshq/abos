@@ -209,7 +209,8 @@ final class TheSaleIsShownBeforeItIsConfirmedTest extends TestCase
         $this->assertMatchesRegularExpression('/<dialog data-confirm-overview-dialog[^>]*class="[^"]*\bm-auto\b/', $page,
             '⛔ সারাংশের পপ-আপে m-auto নেই — পর্দার মাঝখানে নয়, বাঁ-উপরের কোণে বসে');
         $manifest = json_decode((string) file_get_contents(public_path('build/manifest.json')), true);
-        $css = (string) file_get_contents(public_path('build/'.$manifest['resources/css/app.css']['file']));
+        // ⓘ Tailwind-এর ক্লাস base.css-এর বান্ডেলে — CSS ভাগের পর ([[PageCss]], ২৮ নভেম্বর ২০২৬)
+        $css = (string) file_get_contents(public_path('build/'.$manifest['resources/css/base.css']['file']));
         $this->assertStringContainsString('.m-auto{margin:auto}', $css, '⛔ m-auto বিল্ড করা CSS-এ নেই — পপ-আপ তবুও কোণে');
     }
 

@@ -128,7 +128,14 @@
               data-message="{{ __('live.fresh') }}"
               data-action="{{ __('live.refresh') }}">
     @endif
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- ⭐ CSS চার ধাপে, ঠিক এই ক্রমে — base.css, নিজের রূপ, নিজের পাতা, app.css ([[PageCss]]; কেন এই ক্রম, সেখানে) --}}
+    @vite([\App\Core\Support\PageCss::HEAD, ...\App\Core\Support\PageCss::look(\App\Core\Support\LookRegistry::lookFor(\App\Core\Support\LookPreview::orChosen(auth()->user()?->ui)))])
+    {{-- ⓘ কাউন্টার মোডের সারি ([[x-shell.counter-strip]]) যেকোনো পাতায় বসে, আর তার চেহারা কাউন্টারের CSS-এ — তাই মোড চালু থাকলে সেটাও (একবারই) --}}
+    @if (\App\Core\Support\CounterMode::wanted())
+        <x-page-css name="counter" />
+    @endif
+    @stack('page-css')
+    @vite([\App\Core\Support\PageCss::BODY, 'resources/js/app.js'])
     {{-- ⓘ স্টাইলশিটের পরে — `:root:root` (০,৩,০) এমনিতেই জেতে, ক্রমটা কেবল বাড়তি নিশ্চয়তা --}}
     @if (\App\Core\Support\LookPreview::style(auth()->user()?->theme ?? 'light') === null)
         <style data-look @nonce>{!! \App\Core\Support\LookRegistry::sheetForUser(auth()->user()?->ui) !!}</style>

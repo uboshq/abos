@@ -40,7 +40,7 @@
     --}}
     <meta name="robots" content="noindex, nofollow">
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/base.css', 'resources/css/app.css', 'resources/js/app.js'])
 </head>
 
 <body class="min-h-dvh bg-(--color-surface-app)">

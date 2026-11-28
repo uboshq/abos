@@ -28,22 +28,22 @@ class TailwindSourcesCoverEveryViewTest extends TestCase
 {
     public function test_every_blade_file_falls_under_a_declared_source(): void
     {
-        $css = file_get_contents(resource_path('css/app.css'));
+        $css = file_get_contents(resource_path('css/base.css'));
 
-        $this->assertIsString($css, 'resources/css/app.css পড়া গেল না।');
+        $this->assertIsString($css, 'resources/css/base.css পড়া গেল না।');
 
         preg_match_all("/@source\s+'([^']+)'/", $css, $matches);
 
         $globs = $matches[1];
 
         $this->assertNotEmpty($globs, implode("\n", [
-            'app.css-এ একটাও @source নেই।',
+            'base.css-এ (Tailwind-এর প্রবেশ, CSS ভাগের পর) একটাও @source নেই।',
             'তখন Tailwind কেবল নিজের খোঁজার উপর চলবে, আর সেটা মেশিনভেদে',
             'আলাদা ফল দেয় — ঠিক যে সমস্যাটা এই পরীক্ষা ঠেকাতে এসেছে।',
         ]));
 
         /*
-         * গ্লবগুলো app.css-এর ফোল্ডার থেকে আপেক্ষিক, আর মিলানো হয়
+         * গ্লবগুলো base.css-এর ফোল্ডার থেকে আপেক্ষিক, আর মিলানো হয়
          * নিজের হাতে — PHP-র glob() `**` চেনে না (ওটাকে একটামাত্র স্তরের
          * `*` ধরে), অথচ Tailwind চেনে। ওটা ব্যবহার করলে এই পরীক্ষাটাই
          * ঠিক ঘোষিত ফাইলগুলোকে "অঘোষিত" বলত।
@@ -82,7 +82,7 @@ class TailwindSourcesCoverEveryViewTest extends TestCase
             'এই ব্লেড ফাইলগুলো কোনো @source-এ পড়ে না।',
             'এগুলোর ক্লাসগুলো CSS-এ থাকবে কি না তা নির্ভর করবে Tailwind-এর',
             'স্বয়ংক্রিয় খোঁজার উপর, যেটা এক মেশিনে চলে আর অন্যটায় চলে না।',
-            'resources/css/app.css-এ একটা @source যোগ করুন।',
+            'resources/css/base.css-এ একটা @source যোগ করুন।',
         ]));
     }
 

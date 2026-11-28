@@ -10,7 +10,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ __('sales::scan.who_title') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/base.css', 'resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="grid min-h-screen place-items-center bg-(--color-surface-app) px-4 text-(--color-ink)">
     <main class="w-full max-w-sm">

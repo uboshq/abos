@@ -1,3 +1,4 @@
+<x-page-css name="copilot" />{{-- এই পাতার নিজের CSS ([[PageCss]]) --}}
 {{--
     ⭐ The full-screen Copilot page — owner's web sample copilot-web-sample (21 Nov 2026).
 
