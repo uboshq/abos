@@ -248,6 +248,21 @@ final class CapitalService
     private function assertStillADraft(CapitalEntry $entry): void
     {
         /*
+         * ⛔ লাভকে মূলধনে নেওয়ার খসড়া সইয়ের ভাউচারে বাঁধা — বদলানো বা মোছা যায় না (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে
+         * মুছলে বা নগদে বদলালে শেষ সইয়ে ভাউচারটা তবু খাতায় বসত (২১৯০ → ৩১০০), অথচ পাওনা থেকে আর কাটা হত না — একই লাভ নগদেও
+         * তোলা যেত। ফেরাতে হলে সইকারী "না" বলবেন, বা ভাউচারটা বাতিল।
+         *
+         * ⭐ এই পাহারা **প্রথমে** (২৮ নভেম্বর ২০২৬, PHPStan notIdentical.alwaysFalse): আগে এটা নিচে ছিল, আর উপরেরটা একই
+         * অবস্থা (লাভ, বা ভাউচারে বাঁধা) আগেই "আগেই খাতায় বসেছে" বলে থামাত — সইয়ের অপেক্ষার বার্তাটা কেউ কখনো দেখত না,
+         * আর মানুষ ভাবত কাগজটা পোস্ট হয়ে গেছে। থামা একই; কেবল কারণটা এখন সত্যি।
+         */
+        if ($entry->status === CapitalEntry::DRAFT && ($entry->in_kind === CapitalEntry::PROFIT || $entry->voucher_id !== null)) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.capital_held_for_signature', ['no' => $entry->document_no]),
+            ]);
+        }
+
+        /*
          * ⛔ ভাউচারে বাঁধা বা লাভ/খোলা জের থেকে আসা খসড়া হাতে বদলায় না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ লাভ মূলধনে নেওয়া
          * সইয়ের অপেক্ষায় থাকলে তার সারি মুছলে শেষ সই তবু গোটা ভাউচার বসাত, অথচ পাওনা থেকে আর কাটা হত না — একই লাভ দুবার দেওয়া যেত।
          */
@@ -257,17 +272,6 @@ final class CapitalService
                 'status' => __('finance::validation.capital_already_posted', [
                     'no' => $entry->document_no,
                 ]),
-            ]);
-        }
-
-        /*
-         * ⛔ লাভকে মূলধনে নেওয়ার খসড়া সইয়ের ভাউচারে বাঁধা — বদলানো বা মোছা যায় না (লাইন-ধরে নিরীক্ষা, ১৩ অক্টোবর ২০২৬)। ⓘ আগে
-         * মুছলে বা নগদে বদলালে শেষ সইয়ে ভাউচারটা তবু খাতায় বসত (২১৯০ → ৩১০০), অথচ পাওনা থেকে আর কাটা হত না — একই লাভ নগদেও
-         * তোলা যেত। ফেরাতে হলে সইকারী "না" বলবেন, বা ভাউচারটা বাতিল।
-         */
-        if ($entry->in_kind === CapitalEntry::PROFIT || $entry->voucher_id !== null) {
-            throw ValidationException::withMessages([
-                'status' => __('finance::validation.capital_held_for_signature', ['no' => $entry->document_no]),
             ]);
         }
     }

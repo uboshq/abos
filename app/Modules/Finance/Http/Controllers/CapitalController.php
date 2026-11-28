@@ -404,6 +404,13 @@ orm]]): *"সম্পাদনা
 
     private function assertStillADraft(CapitalEntry $entry): void
     {
+        // ⛔ সইয়ের অপেক্ষার মূলধনে-নেওয়া লাভ — প্রথমে, নইলে নিচেরটা আগে থামিয়ে ভুল কারণ বলত ([[CapitalService::assertStillADraft()]], ২৮ নভেম্বর ২০২৬)
+        if ($entry->status === CapitalEntry::DRAFT && ($entry->in_kind === CapitalEntry::PROFIT || $entry->voucher_id !== null)) {
+            throw ValidationException::withMessages([
+                'status' => __('finance::validation.capital_held_for_signature', ['no' => $entry->document_no]),
+            ]);
+        }
+
         /*
          * ⛔ ভাউচারে বাঁধা বা লাভ/খোলা জের থেকে আসা খসড়া হাতে বদলায় না — Finance লাইন-নিরীক্ষা, ১৩ অক্টোবর ২০২৬। ⓘ লাভ মূলধনে নেওয়া
          * সইয়ের অপেক্ষায় থাকলে তার সারি মুছলে শেষ সই তবু গোটা ভাউচার বসাত, অথচ পাওনা থেকে আর কাটা হত না — একই লাভ দুবার দেওয়া যেত।
@@ -414,13 +421,6 @@ orm]]): *"সম্পাদনা
                 'status' => __('finance::validation.capital_already_posted', [
                     'no' => $entry->document_no,
                 ]),
-            ]);
-        }
-
-        // ⛔ সইয়ের অপেক্ষার মূলধনে-নেওয়া লাভ — সেবার একই পাহারা ([[CapitalService::assertStillADraft()]])
-        if ($entry->in_kind === CapitalEntry::PROFIT || $entry->voucher_id !== null) {
-            throw ValidationException::withMessages([
-                'status' => __('finance::validation.capital_held_for_signature', ['no' => $entry->document_no]),
             ]);
         }
     }

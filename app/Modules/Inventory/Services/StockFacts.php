@@ -160,7 +160,8 @@ final class StockFacts
                 return [
                     'id' => (int) $p->id,
                     'name' => $p->name(),
-                    'unit' => (string) ($p->unit?->code ?? $p->unit?->name ?? ''),
+                    // ⓘ এককের `name` ঘর নেই (name_en/name_bn) — কোড না থাকলে আগে ফাঁকা যেত; এখন নাম, ভাষা ধরে (PHPStan, ২৮ নভেম্বর ২০২৬)
+                    'unit' => (string) ($p->unit?->code ?? $p->unit?->name() ?? ''),
                     'available' => $have,
                     'level' => $level,
                     'order' => bccomp($order, '0', 4) > 0 ? $order : '0',
