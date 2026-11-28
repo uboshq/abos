@@ -48,7 +48,7 @@ final class SalesOverview
     public function __construct(private readonly SalesAnalytics $analytics) {}
 
     /**
-     * @return array{cards: list<array<string, mixed>>, panels: array<string, mixed>}
+     * @return array{cards: list<array<string, mixed>>, panels: array<string, mixed>, totals: array<string, mixed>} ⓘ totals পর্দা ও অ্যাপ দুটোই পড়ে (PHPStan offsetAccess.notFound)
      */
     public function for(User $user, SalesPeriod $period): array
     {
