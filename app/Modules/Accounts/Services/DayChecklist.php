@@ -222,7 +222,7 @@ final class DayChecklist
     /**
      * এই বিলগুলোর কোনটায় এখনো বাকি — পক্ষ ধরে একবার মডিউলের খোলা বিলের তালিকা, তা থেকে কেবল এই বিলগুলো।
      *
-     * @param  \Illuminate\Support\Collection<int, object>  $bills
+     * @param  \Illuminate\Support\Collection<int, covariant object>  $bills  ⓘ covariant: কোয়েরির stdClass সারিও চলে
      * @param  \Closure(int): list<array<string, mixed>>  $open
      * @return array{0: int, 1: string}|null
      */

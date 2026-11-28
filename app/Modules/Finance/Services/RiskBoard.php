@@ -335,7 +335,7 @@ final class RiskBoard
      * ⚠️ রুটের নাম বদলালে বা মডিউল বন্ধ থাকলে `route()` ছুড়ে ফেলত, আর
      * তখন গোটা ঝুঁকির পাতা ৫০০ দিত — একটা লিংকের জন্য।
      *
-     * @param  array<string, mixed>  $params
+     * @param  array<int|string, mixed>  $params  ⓘ route()-এর মতোই — নামসহ বা ক্রমে ([$facility])
      */
     private function link(string $name, array $params = []): ?string
     {
