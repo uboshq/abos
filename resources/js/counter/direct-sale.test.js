@@ -2663,7 +2663,7 @@ describe('Enter in a plain field never submits the counter form', () => {
 /* ⭐ মালিক, ২৮ নভেম্বর ২০২৬: গাড়ি ভাড়ার টাইলে ভাড়া আর লোডিং এক ঘরে — লোডিং "বাছা নেই" হলে গোনা হয় না */
 describe('the cost card: fare alone, loading on its own tile in place of delivery (owner, 28 Nov evening)', () => {
     const withLoading = (mode, amount) => {
-        const c = counter({ texts: { cardNothing: 'এখনো কিছু নেই', loadingByCash: 'নগদে দেওয়া', loadingByDue: 'বাকিতে, পরে দেওয়া' } })
+        const c = counter({ texts: { cardNothing: 'এখনো কিছু নেই', loadingByCash: 'নগদে', loadingByDue: 'বাকিতে' } })
         const fields = { 'input[name="loading_mode"]': { value: mode }, 'input[name="loading_amount"]': { value: amount } }
         c.$root = { querySelector: (s) => fields[s] ?? null }
         return c
@@ -2676,7 +2676,7 @@ describe('the cost card: fare alone, loading on its own tile in place of deliver
         expect(c.fareText).toBe('৳' + c.money(500))
         expect(c.loadingAmount).toBe(200)
         expect(c.loadingText).toBe('৳' + c.money(200))
-        expect(c.loadingTileSub).toBe('নগদে দেওয়া')
+        expect(c.loadingTileSub).toBe('নগদে')
         expect(c.showLoadingTile).toBe(true)
         expect(c.showDeliveryTile).toBe(false)
     })
@@ -2695,6 +2695,6 @@ describe('the cost card: fare alone, loading on its own tile in place of deliver
         const c = withLoading('due', '150')
         c.noteLoading()
         expect(c.loadingText).toBe('৳' + c.money(150))
-        expect(c.loadingTileSub).toBe('বাকিতে, পরে দেওয়া')
+        expect(c.loadingTileSub).toBe('বাকিতে')
     })
 })

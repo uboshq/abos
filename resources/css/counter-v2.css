@@ -135,6 +135,10 @@ form[data-abos-counter] .ds-ct-amber { background: linear-gradient(135deg, #9240
 form[data-abos-counter] .ds-ct-blue { background: linear-gradient(135deg, #1e40af, #2160d8); }
 form[data-abos-counter] .ds-ct-violet { background: linear-gradient(135deg, #5b21b6, #6d28d9); } /* লোডিং খরচ — মালিক, ২৮ নভেম্বর সন্ধ্যা */
 form[data-abos-counter] .ds-ct-wide { grid-column: 1 / -1; }
+form[data-abos-counter] .ds-ct-stack { grid-template-columns: 30px minmax(0, 1fr); }
+form[data-abos-counter] .ds-cl { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; min-width: 0; }
+form[data-abos-counter] .ds-cl b { font-size: 15px; font-weight: 800; }
+form[data-abos-counter] .ds-cl small { display: inline; font-size: 10.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 form[data-abos-counter] .ds-ci { height: 30px; border-radius: 8px; background: rgb(255 255 255 / .22); display: grid; place-items: center; }
 form[data-abos-counter] .ds-cn { font-weight: 700; font-size: 13px; min-width: 0; }
 form[data-abos-counter] .ds-cn small { display: block; font-weight: 500; font-size: 10.5px; opacity: .95; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
