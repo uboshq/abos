@@ -107,7 +107,7 @@ final class PartyStatement
     }
 
     /**
-     * @param  \Closure(): Builder  $base
+     * @param  \Closure(): Builder<LedgerEntry>  $base
      * @param  list<int>|null  $accountIds  অ্যাকাউন্ট লেজার হলে নিজের খাতগুলো (অপর পাশের নাম খুঁজতে); পক্ষের খাতায় `null`
      * @return array<string, mixed>
      */

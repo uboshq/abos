@@ -388,11 +388,15 @@ final class FinanceApiController extends Controller implements HasMiddleware
      *
      * ⓘ [[RentalDues::overdueMonths()]]-এর একই দিনের নিয়ম — "মাসের শুরু + দিন − ১" আজকের আগে পড়লে মাসটা বকেয়ায়, নইলে সামনে।
      */
-    private function nextRentDay(?Carbon $starts, ?Carbon $last, mixed $rentDay): ?Carbon
+    private function nextRentDay(?\Carbon\CarbonInterface $starts, ?\Carbon\CarbonInterface $last, mixed $rentDay): ?Carbon
     {
         if ($starts === null) {
             return null;
         }
+
+        // ⓘ যে ধরনের Carbon-ই আসুক, ভেতরে একটাই ধরন — ফেরতও তাই ([[Dates::of()]])
+        $starts = \App\Core\Support\Dates::of($starts);
+        $last = $last === null ? null : \App\Core\Support\Dates::of($last);
 
         $today = Carbon::today();
         $day = max(1, min(28, (int) ($rentDay ?: 1)));
