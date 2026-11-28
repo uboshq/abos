@@ -94,7 +94,12 @@ form[data-abos-counter] .ds-cart-scroll [data-edit-line]:hover { border-color: #
 
 /* ── ৪ · ডান কলাম: তিনটা আলাদা কার্ড — মোট · মাল পৌঁছানো ও খরচ · কাজের বোতাম ─────────── */
 form[data-abos-counter] .ds-side > aside.ds-tot-abos { background: transparent !important; border: 0 !important; box-shadow: none !important; overflow: visible !important; gap: 10px; }
-form[data-abos-counter] .ds-tot-abos > div:first-child { background: transparent !important; overflow: visible !important; display: flex; flex-direction: column; gap: 10px; }
+/* ⓘ পাশের প্যানেল পর্দার উচ্চতায় বাঁধা; জায়গা কম পড়লে (জুম, ছোট পর্দা) উপরের অংশ নিজের ভিতরে স্ক্রল করে — আগে overflow: visible
+   থাকায় খরচের কার্ড নিচের বোতামের কার্ডের তলায় ঢুকে যেত (মালিক, ২৮ নভেম্বর: "নোটের ঘরটা নিচে ঢুকে যাচ্ছে"). প্যাডিং = আউটলাইন ও ছায়ার জায়গা */
+form[data-abos-counter] .ds-tot-abos > div:first-child { background: transparent !important; overflow-x: hidden !important; overflow-y: auto !important; overscroll-behavior: contain;
+    padding: 3px 4px 8px; margin: -3px -4px 0; display: flex; flex-direction: column; gap: 10px; }
+/* ⓘ পরিমাণ/দর/ছাড়ের ঘরের ফোকাসের গোল দাগ কাটত — মোড়কের কিনারায় ০px জায়গা ছিল (মালিক, ২৮ নভেম্বর) */
+form[data-abos-counter] .ds-qtywrap { padding: 4px; margin-inline: -4px; margin-bottom: -4px; }
 form[data-abos-counter] .ds-tot-card { border-radius: 14px; overflow: hidden; outline: 2px solid #7cd3dc; box-shadow: 0 6px 18px rgb(11 59 92 / .16);
     background: linear-gradient(180deg, #e6f8fb, #f5fcfd 40%, #fff) !important; padding-bottom: 8px; }
 /* মোটের মাথা: গাঢ় নেভি, ৩০px সংখ্যা */

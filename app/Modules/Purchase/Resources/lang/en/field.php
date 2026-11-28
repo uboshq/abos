@@ -88,7 +88,7 @@ return [
     'previous_advance' => 'Previous Credit',
     'total_due' => 'Total outstanding',
     'total_item' => 'Total items',
-    'total_qty' => 'Total qty',
+    'total_qty' => 'Total Qty',
 
     /*
      * The four counts at the foot of the totals card.
@@ -190,7 +190,7 @@ return [
     'their_invoice' => 'Their invoice no.',
     'purchase_rate' => 'Purchase rate',
     'sales_rate' => 'Sales rate',
-    'free_unit' => 'Free unit',
+    'free_unit' => 'Free Unit',
     'line_qty_total' => 'Total qty.',
     'this_line' => 'This line',
     'unloading_bill' => 'Unloading bill',
