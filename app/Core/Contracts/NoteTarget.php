@@ -15,6 +15,10 @@ namespace App\Core\Contracts;
  * ── ⚠️ কেন চুক্তি ─────────────────────────────────────────────────────
  * Accounts কোনো মডিউলের নাম জানে না ([[SettledByAVoucher]]-এর একই কারণ)। ধরনের নামটা কাগজের নিজের module.php-র
  * `drill_sources`-এ, [[App\Core\Engines\Drill\DrillResolver]] খুলে দেয়, আর Accounts কেবল এই চুক্তি চেনে।
+ *
+ * ⓘ প্রতিটা বাস্তবায়ন একটা মডেল — PHPStan-কে তা বলা (`getKey()` চেনে; ২৮ নভেম্বর ২০২৬), আর মডেল-ছাড়া বাস্তবায়ন এলে সে থামায়।
+ *
+ * @phpstan-require-extends \Illuminate\Database\Eloquent\Model
  */
 interface NoteTarget
 {
